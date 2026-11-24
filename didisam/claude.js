@@ -64,7 +64,7 @@ function mdHTML(s) {
     S.ai.usage++; S.chat = S.chat.slice(-60); save(); renderThreads(); if (r.nav) setTimeout(() => go(r.nav, true), 350);
   }).catch(err => {
     let r; try { r = answer(q); } catch (e) { r = { text: '처리하는 중 문제가 생겼습니다.' }; }
-    delete ph.typing; Object.assign(ph, r, { via: '규칙 엔진', note: `Claude 연결 실패(${err.message}) — 규칙 엔진으로 처리했습니다.` }); S.chat = S.chat.slice(-60); save(); renderThreads(); if (r.nav) setTimeout(() => go(r.nav, true), 350);
+    delete ph.typing; Object.assign(ph, r, { via: '규칙 엔진', note: `Claude 연결 실패(${errMsg(err)}) — 규칙 엔진으로 처리했습니다.` }); S.chat = S.chat.slice(-60); save(); renderThreads(); if (r.nav) setTimeout(() => go(r.nav, true), 350);
   });
 }; }
 { const base = aiBody; aiBody = m => { let h = ''; if (m.note) h += `<p class="cnote2">${esc(m.note)}</p>`; if (m.md) h += `<div class="mdx">${mdHTML(m.md)}</div>`; if (m.act) h += `<p class="actline">${ic('spark', 12)} 실행 지시 → 「${esc(m.act)}」</p>`; h += base(m); if (m.via) h += `<div class="via">${(m.md || m.tok) && m.via !== '규칙 엔진' && typeof aiMark === 'function' ? aiMark('sam') : ''}${m.via === '규칙 엔진' ? '' : '<i class="vdot"></i>'}${esc(m.via)}${m.tok ? ` · ${m.tok.toLocaleString()} tokens` : ''}</div>`; return h; }; }
@@ -80,7 +80,7 @@ function mdHTML(s) {
     if (c && /채워|채우|맞춰|맞춤/.test(q)) { const r = fillDoc(b, c); b = r.body; }
     const A = d.body.split('\n'), B = b.split('\n'); let n = 0; for (let i = 0; i < Math.max(A.length, B.length); i++) if ((A[i] || '') !== (B[i] || '')) n++;
     d.body = b.slice(0, 60000); return [`Claude 수정 ${n}줄 (${CL.label(res.model)})`];
-  } catch (e) { const ch = await base(d, q, c); return [`Claude 연결 실패(${e.message}) — 규칙으로 처리`, ...ch]; }
+  } catch (e) { const ch = await base(d, q, c); return [`Claude 연결 실패(${errMsg(e)}) — 규칙으로 처리`, ...ch]; }
 }; }
 /* ── 홈페이지 AI 수정: 구조(색 · 섹션 · 언어)는 규칙, 문구는 Claude ── */
 { const base = ACT['site-gen']; ACT['site-gen'] = () => { const q = ($('#sitePrompt')?.value || UI.sitePrompt || '').trim(); base();
@@ -90,7 +90,7 @@ function mdHTML(s) {
     .then(res => { const m = res.text.match(/\[[\s\S]*\]/); if (!m) throw new Error('형식 오류'); const R = JSON.parse(m[0]); let n = 0;
       R.forEach(o => { const x = s.sections[o.i]; if (!x) return; ['eyebrow', 'title', 'sub', 'body', 'cta'].forEach(k => { if (typeof o[k] === 'string' && x.data[k] !== undefined && o[k] !== x.data[k]) { x.data[k] = o[k].slice(0, 300); n++; } }); if (Array.isArray(o.cols) && Array.isArray(x.data.cols) && o.cols.length === x.data.cols.length) { const nc = o.cols.map(r => [String(r[0] || '').slice(0, 60), String(r[1] || '').slice(0, 120)]); if (JSON.stringify(nc) !== JSON.stringify(x.data.cols)) { x.data.cols = nc; n++; } } });
       if (s.log?.[0]) s.log[0].ch = [...s.log[0].ch.filter(c => c !== '변경 없음'), `Claude 문구 ${n}곳`]; save(); render(); toast(`${CL.label(res.model)}가 문구 ${n}곳을 고쳤습니다.`, 'ok'); })
-    .catch(e => toast(`Claude 문구 수정 실패(${e.message}) — 규칙 수정만 적용했습니다.`, 'warn')); }; }
+    .catch(e => toast(`Claude 문구 수정 실패(${errMsg(e)}) — 규칙 수정만 적용했습니다.`, 'warn')); }; }
 /* ── 설정 › 연동: Claude 카드 ── */
 function claudeCard() { const c = CL.get();
   return `<div class="card clc"><div class="ch"><span class="orb sm">${ic('spark', 14)}</span><b>Claude AI 연결</b>${c.key ? tag('연결됨', 'g') : tag('미연결')}<span class="sp"></span><small>대화 · 문서 · 홈페이지 AI 수정</small></div>
@@ -105,7 +105,7 @@ ACT['cl-use'] = el => { CL.set({ [el.dataset.v]: el.checked }); };
 ACT['cl-off'] = () => { CL.set({ key: '' }); render(); toast('Claude 연결을 해제했습니다. 규칙 엔진으로 동작합니다.'); };
 ACT['cl-save'] = async el => { const k = $('#clKey')?.value.trim(); if (k) { if (!/^sk-ant-[\w-]{10,}$/.test(k)) { toast('Anthropic API 키 형식(sk-ant-…)이 아닙니다.', 'warn'); return; } CL.set({ key: k }); }
   if (!CL.get().key) { toast('API 키를 입력하세요.', 'warn'); return; } el.disabled = true; el.textContent = '연결 확인 중…';
-  try { const r = await CL.call({ system: '한 단어로만 답하세요.', messages: [{ role: 'user', content: '연결 확인: "확인"이라고 답하세요.' }], max: 16 }); toast(`${CL.label(r.model)} 연결 확인 — 응답 「${r.text.slice(0, 20)}」`, 'ok'); } catch (e) { toast(`연결 실패: ${e.message}`, 'bad'); }
+  try { const r = await CL.call({ system: '한 단어로만 답하세요.', messages: [{ role: 'user', content: '연결 확인: "확인"이라고 답하세요.' }], max: 16 }); toast(`${CL.label(r.model)} 연결 확인 — 응답 「${r.text.slice(0, 20)}」`, 'ok'); } catch (e) { toast(`연결 실패: ${errMsg(e)}`, 'bad'); }
   render(); };
 /* 대화창 머리: 엔진 · 모델 표시 */
 /* v18.1 연결 표시 + 모델 고르기를 한 알약으로 합침(중복 표시로 머리글이 좁아져 'AI SAM'이 세로로 꺾이던 문제) */

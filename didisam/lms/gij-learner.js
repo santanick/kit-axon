@@ -37,7 +37,7 @@
       const L = cts.map(({ c, x }) => { const g = W.prog[c.content_id + '|' + p.person_id] || {}; return { content_id: c.content_id, week_no: x.week_no, seq: x.seq, title: c.title, duration_sec: c.duration_sec, open_at: x.open_at, close_at: x.close_at, pct: g.pct || 0, watched_sec: g.watched_sec || 0, last_pos: g.last_pos || 0, completed: !!g.completed_at, subtitles: Object.keys(W.subs).filter(k => k.startsWith(c.content_id + '|')).map(k => k.split('|')[1]).sort(), quizzes: W.quizzes.filter(q => q.content_id === c.content_id).length }; });
       return { section_id: s.section_id, title: s.title, term_id: s.term_id, contents: L, avg_pct: L.length ? Math.round(L.reduce((a, x) => a + x.pct, 0) / L.length) : 0 }; }) }; }
   function demoRefl(sid) { const W = room(); const p = W && W.persons.find(x => x.member_no === String(LR.me.sid || '')); if (!p) return []; return (W.refl || []).filter(r => r.section_id === sid && r.person_id === p.person_id).sort((a, b) => b.week_no - a.week_no).map(r => ({ ...r, member_no: p.member_no })); }
-  const load = (k, path, demo) => { if (!live()) return demo(); if (ST[k] == null && !ST.busy[k]) { ST.busy[k] = 1; api('GET', path).then(r => { ST[k] = r; }).catch(e => { ST.err = e.message; ST[k] = { found: false, sections: [], err: e.message }; }).finally(() => { delete ST.busy[k]; re(); }); } return ST[k]; };
+  const load = (k, path, demo) => { if (!live()) return demo(); if (ST[k] == null && !ST.busy[k]) { ST.busy[k] = 1; api('GET', path).then(r => { ST[k] = r; }).catch(e => { ST.err = errMsg(e); ST[k] = { found: false, sections: [], err: errMsg(e) }; }).finally(() => { delete ST.busy[k]; re(); }); } return ST[k]; };
   const G = () => load('g', '/api/lms/g/my', demoG); const I = () => load('i', '/api/lms/i/my', demoI);
 
   /* x3: 분반 본인 확인 규칙(운영: /api/lms/g/idv의 rules · 데모: 기관 데이터룸 S.lms.w3.idvRule) */
@@ -125,7 +125,7 @@
     }
     const live = () => LR.mode === 'live';
     async function status() { if (live()) return api('GET', '/api/lms/g/idv'); const d = dGet(); return { passkeys: d.passkeys || [], totp: { enrolled: !!d.secret, confirmed: !!d.totpOk } }; }
-    async function refresh() { try { I.st = await status(); } catch (e) { I.msg = e.message; } draw(); }
+    async function refresh() { try { I.st = await status(); } catch (e) { I.msg = errMsg(e); } draw(); }
     const allow = m => !I.req || I.req.method === 'any' ? true : I.req.method === m;
     function html() {
       const s = I.st; const R = I.req; const pk = 'PublicKeyCredential' in window; const n = s ? s.passkeys.length : 0;
@@ -147,7 +147,7 @@
     function draw() { let w = document.getElementById('ddidv'); if (!I.open) { if (w) w.remove(); return; } if (!w) { w = document.createElement('div'); w.id = 'ddidv'; w.className = 'ddidv'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', '본인 확인'); document.body.appendChild(w); }
       w.innerHTML = `<div class="ddidv-in">${html()}</div>`; }
     function finish(ticket) { const f = I.done; I.open = false; I.done = null; draw(); if (f) f(ticket || null); }
-    async function run(fn) { if (I.busy) return; I.busy = true; I.msg = ''; try { await fn(); } catch (e) { I.msg = e && e.name === 'NotAllowedError' ? '기기 확인이 취소되었거나 시간이 지났습니다. 다시 시도하세요.' : (e.message || String(e)); } finally { I.busy = false; draw(); } }
+    async function run(fn) { if (I.busy) return; I.busy = true; I.msg = ''; try { await fn(); } catch (e) { I.msg = e && e.name === 'NotAllowedError' ? '기기 확인이 취소되었거나 시간이 지났습니다. 다시 시도하세요.' : (errMsg(e)); } finally { I.busy = false; draw(); } }
     async function waReg() {
       if (!('PublicKeyCredential' in window)) throw new Error('이 브라우저는 패스키를 지원하지 않습니다.');
       if (!live()) { const ch = crypto.getRandomValues(new Uint8Array(32)); let id = 'demo-' + Date.now();
@@ -210,7 +210,7 @@
     { const sec = (G().sections || []).find(x => x.sessions.some(z => z.session_id === ST.ses)); const m = sec ? idvRule(sec.section_id) : 'none';
       if (m !== 'none') { const t = await IDV.ensure('checkin', ST.ses, m); if (!t) { ST.res = { ok: 0, msg: '본인 확인을 마치지 않아 출석하지 않았습니다.' }; re(); return; } if (live()) b.idv = t; else IDV.take('checkin', ST.ses, m); } }
     if (!live()) { ST.res = { ok: 1, msg: '데모 화면입니다. 운영 서버에 연결되면 이 내용으로 출석이 기록됩니다.' }; re(); return; }
-    try { const r = await api('POST', '/api/lms/g/checkin', b); ST.res = { ok: 1, msg: `${ST_N[r.status]} 처리되었습니다 · ${fmt(r.evidence && r.evidence.at)}` }; ST.g = null; } catch (e) { ST.res = { ok: 0, msg: e.message }; }
+    try { const r = await api('POST', '/api/lms/g/checkin', b); ST.res = { ok: 1, msg: `${ST_N[r.status]} 처리되었습니다 · ${fmt(r.evidence && r.evidence.at)}` }; ST.g = null; } catch (e) { ST.res = { ok: 0, msg: errMsg(e) }; }
     re();
   }
   let camStream = null;
@@ -228,7 +228,7 @@
   async function call(m, p, b) { if (!live()) return null; return api(m, p, b); }
   async function beat() { const P = ST.play; if (!P || !P.play_id) return; const pos = Math.floor(P.pos), from = Math.floor(P.from);
     try { const r = await call('POST', '/api/lms/i/play/beat', { play_id: P.play_id, from, pos: Math.max(pos, from), rate: P.rate }); if (r) { P.watched_sec = r.watched_sec; P.pct = r.pct; const s = $1('#gijStat'); if (s) s.textContent = `학습 인정 ${mmss(r.watched_sec)} · 진도 ${r.pct}%${r.completed ? ' · 완료' : ''}`; } P.from = pos; }
-    catch (e) { stop(); T(/바뀐 재생|play_over/.test(e.message + e.code) ? '다른 기기에서 재생을 시작해 이 재생을 멈췄습니다.' : e.message, 'bad'); ST.play = null; re(); } }
+    catch (e) { stop(); T(/바뀐 재생|play_over/.test(e.message + e.code) ? '다른 기기에서 재생을 시작해 이 재생을 멈췄습니다.' : errMsg(e), 'bad'); ST.play = null; re(); } }
   function paint() { const P = ST.play; if (!P) return; const r = $1('#gijPos'); if (r && document.activeElement !== r) r.value = Math.floor(P.pos); const t = $1('#gijTime'); if (t) t.textContent = `${mmss(P.pos)} / ${mmss(P.duration_sec)}`;
     const k = (P.cues || []).findIndex(c => P.pos >= c.s && P.pos < c.e); const cp = $1('#gijCapt'); if (cp) cp.textContent = k >= 0 ? P.cues[k].t : '';
     document.querySelectorAll('#gijTr button').forEach((b, n) => { const o = n === k; if (o !== b.classList.contains('on')) { b.classList.toggle('on', o); if (o) b.scrollIntoView({ block: 'nearest' }); } }); }
@@ -239,7 +239,7 @@
   async function startPlay(cid) {
     const i = I(); const c = (i.sections || []).flatMap(s => s.contents).find(x => x.content_id === cid); if (!c) return; stop();
     let st = { content_id: cid, title: c.title, duration_sec: c.duration_sec, resume_pos: c.last_pos >= c.duration_sec - 5 ? 0 : c.last_pos, src: null, watched_sec: c.watched_sec, pct: c.pct, play_id: null };
-    if (live()) { try { const r = await api('POST', '/api/lms/i/play/start', { content_id: cid }); if (r.blocked) { T('다른 기기 · 창에서 재생 중입니다. 동시 재생은 허용되지 않습니다.', 'bad'); return; } st = r; } catch (e) { T(e.message, 'bad'); return; } }
+    if (live()) { try { const r = await api('POST', '/api/lms/i/play/start', { content_id: cid }); if (r.blocked) { T('다른 기기 · 창에서 재생 중입니다. 동시 재생은 허용되지 않습니다.', 'bad'); return; } st = r; } catch (e) { T(errMsg(e), 'bad'); return; } }
     const subs = await subsFor(cid); const pick = subs.find(x => x.lang === 'ko') || subs[0];
     let qz = []; if (live()) { try { qz = await api('GET', '/api/lms/i/quizzes?content_id=' + encodeURIComponent(cid)); } catch (e) { } } else { const W = room(); qz = ((W && W.quizzes) || []).filter(q => q.content_id === cid).map(q => ({ ...q, demoAnswer: q.answer, answer: null, mine: null })); }
     ST.play = { ...st, pos: st.resume_pos, from: st.resume_pos, rate: 1, on: false, langs: subs.map(x => x.lang), subs, lang: pick ? pick.lang : '', cues: pick ? pick.cues : [], quizzes: qz, quiz: null }; re(); toggle();
@@ -247,10 +247,10 @@
   function toggle() { const P = ST.play; if (!P) return; const v = $1('#gijV'); if (P.on) { stop(); if (v) v.pause(); beat(); } else { P.on = true; last = Date.now(); if (v) { v.currentTime = P.pos; v.playbackRate = P.rate; v.play().catch(() => { }); } timer = setInterval(tick, 250); } const b = $1('[data-lact="gij-toggle"]'); if (b) b.textContent = P.on ? '일시정지' : '재생'; }
   async function answer(n) { const P = ST.play; const q = P && P.quiz; if (!q) return;
     try { if (live()) { const r = await api('POST', '/api/lms/i/quiz/answer', { quiz_id: q.quiz_id, choice: n }); q.mine = { choice: n, correct: r.correct }; T(r.correct ? `정답입니다 · 영상 퀴즈 ${r.score}점` : `오답입니다(정답 ${r.answer + 1}번)`); } else { q.mine = { choice: n, correct: n === q.demoAnswer }; T(q.mine.correct ? '정답입니다(데모)' : `오답입니다(정답 ${q.demoAnswer + 1}번, 데모)`); } }
-    catch (e) { q.skip = 1; T(e.message, 'bad'); } P.quiz = null; re(); toggle(); }
+    catch (e) { q.skip = 1; T(errMsg(e), 'bad'); } P.quiz = null; re(); toggle(); }
   async function closePlay() { const P = ST.play; stop(); if (P && P.play_id) { await beat(); await call('POST', '/api/lms/i/play/end', { play_id: P.play_id, pos: Math.floor(P.pos) }).catch(() => { }); } ST.play = null; ST.i = null; re(); }
   async function saveRefl() { const b = { section_id: ST.rsec, week_no: +($1('#gijRw')?.value || 1), mood: +($1('#gijRm')?.value || 3), body: ($1('#gijRb')?.value || '').trim() }; if (!b.body) { T('내용을 입력하세요.', 'bad'); return; }
-    if (!live()) { T('데모 화면입니다. 운영 서버에서 저장됩니다.'); return; } try { await api('POST', '/api/lms/j/reflection', b); T('성찰일지를 저장했습니다.'); delete ST.refl[ST.rsec]; re(); } catch (e) { T(e.message, 'bad'); } }
+    if (!live()) { T('데모 화면입니다. 운영 서버에서 저장됩니다.'); return; } try { await api('POST', '/api/lms/j/reflection', b); T('성찰일지를 저장했습니다.'); delete ST.refl[ST.rsec]; re(); } catch (e) { T(errMsg(e), 'bad'); } }
 
   document.addEventListener('click', e => {
     const el = e.target.closest('[data-lact^="gij-"]'); if (!el) return; e.preventDefault(); const a = el.dataset.lact;

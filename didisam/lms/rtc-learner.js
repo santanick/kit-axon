@@ -9,7 +9,7 @@
   const ST = { my: null, busy: false, err: '', tr: {} };
   const call = (m, p) => { LV.setMode(LR.mode === 'live' ? 'live' : 'demo'); LV.demoMe = { kind: 'learner', sid: String(LR.me && LR.me.sid || '20261001') }; return LV.api(m, p); };
   const re = () => { if (typeof lrender === 'function') lrender(); };
-  function load() { if (ST.my || ST.busy) return; ST.busy = true; call('GET', '/api/lms/live/my').then(j => { ST.my = j; }).catch(e => { ST.err = e.message; ST.my = { rooms: [], captions: [] }; }).finally(() => { ST.busy = false; re(); }); }
+  function load() { if (ST.my || ST.busy) return; ST.busy = true; call('GET', '/api/lms/live/my').then(j => { ST.my = j; }).catch(e => { ST.err = errMsg(e); ST.my = { rooms: [], captions: [] }; }).finally(() => { ST.busy = false; re(); }); }
   function card() {
     load(); const j = ST.my; const head = '<div class="myhead"><h2>실시간 수업</h2></div>';
     if (!j) return `<div class="mycard wide" id="lvMy">${head}<p class="mini">불러오는 중입니다.</p></div>`;
@@ -22,5 +22,5 @@
   }
   { const base = viewMy; viewMy = function (...a) { const h = base.apply(this, a); if (!on()) return h; try { const c = card(); return h.includes('<div class="mygrid">') ? h.replace('<div class="mygrid">', '<div class="mygrid">' + c) : c + h; } catch (e) { console.error('lv my', e); return h; } }; } // eslint-disable-line no-global-assign
   document.addEventListener('click', async e => { const b = e.target.closest && e.target.closest('[data-lact="lv-tr"]'); if (!b) return; e.preventDefault(); const id = b.dataset.v;
-    if (ST.tr[id]) { delete ST.tr[id]; re(); return; } ST.tr[id] = {}; try { const j = await call('GET', '/api/lms/live/cap-transcript?room_id=' + encodeURIComponent(id)); ST.tr[id] = { transcript: j.transcript || '', summary: j.summary }; } catch (x) { ST.tr[id] = { transcript: x.message }; } re(); }, true);
+    if (ST.tr[id]) { delete ST.tr[id]; re(); return; } ST.tr[id] = {}; try { const j = await call('GET', '/api/lms/live/cap-transcript?room_id=' + encodeURIComponent(id)); ST.tr[id] = { transcript: j.transcript || '', summary: j.summary }; } catch (x) { ST.tr[id] = { transcript: errMsg(x) }; } re(); }, true);
 })();

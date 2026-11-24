@@ -70,7 +70,7 @@
     try { const [u, o] = await Promise.all([fapi('GET', P('my') + '?scope=upcoming'), fapi('GET', P('my') + '?scope=past').catch(() => ({ bookings: [] }))]);
       const seen = new Set(); const B = [...(u.bookings || []), ...(o.bookings || [])].filter(b => b && !seen.has(b.id) && seen.add(b.id));
       FX.my = { bk: B.map(b => normB({ ...b, pay: b.pay || (b.passId ? 'pass' : b.payMode === 'free' ? (b.status === 'requested' ? 'approve' : 'free') : b.payMode) })), ps: (u.passes || []).map(normP), rt: (u.rentals || []).map(normR) }; FX.err = ''; }
-    catch (e) { FX.my = FX.my || { bk: [], ps: [], rt: [] }; FX.err = e.message || '불러오지 못했어요'; }
+    catch (e) { FX.my = FX.my || { bk: [], ps: [], rt: [] }; FX.err = errMsg(e, '불러오지 못했어요'); }
     FX.myAt = Date.now(); FX.myBusy = false; if (['fac', 'home', 'cal'].includes(route().a)) rer(); }
   const mine = () => { if (!LR.me) return { bk: [], ps: [], rt: [] }; if (live()) { loadMy(); return FX.my || { bk: [], ps: [], rt: [] }; } return store(); };
   /* 예약 한 건을 화면용으로(서버 · 게시본 · 이 기기 모양을 하나로) */
@@ -265,7 +265,7 @@
     const j = new Uint8Array(8); crypto.getRandomValues(j); const pl = { t: LR.tid, [Q.kind]: Q.x.id, f: Q.x.fac, d: today(), jti: Array.from(j, v => v.toString(16).padStart(2, '0')).join('') };
     const tok = 'v1.' + btoa(unescape(encodeURIComponent(JSON.stringify(pl)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') + '.demo'; FX.qr = { id: Q.x.id, tok, next: Date.now() + 30000 }; return tok; }
   async function qrFetch(Q) { if (FX.qrBusy) return; FX.qrBusy = true; const body = Q.kind === 'b' ? { booking: Q.x.id } : Q.kind === 'p' ? { passId: Q.x.id } : { rental: Q.x.id };
-    try { const r = await fapi('POST', P('qr'), body); FX.qr = { id: Q.x.id, tok: r.token, next: Date.now() + 30000 }; } catch (e) { FX.qr = { id: Q.x.id, tok: '', next: Date.now() + 30000, err: e.message }; }
+    try { const r = await fapi('POST', P('qr'), body); FX.qr = { id: Q.x.id, tok: r.token, next: Date.now() + 30000 }; } catch (e) { FX.qr = { id: Q.x.id, tok: '', next: Date.now() + 30000, err: errMsg(e) }; }
     FX.qrBusy = false; paintQR(); }
   function qrView(id) { const Q = qrState(id); if (!Q) return page('fx-qr', `${head('입장 QR')}<p class="fx-empty">예약을 찾지 못했어요. <a href="#fac/my">내 예약</a>에서 확인해 주세요.</p>`);
     const pass = Q.kind === 'p' && Q.pass && Q.pass.kind === 'count' ? Q.pass : null;
@@ -340,7 +340,7 @@
     const extra = ex && F.carOn && F.consent ? { [ex.key]: F.car, purpose: ex.purpose, keepDays: +ex.keepDays } : null;
     const btn = fm.querySelector('button[type=submit]'); if (btn) btn.disabled = true; FX.err2 = '';
     try { const id = p ? await buyProd(f, p, F, extra) : await bookTime(f, F, extra); if (!id) { if (btn) btn.disabled = false; return; } FX.f[fm.dataset.fac + '|' + fm.dataset.p] = null; location.hash = '#fac/done/' + encodeURIComponent(id); if (F.method === 'online') setTimeout(() => startPay(id), 60); }
-    catch (e) { if (btn) btn.disabled = false; err(e.fx || e.message || '신청하지 못했어요. 잠시 후 다시 시도해 주세요.'); } }
+    catch (e) { if (btn) btn.disabled = false; err(e.fx || errMsg(e, '신청하지 못했어요. 잠시 후 다시 시도해 주세요.')); } }
   const fxErr = m => Object.assign(new Error(m), { fx: m });
   async function bookTime(f, F, extra) { const sel = FX.sel; if (!sel || sel.fac !== f.id) throw fxErr('시간 칸을 다시 골라 주세요.'); const A = avail(f, sel.day); const S = A.slots.filter(s => s.slot >= sel.s0 && s.slot < sel.s0 + sel.n);
     if (S.some(s => s.mine || s.dup)) throw fxErr('같은 시간에 예약이 있어요. 다른 시간을 골라 주세요.'); if (S.length !== sel.n || S.some(s => !s.ok)) { FX.sel = null; throw fxErr('방금 마감됐어요. 다른 시간을 골라 주세요.'); }
@@ -363,10 +363,10 @@
     if (c === 'taken') { FX.av = {}; const alt = (x.alt || []).map(id => (resOf(f).find(r => r.id === id) || {}).name || id).slice(0, 3); return fxErr(alt.length ? `방금 다른 분이 예약했어요. 같은 시간에 ${alt.join(', ')}이(가) 비어 있어요 — 시간 칸을 다시 골라 주세요.` : '방금 마감됐어요. 다른 시간을 골라 주세요.'); }
     if (c === 'not_open') return fxErr(x.opensAt ? `${fmtD(String(x.opensAt).slice(0, 10))} ${String(x.opensAt).slice(11, 16)}에 열려요.` : '아직 예약이 열리지 않았어요.');
     if (c === 'onsite_only') { FX.onsiteOnly = true; FX.f = {}; rer(); return fxErr('지금은 현장 결제만 가능해요. 결제 방법을 현장 결제로 바꿨어요.'); }
-    if (c === 'suspended') return fxErr(x.until ? `노쇼가 쌓여 ${fmtD(x.until)}까지 예약할 수 없어요.` : e.message);
-    if (c === 'verify') return fxErr(e.message || '구성원 확인이 안 됐어요. 학번을 다시 입력하거나 일반 요금으로 신청해 주세요.');
+    if (c === 'suspended') return fxErr(x.until ? `노쇼가 쌓여 ${fmtD(x.until)}까지 예약할 수 없어요.` : errMsg(e));
+    if (c === 'verify') return fxErr(errMsg(e, '구성원 확인이 안 됐어요. 학번을 다시 입력하거나 일반 요금으로 신청해 주세요.'));
     if (c === 'amount') { FX.av = {}; return fxErr(`요금이 바뀌었어요${x.expected != null ? `(${won(x.expected)})` : ''}. 화면을 새로 고쳐 다시 확인해 주세요.`); }
-    return fxErr(e.message || '신청하지 못했어요. 잠시 후 다시 시도해 주세요.'); }
+    return fxErr(errMsg(e, '신청하지 못했어요. 잠시 후 다시 시도해 주세요.')); }
   async function buyProd(f, p, F, extra) { const q = QT({ fac: f, product: p, aud: F.aud }); const start = /^\d{4}-\d{2}-\d{2}$/.test(F.start) && F.start >= today() ? F.start : today(); const m = F.method;
     if (live()) { const pm = { online: 'online', onsite: 'onsite', free: 'free' }[m]; const mem = univ() && F.aud !== 'public' ? (F.sid || sidMe()) : undefined; const idem = FX.idem || (FX.idem = uid('i'));
       try { const r = p.type === 'rent' ? await fapi('POST', P('rent'), { fac: f.id, productId: p.id, from: start, aud: F.aud, payMode: pm, memberNo: mem, idem }) : await fapi('POST', P('buy'), { productId: p.id, aud: F.aud, payMode: pm, memberNo: mem, idem }); FX.idem = ''; await loadMy(true); const id = (r.pass || r.rental || {}).id; if (id && r.orderId) FX.order[id] = r.orderId; if (id && FX.my) { if (r.pass && !FX.my.ps.some(z => z.id === id)) FX.my.ps.push(normP({ ...r.pass, fac: f.id })); if (r.rental && !FX.my.rt.some(z => z.id === id)) FX.my.rt.push(normR({ ...r.rental, fac: f.id, productId: p.id, fromDay: start })); } return id; }
@@ -392,12 +392,12 @@
   async function paidBack(id) { const q = new URLSearchParams((location.hash.split('?')[1] || '') + '&' + location.search.slice(1)); const key = q.get('paymentKey'), oid = q.get('orderId'), amt = +q.get('amount');
     if (FX.paid === id) return; FX.paid = id; if (!key || !oid) { toast(q.get('message') || '결제가 취소됐어요.', 'warn'); location.replace('#fac/done/' + encodeURIComponent(id)); return; }
     try { await fapi('POST', P('pay'), { paymentKey: key, orderId: oid, amount: amt }); await loadMy(true); toast('결제했어요. 예약이 확정됐어요.', 'ok'); }
-    catch (e) { toast(e.code === 'hold_expired' ? '결제 시간이 지나 예약이 풀렸어요. 다시 예약해 주세요.' : e.code === 'onsite_only' ? '지금은 현장 결제만 가능해요.' : e.message || '결제를 확인하지 못했어요.', 'bad'); }
+    catch (e) { toast(e.code === 'hold_expired' ? '결제 시간이 지나 예약이 풀렸어요. 다시 예약해 주세요.' : e.code === 'onsite_only' ? '지금은 현장 결제만 가능해요.' : errMsg(e, '결제를 확인하지 못했어요.'), 'bad'); }
     location.replace('#fac/done/' + encodeURIComponent(id)); }
   async function cancel(kind, id) { const why = (document.getElementById('fxWhy') || {}).value || ''; const M = mine(); const L = kind === 'bk' ? M.bk : kind === 'ps' ? M.ps : M.rt; const x = L.find(z => z.id === id); if (!x) return; const R = refundOf(x, kind);
     if (live()) { try { if (kind === 'ps') { if (x.payStatus === 'pending') { toast('결제 전 이용권은 프론트에서 취소해요.', 'warn'); FX.cx = null; return rer(); } const r = await fapi('POST', P('pass-refund'), { passId: id, reason: why || undefined }); FX.refReq[id] = r.refund; FX.cx = null; rer(); toast(`환불을 신청했어요. 예상액 ${won(r.refund.auto)} · 운영자 확인 후 환불돼요.`, 'ok'); return; }
       if (kind === 'rt') { const r = await fapi('POST', P('rent-cancel'), { rental: id, reason: why || undefined }); FX.cx = null; await loadMy(true); toast(`대여를 취소했어요.${r.refund && r.refund.auto ? ` 환불 예상액 ${won(r.refund.auto)}이에요.` : ''}`, 'ok'); return; }
-      const r = await fapi('POST', P('cancel'), { booking: id, reason: why }); FX.cx = null; await loadMy(true); toast(`취소했어요. 환불 예상액은 ${won((r.refund || R).auto)}이에요.`, 'ok'); } catch (e) { if (e.code === 'requested') { FX.refReq[id] = FX.refReq[id] || { status: 'pending' }; FX.cx = null; rer(); } toast(e.code === 'requested' ? '이미 환불을 신청했어요. 운영자 확인 후 환불돼요.' : e.code === 'not_refundable' ? '환불을 신청할 수 있는 이용권이 아니에요(사용 중 · 결제 완료 상태만).' : e.code === 'not_cancelable' ? '물품을 받은 뒤에는 취소할 수 없어요. 반납해 주세요.' : e.message || '취소하지 못했어요. 프론트에 문의해 주세요.', 'bad'); } return; }
+      const r = await fapi('POST', P('cancel'), { booking: id, reason: why }); FX.cx = null; await loadMy(true); toast(`취소했어요. 환불 예상액은 ${won((r.refund || R).auto)}이에요.`, 'ok'); } catch (e) { if (e.code === 'requested') { FX.refReq[id] = FX.refReq[id] || { status: 'pending' }; FX.cx = null; rer(); } toast(e.code === 'requested' ? '이미 환불을 신청했어요. 운영자 확인 후 환불돼요.' : e.code === 'not_refundable' ? '환불을 신청할 수 있는 이용권이 아니에요(사용 중 · 결제 완료 상태만).' : e.code === 'not_cancelable' ? '물품을 받은 뒤에는 취소할 수 없어요. 반납해 주세요.' : errMsg(e, '취소하지 못했어요. 프론트에 문의해 주세요.'), 'bad'); } return; }
     if (kind === 'ps' && x.payStatus !== 'pending') { x.status = 'refund_req'; } else x.status = 'cancelled'; x.cancelReason = why; if (kind === 'bk' && x.passId) { const ps = store().ps.find(z => z.id === x.passId); if (ps && ps.kind === 'count' && ps.used > 0) ps.used--; } x.refund = { auto: R.auto, lines: R.lines, at: new Date().toISOString() }; if (x.extra) x.extra = null; /* 취소하면 선택 수집 항목은 바로 지운다 */
     persist(); FX.cx = null; rer(); toast(kind === 'ps' && x.status === 'refund_req' ? `환불을 신청했어요. 예상액 ${won(R.auto)} · 운영자 승인 후 처리돼요.` : `취소했어요.${R.auto ? ` 환불 예상액 ${won(R.auto)}이에요.` : ''}`, 'ok'); }
   /* .ics 한 건(캘린더 앱으로) — 학습 캘린더(lcal)에는 자동으로 들어간다 */

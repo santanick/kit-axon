@@ -122,7 +122,7 @@
   const demoOrgs = () => { if (!S.santaDemo) S.santaDemo = { orgs: [{ tid: 'tn_demohere01', name: (S.org && S.org.name) || '체험 기관', type: (S.org && S.org.type) || 'univ', here: true, log: [] }, { tid: 'tn_demokit001', name: '경남정보대학교(예시)', type: 'univ', plan: { code: 'U2', tier: 'University', contract: 'multi', aiMonthTokens: 30000000, since: '2026-09-01' }, aiplan: { monthTokens: 30000000, overage: 'pack' }, used: 12400000, log: [] }, { tid: 'tn_democorp01', name: '산타 고객사(예시)', type: 'corp', log: [] }] };
     const h = S.santaDemo.orgs.find(o => o.here); if (h) { h.plan = S.plan || null; h.aiplan = S.aiplan || null; h.used = data() ? data().used : 0; h.name = (S.org && S.org.name) || h.name; } return S.santaDemo.orgs; };
   function santaLoad() { if (!live()) { U.so = demoOrgs().filter(o => !U.sq || o.name.includes(U.sq) || o.tid === U.sq).map(o => ({ ...o, ready: true, memo: (o.log[0] || {}).memo || '' })); return Promise.resolve(); }
-    return api('GET', '/api/santa/orgs?q=' + encodeURIComponent(U.sq)).then(r => { U.so = r.orgs || []; render(); }).catch(e => { U.so = []; toast(e.message || '기관 목록을 불러오지 못했습니다.', 'bad'); render(); }); }
+    return api('GET', '/api/santa/orgs?q=' + encodeURIComponent(U.sq)).then(r => { U.so = r.orgs || []; render(); }).catch(e => { U.so = []; toast(errMsg(e, '기관 목록을 불러오지 못했습니다.'), 'bad'); render(); }); }
   function santaView() {
     style(); if (!isSanta()) return '<div class="empty">산타 관리자만 쓸 수 있습니다.</div>';
     if (U.so === null) { santaLoad().then(() => render()); return '<div class="aiu"><section class="card"><p class="mini">기관 목록을 불러오는 중입니다…</p></section></div>'; }
@@ -175,7 +175,7 @@
     if (!d.payOnline) { toast('결제 연결 준비 중 — 산타에 문의하십시오.', 'warn'); return; }
     try { const o = await api('POST', '/api/ai/topup', { won: q.won }); const TP = await tossSDK(); const back = location.origin + location.pathname;
       await TP(o.clientKey).requestPayment('카드', { amount: o.amount, orderId: o.orderId, orderName: String(o.orderName || 'AI 추가 충전').slice(0, 90), successUrl: back + '?aitopup=ok#settings', failUrl: back + '?aitopup=fail#settings' }); }
-    catch (e) { if (e && e.code === 'USER_CANCEL') toast('결제를 취소했습니다.', 'warn'); else if (e && e.code === 'pay_off') { if (U.d) U.d.payOnline = false; render(); toast(e.message, 'warn'); } else toast((e && e.message === 'sdk') ? '결제 창을 열 수 없습니다. 잠시 후 다시 시도하십시오.' : (e && e.message) || '결제를 시작하지 못했습니다.', 'bad'); }
+    catch (e) { if (e && e.code === 'USER_CANCEL') toast('결제를 취소했습니다.', 'warn'); else if (e && e.code === 'pay_off') { if (U.d) U.d.payOnline = false; render(); toast(errMsg(e), 'warn'); } else toast((e && e.message === 'sdk') ? '결제 창을 열 수 없습니다. 잠시 후 다시 시도하십시오.' : errMsg(e, '결제를 시작하지 못했습니다.'), 'bad'); }
   };
   /* 산타 관리 동작 */
   ACT['aiu-sfind'] = () => { const i = document.getElementById('sQ'); U.sq = i ? i.value.trim().slice(0, 60) : ''; U.sel = ''; if (live()) santaLoad(); else { santaLoad(); render(); } };
@@ -185,7 +185,7 @@
     const g = id => (document.getElementById(id) || {}).value || ''; const b = { code: g('sCode').trim().toUpperCase(), tier: g('sTier').trim(), contract: g('sContract'), aiMonthTokens: Math.round(+g('sTokens')), since: g('sSince'), memo: g('sMemo').trim() };
     if (!/^(TRIAL|[A-Z][0-9])$/.test(b.code)) { toast('요금제 코드는 TRIAL 또는 영문 대문자 1자 + 숫자 1자(E1 · U0 · G4 등)입니다.', 'warn'); return; }
     if (!(Number.isInteger(b.aiMonthTokens) && b.aiMonthTokens >= 0)) { toast('월 포함 토큰은 0 이상 정수입니다.', 'warn'); return; }
-    if (live()) { try { await api('PUT', `/api/santa/orgs/${encodeURIComponent(U.sel)}/plan`, b); toast('저장했습니다. 기관 화면에 바로 반영됩니다.', 'ok'); if (LIVE.tenant && LIVE.tenant.tid === U.sel) { U.d = null; U.at = 0; } await santaLoad(); } catch (e) { toast(e.message || '저장하지 못했습니다.', 'bad'); } return; }
+    if (live()) { try { await api('PUT', `/api/santa/orgs/${encodeURIComponent(U.sel)}/plan`, b); toast('저장했습니다. 기관 화면에 바로 반영됩니다.', 'ok'); if (LIVE.tenant && LIVE.tenant.tid === U.sel) { U.d = null; U.at = 0; } await santaLoad(); } catch (e) { toast(errMsg(e, '저장하지 못했습니다.'), 'bad'); } return; }
     const o = demoOrgs().find(x => x.tid === U.sel); if (!o) return; const plan = { code: b.code, tier: b.tier.slice(0, 30), contract: CONTRACT[b.contract] ? b.contract : 'sub', aiMonthTokens: b.aiMonthTokens, since: b.since || kst() };
     o.log = [{ at: nowStr(), actor: (S.me && S.me.name) || '산타', before: o.plan || null, after: plan, memo: b.memo.slice(0, 500) }].concat(o.log || []).slice(0, 10); o.plan = plan;
     o.aiplan = plan.aiMonthTokens > 0 ? { monthTokens: plan.aiMonthTokens, overage: o.aiplan && o.aiplan.overage === 'block' ? 'block' : 'pack' } : null;
@@ -200,7 +200,7 @@
     if (st !== 'ok') { clean(); toast('결제가 끝나지 않았습니다. 다시 시도하십시오.', 'warn'); go('settings'); return; }
     api('POST', '/api/ai/topup/confirm', { paymentKey: q.get('paymentKey'), orderId: q.get('orderId'), amount: +q.get('amount') })
       .then(r => { U.d = { ...(U.d || {}), ...r }; U.at = Date.now(); clean(); go('settings'); toast('추가 충전이 반영되었습니다.', 'ok'); })
-      .catch(e => { clean(); go('settings'); toast(e.message || '결제 승인을 확인하지 못했습니다.', 'bad'); }); }
+      .catch(e => { clean(); go('settings'); toast(errMsg(e, '결제 승인을 확인하지 못했습니다.'), 'bad'); }); }
 
   /* 홈 · 머리 알림 한 줄(80% 주의 · 100% 초과) */
   AFTER.push(cur => {

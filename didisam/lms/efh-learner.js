@@ -41,13 +41,13 @@
   }
   function get(key, fn) {
     if (key in L.cache) return L.cache[key];
-    if (!L.busy[key]) { L.busy[key] = true; Promise.resolve().then(fn).then(v => { L.cache[key] = v; delete L.err[key]; }).catch(e => { L.err[key] = e.message; L.cache[key] = null; }).finally(() => { delete L.busy[key]; rer(); }); }
+    if (!L.busy[key]) { L.busy[key] = true; Promise.resolve().then(fn).then(v => { L.cache[key] = v; delete L.err[key]; }).catch(e => { L.err[key] = errMsg(e); L.cache[key] = null; }).finally(() => { delete L.busy[key]; rer(); }); }
     return undefined;
   }
   const drop = p => Object.keys(L.cache).forEach(k => { if (!p || k.startsWith(p)) delete L.cache[k]; }); window.LMSEFH_DROP = () => { drop(); L.err = {}; };
   const box = (k, html) => L.err[k] ? `<p class="mini">${esc(L.err[k])}</p>` : html;
   const wait = '<p class="mini">불러오는 중입니다.</p>';
-  async function act(fn, ok, dropKey) { try { const r = await fn(); if (ok) toast(ok, 'ok'); if (dropKey !== undefined) { drop(dropKey); rer(); } return r; } catch (e) { toast(e.message, 'bad'); return null; } }
+  async function act(fn, ok, dropKey) { try { const r = await fn(); if (ok) toast(ok, 'ok'); if (dropKey !== undefined) { drop(dropKey); rer(); } return r; } catch (e) { toast(errMsg(e), 'bad'); return null; } }
 
   /* ── 화면: #lms ── */
   function page() {
@@ -164,10 +164,10 @@
   function pmEv(kind, detail) { if (!PM.on) return; PM.buf.push({ kind, at: new Date().toISOString(), detail: detail || undefined }); if (['fs_exit', 'hidden', 'capture', 'devtools', 'paste', 'print', 'cam_off'].includes(kind)) pmFlush(); }
   async function pmFlush() { if (!PM.on) return; const ev = PM.buf.splice(0, 50);
     try { const r = await call('POST', '/api/lms/f/proctor-event', { attempt_id: PM.att, ptoken: PM.pt, events: ev }); PM.risk = r.risk; const b = document.getElementById('eflPmRisk'); if (b) b.textContent = r.risk; }
-    catch (e) { if (e.code === 'replaced' || /다른 기기/.test(e.message)) return pmKicked(e.message); PM.buf.unshift(...ev.slice(0, 50 - PM.buf.length)); } }
+    catch (e) { if (e.code === 'replaced' || /다른 기기/.test(e.message)) return pmKicked(errMsg(e)); PM.buf.unshift(...ev.slice(0, 50 - PM.buf.length)); } }
   async function pmSnap(kind) { if (!PM.on || !PM.video || !PM.stream) return; const c = grab(PM.video); const f = await countFaces(c, PM.cfg.face_check);
     try { const r = await call('POST', '/api/lms/f/proctor-snap', { attempt_id: PM.att, ptoken: PM.pt, kind, b64: jpeg(c), faces: f.faces, face_method: f.method }); PM.snaps++; PM.risk = r.risk; const b = document.getElementById('eflPmRisk'); if (b) b.textContent = r.risk; }
-    catch (e) { if (e.code === 'replaced' || /다른 기기/.test(e.message)) pmKicked(e.message); } }
+    catch (e) { if (e.code === 'replaced' || /다른 기기/.test(e.message)) pmKicked(errMsg(e)); } }
   function pmKicked(msg) { pmStop(); L.paper = null; L.kicked = msg || '다른 기기 · 창에서 이 시험을 이어 응시하고 있어 이 화면은 종료되었습니다.'; drop('exam:'); rer(); }
   const H = {
     key(e) { const k = (e.key || '').toLowerCase(); const m = e.ctrlKey || e.metaKey;
@@ -264,7 +264,7 @@
     const r = await act(() => call('POST', '/api/lms/f/start', { exam_id: P.exam_id })); if (!r) return;
     const att = r.attempt.attempt_id; const ua = navigator.userAgent; const device = `${/mobi|iphone|android/i.test(ua) ? 'mobile' : 'desktop'} · ${/Edg\//.test(ua) ? 'Edge' : /Whale/.test(ua) ? 'Whale' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : /Firefox/.test(ua) ? 'Firefox' : '기타'}`;
     let b; try { b = await call('POST', '/api/lms/f/proctor-begin', { attempt_id: att, ptoken: ptGet(att) || undefined, consent: true, device, secure_browser: P.sb || undefined, checks: { camera: !!P.checks.camera, mic: !!P.checks.mic, browser: !!P.checks.browser, network_ms: P.checks.network_ms, face: c.face_check ? faceMode() : 'skip', fullscreen: !!document.documentElement.requestFullscreen, demo_nocam: !!P.demoNoCam } }); }
-    catch (e) { P.msg = e.message; return rer(); }
+    catch (e) { P.msg = errMsg(e); return rer(); }
     if (b.blocked) { P.msg = b.message; return rer(); }
     ptSet(att, b.ptoken); const stream = P.stream; P.stream = null; L.pc = null; r.skew = Date.parse(r.now) ? Date.now() - Date.parse(r.now) : 0; L.paper = r; L.pt = b.ptoken; L.result = null; L.kicked = null;
     await pmStart(b.cfg, att, b.ptoken, stream);
@@ -280,13 +280,13 @@
     document.head.appendChild(s); } } catch (e) { }
 
   /* ── 동작 ── */
-  async function saveDraft(ta) { try { const r = await call('POST', '/api/lms/e/draft', { asg_id: ta.dataset.asg, body: ta.value, base_version: ta.dataset.ver ? +ta.dataset.ver : undefined }); ta.dataset.ver = r.submission.version; const s = document.getElementById('efls_' + ta.dataset.asg); if (s) s.textContent = `버전 ${r.submission.version} · ${fmt(r.submission.saved_at)} 자동 저장`; drop('asg:'); return r; } catch (e) { toast(e.message, 'bad'); return null; } }
+  async function saveDraft(ta) { try { const r = await call('POST', '/api/lms/e/draft', { asg_id: ta.dataset.asg, body: ta.value, base_version: ta.dataset.ver ? +ta.dataset.ver : undefined }); ta.dataset.ver = r.submission.version; const s = document.getElementById('efls_' + ta.dataset.asg); if (s) s.textContent = `버전 ${r.submission.version} · ${fmt(r.submission.saved_at)} 자동 저장`; drop('asg:'); return r; } catch (e) { toast(errMsg(e), 'bad'); return null; } }
   const timers = {};
   document.addEventListener('input', e => { const ta = e.target.closest && e.target.closest('.efl-ta'); if (!ta || ta.readOnly) return; const id = ta.dataset.asg; clearTimeout(timers[id]); const s = document.getElementById('efls_' + id); if (s) s.textContent = '저장 대기 중…'; timers[id] = setTimeout(() => saveDraft(ta), 1200); });
   const toB64 = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = no; r.readAsDataURL(f); });
   async function saveAnswer(el) { const p = L.paper; if (!p) return; const q = el.dataset.eq; const v = el.dataset.multi ? [...document.querySelectorAll(`[data-eq="${q}"][data-multi]:checked`)].map(x => x.value) : el.value;
     p.answers = { ...(p.answers || {}), [q]: v };
-    try { const r = await call('POST', '/api/lms/f/answer', { attempt_id: p.attempt.attempt_id, ptoken: L.pt || undefined, answers: { [q]: v } }); if (r.expired) { pmStop(); toast('시험 시간이 끝나 자동 제출했습니다.', 'bad'); L.paper = null; await openResult(r.attempt.attempt_id); } } catch (x) { if (x.code === 'replaced') return pmKicked(x.message); toast(x.message, 'bad'); } }
+    try { const r = await call('POST', '/api/lms/f/answer', { attempt_id: p.attempt.attempt_id, ptoken: L.pt || undefined, answers: { [q]: v } }); if (r.expired) { pmStop(); toast('시험 시간이 끝나 자동 제출했습니다.', 'bad'); L.paper = null; await openResult(r.attempt.attempt_id); } } catch (x) { if (x.code === 'replaced') return pmKicked(errMsg(x)); toast(errMsg(x), 'bad'); } }
   document.addEventListener('change', async e => {
     const up = e.target.closest && e.target.closest('.efl-up');
     if (up) { const id = up.dataset.asg; const cur = (L.cache['asg:' + L.sec] || { assignments: [] }).assignments.find(g => g.asg_id === id); const s = cur && cur.submission; const ids = s ? s.files.map(f => f.file_id) : [];

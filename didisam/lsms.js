@@ -44,8 +44,8 @@
     if (!t.checked && c) { t.checked = true; document.querySelector('[data-sms="off"]')?.click(); } });
   document.addEventListener('click', async e => { const b = e.target.closest && e.target.closest('[data-sms]'); if (!b || b.dataset.sms === 'tog') return; const k = b.dataset.sms;
     if (k === 'edit') { ST.form = true; ST.err = ''; lrender(); return; } if (k === 'cancel') { ST.form = false; ST.err = ''; lrender(); return; }
-    if (k === 'off') { b.disabled = true; try { await put(''); ST.form = false; toast('문자 알림을 끄고 휴대폰 번호를 지웠어요.', 'ok'); } catch (x) { toast(x.message || '지우지 못했어요. 다시 시도해 주세요.', 'bad'); } lrender(); } });
+    if (k === 'off') { b.disabled = true; try { await put(''); ST.form = false; toast('문자 알림을 끄고 휴대폰 번호를 지웠어요.', 'ok'); } catch (x) { toast(errMsg(x, '지우지 못했어요. 다시 시도해 주세요.'), 'bad'); } lrender(); } });
   document.addEventListener('submit', async e => { const f = e.target; if (!f || f.id !== 'sm43F') return; e.preventDefault(); const v = String(f.ph.value || '').replace(/\D/g, ''); const say = m => { ST.err = m; const el = document.getElementById('sm43E'); if (el) el.textContent = m; };
     if (!okPhone(v)) { say('휴대폰 번호를 확인해 주세요. 예: 010-1234-5678'); f.ph.focus(); return; } if (!f.ag.checked) { say('문자를 받으려면 수집 · 이용에 동의해 주세요.'); return; }
-    const btn = f.querySelector('[type=submit]'); btn.disabled = true; try { await put(v); ST.form = false; ST.err = ''; toast(`문자 알림을 켰어요. ${mask(v)}로 보내 드려요.`, 'ok'); } catch (x) { btn.disabled = false; say(x.message || '저장하지 못했어요. 다시 시도해 주세요.'); return; } lrender(); });
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true; try { await put(v); ST.form = false; ST.err = ''; toast(`문자 알림을 켰어요. ${mask(v)}로 보내 드려요.`, 'ok'); } catch (x) { btn.disabled = false; say(errMsg(x, '저장하지 못했어요. 다시 시도해 주세요.')); return; } lrender(); });
 })();

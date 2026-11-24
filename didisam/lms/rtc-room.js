@@ -33,7 +33,7 @@
       <video id="lvPrev" class="lv-prev" playsinline muted autoplay hidden></video>
       <div class="lv-row"><label class="lv-ck"><input type="checkbox" id="lvUseCam" ${host ? 'checked' : ''}> 카메라 켜기</label><label class="lv-ck"><input type="checkbox" id="lvUseMic" ${host ? 'checked' : ''}> 마이크 켜기</label></div>
       ${err && err.code === 'rec_consent' ? `<div class="lv-warn"><b>녹화 안내</b><p>이 수업은 교수자 화면 · 음성이 녹화되어 강의자료로 올라갈 수 있습니다. 학생의 카메라 영상은 녹화하지 않습니다. 녹화본은 기관이 정한 보존 기간이 지나면 자동으로 파기되고, 누가 열람했는지 기록됩니다.</p><label class="lv-ck"><input type="checkbox" id="lvConsent"> 위 내용을 확인했고 동의합니다.</label></div>` : ''}
-      ${err && err.code !== 'rec_consent' ? `<p class="lv-err" role="alert">${E(err.message)}${err.status === 401 ? ` <a href="learner.html">학습자 사이트에서 로그인</a>` : ''}</p>` : ''}
+      ${err && err.code !== 'rec_consent' ? `<p class="lv-err" role="alert">${E(errMsg(err))}${err.status === 401 ? ` <a href="learner.html">학습자 사이트에서 로그인</a>` : ''}</p>` : ''}
       <button class="lv-btn pri" id="lvGo">${host ? '수업 화면 열기' : '입장하기'}</button>${demoNote()}</div>`;
     $('#lvGo').onclick = () => enter(host);
   }
@@ -100,19 +100,19 @@
   }
   const TOOL = {
     mic: () => { st.mic.enabled = !st.mic.enabled; tools(); }, cam: () => { st.cam.enabled = !st.cam.enabled; tools(); },
-    start: async () => { try { const j = await api('POST', '/api/lms/live/room-state', { room_id: st.room.room_id, status: 'live' }); st.room = { ...st.room, ...j.room }; toast('수업을 시작했습니다. 지금부터 접속 시간으로 출석을 셉니다.', 'ok'); tools(); status(); } catch (e) { toast(e.message, 'warn'); } },
+    start: async () => { try { const j = await api('POST', '/api/lms/live/room-state', { room_id: st.room.room_id, status: 'live' }); st.room = { ...st.room, ...j.room }; toast('수업을 시작했습니다. 지금부터 접속 시간으로 출석을 셉니다.', 'ok'); tools(); status(); } catch (e) { toast(errMsg(e), 'warn'); } },
     end: async () => { if (!confirm('수업을 마칠까요? 접속 시간으로 출석이 기록되고 모든 연결이 끊깁니다.')) return; try { if (st.rec) await recStop(false); if (st.stt || st.capRoom) await capStop(); const j = await api('POST', '/api/lms/live/room-state', { room_id: st.room.room_id, status: 'ended' }); st.ended = true; stop(); const a = j.attendance;
-      root.innerHTML = `<div class="lv-card lv-center"><h1>수업을 마쳤습니다</h1><p>출석 ${a.present} · 지각 ${a.late} · 결석 ${a.absent}${a.session ? ` — 출결에 ${a.written}명 기록${a.kept ? `(다른 방식으로 이미 정해진 ${a.kept}명은 그대로)` : ''}` : ' — 차시가 연결되지 않아 출결에는 기록하지 않았습니다'}</p><p class="lv-mini">스튜디오 「실시간 수업 › 출석」에서 자세히 보고 내려받을 수 있습니다.</p></div>`; } catch (e) { toast(e.message, 'warn'); } },
+      root.innerHTML = `<div class="lv-card lv-center"><h1>수업을 마쳤습니다</h1><p>출석 ${a.present} · 지각 ${a.late} · 결석 ${a.absent}${a.session ? ` — 출결에 ${a.written}명 기록${a.kept ? `(다른 방식으로 이미 정해진 ${a.kept}명은 그대로)` : ''}` : ' — 차시가 연결되지 않아 출결에는 기록하지 않았습니다'}</p><p class="lv-mini">스튜디오 「실시간 수업 › 출석」에서 자세히 보고 내려받을 수 있습니다.</p></div>`; } catch (e) { toast(errMsg(e), 'warn'); } },
     share: async () => { if (st.scr) { st.scr.stop(); st.scr = null; st.setSrc(); tools(); return; }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) return toast('이 기기 · 브라우저는 화면 공유를 지원하지 않습니다(휴대폰은 카메라로 진행하세요).', 'warn');
       try { const s = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false }); st.scr = s.getVideoTracks()[0]; st.scr.onended = () => { st.scr = null; st.setSrc(); tools(); }; st.setSrc(); tools(); } catch (e) { toast('화면 공유를 취소했거나 허용하지 않았습니다.', 'warn'); } },
     rec: () => st.rec ? recAsk() : recStart(),
     cap: () => (st.stt || st.capRoom) ? capStop() : capStart(),
-    hand: async () => { try { await ev(st.hand ? 'lower' : 'hand'); st.hand = !st.hand; tools(); } catch (e) { toast(e.message, 'warn'); } }
+    hand: async () => { try { await ev(st.hand ? 'lower' : 'hand'); st.hand = !st.hand; tools(); } catch (e) { toast(errMsg(e), 'warn'); } }
   };
   function status() { const s = $('#lvSt'); if (s) s.textContent = ` · ${{ ready: '시작 전', live: '진행 중', ended: '종료' }[st.room.status] || ''} · 참여 ${st.peers.length}명`; const rr = $('#lvRec'); if (rr) rr.hidden = !st.room.recording; }
   const ev = (kind, x = {}) => api('POST', '/api/lms/live/event', { room_id: st.room.room_id, peer_id: st.peer.peer_id, kind, ...x });
-  async function send() { const t = $('#lvTxt').value.trim(); if (!t) return; try { await ev(st.tab === 'qa' ? 'qa' : 'chat', { text: t }); $('#lvTxt').value = ''; } catch (e) { toast(e.message, 'warn'); } }
+  async function send() { const t = $('#lvTxt').value.trim(); if (!t) return; try { await ev(st.tab === 'qa' ? 'qa' : 'chat', { text: t }); $('#lvTxt').value = ''; } catch (e) { toast(errMsg(e), 'warn'); } }
 
   /* 영상 칸 */
   function tiles() {
@@ -138,15 +138,15 @@
         return `<div class="lv-poll"><b>${E(p.body.text)}</b>${cl ? ' <small>마감</small>' : ''}${p.body.options.map((o, i) => (host || cl) ? `<div class="lv-bar"><span>${E(o)}</span><i style="width:${tot ? tally[i] * 100 / tot : 0}%"></i><em>${tally[i]}</em></div>` : `<button class="lv-btn sm ${st.voted[p.id] === i ? 'pri' : ''}" data-vote="${p.id}" data-c="${i}" ${st.voted[p.id] != null ? 'disabled' : ''}>${E(o)}</button>`).join('')}${host && !cl ? `<button class="lv-btn sm" data-close="${p.id}">마감하고 결과 보여 주기</button>` : ''}</div>`; }).join('') || '<p class="lv-mini">올라온 투표가 없습니다.</p>');
     if (st.tab === 'ppl') h = st.peers.map(p => `<p class="lv-ppl"><b>${E(p.label)}</b> ${p.role === 'host' ? '<small>교수자</small>' : ''}${p.hand ? ' ✋' : ''}${host && p.hand ? ` <button class="lv-btn sm" data-lower="${E(p.peer_id)}">손 내리기</button>` : ''}</p>`).join('');
     const atBottom = P.scrollTop + P.clientHeight >= P.scrollHeight - 30; P.innerHTML = h; if (atBottom) P.scrollTop = P.scrollHeight;
-    P.querySelectorAll('.lv-ans').forEach(f => f.onsubmit = async e => { e.preventDefault(); const t = f.querySelector('input').value.trim(); if (!t) return; try { await ev('answer', { ref: +f.dataset.q, text: t }); } catch (x) { toast(x.message, 'warn'); } });
-    P.querySelectorAll('[data-vote]').forEach(b => b.onclick = async () => { try { await ev('vote', { ref: +b.dataset.vote, choice: +b.dataset.c }); st.voted[b.dataset.vote] = +b.dataset.c; panel(); } catch (x) { toast(x.message, 'warn'); } });
-    P.querySelectorAll('[data-close]').forEach(b => b.onclick = async () => { try { await ev('close', { ref: +b.dataset.close }); } catch (x) { toast(x.message, 'warn'); } });
-    P.querySelectorAll('[data-lower]').forEach(b => b.onclick = async () => { try { await ev('lower', { to: b.dataset.lower }); } catch (x) { toast(x.message, 'warn'); } });
-    const pf = $('#lvPollNew'); if (pf) pf.onsubmit = async e => { e.preventDefault(); const o = $('#lvPo').value.split(',').map(x => x.trim()).filter(Boolean); try { await ev('poll', { text: $('#lvPq').value.trim(), options: o }); pf.reset(); } catch (x) { toast(x.message, 'warn'); } };
+    P.querySelectorAll('.lv-ans').forEach(f => f.onsubmit = async e => { e.preventDefault(); const t = f.querySelector('input').value.trim(); if (!t) return; try { await ev('answer', { ref: +f.dataset.q, text: t }); } catch (x) { toast(errMsg(x), 'warn'); } });
+    P.querySelectorAll('[data-vote]').forEach(b => b.onclick = async () => { try { await ev('vote', { ref: +b.dataset.vote, choice: +b.dataset.c }); st.voted[b.dataset.vote] = +b.dataset.c; panel(); } catch (x) { toast(errMsg(x), 'warn'); } });
+    P.querySelectorAll('[data-close]').forEach(b => b.onclick = async () => { try { await ev('close', { ref: +b.dataset.close }); } catch (x) { toast(errMsg(x), 'warn'); } });
+    P.querySelectorAll('[data-lower]').forEach(b => b.onclick = async () => { try { await ev('lower', { to: b.dataset.lower }); } catch (x) { toast(errMsg(x), 'warn'); } });
+    const pf = $('#lvPollNew'); if (pf) pf.onsubmit = async e => { e.preventDefault(); const o = $('#lvPo').value.split(',').map(x => x.trim()).filter(Boolean); try { await ev('poll', { text: $('#lvPq').value.trim(), options: o }); pf.reset(); } catch (x) { toast(errMsg(x), 'warn'); } };
   }
 
   /* ═════════ 신호 · 연결 ═════════ */
-  function loop() { clearTimeout(st.timer); const tick = async () => { if (st.ended) return; try { await poll(); } catch (e) { if (e.code === 'ended') { st.ended = true; stop(); if (st.role !== 'host') root.innerHTML = `<div class="lv-card lv-center"><h1>수업이 끝났습니다</h1><p>참여해 주셔서 감사합니다. 출석은 접속 시간으로 자동 기록됩니다.</p></div>`; return; } if (e.code === 'replaced' || e.code === 'left' || e.code === 'peer') { st.ended = true; stop(); root.innerHTML = `<div class="lv-card lv-center"><h1>연결이 끊겼습니다</h1><p>${E(e.message)}</p><button class="lv-btn pri" data-reload>다시 입장</button></div>`; return; } }
+  function loop() { clearTimeout(st.timer); const tick = async () => { if (st.ended) return; try { await poll(); } catch (e) { if (e.code === 'ended') { st.ended = true; stop(); if (st.role !== 'host') root.innerHTML = `<div class="lv-card lv-center"><h1>수업이 끝났습니다</h1><p>참여해 주셔서 감사합니다. 출석은 접속 시간으로 자동 기록됩니다.</p></div>`; return; } if (e.code === 'replaced' || e.code === 'left' || e.code === 'peer') { st.ended = true; stop(); root.innerHTML = `<div class="lv-card lv-center"><h1>연결이 끊겼습니다</h1><p>${E(errMsg(e))}</p><button class="lv-btn pri" data-reload>다시 입장</button></div>`; return; } }
     st.timer = setTimeout(tick, [...st.pcs.values()].some(x => x.pc.connectionState !== 'connected') ? 800 : 1500); }; tick(); }
   async function poll() {
     const j = await api('POST', '/api/lms/live/poll', { room_id: st.room.room_id, peer_id: st.peer.peer_id, since: st.since, esince: st.esince });
@@ -203,13 +203,13 @@
     const mime = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(m => MediaRecorder.isTypeSupported(m)) || '';
     try { const j = await api('POST', '/api/lms/live/rec-start', { room_id: st.room.room_id, consent: true, mime: mime || 'video/webm' }); st.rec = { id: j.rec.rec_id, idx: 0, buf: [], size: 0, up: Promise.resolve(), mr: new MediaRecorder(st.out, mime ? { mimeType: mime, videoBitsPerSecond: 900e3 } : undefined) };
       st.rec.mr.ondataavailable = e => { if (!e.data || !e.data.size) return; st.rec.buf.push(e.data); st.rec.size += e.data.size; if (st.rec.size >= 1.5e6) flush(); };
-      st.rec.mr.start(5000); st.room.recording = true; tools(); status(); toast('녹화를 시작했습니다.', 'ok'); } catch (e) { toast(e.message, 'warn'); }
+      st.rec.mr.start(5000); st.room.recording = true; tools(); status(); toast('녹화를 시작했습니다.', 'ok'); } catch (e) { toast(errMsg(e), 'warn'); }
   }
   function flush() { const R = st.rec; if (!R || !R.buf.length) return R ? R.up : null; const blob = new Blob(R.buf, { type: R.buf[0].type }); R.buf = []; R.size = 0;
-    R.up = R.up.then(async () => { const ab = await blob.arrayBuffer(); for (let o = 0; o < ab.byteLength; o += 2 * 1024 * 1024) { await api('POST', '/api/lms/live/rec-part', { rec_id: R.id, idx: R.idx, b64: LV.b64(ab.slice(o, o + 2 * 1024 * 1024)) }); R.idx++; } }).catch(e => toast('녹화 조각을 올리지 못했습니다: ' + e.message, 'warn')); return R.up; }
+    R.up = R.up.then(async () => { const ab = await blob.arrayBuffer(); for (let o = 0; o < ab.byteLength; o += 2 * 1024 * 1024) { await api('POST', '/api/lms/live/rec-part', { rec_id: R.id, idx: R.idx, b64: LV.b64(ab.slice(o, o + 2 * 1024 * 1024)) }); R.idx++; } }).catch(e => toast('녹화 조각을 올리지 못했습니다: ' + errMsg(e), 'warn')); return R.up; }
   function recAsk() { modal('녹화 마치기', '<label class="lv-ck"><input type="checkbox" id="lvPub"> 강의자료에 올리고 학생에게 바로 공개합니다(끄면 교수자만 봅니다).</label>', '마치고 강의자료에 올리기', () => recStop($('#lvPub').checked)); }
   async function recStop(pub) { const R = st.rec; if (!R) return; await new Promise(ok => { R.mr.onstop = ok; try { R.mr.stop(); } catch (e) { ok(); } }); await flush(); await R.up; st.rec = null; tools();
-    try { if (R.idx) { await api('POST', '/api/lms/live/rec-finish', { rec_id: R.id, publish: !!pub }); toast('녹화본을 강의자료에 올렸습니다.', 'ok'); } } catch (e) { toast(e.message, 'warn'); } }
+    try { if (R.idx) { await api('POST', '/api/lms/live/rec-finish', { rec_id: R.id, publish: !!pub }); toast('녹화본을 강의자료에 올렸습니다.', 'ok'); } } catch (e) { toast(errMsg(e), 'warn'); } }
   function modal(title, body, ok, run) { const w = document.createElement('div'); w.className = 'lv-modal'; w.innerHTML = `<div class="lv-card" role="dialog" aria-modal="true"><h2>${E(title)}</h2>${body}<div class="lv-row"><button class="lv-btn" data-x>취소</button><button class="lv-btn pri" data-ok>${E(ok)}</button></div></div>`; document.body.appendChild(w); w.querySelector('[data-x]').onclick = () => w.remove(); w.querySelector('[data-ok]').onclick = async () => { const r = await run(w); if (r !== false) w.remove(); }; }
 
   /* ═════════ 자막 ═════════ */
@@ -219,14 +219,14 @@
     modal('실시간 자막', `<label class="lv-f">말하는 언어<select id="lvSrc">${langOpts('ko')}</select></label><p class="lv-mini">학생에게 보여 줄 자막 언어(최대 4개, 말하는 언어 포함)</p><div class="lv-langs">${Object.keys(LN).map(l => `<label><input type="checkbox" class="lvL" value="${l}" ${['ko', 'en'].includes(l) ? 'checked' : ''}> ${LN[l]}</label>`).join('')}</div>
       ${SRC() ? '<p class="lv-mini">이 브라우저의 음성 인식으로 받아쓰고, 서버가 언어별로 번역합니다.</p>' : '<p class="lv-warnline">이 브라우저는 음성 받아쓰기를 지원하지 않습니다(크롬 · 엣지 · 사파리). 자막 문장을 직접 입력할 수 있고, 수업 녹음 파일은 나중에 영상 자막으로 처리할 수 있습니다.</p>'}`, '자막 시작', async w => {
       const src = w.querySelector('#lvSrc').value; const langs = [...new Set([src, ...[...w.querySelectorAll('.lvL:checked')].map(x => x.value)])]; if (langs.length > 4) { toast('자막 언어는 말하는 언어를 포함해 4개까지입니다.', 'warn'); return false; }
-      try { const j = await api('POST', '/api/lms/live/cap-room', { section_id: st.room.section_id, title: st.room.title + ' 자막', src_lang: src, langs, live_room_id: st.room.room_id }); st.capRoom = j.room; sttRun(src); tools(); capBar(); } catch (e) { toast(e.message, 'warn'); return false; } });
+      try { const j = await api('POST', '/api/lms/live/cap-room', { section_id: st.room.section_id, title: st.room.title + ' 자막', src_lang: src, langs, live_room_id: st.room.room_id }); st.capRoom = j.room; sttRun(src); tools(); capBar(); } catch (e) { toast(errMsg(e), 'warn'); return false; } });
   }
   /* 받아쓰기: 끝난 문장만 서버로, 4초마다 번역 */
   function sttRun(src, onLine) {
     const C = SRC(); st.capRoomId = st.capRoom.room_id; let pend = false;
     const tr = () => { if (!pend) return; pend = false; api('POST', '/api/lms/live/cap-translate', { room_id: st.capRoomId }).catch(() => { }); };
     st.capT = setInterval(tr, 4000);
-    st.pushSeg = async (text, source) => { try { const j = await api('POST', '/api/lms/live/cap-seg', { room_id: st.capRoomId, text, source }); pend = true; if (onLine) onLine(j.line); } catch (e) { toast(e.message, 'warn'); } };
+    st.pushSeg = async (text, source) => { try { const j = await api('POST', '/api/lms/live/cap-seg', { room_id: st.capRoomId, text, source }); pend = true; if (onLine) onLine(j.line); } catch (e) { toast(errMsg(e), 'warn'); } };
     if (!C) return;
     const r = new C(); r.lang = LV.SR[src] || 'ko-KR'; r.continuous = true; r.interimResults = true; st.stt = r;
     r.onresult = e => { let fin = '', mid = ''; for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) fin += t; else mid += t; } const it = $('#lvInterim'); if (it) it.textContent = mid; if (fin.trim()) st.pushSeg(fin.trim().slice(0, 1000), 'stt'); };
@@ -257,14 +257,14 @@
       const s = $('#cvL'); if (s) s.onchange = e => { L = e.target.value; since = 0; lines = []; tick(); history.replaceState(null, '', `#cap=${encodeURIComponent(code)}&lang=${L}`); };
       $('#cvS').onclick = () => { size = size >= 34 ? 22 : size + 6; draw(); }; const b = root.querySelector('.cv-lines'); if (b) b.scrollTop = b.scrollHeight; };
     const tick = async () => { try { const j = await api('GET', `/api/lms/live/cap-view?code=${encodeURIComponent(code)}${L ? '&lang=' + L : ''}&since=${Math.max(0, since - 5)}&v=${viewer()}`); room = j.room; if (!L) { L = room.langs.find(x => x !== room.src_lang) || room.src_lang; return tick(); }
-      j.lines.forEach(l => { const i = lines.findIndex(x => x.seq === l.seq); if (i >= 0) lines[i] = l; else lines.push(l); }); since = Math.max(since, ...j.lines.map(l => l.seq), 0); draw(); } catch (e) { root.innerHTML = `<div class="lv-card lv-center"><p class="lv-err">${E(e.message)}</p></div>`; } };
+      j.lines.forEach(l => { const i = lines.findIndex(x => x.seq === l.seq); if (i >= 0) lines[i] = l; else lines.push(l); }); since = Math.max(since, ...j.lines.map(l => l.seq), 0); draw(); } catch (e) { root.innerHTML = `<div class="lv-card lv-center"><p class="lv-err">${E(errMsg(e))}</p></div>`; } };
     tick(); setInterval(tick, 2500);
   }
 
   /* ═════════ 대면 수업 받아쓰기 콘솔(교수자) ═════════ */
   async function capture(id) {
     if (LV.mode() === 'demo') LV.demoMe = { kind: 'staff' };
-    let j; try { j = await api('GET', '/api/lms/live/cap-lines?room_id=' + encodeURIComponent(id)); } catch (e) { root.innerHTML = `<div class="lv-card lv-center"><p class="lv-err">${E(e.message)}</p></div>`; return; }
+    let j; try { j = await api('GET', '/api/lms/live/cap-lines?room_id=' + encodeURIComponent(id)); } catch (e) { root.innerHTML = `<div class="lv-card lv-center"><p class="lv-err">${E(errMsg(e))}</p></div>`; return; }
     st.capRoom = j.room; let lines = j.lines;
     const view = LV.url(`cap=${encodeURIComponent(j.room.code)}`);
     const draw = () => { root.innerHTML = `<div class="lv-card lv-capture"><h1>${E(j.room.title)}</h1><p class="lv-mini">말하는 언어 ${LN[j.room.src_lang]} → 자막 ${j.room.langs.map(l => LN[l]).join(' · ')} · 학생 화면: <a href="${E(view)}" target="_blank" rel="noopener">${E(view)}</a></p>
@@ -274,7 +274,7 @@
       <div class="lv-lines">${lines.slice().reverse().map(l => `<p><small>#${l.seq} ${l.source === 'stt' ? '받아쓰기' : '입력'}</small> ${E(l.text)}${Object.entries(l.tr || {}).map(([k, v]) => `<br><small>[${E(LN[k])}${(l.tr_engine || {})[k] === 'rule' ? ' · 규칙' : ''}] ${E(v)}</small>`).join('')}</p>`).join('') || '<p class="lv-mini">아직 자막이 없습니다.</p>'}</div>${demoNote()}</div>`;
       const g = $('#cpGo'); if (g) g.onclick = () => { if (st.stt) { const r = st.stt; st.stt = null; r.onend = null; try { r.stop(); } catch (e) { } clearInterval(st.capT); draw(); } else { sttRun(j.room.src_lang, l => { lines.push(l); draw(); }); draw(); } };
       const f = $('#cpIn'); if (f) f.onsubmit = async e => { e.preventDefault(); const i = f.querySelector('input'); const t = i.value.trim(); if (!t) return; if (!st.pushSeg) sttRunManual(); await st.pushSeg(t, 'manual'); i.value = ''; };
-      const en = $('#cpEnd'); if (en) en.onclick = async () => { if (st.stt) { st.stt.onend = null; try { st.stt.stop(); } catch (e) { } st.stt = null; } clearInterval(st.capT); try { await api('POST', '/api/lms/live/cap-translate', { room_id: id }); const r = await api('POST', '/api/lms/live/cap-finish', { room_id: id }); j.room = r.room; toast('자막을 마치고 대본을 저장했습니다.', 'ok'); draw(); } catch (x) { toast(x.message, 'warn'); } };
+      const en = $('#cpEnd'); if (en) en.onclick = async () => { if (st.stt) { st.stt.onend = null; try { st.stt.stop(); } catch (e) { } st.stt = null; } clearInterval(st.capT); try { await api('POST', '/api/lms/live/cap-translate', { room_id: id }); const r = await api('POST', '/api/lms/live/cap-finish', { room_id: id }); j.room = r.room; toast('자막을 마치고 대본을 저장했습니다.', 'ok'); draw(); } catch (x) { toast(errMsg(x), 'warn'); } };
       const up = $('#cpUp'); if (up) up.onclick = () => audioUp(id);
     };
     const sttRunManual = () => { const C = window.SpeechRecognition; window.SpeechRecognition = null; const W = window.webkitSpeechRecognition; window.webkitSpeechRecognition = null; sttRun(j.room.src_lang, l => { lines.push(l); draw(); }); window.SpeechRecognition = C; window.webkitSpeechRecognition = W; };
@@ -286,7 +286,7 @@
     const f = $('#cpFile') && $('#cpFile').files[0]; if (!f) return toast('파일을 고르세요.', 'warn'); if (f.size > 100 * 1024 * 1024) return toast('100MB까지 올릴 수 있습니다.', 'warn');
     try { const ab = await f.arrayBuffer(); const ids = []; for (let o = 0, i = 0; o < ab.byteLength; o += 2 * 1024 * 1024, i++) { const r = LV.mode() === 'live' ? await api('POST', '/api/lms/e/file', { name: `${f.name}.part${i}`, mime: f.type || 'audio/webm', b64: LV.b64(ab.slice(o, o + 2 * 1024 * 1024)) }) : { file_id: LV.uid() }; ids.push(r.file_id); }
       const j = await api('POST', '/api/lms/live/cap-audio', { room_id: id, file_ids: ids }); if (typeof window.lmsVodSubtitleJob === 'function') { try { window.lmsVodSubtitleJob(j.job); } catch (e) { } }
-      toast('영상 자막 처리 대기열에 넣었습니다(영상 자막 엔진이 처리하면 대본에 반영).', 'ok'); } catch (e) { toast(e.message, 'warn'); }
+      toast('영상 자막 처리 대기열에 넣었습니다(영상 자막 엔진이 처리하면 대본에 반영).', 'ok'); } catch (e) { toast(errMsg(e), 'warn'); }
   }
 
   /* ═════════ 녹화 다시 보기 ═════════ */
@@ -295,7 +295,7 @@
     try { const first = await api('GET', `/api/lms/live/rec?rec_id=${encodeURIComponent(id)}&idx=0`); const parts = [first]; for (let i = 1; i < first.parts; i++) parts.push(await api('GET', `/api/lms/live/rec?rec_id=${encodeURIComponent(id)}&idx=${i}`));
       const blob = new Blob(parts.map(p => Uint8Array.from(atob(p.b64), c => c.charCodeAt(0))), { type: first.mime.split(';')[0] });
       root.innerHTML = `<div class="lv-card lv-rec"><h1>실시간 수업 녹화</h1><video controls playsinline src="${URL.createObjectURL(blob)}"></video><p class="lv-mini">열람 기록이 남습니다. 보존 기간이 지나면 자동으로 파기됩니다.</p></div>`; }
-    catch (e) { root.innerHTML = `<div class="lv-card lv-center"><p class="lv-err">${E(e.message)}</p>${e.status === 401 ? '<a href="learner.html">학습자 사이트에서 로그인</a>' : ''}</div>`; }
+    catch (e) { root.innerHTML = `<div class="lv-card lv-center"><p class="lv-err">${E(errMsg(e))}</p>${e.status === 401 ? '<a href="learner.html">학습자 사이트에서 로그인</a>' : ''}</div>`; }
   }
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-reload]')) location.reload(); });
   window.LVROOM = { st };

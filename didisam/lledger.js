@@ -161,7 +161,7 @@
   const rer = () => { const y = scrollY; lrender(); requestAnimationFrame(() => scrollTo(0, y)); };
   const tossSDK = () => window.TossPayments ? Promise.resolve(window.TossPayments) : (LG.sdk || (LG.sdk = new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://js.tosspayments.com/v1/payment'; s.onload = () => window.TossPayments ? ok(window.TossPayments) : no(new Error('sdk')); s.onerror = () => { LG.sdk = null; no(new Error('sdk')); }; document.head.appendChild(s); })));
   const ERR = { amount_mismatch: '금액이 바뀌었어요. 청구서를 새로 불러온 뒤 다시 결제해 주세요.', over_balance: '이미 결제된 청구서예요. 결제 내역을 확인해 주세요.', link_expired: '링크 사용 기간이 지났어요.', link_used: '이미 결제한 링크예요.', not_found: '청구서를 찾지 못했어요.', paid: '이미 결제가 끝난 청구서예요.', expired: '결제 시간이 지났어요. 다시 결제해 주세요.', used: '이미 결제한 청구서예요.', link: '청구서를 찾지 못했어요.', pg: '결제 승인에 실패했어요. 잠시 후 다시 시도해 주세요.', auth: '로그인이 끝났어요. 다시 로그인해 주세요.' };
-  const errMsg = e => ERR[e && e.code] || (e && e.message) || '결제를 확인하지 못했어요.';
+  const errMsg = e => ERR[e && e.code] || window.errMsg(e, '결제를 확인하지 못했어요.');
   /* 토스 결제창: 서버 주문(금액 · 주문번호 · 클라이언트 키) → requestPayment(카드) → successUrl/failUrl로 돌아온다 */
   async function openToss(o, back) { const TP = await tossSDK(); TP(o.clientKey).requestPayment('카드', { amount: o.amount, orderId: o.orderId, orderName: String(o.orderName || '청구서').slice(0, 90), successUrl: back, failUrl: back }).catch(e => { LG.paying = false; if (e && e.code === 'USER_CANCEL') toast('결제를 취소했어요.', 'warn'); else toast('결제가 끝나지 않았어요. 다시 시도해 주세요.', 'warn'); rer(); }); }
   async function pay(key) { if (LG.paying) return; const M = model(); const b = M.bills.find(x => x.key === key); if (!b || b.bal <= 0) return; if (LR.mode === 'preview') { toast('미리보기에서는 결제할 수 없어요.', 'warn'); return; }

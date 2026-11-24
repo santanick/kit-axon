@@ -210,7 +210,7 @@
       }
       await W3.call('POST', '/api/lms/v/finish', { media_id: m.media_id });
       V.sel = m.media_id; V.up = null; UI.lmsvT = 'list'; toast('올렸습니다. 학교 서버가 변환을 시작했습니다.', 'ok'); refresh(); return m;
-    } catch (e) { V.up = null; toast(e.message, 'warn'); render(); return null; }
+    } catch (e) { V.up = null; toast(errMsg(e), 'warn'); render(); return null; }
   }
   ACT['lmsv-up'] = () => {
     const sec = W3.section(); const Ss = (sec && W3.cache['sessions:' + sec.section_id]) || [];
@@ -350,7 +350,7 @@
     const cues = readCues(); let ok = 0;
     for (const to of tg) { V.trBusy = `${LANGS[to]} 번역 중…`; render();
       try { const tc = await translate(cues, V.capLang, to); await W3.call('POST', '/api/lms/v/caption', { media_id: V.sel, lang: to, cues: tc, source: 'translate', engine: W3.live() ? 'claude' : 'demo' }); ok++; }
-      catch (e) { toast(e.code === 'ai_off' ? 'AI 키가 설정되지 않아 번역할 수 없습니다(설정 › AI).' : e.message, 'warn'); break; } }
+      catch (e) { toast(e.code === 'ai_off' ? 'AI 키가 설정되지 않아 번역할 수 없습니다(설정 › AI).' : errMsg(e), 'warn'); break; } }
     V.trBusy = null; W3.drop('lmsv:'); if (ok) toast(`${ok}개 언어 초안을 만들었습니다. 확인 뒤 언어별로 게시하세요.`, 'ok'); render();
   };
 

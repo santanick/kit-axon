@@ -306,7 +306,7 @@
     HI.aiBusy = true; paintTb(); placeTb();
     try { const r = await CL.call({ system: '당신은 교육기관 홈페이지 카피라이터입니다. 주어진 문장 하나를 같은 뜻으로 더 읽기 쉽게 다시 씁니다. 원래 길이 이하, 숫자 · 이름 · 연락처 · 사실은 바꾸지 않고 새로 지어내지 않습니다. 과장 표현(최고 · 1위 · 혁신적)과 느낌표는 쓰지 않습니다. JSON {"opts":["","",""]} 하나만 출력합니다.', messages: [{ role: 'user', content: `기관: ${N()}\n위치: ${s.el.tagName === 'H1' ? '첫 화면 제목' : s.btn ? '버튼' : '홈페이지 문장'}\n문장: ${v}` }], max: 500 });
       const t2 = String(r.text || ''); const j = JSON.parse(t2.slice(t2.indexOf('{'), t2.lastIndexOf('}') + 1)); HI.aiOpts = A(j.opts).map(x => String(x).replace(/[<>]/g, '').trim().slice(0, 300)).filter(Boolean).slice(0, 3); HI.aiVia = `${CL.label(r.model)}가 썼습니다. 고르면 바로 바뀝니다.`; }
-    catch (e) { HI.aiOpts = ruleRewrite(v); HI.aiVia = `Claude 연결 실패(${e.message}) — 기본 규칙으로 줄였습니다.`; }
+    catch (e) { HI.aiOpts = ruleRewrite(v); HI.aiVia = `Claude 연결 실패(${errMsg(e)}) — 기본 규칙으로 줄였습니다.`; }
     HI.aiBusy = false; if (HI.sel) { paintTb(); placeTb(); } }
 
   /* ═════════ 5. 사진 패널 ═════════ */
@@ -333,7 +333,7 @@
       const ok = commit(s0 => { apply(s0, r, { src: o.url, ...(r.k === 'logo' ? {} : { fit: read(s0, r).fit || 'cover', pos: read(s0, r).pos || '50% 50%' }) }); }, `${slotName(r)}을(를) 바꿨습니다(${o.w}×${o.h} · ${o.kb}KB). 마음에 들지 않으면 [되돌리기]를 누르세요.`);
       if (ok && r.k === 'logo') { const C = await colors(o.url); if (C.length) { HI.sug = { colors: C, pick: C[0] }; sugShow(); } }
       if (!HI.ip) return; paintImg(); }
-    catch (e) { say(`${e.message}.`, 'warn'); } }
+    catch (e) { say(`${errMsg(e)}.`, 'warn'); } }
   function ipClick(e) { const b = e.target.closest('[data-hpi-i]'); if (!b) return; const a = b.dataset.hpiI, r = HI.ipRef; if (a === 'sugok') return sugApply(); if (a === 'sugno') { HI.sug = null; sugShow(); return; } if (a === 'sugc') { if (HI.sug) HI.sug.pick = b.dataset.v; sugShow(); return; } if (!r && a !== 'x') return;
     if (a === 'x') return closeImg();
     if (a === 'fit') return commit(s0 => apply(s0, r, { fit: b.dataset.v }), b.dataset.v === 'contain' ? '사진 전체가 보이도록 맞췄습니다.' : '사진이 자리를 채우도록 맞췄습니다.');
@@ -353,7 +353,7 @@
       const alt = v.alt || `${N()} ${slotName(r).replace(/ 사진$/, '')} 사진`; commit(s0 => apply(s0, r, { alt, fit: fitV }), `규칙으로 대체 텍스트 「${alt}」 · 맞춤(${fitV === 'contain' ? '전체 보이기' : '채우기'})을 넣었습니다. Claude를 연결하면 사진을 보고 써 드립니다.`); };
     if (!aiOn() || !(/^data:image\/(png|jpeg|webp|gif);base64,/.test(v.src) || (window.HPM && HPM.isMedia(v.src)))) return rule();
     modal('사진을 AI에게 보낼까요?', `<p>사진을 ${E(CL.label())}로 보내 대체 텍스트 · 맞춤 · 초점을 추천받습니다.</p><p class="mini">사진 속 얼굴 · 이름표 · 연락처 같은 개인정보도 함께 전송됩니다. 개인정보가 보이는 사진이면 [규칙으로]를 누르세요.</p>`,
-      [{ id: 'c', label: '취소' }, { id: 'rule', label: '규칙으로', run: () => { rule(); } }, { id: 'ok', label: '보내기', kind: 'pri', run: () => { sendAI(r, v).catch(e => { say(`AI 추천 실패(${e.message}) — 규칙으로 넣습니다.`, 'warn'); rule(); }); } }]); }
+      [{ id: 'c', label: '취소' }, { id: 'rule', label: '규칙으로', run: () => { rule(); } }, { id: 'ok', label: '보내기', kind: 'pri', run: () => { sendAI(r, v).catch(e => { say(`AI 추천 실패(${errMsg(e)}) — 규칙으로 넣습니다.`, 'warn'); rule(); }); } }]); }
   async function sendAI(r, v) { say(`${CL.label()}가 사진을 보는 중입니다…`); const m = (/^data:/.test(v.src) ? v.src : await HPM.dataURL(v.src)).match(/^data:(image\/\w+);base64,(.*)$/); if (!m) throw new Error('보낼 수 없는 형식');
     const res = await CL.call({ system: '당신은 웹 접근성 전문가입니다. 홈페이지 사진의 대체 텍스트(40자 이내, 한국어, 보이는 것만 · 사람 이름이나 신원은 추측하지 않음)와 맞춤(cover|contain), 초점(가로 · 세로 %)을 추천합니다. JSON {"alt":"","fit":"cover","x":50,"y":50} 하나만 출력합니다.', messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } }, { type: 'text', text: `자리: ${slotName(r)} · 기관: ${N()}` }] }], max: 300 });
     const t2 = String(res.text || ''); const j = JSON.parse(t2.slice(t2.indexOf('{'), t2.lastIndexOf('}') + 1)); const x = Math.max(0, Math.min(100, Math.round(+j.x || 50))), y = Math.max(0, Math.min(100, Math.round(+j.y || 50)));
@@ -441,7 +441,7 @@
       const t2 = String(r.text || ''); const j = JSON.parse(t2.slice(t2.indexOf('{'), t2.lastIndexOf('}') + 1)); const cl = v => String(v || '').replace(/[<>]/g, '').trim();
       const G = { title: cl(j.title).slice(0, 40), body: cl(j.body).slice(0, 300), cols: A(j.cols).map(c => [cl(c[0]).slice(0, 20), cl(c[1]).slice(0, 50)]).filter(c => c[0]).slice(0, 4) }; if (G.cols.length < 3) G.cols = [];
       return { title: `소개 섹션을 「${F.name}」 내용으로`, steps: [`소개 제목 「${G.title || '그대로'}」 · 설명 「${G.body.slice(0, 40)}…」${G.cols.length ? ` · 특징 카드 ${G.cols.length}개` : ''}`], msg: `${CL.label(r.model)}가 문서 내용만으로 썼습니다.`, next: s0 => aboutPatch(J(s0), G) }; }
-    catch (e) { const P = intent('브로슈어 보고 소개 문구 업데이트', [], { force: true, sync: true }); if (P) P.msg = `Claude 연결 실패(${e.message}) — 규칙으로 문서 문장을 옮겼습니다.`; return P; } }
+    catch (e) { const P = intent('브로슈어 보고 소개 문구 업데이트', [], { force: true, sync: true }); if (P) P.msg = `Claude 연결 실패(${errMsg(e)}) — 규칙으로 문서 문장을 옮겼습니다.`; return P; } }
 
   /* ── 계획 카드 → 미리보기 → 적용 · 되돌리기 ── */
   function pvModal(prev, next, title, onOk, P) {
@@ -470,7 +470,7 @@
   async function attach(files) { const L = [...(files || [])].filter(f => /^image\//.test(f.type)); if (!L.length) return 0; let n = 0;
     for (const f of L.slice(0, 8)) { if (HI.att.length >= 8) { say('사진은 한 번에 8장까지 첨부할 수 있습니다.', 'warn'); break; }
       try { const o = await shrink(f); const a = { id: 'att_' + (++HI.n), kind: 'img', name: String(f.name || '사진').slice(0, 60), url: window.HPM ? await HPM.keep(o.url, f.name) : o.url, w: o.w, h: o.h, kb: o.kb, colors: await colors(o.url) }; HI.att.push(a); HI.used[a.id] = a; n++; }
-      catch (e) { say(`${f.name || '사진'}: ${e.message}.`, 'warn'); } }
+      catch (e) { say(`${f.name || '사진'}: ${errMsg(e)}.`, 'warn'); } }
     decorate2(); talkSync(); if (n) say(`사진 ${n}장을 첨부했습니다. 어디에 넣을지 말해 주세요(예: 이 사진으로 첫 화면 바꿔줘).`, 'ok'); return n; }
   const chipBar = () => HI.att.length ? `<div class="hpi-abar" aria-label="첨부한 사진">${HI.att.map(a => `<span class="hpi-chip" title="${E(a.name)} · ${SIZEW(a)}"><img src="${E(a.url)}" alt=""><em>${E(a.name)}</em><button type="button" data-act="hpi-adel" data-v="${a.id}" aria-label="${E(a.name)} 첨부 빼기">✕</button></span>`).join('')}<span class="hpi-aq">${[['이 사진으로 첫 화면 바꿔줘', '첫 화면'], ['로고 넣고 색 맞춰줘', '로고'], ['갤러리에 이 사진들 넣어줘', '갤러리']].map(([q, l]) => `<button type="button" class="chip" data-act="chat-q" data-v="${E(q)}">${E(l)}</button>`).join('')}</span></div>` : '';
   /* v34.5 FZ(FIXLIST 21): 파일을 고르는 사이 화면이 다시 그려져 입력칸이 문서에서 떨어지면 문서 위임(data-chg)이 change를 못 받는다 → 떨어진 입력칸만 직접 처리 */

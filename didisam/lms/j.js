@@ -179,7 +179,7 @@
     if (!(W3.live() && LIVE.cfg && LIVE.cfg.ai)) { toast('AI가 연결되지 않아 규칙 기반 초안을 그대로 씁니다(AI 관리에서 LLM 연결 후 동작).', 'warn'); return; }
     try { const r = await api('POST', '/api/ai/messages', { system: '너는 대학 LMS 학습 코치다. 주어진 학습 상태 안내문을 존댓말로 따뜻하고 구체적으로 다듬는다. 숫자와 사실은 바꾸지 않는다. 학번 외 개인정보를 만들지 않는다. 6문장 이내.', messages: [{ role: 'user', content: `대상: ${d.audience === 'student' ? '학습자' : '교수자'}\n안내문:\n${txt}` }], max: 600 });
       const out = (r.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim(); if (out) { $('#w3ftx').value = out; UI.w3jDraft.ai = 1; toast('AI가 다듬었습니다. 확인 후 저장하세요.', 'ok'); } }
-    catch (e) { toast(e.message + ' — 규칙 기반 초안을 유지합니다.', 'warn'); } };
+    catch (e) { toast(errMsg(e) + ' — 규칙 기반 초안을 유지합니다.', 'warn'); } };
   ACT['w3j-fsave'] = () => { const d = UI.w3jDraft; W3.act(() => W3.call('POST', '/api/lms/j/feedback/save', { section_id: UI.w3sec, audience: d.audience, member_no: d.member_no || undefined, body: $('#w3ftx').value, source: d.ai ? 'ai' : 'edited' }), '저장했습니다.').then(r => { if (r) { UI.w3jDraft = null; W3.drop('jfb:'); render(); } }); };
 
   function jRefl(sec) {

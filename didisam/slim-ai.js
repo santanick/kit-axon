@@ -160,7 +160,7 @@
       si: rows, plan: pid, state: 'pending', cta: '승인하고 실행', via: 'AI SAM 계획' }; }
   let SI_LAST = null;
   function siExec(P) { const X = { made: [], q: P.q }; const out = []; let stop = false;
-    P.steps.forEach(s => { if (stop) { out.push({ l: s.l, msg: '앞 단계가 실패해 건너뜀', bad: true }); return; } try { const r = s.run(X) || {}; out.push({ l: s.l, n: r.n || 0, msg: r.msg || '완료', go: r.go || s.go }); } catch (e) { console.error(e); out.push({ l: s.l, msg: '실패 — ' + String(e.message || e).slice(0, 80), bad: true }); stop = true; } });
+    P.steps.forEach(s => { if (stop) { out.push({ l: s.l, msg: '앞 단계가 실패해 건너뜀', bad: true }); return; } try { const r = s.run(X) || {}; out.push({ l: s.l, n: r.n || 0, msg: r.msg || '완료', go: r.go || s.go }); } catch (e) { console.error(e); out.push({ l: s.l, msg: '실패 — ' + errMsg(e), bad: true }); stop = true; } });
     S.ai.usage++; save(); SI_LAST = { out, copy: X.copy || '' };
     return out.length > 1 ? `${out.filter(o => !o.bad).length}/${out.length}단계를 처리했습니다.\n` + out.map((o, i) => `${i + 1}. ${o.l} — ${o.msg}`).join('\n') : (out[0] || {}).msg || '처리했습니다.'; }
 

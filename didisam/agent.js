@@ -97,7 +97,7 @@ async function agHuman(tu, gd, tc) {
   if (!pw0) return false;
   try { const pw = pw0.pw || undefined;
     const r = await api('POST', '/api/ai/tool-confirm', { id: tu.id, name: tu.name, ...(pw ? { password: pw } : {}) }); tc[tu.id] = r.token; return true; }
-  catch (e) { toast && toast(e.message); return false; }
+  catch (e) { toast && toast(errMsg(e)); return false; }
 }
 const AG = { base: null };
 { const prev = chatSend; AG.base = typeof answer === 'function' ? q => answer(q) : null;
@@ -117,7 +117,7 @@ const AG = { base: null };
         for (const tu of res.tools) { ctx.used.push(tu.name); ph.text = `확인 중 · ${({ get_overview: '운영 현황', list_courses: '과정 목록', list_learners_at_risk: '위험 학습자', list_open_questions: '미답변 질문', run_studio_command: '실행 계획 만들기', open_screen: '화면 열기', download_report: '보고서', start_guide: '가이드' })[tu.name] || tu.name}…`; renderThreads();
           const gd = (res.guard || []).find(x => x && x.id === tu.id); /* 외부 출처를 읽은 뒤의 2등급 이상 · 3등급: 운영자가 확인해야 실행(서버가 토큰 없는 결과를 428로 막음) */
           if (gd && !(await agHuman(tu, gd, tc))) { results.push({ type: 'tool_result', tool_use_id: tu.id, is_error: true, content: '운영자가 확인하지 않아 실행하지 않았습니다(외부 출처를 읽은 뒤의 발송 · 고위험 작업). 운영자에게 직접 다시 요청해 달라고 안내합니다.' }); continue; }
-          let out; try { out = agRun(tu.name, tu.input, ctx); } catch (e) { out = { ok: false, 이유: String(e.message || e).slice(0, 120) }; }
+          let out; try { out = agRun(tu.name, tu.input, ctx); } catch (e) { out = { ok: false, 이유: errMsg(e) }; }
           results.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(out).slice(0, 12000) }); }
         msgs.push({ role: 'user', content: results });
         if (round === 5) text = text || '요청을 여러 단계로 처리했습니다. 아래 계획 카드를 확인해 주세요.';
@@ -127,7 +127,7 @@ const AG = { base: null };
       S.ai.usage++; S.chat = S.chat.slice(-60); save(); renderThreads(); const nv = ctx.nav || (ctx.cards.find(c => c && c.nav && !c.plan) || {}).nav; /* v23.1 실측: '화면을 열었습니다'라고 답하고 실제로는 열지 않던 문제 */ if (nv) setTimeout(() => go(nv, true), 350); ctx.after.forEach(f => setTimeout(f, 400));
     } catch (err) { const i = S.chat.indexOf(ph); if (i >= 0) S.chat.splice(i, 1); S.chat.pop(); S.chat = S.chat.filter(m => m !== ph);
       let r; try { r = AG.base(q); } catch (e) { r = { text: '처리하는 중 문제가 생겼습니다.' }; }
-      S.chat.push({ role: 'user', text: q }, { role: 'ai', ...r, via: '규칙 엔진', note: `Claude 연결 실패(${err.message}) — 규칙 엔진으로 처리했습니다.` }); S.chat = S.chat.slice(-60); save(); renderThreads(); if (r.nav) setTimeout(() => go(r.nav, true), 350); }
+      S.chat.push({ role: 'user', text: q }, { role: 'ai', ...r, via: '규칙 엔진', note: `Claude 연결 실패(${errMsg(err)}) — 규칙 엔진으로 처리했습니다.` }); S.chat = S.chat.slice(-60); save(); renderThreads(); if (r.nav) setTimeout(() => go(r.nav, true), 350); }
   }; }
 /* 답 아래 '확인한 데이터' 줄 */
 { const base = aiBody; aiBody = m => { let h = base(m); if (m.tools && m.tools.length) h += `<p class="agused">${ic('check', 12)} 확인 · 실행: ${m.tools.map(n => esc(({ get_overview: '운영 현황', list_courses: '과정', list_learners_at_risk: '위험 학습자', list_open_questions: '질문', run_studio_command: '계획 카드', open_screen: '화면', download_report: '보고서', start_guide: '가이드' })[n] || n)).join(' · ')}</p>`; return h; }; }

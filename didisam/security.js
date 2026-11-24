@@ -109,7 +109,7 @@
   async function load(k, again) {
     if (!live() || (L.busy[k] && !again)) return; L.busy[k] = true;
     try { const j = await api('GET', URL[k]); L[k] = j; L.err[k] = ''; }
-    catch (e) { L.err[k] = e.status === 403 ? '산타 관리자만 볼 수 있습니다.' : e.status === 404 ? '서버에 아직 연결되지 않은 화면입니다(미연결).' : (e.message || '불러오지 못했습니다.'); L[k] = L[k] || {}; }
+    catch (e) { L.err[k] = e.status === 403 ? '산타 관리자만 볼 수 있습니다.' : e.status === 404 ? '서버에 아직 연결되지 않은 화면입니다(미연결).' : (errMsg(e, '불러오지 못했습니다.')); L[k] = L[k] || {}; }
     if (CUR && CUR.tab === 'security') render();
   }
   const get = k => { if (!live()) return DS[k]; if (L[k] == null) { load(k); return null; } return L[k]; };
@@ -174,7 +174,7 @@
       [{ id: 'c', label: '닫기' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { const st = w.querySelector('#secFs').value, note = w.querySelector('#secFn').value.trim().slice(0, 200); if (st === 'na' && !note) { toast('해당 없음은 근거를 적어야 합니다.', 'warn'); return false; } finSave(x, st, note); } }]);
   }
   async function finSave(x, status, note) {
-    if (live()) { try { await api('PATCH', `/api/security/findings/${encodeURIComponent(x.id)}`, { status, note }); toast('저장했습니다. 서버에 기록되었습니다.', 'ok'); load('fin', true); } catch (e) { toast(e.message, 'warn'); } return; }
+    if (live()) { try { await api('PATCH', `/api/security/findings/${encodeURIComponent(x.id)}`, { status, note }); toast('저장했습니다. 서버에 기록되었습니다.', 'ok'); load('fin', true); } catch (e) { toast(errMsg(e), 'warn'); } return; }
     x.status = status; if (note) x.note = note; audit(`Finding ${x.id} 상태 → ${(COLS.find(c => c[0] === status) || [])[1]}`); render(); toast('저장했습니다.', 'ok');
   }
 
@@ -209,7 +209,7 @@
     const p = prOf(id); if (!p) return;
     if (live()) {
       try { const r = await api('POST', `/api/security/prs/${encodeURIComponent(id)}/approve`, (ra && typeof ra === 'object' ? ra : { reauth: ra })); const st = (r && (r.status || r.state)) || ''; toast(st === 'pending' ? '승인을 서버에 기록했습니다. 필요 인원이 모자라 다른 승인자를 기다립니다.' : '승인을 서버에 기록했습니다.', 'ok'); load('prs', true); load('sum', true); cb && cb(st || 'approved'); }
-      catch (e) { toast(e.status === 401 || e.status === 403 ? '재인증에 실패했거나 권한이 없습니다. 승인은 기록되지 않았습니다.' : e.message, 'warn'); cb && cb('fail'); }
+      catch (e) { toast(e.status === 401 || e.status === 403 ? '재인증에 실패했거나 권한이 없습니다. 승인은 기록되지 않았습니다.' : errMsg(e), 'warn'); cb && cb('fail'); }
       return;
     }
     const slot = p.appr.find(a => !a.done && a.role === '대표님') || p.appr.find(a => !a.done);
@@ -221,7 +221,7 @@
   ACT['sec-approve'] = el => { if (!own()) { toast('산타 관리자만 승인할 수 있습니다.', 'warn'); return; } const p = prOf(el.dataset.v); if (!p || !p.ok) { toast('검증을 통과한 PR만 승인할 수 있습니다.', 'warn'); return; } reauth(`PR #${p.id} 승인`, `<b>${esc(p.title)}</b>을(를) 승인합니다. 필요 인원 ${need(p.sev)}명 · 현재 ${apprLine(p)}.`, ra => approve(p.id, ra)); };
   ACT['sec-reject'] = el => { const p = prOf(el.dataset.v); if (!p) return; modal(`PR #${p.id} 반려`, `<label class="fl">반려 사유(필수)<textarea id="secRj" maxlength="300" rows="3"></textarea></label>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '반려', kind: 'pri', run: w => { const why = w.querySelector('#secRj').value.trim(); if (!why) { toast('반려 사유를 적어 주십시오.', 'warn'); return false; } reject(p, why); } }]); };
   async function reject(p, why) {
-    if (live()) { try { await api('POST', `/api/security/prs/${encodeURIComponent(p.id)}/reject`, { reason: why }); toast('반려를 서버에 기록했습니다.', 'ok'); load('prs', true); } catch (e) { toast(e.status === 404 ? '반려 기록 API가 아직 없습니다. GitHub PR에 사유를 남겨 주십시오.' : e.message, 'warn'); } return; }
+    if (live()) { try { await api('POST', `/api/security/prs/${encodeURIComponent(p.id)}/reject`, { reason: why }); toast('반려를 서버에 기록했습니다.', 'ok'); load('prs', true); } catch (e) { toast(e.status === 404 ? '반려 기록 API가 아직 없습니다. GitHub PR에 사유를 남겨 주십시오.' : errMsg(e), 'warn'); } return; }
     p.state = 'rejected'; audit(`PR #${p.id} 반려: ${why.slice(0, 60)}`); render(); toast('반려했습니다.', 'ok');
   }
 
@@ -229,7 +229,7 @@
   const M = { id: null, exp: 0, step: 'auth', timer: 0, tok: '' };
   async function mobileOpen(id, tok, expAt, ra, sec) {
     M.id = id; M.tok = tok || ''; M.sec = sec || ''; M.step = live() && M.tok && M.sec ? 'ok' : 'auth'; /* 서버 계약: 링크 = 재인증 후 발급된 1회용 token+secret, 링크를 연 사람은 그것으로 승인 */ M.exp = expAt || Date.now() + 15 * 60e3;
-    if (live() && !tok) { try { const r = await api('POST', '/api/security/approve-link', { pr: id, reauth: ra || '' }); M.tok = r.token || ''; M.sec = r.secret || ''; M.exp = r.exp ? +new Date(r.exp) : M.exp; M.url = r.url || ''; } catch (e) { toast(e.message, 'warn'); return; } }
+    if (live() && !tok) { try { const r = await api('POST', '/api/security/approve-link', { pr: id, reauth: ra || '' }); M.tok = r.token || ''; M.sec = r.secret || ''; M.exp = r.exp ? +new Date(r.exp) : M.exp; M.url = r.url || ''; } catch (e) { toast(errMsg(e), 'warn'); return; } }
     mobileDraw(); clearInterval(M.timer); M.timer = setInterval(() => { const t = document.getElementById('secMt'); if (!t) { clearInterval(M.timer); return; } if (Date.now() >= M.exp) { mobileDraw(); clearInterval(M.timer); return; } t.textContent = left(); }, 1000);
   }
   const left = () => { const s = Math.max(0, Math.round((M.exp - Date.now()) / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')} 남음`; };
@@ -263,7 +263,7 @@
   }
   ACT['sec-card'] = async el => {
     const id = el.dataset.v;
-    if (live()) { try { const r = await api('POST', `/api/security/threats/${encodeURIComponent(id)}/card`, {}); toast(`${(r && r.id) || '대책 카드'} 초안을 만들었습니다.`, 'ok'); load('thr', true); load('cards', true); } catch (e) { toast(e.message, 'warn'); } return; }
+    if (live()) { try { const r = await api('POST', `/api/security/threats/${encodeURIComponent(id)}/card`, {}); toast(`${(r && r.id) || '대책 카드'} 초안을 만들었습니다.`, 'ok'); load('thr', true); load('cards', true); } catch (e) { toast(errMsg(e), 'warn'); } return; }
     const t = DS.thr.find(x => x.id === id); if (!t || t.card) return; const no = 'CARD-' + String(12 + DS.cards.length).padStart(4, '0');
     DS.cards.push({ id: no, v: t.v, ver: 1, state: '초안', title: t.title, src: `${t.src} · ${t.date}`, kind: '—', reuse: 0, checked: '—', review: 'D-90', judge: t.note, map: [t.src], rule: '(탐지 규칙 초안 작성 대기)', control: '담당 스킬과 연결해 주간 통합 PR에 포함합니다.', test: '회귀 테스트 초안 작성 대기', skills: ['edu-platform-security'], hist: [[now().slice(0, 5), '카드 생성(초안)']] });
     t.card = no; UI.secCard = no; audit(`대책 카드 ${no} 생성(${t.title.slice(0, 40)})`); render(); toast(`${no} 초안을 만들었습니다. 주 1회 통합 PR에 포함합니다.`, 'ok');
@@ -300,7 +300,7 @@
     modal('차단 해제', `<p>이 차단을 지금 해제합니다. 해제 기록(사람 · 시각 · 사유)은 서버 감사 기록에 남습니다.</p><label class="fl">해제 사유(필수)<input id="secRl" maxlength="200"></label>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '해제', kind: 'pri', run: w => { const why = w.querySelector('#secRl').value.trim(); if (!why) { toast('해제 사유를 적어 주십시오.', 'warn'); return false; } release(id, why); } }]);
   };
   async function release(id, why) {
-    if (live()) { try { await api('POST', `/api/security/kill/${encodeURIComponent(id)}/release`, { reason: why }); toast('해제를 서버에 기록했습니다.', 'ok'); load('kill', true); } catch (e) { toast(e.message, 'warn'); } return; }
+    if (live()) { try { await api('POST', `/api/security/kill/${encodeURIComponent(id)}/release`, { reason: why }); toast('해제를 서버에 기록했습니다.', 'ok'); load('kill', true); } catch (e) { toast(errMsg(e), 'warn'); } return; }
     const a = DS.kill.active.find(x => x.id === id); if (!a) return; DS.kill.active = DS.kill.active.filter(x => x.id !== id);
     DS.kill.log.unshift([now(), `${kName(a.action)} 해제${a.dry ? '(모의)' : ''}`, a.tenant, why.slice(0, 60), `사람 해제 · ${S.me.name || '정운영자'}`]); audit(`긴급 차단 해제: ${kName(a.action)} · ${a.tenant}`); render(); toast('해제했습니다.', 'ok');
   }

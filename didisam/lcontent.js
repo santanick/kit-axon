@@ -151,7 +151,7 @@
     const fail = why => { const w = el ? el.closest('.lc-media') : null; if (w) w.outerHTML = demoNote(why); else if (wait) wait.remove(); };
     FILE = { iid: it.id, act: async b => { try { if (b.dataset.lcf === 'down') { const h = HP(); if (h && typeof h.download === 'function' && !/^\/api\/media\/f\//.test(it.url)) { await h.download(it.url, name); return; } const u = await srcOf(it.url); const a = document.createElement('a'); a.href = u + (/^\/api\//.test(u) ? (u.includes('?') ? '&' : '?') + 'dl=1' : ''); a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); return; }
         if (b.dataset.lcf === 'open') { const u = await srcOf(it.url); const w = window.open(u, '_blank', 'noopener'); if (!w && !/^blob:/.test(u)) location.href = u; } }
-      catch (x) { say(x.code === 'media_demo' || x.code === 'media_missing' ? '데모에서 올린 파일은 운영자가 올린 같은 브라우저에서만 열려요.' : (x.message || '파일을 열지 못했어요.'), 'warn'); } } };
+      catch (x) { say(x.code === 'media_demo' || x.code === 'media_missing' ? '데모에서 올린 파일은 운영자가 올린 같은 브라우저에서만 열려요.' : (errMsg(x, '파일을 열지 못했어요.')), 'warn'); } } };
     if (!el) return;
     srcOf(it.url).then(u => { if (!document.body.contains(el)) return; if (wait) wait.remove();
       if (fk === 'video' || fk === 'audio') { const seen = new Set(); let last = 0;
@@ -163,7 +163,7 @@
         el.src = u; }
       else if (fk === 'pdf') { el.src = u; }
       else if (fk === 'image') { el.addEventListener('error', () => fail('그림을 불러오지 못했어요.'), { once: true }); el.src = u; }
-    }).catch(x => fail(x && x.code === 'media_missing' ? '이 파일은 운영자가 올린 브라우저에만 저장되어 있어요(데모). 실제 운영 서버에서는 어디서든 열 수 있어요.' : x && x.code === 'media_demo' ? '' : (x && x.message) || ''));
+    }).catch(x => fail(x && x.code === 'media_missing' ? '이 파일은 운영자가 올린 브라우저에만 저장되어 있어요(데모). 실제 운영 서버에서는 어디서든 열 수 있어요.' : x && x.code === 'media_demo' ? '' : errMsg(x, '')));
   }
   let FILE = null;
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.lc [data-lcf]'); if (!b) return; e.preventDefault(); const box = b.closest('.lc'); if (FILE && box && box.dataset.i === FILE.iid) FILE.act(b); });

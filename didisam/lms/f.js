@@ -145,7 +145,7 @@
         const k = fv(w, 'k'); const lines = fv(w, 'c').split('\n').map(s => s.trim()).filter(Boolean); const choices = lines.map((t, i) => ({ id: 'c' + (i + 1), text: t })); const raw = fv(w, 'a');
         let answer = raw; if (/single|multi/.test(k)) answer = raw.split(/[\s,]+/).filter(Boolean).map(n => 'c' + n); else if (k === 'tf') answer = /참|t|o/i.test(raw) ? 't' : 'f'; else if (k === 'short') answer = raw.split(',').map(s => s.trim()).filter(Boolean); else if (k === 'numeric') { const [v, t] = raw.split('±'); answer = { value: +v, tol: +t || 0 }; }
         const media = q ? q.media.filter(m => m.type === 'image') : []; const f = w.querySelector('[name=img]').files[0]; if (f) { const up = await call('POST', '/api/lms/e/file', { name: f.name, mime: f.type || 'image/png', b64: await toB64(f) }); media.push({ type: 'image', file_id: up.file_id }); } if (fv(w, 'v')) media.push({ type: 'video', url: fv(w, 'v') });
-        await run(() => call('POST', '/api/lms/f/q-save', { q_id: q ? q.q_id : undefined, bank_id: UI.lmsfB, kind: k, stem: fv(w, 's'), choices, answer, points: fv(w, 'p'), difficulty: fv(w, 'd'), explanation: fv(w, 'e'), media }), '문항을 저장했습니다.', 'lmsf:'); })().catch(e => toast(e.message, 'warn')); } }], true);
+        await run(() => call('POST', '/api/lms/f/q-save', { q_id: q ? q.q_id : undefined, bank_id: UI.lmsfB, kind: k, stem: fv(w, 's'), choices, answer, points: fv(w, 'p'), difficulty: fv(w, 'd'), explanation: fv(w, 'e'), media }), '문항을 저장했습니다.', 'lmsf:'); })().catch(e => toast(errMsg(e), 'warn')); } }], true);
   };
   const C2 = key => EFH.peek(key);
   ACT['lmsf-qdel'] = el => run(() => call('POST', '/api/lms/f/q-delete', { q_id: el.dataset.v }), '문항을 지웠습니다.', 'lmsf:');
@@ -191,7 +191,7 @@
             for (const q of qx) { const r1 = await call('POST', '/api/lms/f/q-save', { bank_id: bid, ...q }); fixed.push(r1.question.q_id); } }
           return call('POST', '/api/lms/f/exam-save', { exam_id: ex ? ex.exam_id : undefined, section_id: sec, title: fv(w, 't'), open_at: iso('o'), close_at: iso('cl'), time_limit_min: fv(w, 'tl'), max_attempts: fv(w, 'ma'), rules, fixed, shuffle_q: fv(w, 'sq'), shuffle_c: fv(w, 'sc'), ip_allow: fv(w, 'ip').split(',').map(s => s.trim()).filter(Boolean), need_precheck: fv(w, 'pc'), show_result: fv(w, 'sr'), score_policy: fv(w, 'sp'), retry_wrong: fv(w, 'rw'), status: fv(w, 'st') }); })()
           .then(() => { closeModal(); toast(`시험을 저장했습니다${qx.length ? ` · 문항 ${qx.length}개를 문제은행에 넣었습니다` : ''}.`, 'ok'); drop('lmsf:'); render(); })
-          .catch(e => { toast(e.message || '저장하지 못했습니다.', 'warn'); if (btn) btn.disabled = false; });
+          .catch(e => { toast(errMsg(e, '저장하지 못했습니다.'), 'warn'); if (btn) btn.disabled = false; });
         return false; } }], true);
   };
   /* 문항 직접 입력 한 줄: 「문항 | 보기1; 보기2 | 정답」 → 객관식(정답 번호 · 여러 개면 복수 정답) · 단답형(보기 없음) · 서술형(문항만) */
@@ -212,7 +212,7 @@
     const showAns = (q, v) => v == null ? '<span class="muted">무응답</span>' : esc(/single|multi|tf/.test(q.kind) ? [].concat(v).map(id => (q.choices.find(c => c.id === id) || {}).text || id).join(', ') : String(v));
     modal(`채점 — ${t.member_no} ${t.no}회차`, r.items.map(q => { const m = t.marks[q.q_id] || {}; return `<div class="efh-q"><b>${q.order}. ${esc(q.stem)}</b> <small>(${q.p}점 · ${esc(KIND[q.kind])})</small><p>답: ${showAns(q, t.answers[q.q_id])} ${m.ok === true ? tag('정답', 'g') : m.ok === false ? tag('오답', 'r') : tag('채점 필요', 'y')}</p>
       <label>점수 <input type="number" min="0" max="${q.p}" step="0.5" data-q="${esc(q.q_id)}" class="lmsf-ms" value="${m.score ?? ''}"></label> <label>피드백 <input class="lmsf-mf" data-q="${esc(q.q_id)}" value="${esc(m.fb || '')}"></label></div>`; }).join(''),
-      [{ id: 'c', label: '닫기' }, { id: 'ok', label: '채점 저장', kind: 'pri', run: w => { (async () => { for (const i of w.querySelectorAll('.lmsf-ms')) { const q = i.dataset.q; const m = t.marks[q] || {}; const fb = w.querySelector(`.lmsf-mf[data-q="${q}"]`).value; if (i.value === '' || (+i.value === m.score && fb === (m.fb || ''))) continue; await call('POST', '/api/lms/f/mark', { attempt_id: t.attempt_id, q_id: q, score: +i.value, feedback: fb }); } toast('채점을 저장했습니다.', 'ok'); drop('lmsf:'); render(); })().catch(e => toast(e.message, 'warn')); } }], true); };
+      [{ id: 'c', label: '닫기' }, { id: 'ok', label: '채점 저장', kind: 'pri', run: w => { (async () => { for (const i of w.querySelectorAll('.lmsf-ms')) { const q = i.dataset.q; const m = t.marks[q] || {}; const fb = w.querySelector(`.lmsf-mf[data-q="${q}"]`).value; if (i.value === '' || (+i.value === m.score && fb === (m.fb || ''))) continue; await call('POST', '/api/lms/f/mark', { attempt_id: t.attempt_id, q_id: q, score: +i.value, feedback: fb }); } toast('채점을 저장했습니다.', 'ok'); drop('lmsf:'); render(); })().catch(e => toast(errMsg(e), 'warn')); } }], true); };
 
   function statsView(sec) {
     const r = load('lmsf:ex:' + sec, () => call('GET', '/api/lms/f/exams', { section: sec })); if (!r) return wait(); if (r.err) return errBox(r.err); const L = r.ok.exams; if (!L.length) return '<div class="empty">시험이 없습니다.</div>';
@@ -253,7 +253,7 @@
       <div class="efh-acts"><button class="btn pri" data-act="lmsf-submit">제출</button></div></div>`;
   }
   ACT['lmsf-ans'] = el => { const q = el.dataset.q; let v; if (el.dataset.multi) v = [...document.querySelectorAll(`[data-q="${q}"][data-multi]:checked`)].map(x => x.value); else v = el.value;
-    UI.lmsfP.answers = { ...(UI.lmsfP.answers || {}), [q]: v }; call('POST', '/api/lms/f/answer', { attempt_id: UI.lmsfP.attempt.attempt_id, ptoken: UI.lmsfPT || undefined, answers: { [q]: v } }).then(r => { if (r.expired) { toast('시험 시간이 끝나 자동 제출했습니다.', 'warn'); UI.lmsfR = r.attempt.attempt_id; UI.lmsfP = null; drop('lmsf:'); render(); } }).catch(e => toast(e.message, 'warn')); };
+    UI.lmsfP.answers = { ...(UI.lmsfP.answers || {}), [q]: v }; call('POST', '/api/lms/f/answer', { attempt_id: UI.lmsfP.attempt.attempt_id, ptoken: UI.lmsfPT || undefined, answers: { [q]: v } }).then(r => { if (r.expired) { toast('시험 시간이 끝나 자동 제출했습니다.', 'warn'); UI.lmsfR = r.attempt.attempt_id; UI.lmsfP = null; drop('lmsf:'); render(); } }).catch(e => toast(errMsg(e), 'warn')); };
   ACT['lmsf-submit'] = () => { const p = UI.lmsfP; if (!p) return; clearInterval(tick); run(async () => { const r = await call('POST', '/api/lms/f/submit', { attempt_id: p.attempt.attempt_id, ptoken: UI.lmsfPT || undefined, answers: p.answers || {} }); UI.lmsfP = null; UI.lmsfPT = null; UI.lmsfR = r.attempt.attempt_id; return r; }, '제출했습니다. 객관식은 바로 채점됩니다.', 'lmsf:'); };
   ACT['lmsf-res'] = el => { UI.lmsfR = el.dataset.v; UI.lmsfP = null; drop('lmsf:res:'); render(); };
   ACT['lmsf-back'] = () => { UI.lmsfR = null; UI.lmsfP = null; drop('lmsf:'); render(); };
@@ -266,7 +266,7 @@
   ACT['lmsf-retry'] = async el => { const r = await run(() => call('POST', '/api/lms/f/retry', { attempt_id: el.dataset.v })); if (!r) return; if (!r.questions.length) return toast('다시 풀 오답이 없습니다.', 'ok');
     modal('오답 다시 풀기(성적 미반영)', r.questions.map((q, i) => `<div class="efh-q"><b>${i + 1}. ${esc(q.stem)}</b>${q.choices.length ? q.choices.map(c => `<label><input type="${q.kind === 'multi' ? 'checkbox' : 'radio'}" name="r_${esc(q.q_id)}" value="${esc(c.id)}"> ${esc(c.text)}</label>`).join('') : `<input name="r_${esc(q.q_id)}" aria-label="답">`}</div>`).join(''),
       [{ id: 'c', label: '닫기' }, { id: 'ok', label: '확인', kind: 'pri', run: w => { const answers = {}; r.questions.forEach(q => { const els = [...w.querySelectorAll(`[name="r_${q.q_id}"]`)]; const v = q.kind === 'multi' ? els.filter(x => x.checked).map(x => x.value) : q.choices.length ? (els.find(x => x.checked) || {}).value : els[0].value; if (v != null && v !== '') answers[q.q_id] = v; });
-        call('POST', '/api/lms/f/retry', { attempt_id: el.dataset.v, answers }).then(c => toast(`${c.checked.filter(x => x.ok).length} / ${c.checked.length}문항 정답입니다.`, 'ok')).catch(e => toast(e.message, 'warn')); } }], true); };
+        call('POST', '/api/lms/f/retry', { attempt_id: el.dataset.v, answers }).then(c => toast(`${c.checked.filter(x => x.ok).length} / ${c.checked.length}문항 정답입니다.`, 'ok')).catch(e => toast(errMsg(e), 'warn')); } }], true); };
   /* ═════════ x3 · SFR-089 웹 시험 감독(응시 감독 탭) ═════════
      운영: /api/lms/f/proctor-* (sql/a3_integrity.sql). 데모: 아래 처리기가 같은 규칙(사건 가중치 · 1기기 · 보존 기간 · 열람 기록)으로 흉내 낸다.
      웹 페이지가 못 하는 것(다른 프로그램 차단 · PC 화면 전체 녹화)은 화면과 설정에 그대로 밝히고, 보안 브라우저 연동 지점(window.DD_SECURE_BROWSER)만 둔다. */
@@ -421,7 +421,7 @@
     ACT['lmsf-photo'] = async el => { const r = await run(() => call('GET', '/api/lms/f/proctor-photo', { id: el.dataset.v })); drop('lmsf:pv:'); const b = document.getElementById('lmsfPhotoBox'); if (r && b) b.innerHTML = `<img class="lmsf-photo" alt="감독 사진" src="data:image/jpeg;base64,${r.b64}"><p class="muted">촬영 ${fmt(r.at)} · ${fmt(r.purge_at)} 자동 파기</p>`; };
     /* 교수 미리보기(데모): 감독 시험은 동의 · 장치 확인을 마친 것으로 시작한다(카메라 없음 표시) */
     async function previewBegin(exId, att) { try { const c = await call('GET', '/api/lms/f/proctor-cfg', { exam: exId }); if (!c.cfg.enabled) return null;
-      const b = await call('POST', '/api/lms/f/proctor-begin', { attempt_id: att, consent: true, device: '교수 미리보기', checks: { camera: true, browser: true, preview: true } }); if (b.blocked) { toast(b.message, 'warn'); return null; } toast('감독 시험 미리보기 — 학생 화면에서는 카메라 · 동의 확인 뒤 시작합니다.', 'ok'); return b.ptoken; } catch (e) { toast(e.message, 'warn'); return null; } }
+      const b = await call('POST', '/api/lms/f/proctor-begin', { attempt_id: att, consent: true, device: '교수 미리보기', checks: { camera: true, browser: true, preview: true } }); if (b.blocked) { toast(b.message, 'warn'); return null; } toast('감독 시험 미리보기 — 학생 화면에서는 카메라 · 동의 확인 뒤 시작합니다.', 'ok'); return b.ptoken; } catch (e) { toast(errMsg(e), 'warn'); return null; } }
     if (!document.getElementById('lmsfProcCss')) { const st2 = document.createElement('style'); st2.id = 'lmsfProcCss'; st2.textContent = '.lmsf-snaps{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.lmsf-photo{max-width:100%;width:320px;border-radius:8px;display:block;margin:6px 0}.lmsf-tl{list-style:none;padding:0;margin:8px 0;max-height:260px;overflow:auto;border-top:1px solid var(--line,#e5e7eb)}.lmsf-tl li{padding:4px 2px;border-bottom:1px solid var(--line,#e5e7eb);font-size:13px}.lmsf-tl li.w{color:var(--warn,#b45309)}.lmsf-tl time{font-variant-numeric:tabular-nums;color:var(--muted,#6b7280);margin-right:6px}'; document.head.appendChild(st2); }
     return { view, previewBegin, PK };
   })();
