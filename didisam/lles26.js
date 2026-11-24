@@ -66,7 +66,7 @@
      ③ 응시 기간 표(.a2linfo)는 제목 아래 한 줄 요약(누르면 표). 정책 꺼진 기관도 같은 배치 */
   const LSK = 'didisam.l47.side'; const lsg = () => { try { return localStorage.getItem(LSK); } catch (e) { return null; } }; const lss = v => { try { localStorage.setItem(LSK, v); } catch (e) { } };
   function l47css() { if (document.getElementById('l47itCss')) return; const st = document.createElement('style'); st.id = 'l47itCss';
-    st.textContent = `.l47-sd{border:1px solid var(--line);border-radius:14px;background:var(--surface);margin:0 0 12px}.l47-sd>summary{list-style:none;cursor:pointer;min-height:48px;display:flex;align-items:center;gap:8px;padding:0 14px;font-weight:700;font-size:14px}
+    st.textContent = `.l47-sd{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);margin:0 0 12px}.l47-sd>summary{color:var(--ink)}.l47-sd>summary{list-style:none;cursor:pointer;min-height:48px;display:flex;align-items:center;gap:8px;padding:0 14px;font-weight:700;font-size:14px}
 .l47-sd>summary::-webkit-details-marker{display:none}.l47-sd>summary small{margin-left:auto;color:var(--mute);font-weight:600}.l47-sd>summary::after{content:'';width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg)}
 .l47-sd[open]>summary::after{transform:rotate(-135deg)}.l47-sd>.lcpanel{margin:0;border-top:1px solid var(--line)}
 .l47-infd{margin:0 0 12px}.l47-infd>summary{cursor:pointer;color:var(--ink2,var(--ink));font-size:14px;line-height:1.5;padding:6px 0}.l47-infd[open]>summary{margin-bottom:6px}
@@ -83,7 +83,8 @@ body.lapp .l47-fab{right:16px;bottom:calc(92px + env(safe-area-inset-bottom,0px)
   const tutOn = () => { try { return typeof ltOpen === 'function' && (typeof TCFG !== 'function' || TCFG().enabled !== false); } catch (e) { return false; } };
   function itemOf(cw) { const on = cw.querySelector('aside.cur li.on a[href^="#c/"]'); const P = on ? on.getAttribute('href').split('/') : location.hash.split('/'); try { const c = SITE().classes.find(x => x.id === decodeURIComponent(P[1] || '')); return c && c.items.find(x => x.id === decodeURIComponent(String(P[2] || '').split('?')[0])); } catch (e) { return null; } }
   function helpClose() { const h = document.getElementById('l47Help'); if (h && !h.hidden) { h.hidden = true; const f = document.getElementById('l47Fab') || document.getElementById('tbFab'); if (f) f.setAttribute('aria-expanded', 'false'); } }
-  function helpToggle() { const h = document.getElementById('l47Help'); if (!h) return false; h.hidden = !h.hidden; const f = document.getElementById('l47Fab') || document.getElementById('tbFab'); if (f) f.setAttribute('aria-expanded', String(!h.hidden)); if (!h.hidden) { const x = h.querySelector('button, a[href], summary'); x && x.focus(); } return true; }
+  function helpToggle() { const h = document.getElementById('l47Help'); if (!h) return false; h.hidden = !h.hidden;
+    if (!h.hidden && typeof LT === 'object' && LT.open) { const x = document.querySelector('#ltut [data-tact="close"]'); if (x) x.click(); } /* v47-fix: 시트와 튜터(힌트 사다리) 패널은 한 번에 하나만 */ const f = document.getElementById('l47Fab') || document.getElementById('tbFab'); if (f) f.setAttribute('aria-expanded', String(!h.hidden)); if (!h.hidden) { const x = h.querySelector('button, a[href], summary'); x && x.focus(); } return true; }
   function helpDrop() { ['l47Help', 'l47Fab'].forEach(id => { const e = document.getElementById(id); if (e) e.remove(); }); document.body.classList.remove('l47-item'); }
   function l47item() {
     const cw = document.querySelector('section.crsb .cw2.l26'); if (!cw) { helpDrop(); return; } const main = cw.querySelector('.imain'); if (!main) return; l47css();
@@ -110,11 +111,13 @@ body.lapp .l47-fab{right:16px;bottom:calc(92px + env(safe-area-inset-bottom,0px)
       if (k === 'coach' && el.classList.contains('v2-aib') && !main.querySelector('.l47-ail')) { const b = el.querySelector('.v2-aib-t b'); const sm = el.querySelector('.v2-aib-t small'); const t = b ? (b.firstChild && b.firstChild.nodeType === 3 ? b.firstChild.textContent : b.textContent).trim() : '';
         const p = document.createElement('p'); p.className = 'l47-ail'; p.dataset.l47 = 'ail'; p.innerHTML = `<b></b><span></span>`; p.firstChild.textContent = t; p.lastChild.textContent = sm ? sm.textContent.trim() : ''; const h2 = main.querySelector(':scope > h2'); (h2 || main.firstChild).after(p); } });
     const aiBox = h.querySelector('.l47-hps[data-k="ai"]'); if (aiBox && !aiBox.children.length) { if (ai && !aiBox.querySelector('.pl43ai')) aiBox.innerHTML = `<button type="button" class="lbtn pri blk" data-pl43q="">${typeof ico === 'function' ? ico('spark', 16) : ''} AI 튜터에게 묻기</button>`; }
+    /* v47-fix(QA 높음 3): 과제 AI 띠(.v2-aib)의 「힌트 받기」가 튜터 = 힌트 사다리 패널을 열므로, 같은 패널을 여는 「AI 튜터에게 묻기」는 두지 않는다 */
+    const lad = !!h.querySelector('.l47-hps[data-k="coach"] .v2-aib [data-v2="ladder"]'); if (lad) aiBox.querySelectorAll('[data-pl43q]').forEach(x => x.closest('.pl43ai') ? x.closest('.pl43ai').remove() : x.remove());
     if (!ai) aiBox.querySelectorAll('[data-pl43q]').forEach(x => x.closest('.pl43ai') ? x.closest('.pl43ai').remove() : x.remove());
     h.querySelectorAll('.l47-hps').forEach(x => { x.hidden = !x.querySelector(':scope > :not(h4)'); });
     if (h.querySelectorAll('.l47-hps:not([hidden])').length === 0) { helpDrop(); return; }
     document.body.classList.add('l47-item');
-    if (tb) { const f = document.getElementById('l47Fab'); if (f) f.remove(); tb.setAttribute('aria-controls', 'l47Help'); return; }
+    /* v47-fix(QA 높음 2): 앱도 항목 화면은 「질문 · 도움」(#l47Fab) 1개 — 튜터 버튼(#tbFab)은 lx47.css가 body.l47-item에서 숨긴다 */
     if (!document.getElementById('l47Fab')) { const f = document.createElement('button'); f.type = 'button'; f.id = 'l47Fab'; f.className = 'l47-fab'; f.setAttribute('aria-controls', 'l47Help'); f.setAttribute('aria-expanded', 'false');
       f.innerHTML = `${typeof ico === 'function' ? ico('spark', 18) : ''}<span>질문 · 도움</span>`; document.body.appendChild(f); }
   }
@@ -122,7 +125,9 @@ body.lapp .l47-fab{right:16px;bottom:calc(92px + env(safe-area-inset-bottom,0px)
     if (t.closest('#l47Fab')) { e.preventDefault(); helpToggle(); return; }
     if (t.closest('#tbFab') && document.getElementById('l47Help') && document.body.classList.contains('l47-item')) { e.preventDefault(); e.stopImmediatePropagation(); helpToggle(); return; }
     if (t.closest('[data-l47h="x"]')) { helpClose(); return; }
-    if (t.closest('#l47Help [data-pl43q], #l47Help a[href]')) setTimeout(helpClose, 0); }, true);
+    if (t.closest('#l47Help [data-pl43q], #l47Help [data-v2], #l47Help a[href]')) setTimeout(helpClose, 0); }, true);
+  /* v47-fix: 튜터 패널(body.lt-on)이 열리면 시트는 닫는다(한 번에 하나만) */
+  new MutationObserver(() => { if (document.body.classList.contains('lt-on')) helpClose(); }).observe(document.body || document.documentElement, { attributes: true, attributeFilter: ['class'] });
   addEventListener('keydown', e => { if (e.key === 'Escape') helpClose(); });
   addEventListener('hashchange', () => { if (!/^#c\/[^/]+\/./.test(location.hash)) helpDrop(); else helpClose(); });
   window.l47Help = { open: () => { const h = document.getElementById('l47Help'); if (h && h.hidden) helpToggle(); }, close: helpClose };
