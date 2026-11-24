@@ -17,7 +17,6 @@ public interface AiMapper {
     List<Map<String, Object>> selectByFeature();
     /* v47 AI 월 포함량 · 추가 충전(ai_credit) — Node aiprice.js monthState · app.js topup과 같은 문장 */
     String selectAiplan(@Param("tid") String tid);
-    String selectPlan(@Param("tid") String tid); /* v47 요금제 기능 묶음 */
     long monthUsed(@Param("tid") String tid, @Param("from") String from);
     /* 충전량 1년 이월: 쓸 수 있는 충전 행 · 사용 기록(DdAiPrice.sim) */
     List<Map<String, Object>> selectCreditRows(@Param("tid") String tid, @Param("from") String from);

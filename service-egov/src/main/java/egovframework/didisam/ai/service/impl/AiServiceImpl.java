@@ -126,7 +126,7 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
     private final java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder().proxy(java.net.http.HttpClient.Builder.NO_PROXY).connectTimeout(java.time.Duration.ofSeconds(10)).build();
     boolean payOn() { return tossKey != null && !tossKey.trim().isEmpty() && tossClient != null && !tossClient.trim().isEmpty(); }
     Map<String, Object> planOf(String tid) { String s = mapper.selectAiplan(tid); return DdAiPrice.planOf(s == null ? null : parse(s)); }
-    @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:}") private String santaEnv = "";
+    @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:nick@didisam.com}") private String santaEnv = "nick@didisam.com"; /* 기본: 대표님 지정 2026-11-24 */
     /** 충전 차감 계산(충전량 1년 이월) — 기관 범위 트랜잭션 안에서 부른다 */
     DdAiPrice.Sim simOf(String tid, Map<String, Object> plan, String today) {
         List<Map<String, Object>> cr = mapper.selectCreditRows(tid, DdAiPrice.creditFrom(today));

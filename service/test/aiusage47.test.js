@@ -31,7 +31,7 @@ test('aiprice 단위: 고정가 · 할인 경계값 · 10만 원 단위 · 요�
   /* 산타 입력 */
   assert.equal(AP.santaInput({ code: 'e1', aiMonthTokens: 1e6 }, '2026-11-24').plan.code, 'E1'); assert.equal(AP.santaInput({ code: 'U0', aiMonthTokens: 0 }, '2026-11-24').plan.since, '2026-11-24');
   assert.equal(AP.santaInput({ code: 'XX', aiMonthTokens: 1 }, 'd').code, 'plan_code'); assert.equal(AP.santaInput({ code: 'G4', aiMonthTokens: -5 }, 'd').code, 'plan_tokens'); assert.equal(AP.santaInput({ code: 'G4', aiMonthTokens: 1.5 }, 'd').code, 'plan_tokens');
-  assert.deepEqual([...AP.santaSet({ SANTA_ADMIN_EMAILS: ' A@x.kr, b@y.kr ,' })], ['a@x.kr', 'b@y.kr']); assert.equal(AP.santaSet({}).size, 0);
+  assert.deepEqual([...AP.santaSet({ SANTA_ADMIN_EMAILS: ' A@x.kr, b@y.kr ,' })], ['a@x.kr', 'b@y.kr']); assert.deepEqual([...AP.santaSet({})], ['nick@didisam.com']); assert.equal(AP.santaSet({ SANTA_ADMIN_EMAILS: '' }).size, 0); /* 기본 산타 관리자(대표님 지정) · 빈 값이면 없음 */
 });
 
 
