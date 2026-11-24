@@ -38,6 +38,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
     @Resource(name = "propertiesService") private EgovPropertyService props;
     private final PiiMapper mapper; private final PiiTx ptx; private final TenantTxMapper txm; private final DdPiiCrypto K; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.mileage.service.MileService mile; /* v42 수집 훅 */
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.sec.service.SecService sec; /* 가디언 긴급 차단 실행 지점 */
     private final egovframework.didisam.cpl.service.CplService cpl; private final DdMail mail;
     public PiiServiceImpl(PiiMapper mapper, PiiTx ptx, TenantTxMapper txm, DdPiiCrypto K, DdProps p, DdWeb web, DdRateLimiter rl, egovframework.didisam.cpl.service.CplService cpl, DdMail mail) { this.cpl = cpl; this.mail = mail;
         this.mapper = mapper; this.ptx = ptx; this.txm = txm; this.K = K; this.p = p; this.web = web; this.rl = rl;
@@ -293,6 +294,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
 
     @Override public boolean mailTo(String tid, String lid, String subject, String text) throws Exception {
         if (!mail.on || lid == null || !lid.matches("(?i)^[0-9a-f-]{36}$")) return false;
+        if (sec.egressBlocked(tid)) return false; /* 가디언 egress 차단: 기관 알림 메일 중단 */
         String to = ptx.run(tid, r -> r.P(() -> { Map<String, Object> x = mapper.selectMine(tid, lid); return x == null || x.get("email_enc") == null ? null : dec(x.get("email_enc"), DdPiiCrypto.aad(tid, lid, "email")); }));
         if (to == null || to.isEmpty()) return false; mail.send(to, subject, text); return true;
     }

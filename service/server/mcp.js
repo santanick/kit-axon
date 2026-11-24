@@ -11,7 +11,7 @@ const PROTO = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const KEY_RE = /^dds_[A-Za-z0-9_-]{40}$/;
 const MAX_KEYS = 20;
 
-function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, version = '16.0' }) {
+function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, version = '16.0', blocked = null }) {
   const fp = key => crypto.createHmac('sha256', 'mcp|' + pepper).update(key).digest('hex');
 
   /* ── 키 관리(스튜디오 세션 · 정운영자) ── */
@@ -45,6 +45,7 @@ function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, versi
     if (!KEY_RE.test(key)) return null;
     const { rows } = await pool.query("select k.id, k.tenant_id tid, k.name, k.scope, t.name org, t.type from api_keys k join tenants t on t.id = k.tenant_id where k.hash = $1 and k.revoked_at is null", [fp(key)]);
     if (!rows[0]) return null;
+    if (blocked && await blocked(rows[0].tid)) return null; /* 가디언 긴급 차단(키 비활성 · egress) — 키는 지우지 않는다 */
     pool.query('update api_keys set last_used = now(), calls = calls + 1 where id = $1', [rows[0].id]).catch(() => {});
     return rows[0];
   }

@@ -443,6 +443,47 @@ const MIGRATIONS = [
   `alter table ai_credit add column if not exists expires_at date;
    update ai_credit set expires_at = (paid_at at time zone 'Asia/Seoul')::date + 365 where status = 'paid' and expires_at is null and paid_at is not null;
    create index if not exists ai_credit_exp on ai_credit (tenant_id, status, expires_at);`,
+  /* 가디언(보안봇) Phase 0 — 내부 전용 security 스키마(보고서 1231줄 데이터 모델). 기관 역할(didisam_tenant)에는 권한을 주지 않는다.
+     승인 · 긴급 차단 · 감사는 서버 기록만 유효. audit는 해시 체인(prev_hash · hash = sha256(prev|ts|actor|action|target|detail)) — Node security.js · Java SecServiceImpl 같은 식 */
+  `create schema if not exists security;
+   revoke all on schema security from public;
+   create table if not exists security.threat_item (
+     id text primary key, source text not null, external_id text not null, title text not null default '', cvss double precision, epss double precision, kev boolean not null default false,
+     affected jsonb not null default '[]', attack_type text not null default '', url text not null default '', published_at timestamptz, verdict text not null default 'pending', hash text not null default '', summary text not null default '',
+     created_at timestamptz not null default now(), updated_at timestamptz not null default now(), unique (source, external_id));
+   create table if not exists security.finding (
+     id text primary key, key text not null unique, origin text not null default 'scan', title text not null default '', severity text not null default 'medium' check (severity in ('critical','high','medium','low')),
+     priority text not null default 'P3' check (priority in ('P0','P1','P2','P3')), score double precision not null default 0, status text not null default 'open' check (status in ('open','triage','fixing','fixed','accepted','false_positive')),
+     tenant_scope text not null default 'all', owner text not null default '', sla_due_at timestamptz, jira_key text not null default '', note text not null default '', threat_id text, evidence jsonb not null default '{}',
+     created_at timestamptz not null default now(), updated_at timestamptz not null default now(), resolved_at timestamptz);
+   create index if not exists sec_finding_st on security.finding (status, priority);
+   create table if not exists security.scan (
+     id bigserial primary key, type text not null, target text not null default '', tool text not null default '', tool_version_sha text not null default '', findings_count integer not null default 0, raw_ref text not null default '', at timestamptz not null default now());
+   create table if not exists security.fix_pr (
+     id text primary key, pr_number integer, title text not null default '', finding_ids jsonb not null default '[]', severity text not null default 'medium' check (severity in ('critical','high','medium','low')),
+     change_type text not null default '', files jsonb not null default '[]', verify_result text not null default '', risk text not null default '', rollback_ref text not null default '', url text not null default '',
+     status text not null default 'open' check (status in ('open','pending','approved','rejected','merged','closed')), reject_reason text not null default '', created_at timestamptz not null default now(), approved_at timestamptz, merged_at timestamptz);
+   create table if not exists security.approval (
+     id bigserial primary key, pr_id text not null references security.fix_pr(id) on delete cascade, approver text not null, method text not null check (method in ('reauth','link')), at timestamptz not null default now(), unique (pr_id, approver));
+   create table if not exists security.approve_link (
+     id text primary key, secret_hash text not null, pr_id text not null references security.fix_pr(id) on delete cascade, uid uuid not null, email text not null, expires_at timestamptz not null, used_at timestamptz, created_at timestamptz not null default now());
+   create table if not exists security.countermeasure (
+     id text primary key, threat_id text, title text not null default '', threat_pattern text not null default '', controls jsonb not null default '[]', regression_tests jsonb not null default '[]',
+     skill_refs jsonb not null default '[]', playbook text not null default '', body text not null default '', reuse_count integer not null default 0, version integer not null default 1, status text not null default 'draft',
+     created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+   create table if not exists security.incident (
+     id text primary key, type text not null, scope text not null default '', phase text not null default 'detect', timeline jsonb not null default '[]', notify_due_at timestamptz, decision_log jsonb not null default '[]', created_at timestamptz not null default now());
+   create table if not exists security.kill_switch (
+     id text primary key, action text not null check (action in ('key_disable','feature_off','egress_block')), tenant_id text not null references tenants(id) on delete cascade,
+     mode text not null check (mode in ('dry','live')), trigger text not null default 'manual', rule_id text not null default '', reason text not null, signals jsonb not null default '[]', actor text not null,
+     activated_at timestamptz not null default now(), expires_at timestamptz, released_at timestamptz, released_by text, release_note text not null default '', kday date not null);
+   create index if not exists sec_kill_t on security.kill_switch (tenant_id, released_at);
+   create index if not exists sec_kill_day on security.kill_switch (kday);
+   create table if not exists security.audit (
+     id bigserial primary key, at timestamptz not null default now(), ts text not null, actor text not null, actor_kind text not null check (actor_kind in ('user','agent')),
+     action text not null, target text not null default '', detail text not null default '', ip_masked text not null default '', prev_hash text not null, hash text not null);
+   revoke all on all tables in schema security from didisam_tenant;
+   revoke all on schema security from didisam_tenant;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).
