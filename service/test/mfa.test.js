@@ -75,17 +75,18 @@ test('운영자 2단계 인증', async t => {
   await t.test('기관 정책 org.sec.mfa — 정운영자만 · audit · 인증 앱 강제', async () => {
     const st = await call('B', 'POST', '/api/staff', { email: SUB, role: 'sub' }); assert.equal(st.status, 200);
     const sl = await full('S', SUB, st.j.password); assert.equal(sl.status, 200); assert.equal((await call('S', 'POST', '/api/password', { current: st.j.password, next: 'Passw0rd-sub1' })).status, 200);
-    const cur = (await call('B', 'GET', '/api/state')).j; const doc = cur.doc || { org: { name: 'M' } };
-    const put = (who, d, rev) => call(who, 'PUT', '/api/state', { doc: d, rev });
-    let r = await put('B', { ...doc, org: { ...doc.org, sec: { mfa: 'sms' } } }, cur.rev); assert.equal(r.status, 400);
-    r = await put('S', { ...doc, org: { ...doc.org, sec: { mfa: 'totp' } } }, cur.rev); assert.equal(r.status, 403); assert.equal(r.j.error, 'mfa_policy');
-    r = await put('B', { ...doc, org: { ...doc.org, sec: { mfa: 'totp' } } }, cur.rev); assert.equal(r.status, 200);
-    const au = (await pool.query("select detail from audit_log where actor = $1 and action = 'org.mfa'", [OW])).rows; assert.deepEqual(au.map(x => x.detail), [{ from: 'email', to: 'totp' }]);
+    /* 통합(가디언 4차): 기관 보안 정책은 POST /api/org/security(d2) 한 경로 — PUT /api/state의 org.sec는 서버 값 유지 */
+    const sec = (who, b) => call(who, 'POST', '/api/org/security', b);
+    if (!(await call('B', 'GET', '/api/state')).j.doc) await call('B', 'PUT', '/api/state', { doc: { org: { name: 'M' } }, rev: 0 });
+    let r = await sec('B', { mfa: 'sms' }); assert.equal(r.status, 400); assert.equal(r.j.error, 'sec_mfa');
+    r = await sec('S', { mfa: 'totp' }); assert.equal(r.status, 403);
+    r = await sec('B', { mfa: 'totp' }); assert.equal(r.status, 200);
+    const au = (await pool.query("select detail from audit_log where actor = $1 and action = 'org.sec'", [OW])).rows; assert.equal(au.length, 1); assert.deepEqual(au[0].detail.set, { mfa: 'totp' });
     assert.equal((await call('B', 'GET', '/api/me/mfa')).j.policy, 'totp');
     assert.equal((await call('B', 'DELETE', '/api/me/mfa', { password: PW })).j.error, 'mfa_policy', '정책상 해제 불가');
     const l = await login('S2', SUB, 'Passw0rd-sub1'); assert.equal(l.j.mfa, 'email'); assert.equal(l.j.totpSetup, true, '미등록자는 이메일로 들어온 뒤 등록 안내');
     const ok = await call('S2', 'POST', '/api/login/mfa', { ticket: l.j.ticket, code: lastCode(SUB) }); assert.equal(ok.status, 200); assert.equal(ok.j.totpSetup, true);
-    const cur2 = (await call('B', 'GET', '/api/state')).j; assert.equal((await put('B', { ...cur2.doc, org: { ...cur2.doc.org, sec: { mfa: 'email' } } }, cur2.rev)).status, 200);
+    assert.equal((await sec('B', { mfa: 'email' })).status, 200);
     assert.equal((await call('B', 'DELETE', '/api/me/mfa', {})).status, 401, '비밀번호 재확인');
     assert.equal((await call('B', 'DELETE', '/api/me/mfa', { password: PW })).j.method, 'email');
     assert.equal((await login('G', OW, PW)).j.mfa, 'email');
