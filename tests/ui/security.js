@@ -14,7 +14,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
     { const { ctx, p } = await open();
       const R = await p.evaluate(() => { const out = {}; for (const ty of ['univ', 'corp', 'k12', 'voc']) { createOrg(ty, '점검'); render(); const r = {}; for (const role of ['owner', 'sub', 'teacher']) { S.me.role = role; render(); r[role] = wsTabs('ops').includes('security'); } S.me.role = 'sub'; go('security'); r.subGo = CUR.tab; r.subView = VIEWS.security(); S.me.role = 'owner'; out[ty] = r; }
         out.rail = S.nav.ws; out.rail0 = presetNav(S.org.type).ws.length; delete S.nav.tabs.ops; S.nav.tabs.ops = []; upgradeState(); out.upg = wsTabs('ops').includes('security'); return out; });
-      for (const ty of ['univ', 'corp', 'k12', 'voc']) { ok(R[ty].owner, ty + ' owner 보임'); ok(!R[ty].sub && !R[ty].teacher, ty + ' sub/teacher 숨김'); ok(R[ty].subGo !== 'security' && /정운영자만/.test(R[ty].subView), ty + ' sub 직접 이동 차단'); }
+      for (const ty of ['univ', 'corp', 'k12', 'voc']) { ok(R[ty].owner, ty + ' owner 보임'); ok(!R[ty].sub && !R[ty].teacher, ty + ' sub/teacher 숨김'); ok(R[ty].subGo !== 'security' && /산타 관리자만|정운영자만/.test(R[ty].subView), ty + ' sub 직접 이동 차단'); }
       ok(!R.rail.includes('security') && !R.rail.includes('sec'), '레일 칸 그대로 ' + R.rail); ok(R.upg, 'upgradeState로 기존 사용자 메뉴 추가');
       await ctx.close(); }
     /* ② 화면 렌더 · 승인 흐름 · 차단 해제 · 대책 카드 · AI SAM */
@@ -35,7 +35,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; con
         UI.sec = 'feed'; render(); document.querySelector('[data-act="sec-card"]').click(); r.card = /CARD-0013/.test(T());
         UI.sec = 'audit'; render(); r.audit = /PR #412 승인/.test(T());
         const a = answer('보안 상태 알려줘'); r.sam = /보안 상태는 정상/.test(a.text) && /승인 대기 수정 PR/.test(a.text) && a.btn && a.btn.act === 'sec-open';
-        S.me.role = 'teacher'; r.samT = /정운영자만/.test(answer('보안 상태 알려줘').text); S.me.role = 'owner';
+        S.me.role = 'teacher'; r.samT = /산타 관리자만|정운영자만/.test(answer('보안 상태 알려줘').text); S.me.role = 'owner';
         return r; });
       Object.entries(R.views).forEach(([k, v]) => ok(v, '화면 렌더 ' + k)); ok(R.tabs === 4 && R.more, '위쪽 탭 4 + 더 보기'); ok(R.cve, '가상 CVE 표기');
       ok(R.prFields, '승인함 근거 · 영향 · 파일 · 테스트 · 롤백 · 필요 인원'); ok(R.modal && R.needAgree, '재인증 · 동의 없으면 승인 안 됨');

@@ -10,7 +10,8 @@
   if (!IC.clock) IC.clock = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
 
   /* ── 메뉴 · 프리셋 · 기존 저장 사용자 ── */
-  MENU.security = { label: '보안', ws: 'ops', owner: true };
+  /* v47 통합 결정: 가디언은 산타 내부 운영 도구 — 실서버는 산타 관리자(LIVE.user.santa, 서버 SANTA_ADMIN_EMAILS)만, 시연판은 데모 정운영자(흐름 확인용). 고객 기관용 보안 센터는 Phase 2 */
+  { const M = { label: '보안', ws: 'ops', owner: true }; Object.defineProperty(MENU, 'security', { configurable: true, enumerable: true, get: () => (typeof LIVE !== 'undefined' && LIVE && LIVE.user && !LIVE.user.santa) ? undefined : M }); }
   Object.keys(PRESET).forEach(k => { const P = PRESET[k]; if (P && Array.isArray(P.on) && !P.on.includes('security') && !(P.off || []).includes('security')) P.on.push('security'); });
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org && S.nav && typeof navAdd === 'function' && !Object.values(S.nav.tabs).some(L => (L || []).some(x => x.id === 'security'))) { navAdd('security', true); save(); } } catch (e) { console.error('security', e); } return r; }; } /* eslint-disable-line no-global-assign */
   /* 기본 메뉴(slimEss)에 포함 — 정운영자에게만 보인다(MENU.owner). 학사 LMS 시나리오가 DOMContentLoaded에 바꾸므로 그 뒤에도 한 번 더 감싼다 */
@@ -19,7 +20,7 @@
   if (typeof DICT !== 'undefined') Object.assign(DICT, { '보안': 'Security|セキュリティ|安全|Seguridad|Sécurité|Sicherheit|Bảo mật|ความปลอดภัย|Безопасность' });
 
   const live = () => typeof LIVE !== 'undefined' && !!(LIVE && LIVE.user);
-  const own = () => !!(S && S.me && S.me.role === 'owner');
+  const own = () => live() ? !!(LIVE.user && LIVE.user.santa) : !!(S && S.me && S.me.role === 'owner');
   const arr = x => Array.isArray(x) ? x : (x && (x.items || x.rows || x.list)) || [];
   const nf = n => Math.round(+n || 0).toLocaleString('ko-KR');
   const hm = h => { h = Math.max(0, Math.round(+h || 0)); const d = Math.floor(h / 24), r = h % 24; return d ? `${d}일${r ? ' ' + r + '시간' : ''}` : `${r}시간`; };
@@ -105,7 +106,7 @@
   async function load(k, again) {
     if (!live() || (L.busy[k] && !again)) return; L.busy[k] = true;
     try { const j = await api('GET', URL[k]); L[k] = j; L.err[k] = ''; }
-    catch (e) { L.err[k] = e.status === 403 ? '정운영자만 볼 수 있습니다.' : e.status === 404 ? '서버에 아직 연결되지 않은 화면입니다(미연결).' : (e.message || '불러오지 못했습니다.'); L[k] = L[k] || {}; }
+    catch (e) { L.err[k] = e.status === 403 ? '산타 관리자만 볼 수 있습니다.' : e.status === 404 ? '서버에 아직 연결되지 않은 화면입니다(미연결).' : (e.message || '불러오지 못했습니다.'); L[k] = L[k] || {}; }
     if (CUR && CUR.tab === 'security') render();
   }
   const get = k => { if (!live()) return DS[k]; if (L[k] == null) { load(k); return null; } return L[k]; };
@@ -214,7 +215,7 @@
     audit(`PR #${p.id} 승인(재인증) · ${done}/${need(p.sev)}`); render();
     toast(p.state === 'approved' ? '승인을 기록했습니다. 병합 · 배포 · 재스캔이 이어집니다.' : `승인을 기록했습니다(${done}/${need(p.sev)}). 남은 승인자를 기다립니다.`, 'ok'); cb && cb(p.state);
   }
-  ACT['sec-approve'] = el => { if (!own()) { toast('정운영자만 승인할 수 있습니다.', 'warn'); return; } const p = prOf(el.dataset.v); if (!p || !p.ok) { toast('검증을 통과한 PR만 승인할 수 있습니다.', 'warn'); return; } reauth(`PR #${p.id} 승인`, `<b>${esc(p.title)}</b>을(를) 승인합니다. 필요 인원 ${need(p.sev)}명 · 현재 ${apprLine(p)}.`, ra => approve(p.id, ra)); };
+  ACT['sec-approve'] = el => { if (!own()) { toast('산타 관리자만 승인할 수 있습니다.', 'warn'); return; } const p = prOf(el.dataset.v); if (!p || !p.ok) { toast('검증을 통과한 PR만 승인할 수 있습니다.', 'warn'); return; } reauth(`PR #${p.id} 승인`, `<b>${esc(p.title)}</b>을(를) 승인합니다. 필요 인원 ${need(p.sev)}명 · 현재 ${apprLine(p)}.`, ra => approve(p.id, ra)); };
   ACT['sec-reject'] = el => { const p = prOf(el.dataset.v); if (!p) return; modal(`PR #${p.id} 반려`, `<label class="fl">반려 사유(필수)<textarea id="secRj" maxlength="300" rows="3"></textarea></label>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '반려', kind: 'pri', run: w => { const why = w.querySelector('#secRj').value.trim(); if (!why) { toast('반려 사유를 적어 주십시오.', 'warn'); return false; } reject(p, why); } }]); };
   async function reject(p, why) {
     if (live()) { try { await api('POST', `/api/security/prs/${encodeURIComponent(p.id)}/reject`, { reason: why }); toast('반려를 서버에 기록했습니다.', 'ok'); load('prs', true); } catch (e) { toast(e.status === 404 ? '반려 기록 API가 아직 없습니다. GitHub PR에 사유를 남겨 주십시오.' : e.message, 'warn'); } return; }
@@ -240,12 +241,12 @@
     else body = `<div class="sec-m-ok">재인증 완료</div><div class="sec-m-c">${sv(p.sev)} <b>#${esc(p.id)}</b><h3>${esc(p.title)}</h3><ol>${p.plain.map(t => `<li>${esc(t)}</li>`).join('')}</ol><ul class="sec-m-a">${p.appr.map(a => `<li class="${a.done ? 'ok' : ''}">${esc(a.role)} ${a.done ? '승인 완료' : '승인 대기'}</li>`).join('')}</ul></div><label class="sec-ck sec-m-ck"><input type="checkbox" id="secMag"> 병합 후 배포 시작에 동의합니다</label><button class="btn pri sec-m-b" data-act="sec-m-go" ${p.ok ? '' : 'disabled'}>승인하고 병합</button><button class="btn sec-m-b" data-act="sec-m-close">반려 · 자세히는 스튜디오에서</button>`;
     w.innerHTML = `<div class="sec-m-in"><header><button class="sec-m-bk" data-act="sec-m-close" aria-label="닫기">‹</button><b>디디쌤 스튜디오 · 보안 승인</b></header>${body}<footer><span>1회용 링크</span><b id="secMt" class="${exp ? 'bad' : ''}">${exp ? '만료됨' : left()}</b><small>재인증 없는 승인과 서버 기록 없는 승인은 무효입니다.</small></footer></div>`;
   }
-  ACT['sec-mobile'] = el => { if (!own()) { toast('정운영자만 승인할 수 있습니다.', 'warn'); return; } mobileOpen(el.dataset.v); };
+  ACT['sec-mobile'] = el => { if (!own()) { toast('산타 관리자만 승인할 수 있습니다.', 'warn'); return; } mobileOpen(el.dataset.v); };
   ACT['sec-m-close'] = () => { clearInterval(M.timer); const w = document.getElementById('secM'); if (w) w.remove(); };
   ACT['sec-m-auth'] = () => { if (Date.now() >= M.exp) return mobileDraw(); if (live()) { const v = (document.getElementById('secMra') || {}).value || ''; if (!v) { toast('재인증이 필요합니다.', 'warn'); return; } M.ra = v; } else M.ra = 'demo'; M.step = 'ok'; mobileDraw(); };
   ACT['sec-m-go'] = () => { if (Date.now() >= M.exp) return mobileDraw(); if (!(document.getElementById('secMag') || {}).checked) { toast('배포 시작 동의에 체크해 주십시오.', 'warn'); return; } const ra = M.tok ? { token: M.tok, secret: M.ra } : M.ra; M.ra = ''; approve(M.id, ra, st => { if (st !== 'fail') { M.step = 'done'; M.exp = Math.min(M.exp, Date.now() + 5e3); } mobileDraw(); }); };
   /* 알림 카드의 링크: index.html#sec-approve=<PR>.<token> */
-  function hashOpen() { const m = /^#sec-approve=([\w-]+)(?:\.([\w-]+))?/.exec(location.hash || ''); if (!m || !S || !S.org) return; if (!own()) { toast('정운영자만 승인할 수 있습니다.', 'warn'); return; } mobileOpen(m[1], m[2] || '', live() ? 0 : undefined); }
+  function hashOpen() { const m = /^#sec-approve=([\w-]+)(?:\.([\w-]+))?/.exec(location.hash || ''); if (!m || !S || !S.org) return; if (!own()) { toast('산타 관리자만 승인할 수 있습니다.', 'warn'); return; } mobileOpen(m[1], m[2] || '', live() ? 0 : undefined); }
   window.addEventListener('hashchange', hashOpen); if (typeof AFTER !== 'undefined' && AFTER.push) { let once = false; AFTER.push(() => { if (!once) { once = true; hashOpen(); } }); }
 
   /* ④ 위협 인텔 피드 */
@@ -291,7 +292,7 @@
       <section class="sec-box"><div class="sec-bh"><h3>알림 채널 · 보고 주기</h3></div><ul class="sec-ch2"><li>Slack #ai-security <small>${live() ? '서버 설정' : '미연결(웹훅 없음 → 서버 로그)'}</small></li><li>대표님 모바일(승인 카드)</li><li>Jira 보안 프로젝트</li><li>주말 · 공휴일 정기 보고 보내지 않음</li><li>Critical 주말 즉시 알림: 결정 전까지 꺼 둠</li></ul><p class="mini">자동 차단 정책 · 임계값 변경은 대표님 승인이 필요합니다.</p></section>` + demoNote();
   }
   ACT['sec-release'] = el => {
-    if (!own()) { toast('정운영자만 해제할 수 있습니다.', 'warn'); return; }
+    if (!own()) { toast('산타 관리자만 해제할 수 있습니다.', 'warn'); return; }
     const id = el.dataset.v;
     modal('차단 해제', `<p>이 차단을 지금 해제합니다. 해제 기록(사람 · 시각 · 사유)은 서버 감사 기록에 남습니다.</p><label class="fl">해제 사유(필수)<input id="secRl" maxlength="200"></label>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '해제', kind: 'pri', run: w => { const why = w.querySelector('#secRl').value.trim(); if (!why) { toast('해제 사유를 적어 주십시오.', 'warn'); return false; } release(id, why); } }]);
   };
@@ -311,7 +312,7 @@
 
   /* ── 화면 등록 ── */
   VIEWS.security = () => {
-    if (!own()) return '<div class="empty">보안 화면은 정운영자만 볼 수 있습니다.</div>';
+    if (!own()) return '<div class="empty">보안 화면은 산타 관리자만 볼 수 있습니다.</div>';
     let cur = UI.sec; if (![...MAIN, ...MORE].some(x => x[0] === cur)) cur = 'home';
     const B = { home: vHome, board: vBoard, prs: vPrs, feed: vFeed, cards: vCards, kill: vKill, audit: vAudit }[cur];
     return `<div class="sec">${head('', '디디쌤 가디언이 취약점 · 위협을 모아 판정하고, 수정은 PR로 만들어 사람 승인 뒤에만 병합합니다.', `<span class="sec-own">${ic('shield', 16)} 정운영자 전용</span>`)}${nav(cur)}${B()}</div>`;
@@ -333,7 +334,7 @@
   };
   if (typeof answer === 'function') { const base = answer; answer = (q, ...r) => { const s = String(q || ''); /* eslint-disable-line no-global-assign */
     if (/(보안|가디언|취약점)/.test(s) && /(상태|현황|요약|알려|어때|점수|몇)/.test(s) && !/(만들|발송|보내|삭제)/.test(s)) {
-      if (!own()) return { text: '보안 상태는 정운영자만 볼 수 있습니다.' };
+      if (!own()) return { text: '보안 상태는 산타 관리자만 볼 수 있습니다.' };
       const t = window.secSummaryText(); if (t) return t;
       load('sum'); load('prs'); return { text: '보안 요약을 서버에서 불러오고 있습니다. 보안 홈을 열겠습니다.', nav: 'security' };
     }
