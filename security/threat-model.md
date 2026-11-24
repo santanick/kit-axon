@@ -140,7 +140,7 @@
 | `didisam-owner-check-missing-node` · `-java` | owner 전용 경로의 owner 검사 누락 | 0건 |
 | `didisam-hardcoded-secret-literal` | 키 형태 문자열 | 0건 |
 | `didisam-secret-weak-fallback-node` · `-java` | 비밀값 환경변수의 고정 기본값 | 1건(SEC-0007, 운영 기동 차단으로 수용) |
-| `didisam-innerhtml-unescaped` | innerHTML 보간 esc 누락 후보 | 473건 기준선(SEC-0012) |
+| `didisam-innerhtml-unescaped` | innerHTML 보간 esc 누락 후보 | 413건 기준선(SEC-0012, 2차 재측정 · 1차 473건) |
 | `didisam-innerhtml-raw-ai-output` | AI 응답 원문 innerHTML | 0건 |
 | `didisam-ai-tools-passthrough` | AI 도구 무필터 전달 | 0건(SEC-0004 수정 후) |
 
