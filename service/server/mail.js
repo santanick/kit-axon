@@ -14,7 +14,7 @@ function createMailer(env) {
     if (!/^https:\/\//.test(url) && !(!prod && /^http:\/\//.test(url))) return { on: false };
     return { on: true, kind: 'webhook', async send({ to, subject, text }) {
       const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 10e3);
-      try { const r = await fetch(url, { method: 'POST', signal: ac.signal, headers: { 'content-type': 'application/json', ...(tok ? { authorization: 'Bearer ' + tok } : {}) }, body: JSON.stringify({ from, to, subject, text }) }); if (!r.ok) throw new Error('mail webhook ' + r.status); } finally { clearTimeout(t); } } };
+      try { const r = await fetch(url, { method: 'POST', redirect: 'error', signal: ac.signal, headers: { 'content-type': 'application/json', ...(tok ? { authorization: 'Bearer ' + tok } : {}) }, body: JSON.stringify({ from, to, subject, text }) }); if (!r.ok) throw new Error('mail webhook ' + r.status); } finally { clearTimeout(t); } } };
   }
   if (prov === 'smtp') {
     let u; try { u = new URL(String(env.SMTP_URL || '')); } catch (e) { return { on: false }; }

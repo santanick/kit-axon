@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updated": "2026-11-24",
-  "by": "수석 보안 컨설턴트(가디언 2차)",
+  "updated": "2026-11-25",
+  "by": "보안전문가(가디언 4차)",
   "basis": "AI 보안 · 가디언 통합 보고서 Part 2 「디디쌤 Ver2 필수 컴플라이언스 체크리스트 15」, 스킬 didisam-security-agent 2절 · 6절",
   "rule": "status는 충족 · 부분 · 미흡만 씁니다. 충족은 evidence의 파일이 저장소에 있어야 하며(score.js가 확인), 근거 없는 충족을 쓰지 않습니다. in_progress는 다른 브랜치에서 진행 중인 작업으로 점수에 넣지 않습니다 — 병합 후 통합 담당이 status · evidence를 갱신합니다. 개인정보 없음.",
   "score": "충족 1 · 부분 0.5 · 미흡 0, 15항목 평균 × 100",
@@ -53,7 +53,10 @@
         "didisam/lacct.js",
         "security/findings/seed.json"
       ],
-      "remaining": "Anthropic 상용 약관(입력 학습 미사용) 원문 대조는 계약 시점마다 사람이 재확인(SEC-0013 고지 반영 완료)"
+      "remaining": "Anthropic 상용 약관(입력 학습 미사용) 원문 대조는 계약 시점마다 사람이 재확인(SEC-0013 고지 반영 완료)",
+      "cert": [
+        27
+      ]
     },
     {
       "id": "05",
@@ -78,19 +81,35 @@
         "service/server/app.js",
         "service/test/security.test.js"
       ],
-      "remaining": "관리자 MFA는 대표님 결정으로 미도입(위험 수용, 접근성) — 계정 잠금 · 속도 제한 · 권한 차등 · 새 환경 로그인 알림(병합 대기)으로 보완"
+      "remaining": "관리자 2단계 인증 미도입(#1 미흡 — 고시 6조② 의무라 위험 수용을 2026-11-25 철회, d1 보완 중), 유휴 차단 · 세션 쿠키 · 동시 접속(#2~4, d2 보완 중). 운영자 실패 잠금 · 비밀번호 규칙 · 권한 차등은 충족",
+      "cert": [
+        1,
+        2,
+        3,
+        4,
+        9,
+        22,
+        23
+      ]
     },
     {
       "id": "07",
       "title": "접속기록 위 · 변조 방지 · 보관(해시 체인 · 보존 잠금)",
       "group": "기술",
-      "status": "충족",
+      "status": "부분",
       "evidence": [
         "service/server/db.js",
         "service/test/audit-chain.test.js",
         "docs/security/access-log-review.md"
       ],
-      "remaining": ""
+      "remaining": "위 · 변조 방지(해시 체인)는 충족. 접속기록 IP 열 없음(#5) · 기관 삭제 시 연쇄 삭제 · 자동 파기 없음(#10) · 권한 기록 3년(#11) — d3 보완 중, 첫 월간 점검 2026-12(#12)",
+      "cert": [
+        5,
+        10,
+        11,
+        12,
+        25
+      ]
     },
     {
       "id": "08",
@@ -105,7 +124,10 @@
         "server/storage.rules",
         "service/test/api.test.js"
       ],
-      "remaining": "Semgrep 규칙을 CI에서 돌리는 잡은 초안 단계(14와 연계)"
+      "remaining": "Semgrep 규칙을 CI에서 돌리는 잡은 초안 단계(14와 연계)",
+      "cert": [
+        26
+      ]
     },
     {
       "id": "09",
@@ -156,7 +178,10 @@
         ".gitleaks.toml",
         ".github/workflows/security-scan.yml"
       ],
-      "remaining": ""
+      "remaining": "",
+      "cert": [
+        13
+      ]
     },
     {
       "id": "13",
@@ -181,7 +206,13 @@
         ".github/workflows/security-scan.yml",
         "security/redteam/run.js"
       ],
-      "remaining": ""
+      "remaining": "",
+      "cert": [
+        16,
+        17,
+        19,
+        20
+      ]
     },
     {
       "id": "15",
@@ -191,7 +222,362 @@
       "evidence": [
         "docs/security/cert-roadmap.md"
       ],
-      "remaining": "로드맵은 마련 — 데이터 등급 분류표 · ISMS-P 점검표 등 산출물은 2026-12~2027-01 예정"
+      "remaining": "로드맵은 마련 — 데이터 등급 분류표 · ISMS-P 점검표 등 산출물은 2026-12~2027-01 예정",
+      "cert": [
+        18,
+        21
+      ]
+    }
+  ],
+  "cert_basis": "인증 크로스체크(2026-11-25) 3절 #1~27 — 개인정보 안전성 확보조치 고시 제2026-9호 · 안내서(2024. 10.) · ISMS-P 인증기준 · KISA 2026 웹 21항목 · GS 실행 · 교육부 필수기준. status는 이 브랜치의 현재 상태이며, 진행 중(in_progress) 보완은 병합 후 통합 담당이 status · evidence · 원장을 함께 갱신합니다.",
+  "cert": [
+    {
+      "no": 1,
+      "title": "관리자 추가 인증(2단계)",
+      "basis": "고시 6조② · ISMS-P 2.5.3 · 2.6.3 · 2.10.2 · KISA IA · GS 실행 27",
+      "status": "미흡",
+      "finding": "SEC-0018",
+      "current": "운영자 로그인이 ID · 비밀번호 1단계, 새 기기 알림 메일만(service/server/devices.js)",
+      "remaining": "이메일 인증번호 6자리 기본 + 인증 앱(TOTP) 선택, 기관 정책 org.sec.mfa, OAuth 뒤에도 2단계",
+      "in_progress": {
+        "owner": "d1",
+        "branch": "core/sec4-d1",
+        "expect": "이메일 인증번호 6자리 기본 + 인증 앱(TOTP) 선택, 기관 정책 org.sec.mfa, OAuth 뒤에도 2단계"
+      }
+    },
+    {
+      "no": 2,
+      "title": "관리자 유휴 차단 10~60분",
+      "basis": "고시 6조④ · 안내서 74쪽 · ISMS-P 2.6.3 · KISA IS",
+      "status": "미흡",
+      "finding": "SEC-0019",
+      "current": "기본 12시간 · 하한 1시간(service/server/app.js:118), 사용 중에도 끊기는 연장 결함(app.js:162-163), Java AuthServiceImpl 같은 구조",
+      "remaining": "SESSION_IDLE_MIN 기본 60 · 기관 10~60분, 최대 수명 12시간, 만료 5분 전 안내 · 작업 모드",
+      "in_progress": {
+        "owner": "d2",
+        "branch": "core/sec4-d2",
+        "expect": "SESSION_IDLE_MIN 기본 60 · 기관 10~60분, 최대 수명 12시간, 만료 5분 전 안내 · 작업 모드"
+      }
+    },
+    {
+      "no": 3,
+      "title": "관리자 자동 로그인 금지(세션 쿠키)",
+      "basis": "안내서 74쪽 미조치 예시",
+      "status": "미흡",
+      "finding": "SEC-0020",
+      "current": "운영자 쿠키 Max-Age 14일(service/server/app.js:148) — 브라우저 재시작 후에도 로그인",
+      "remaining": "운영자 쿠키 Max-Age 제거(세션 쿠키)",
+      "in_progress": {
+        "owner": "d2",
+        "branch": "core/sec4-d2",
+        "expect": "운영자 쿠키 Max-Age 제거(세션 쿠키)"
+      }
+    },
+    {
+      "no": 4,
+      "title": "동시 접속 통제",
+      "basis": "ISMS-P 2.6.3 · KISA IS",
+      "status": "미흡",
+      "finding": "SEC-0021",
+      "current": "동시 로그인 허용 · 경고 없음, 기기 목록 화면 없음",
+      "remaining": "로그인 응답 others · 배너 · 로그인 기기 목록 · 다른 기기 로그아웃 · org.sec.maxSessions",
+      "in_progress": {
+        "owner": "d2",
+        "branch": "core/sec4-d2",
+        "expect": "로그인 응답 others · 배너 · 로그인 기기 목록 · 다른 기기 로그아웃 · org.sec.maxSessions"
+      }
+    },
+    {
+      "no": 5,
+      "title": "접속기록 접속지(IP)",
+      "basis": "고시 8조① · 안내서 148쪽 · GS 실행 26",
+      "status": "미흡",
+      "finding": "SEC-0022",
+      "current": "pii.access_log에 ip 열 없음(service/server/db.js:198-206)",
+      "remaining": "ip 열 추가 · 기록 지점 전부 ip(req) 전달",
+      "in_progress": {
+        "owner": "d3",
+        "branch": "core/sec4-d3",
+        "expect": "ip 열 추가 · 기록 지점 전부 ip(req) 전달"
+      }
+    },
+    {
+      "no": 6,
+      "title": "개인정보 내부 관리계획",
+      "basis": "고시 4조 · ISMS-P 1.x",
+      "status": "미흡",
+      "finding": "SEC-0023",
+      "current": "문서 없음",
+      "remaining": "docs/security/internal-plan.md(18개 사항 · 연 1회 이행 점검 · 승인란)",
+      "in_progress": {
+        "owner": "plan",
+        "branch": "core/sec4-plan",
+        "expect": "docs/security/internal-plan.md(18개 사항 · 연 1회 이행 점검 · 승인란)"
+      }
+    },
+    {
+      "no": 7,
+      "title": "접근권한 정기 검토(분기)",
+      "basis": "ISMS-P 2.5.6",
+      "status": "미흡",
+      "finding": "SEC-0024",
+      "current": "검토 기록 기능 없음",
+      "remaining": "GET/POST /api/access-review + didisam/accrev.js, audit access.review",
+      "in_progress": {
+        "owner": "d3",
+        "branch": "core/sec4-d3",
+        "expect": "GET/POST /api/access-review + didisam/accrev.js, audit access.review"
+      }
+    },
+    {
+      "no": 8,
+      "title": "학습자 로그인 유지 끔 반영",
+      "basis": "KISA IS · GS 실행 27",
+      "status": "부분",
+      "finding": "SEC-0025",
+      "current": "학번+접근코드 로그인이 유지 끔을 무시하고 30일(service/server/app.js:317-321, Java PubServiceImpl)",
+      "remaining": "keep:false면 세션 쿠키 + 12시간, 유지 30일은 마지막 사용 기준(최대 90일)",
+      "in_progress": {
+        "owner": "d2",
+        "branch": "core/sec4-d2",
+        "expect": "keep:false면 세션 쿠키 + 12시간, 유지 30일은 마지막 사용 기준(최대 90일)"
+      }
+    },
+    {
+      "no": 9,
+      "title": "학습자 실패 잠금(DB 기준)",
+      "basis": "고시 5조⑥ · 안내서 141쪽 FAQ 3 · 4",
+      "status": "부분",
+      "finding": "SEC-0026",
+      "current": "학번 로그인은 DB(audit) 기준, 일부 경로는 인스턴스 메모리 기준(service/server/app.js:312)",
+      "remaining": "학번 · 이메일 · 간편 로그인 전부 DB 기준 15분 5회 잠금",
+      "in_progress": {
+        "owner": "d2",
+        "branch": "core/sec4-d2",
+        "expect": "학번 · 이메일 · 간편 로그인 전부 DB 기준 15분 5회 잠금"
+      }
+    },
+    {
+      "no": 10,
+      "title": "접속기록 보관 · 연쇄 삭제 금지",
+      "basis": "고시 8조① · ISMS-P 2.9.4",
+      "status": "부분",
+      "finding": "SEC-0027",
+      "current": "문서상 2년이나 tenants on delete cascade(service/server/db.js:57,200), 자동 파기 없음",
+      "remaining": "로그 FK cascade 제거 + 보관 만료 파기 작업",
+      "in_progress": {
+        "owner": "d3",
+        "branch": "core/sec4-d3",
+        "expect": "로그 FK cascade 제거 + 보관 만료 파기 작업"
+      }
+    },
+    {
+      "no": 11,
+      "title": "권한 변경 기록 3년",
+      "basis": "고시 5조③",
+      "status": "부분",
+      "finding": "SEC-0028",
+      "current": "audit_log 보관 정책 2년",
+      "remaining": "role.* · member.* 3년 분리 보관",
+      "in_progress": {
+        "owner": "d3",
+        "branch": "core/sec4-d3",
+        "expect": "role.* · member.* 3년 분리 보관"
+      }
+    },
+    {
+      "no": 12,
+      "title": "접속기록 월간 점검 실시",
+      "basis": "고시 8조② · ISMS-P 2.9.5",
+      "status": "부분",
+      "finding": "SEC-0029",
+      "current": "절차 문서(docs/security/access-log-review.md) 있음, 첫 점검 미실시",
+      "remaining": "2026-12 첫 점검 기록 · 대량 다운로드 사유 확인 규칙(내부 관리계획에 월 1회 명시)",
+      "in_progress": {
+        "owner": "운영",
+        "branch": "2026-12",
+        "expect": "2026-12 첫 점검 기록 · 대량 다운로드 사유 확인 규칙(내부 관리계획에 월 1회 명시)"
+      }
+    },
+    {
+      "no": 13,
+      "title": "DB 전송 구간 서버 인증서 검증",
+      "basis": "고시 7조④ · KISA SN",
+      "status": "부분",
+      "finding": "SEC-0030",
+      "current": "DB_SSL=require일 때 rejectUnauthorized:false(service/server/db.js:9) — 사설 IP는 IAC-04",
+      "remaining": "DB_SSL_CA 있으면 rejectUnauthorized:true, Java sslmode=verify-ca",
+      "in_progress": {
+        "owner": "d3",
+        "branch": "core/sec4-d3",
+        "expect": "DB_SSL_CA 있으면 rejectUnauthorized:true, Java sslmode=verify-ca"
+      }
+    },
+    {
+      "no": 14,
+      "title": "개인정보 내려받기 통제",
+      "basis": "고시 7조⑤ · 12조",
+      "status": "부분",
+      "finding": "SEC-0031",
+      "current": "CSV 평문 내보내기(service/server/fac/mod-admin.js)",
+      "remaining": "사유 입력 필수 · 마스킹 기본 · 원본은 owner · audit export",
+      "in_progress": {
+        "owner": "d3",
+        "branch": "core/sec4-d3",
+        "expect": "사유 입력 필수 · 마스킹 기본 · 원본은 owner · audit export"
+      }
+    },
+    {
+      "no": 15,
+      "title": "IP 제한 · 해외 접속 차단",
+      "basis": "고시 6조① · 안내서 68쪽",
+      "status": "부분",
+      "finding": "SEC-0032",
+      "current": "ADMIN_IPS 허용목록(선택) · 새 기기 · 국가 알림만",
+      "remaining": "org.sec.krOnly — 운영자 로그인 국가 ≠ KR이면 403 geo_blocked(기본 꺼짐)",
+      "in_progress": {
+        "owner": "d3",
+        "branch": "core/sec4-d3",
+        "expect": "org.sec.krOnly — 운영자 로그인 국가 ≠ KR이면 403 geo_blocked(기본 꺼짐)"
+      }
+    },
+    {
+      "no": 16,
+      "title": "KISA 웹 점검표 2026판 21항목",
+      "basis": "KISA 2026 웹 21항목",
+      "status": "충족",
+      "evidence": [
+        "docs/security/kisa-web-check.md"
+      ],
+      "finding": "SEC-0033"
+    },
+    {
+      "no": 17,
+      "title": "SW 개발보안 약점 49개 매핑",
+      "basis": "행안부 구현단계 보안약점 49개 · GS · 공공 감리",
+      "status": "부분",
+      "finding": "SEC-0034",
+      "current": "Semgrep 기준선만 있고 49개 매핑 없음",
+      "remaining": "매핑표 docs/security/swdev49.md(이번 회차) — 미보유 규칙 추가 · 공공 납품 진단 결과서는 남음",
+      "in_progress": {
+        "owner": "exp",
+        "branch": "core/sec4-exp",
+        "expect": "매핑표 docs/security/swdev49.md(이번 회차) — 미보유 규칙 추가 · 공공 납품 진단 결과서는 남음"
+      }
+    },
+    {
+      "no": 18,
+      "title": "공공 클라우드 등급(CSAP → 국정원 C/S/O)",
+      "basis": "CSAP · N2SF",
+      "status": "부분",
+      "finding": "SEC-0035",
+      "current": "GCP 서울 · 논리 분리, AI 미국 전송",
+      "remaining": "데이터 등급 분류표 · 국내 LLM 경로 · 설치형(Java) 대안(로드맵 2027-01)",
+      "in_progress": {
+        "owner": "기획",
+        "branch": "2027-01",
+        "expect": "데이터 등급 분류표 · 국내 LLM 경로 · 설치형(Java) 대안(로드맵 2027-01)"
+      }
+    },
+    {
+      "no": 19,
+      "title": "SSRF(서버 외부 URL 요청)",
+      "basis": "KISA 2026 SF",
+      "status": "충족",
+      "evidence": [
+        "service/server/ssrf.js",
+        "service/server/bench.js",
+        "service-egov/src/main/java/egovframework/didisam/cmm/DdSsrf.java",
+        "service/test/ssrf.test.js"
+      ],
+      "finding": "SEC-0036"
+    },
+    {
+      "no": 20,
+      "title": "이해 가능한 오류 문구",
+      "basis": "GS 실행 10 · KISA EP",
+      "status": "부분",
+      "finding": "SEC-0037",
+      "current": "일부 화면이 서버 오류 원문(e.message) 표시",
+      "remaining": "didisam/errmsg.js errMsg — 운영자 합니다체 · 학습자 해요체, 원문 · 스택 노출 금지",
+      "in_progress": {
+        "owner": "d4",
+        "branch": "core/sec4-d4",
+        "expect": "didisam/errmsg.js errMsg — 운영자 합니다체 · 학습자 해요체, 원문 · 스택 노출 금지"
+      }
+    },
+    {
+      "no": 21,
+      "title": "성능 · 가용성 수치 · 복구 리허설",
+      "basis": "GS 실행 4 · 19~21",
+      "status": "부분",
+      "finding": "SEC-0038",
+      "current": "목표 수치 미정, 복구 리허설 미실시",
+      "remaining": "tests/perf/run.js 실측 · docs/gs/performance.md · docs/gs/recovery.md",
+      "in_progress": {
+        "owner": "d4",
+        "branch": "core/sec4-d4",
+        "expect": "tests/perf/run.js 실측 · docs/gs/performance.md · docs/gs/recovery.md"
+      }
+    },
+    {
+      "no": 22,
+      "title": "운영자 실패 잠금",
+      "basis": "고시 5조⑥ · ISMS-P 2.5.3",
+      "status": "충족",
+      "evidence": [
+        "service/server/app.js:483-484",
+        "service-egov/src/main/java/egovframework/didisam/auth/service/impl/AuthServiceImpl.java"
+      ]
+    },
+    {
+      "no": 23,
+      "title": "비밀번호 규칙 · 일방향 저장",
+      "basis": "고시 5조⑤ · 7조① · KISA BF",
+      "status": "충족",
+      "evidence": [
+        "service/server/pwrule.js:2-3",
+        "service/server/app.js:154"
+      ]
+    },
+    {
+      "no": 24,
+      "title": "고유식별 · 금융정보 미수집 · PII 분리 암호화",
+      "basis": "고시 7조②",
+      "status": "충족",
+      "evidence": [
+        "service/server/pii.js",
+        "service/test/pii.test.js"
+      ]
+    },
+    {
+      "no": 25,
+      "title": "기록 위 · 변조 방지",
+      "basis": "고시 8조③ · GS 실행 24",
+      "status": "충족",
+      "evidence": [
+        "service/server/db.js",
+        "service/test/audit-chain.test.js"
+      ]
+    },
+    {
+      "no": 26,
+      "title": "1인 1계정 · 테넌트 분리",
+      "basis": "고시 5조④ · GS 실행 22",
+      "status": "충족",
+      "evidence": [
+        "service/server/db.js",
+        "service/test/security.test.js"
+      ]
+    },
+    {
+      "no": 27,
+      "title": "국외이전 고지",
+      "basis": "ISMS-P 3.3.4 · 교육부 필수기준",
+      "status": "충족",
+      "evidence": [
+        "didisam/lacct.js"
+      ]
     }
   ]
 }

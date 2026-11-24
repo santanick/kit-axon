@@ -49,3 +49,17 @@ test('저장소의 실제 원장 · 체크리스트는 정직성 검사를 통�
   assert.deepStrictEqual(r.errors, []);
   assert.ok(r.total >= 0 && r.total <= 100);
 });
+
+test('③ 인증 기준 통제 — 27개 · 원장 연결 · 체크리스트 충족과 어긋남 검사', () => {
+  const cert = Array.from({ length: 27 }, (_, i) => ({ no: i + 1, status: '충족', evidence: ['security/score.js'] }));
+  cert[0] = { no: 1, status: '미흡', finding: 'A' }; cert[1] = { no: 2, status: '부분', finding: 'B' }; cert[2] = { no: 3, status: '부분', finding: 'NONE' };
+  const c = { items: ck({ 6: { status: '충족', evidence: ['security/score.js'], cert: [1] } }).items, cert };
+  const k = S.certScore(c, { items: [{ id: 'A', status: 'open' }, { id: 'B', status: 'fixed' }] });
+  assert.strictEqual(k.score, Math.round((24 + 1) / 27 * 1000) / 10);
+  assert.ok(k.errors.some(x => /#2: 부분인데 원장 B가 fixed/.test(x)));
+  assert.ok(k.errors.some(x => /#3: 부분인데 원장 항목/.test(x)));
+  assert.ok(k.errors.some(x => /체크리스트 06: 충족인데 연결된 인증 통제 #1/.test(x)));
+  assert.ok(S.certScore({ cert: cert.slice(0, 26) }, null).errors.some(x => /27개/.test(x)));
+  assert.strictEqual(S.total({ score: 90 }, { score: 90 }, { score: 60 }), 80);
+  assert.strictEqual(S.total({ score: 90 }, { score: 80 }, null), 85);
+});

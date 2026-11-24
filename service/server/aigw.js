@@ -95,7 +95,7 @@ function createGateway({ pool, inTenant, aiUrl, aiKey, today, keys, HttpErr }) {
   /* 외부 호출: 요청 본문은 호출부가 만든 그대로 보낸다(동작 불변). 망 오류 · 시간 초과는 502 ai_net */
   async function post(body, ms) {
     const ac = new AbortController(); const to = setTimeout(() => ac.abort(), ms); let r, j;
-    try { r = await fetch(aiUrl, { method: 'POST', signal: ac.signal, headers: { 'content-type': 'application/json', 'x-api-key': aiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify(body) }); j = await r.json().catch(() => ({})); }
+    try { r = await fetch(aiUrl, { method: 'POST', redirect: 'manual', signal: ac.signal, headers: { 'content-type': 'application/json', 'x-api-key': aiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify(body) }); j = await r.json().catch(() => ({})); }
     catch (e) { throw new HttpErr(502, e.name === 'AbortError' ? 'AI 응답 시간이 초과되었습니다.' : 'AI 서버에 연결하지 못했습니다.', 'ai_net'); } finally { clearTimeout(to); }
     return { r, j };
   }

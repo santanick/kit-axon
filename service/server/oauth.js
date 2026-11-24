@@ -48,11 +48,11 @@ function createOAuth({ env, pool, HttpErr, readBody, limit, ip, cookies, secure,
   };
   const provOf = p => { const c = P[p]; if (!c) throw new HttpErr(404, '사용할 수 없는 로그인 방식입니다.', 'oauth_prov'); return c; };
   const postForm = async (url, form) => {
-    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded;charset=utf-8', accept: 'application/json' }, body: new URLSearchParams(form), signal: AbortSignal.timeout(10000) });
+    const r = await fetch(url, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded;charset=utf-8', accept: 'application/json' }, body: new URLSearchParams(form), signal: AbortSignal.timeout(10000) });
     const j = await r.json().catch(() => ({})); if (!r.ok || !j.access_token) throw new Error('token'); return j;
   };
   const getJson = async (url, tok) => {
-    const r = await fetch(url, { headers: { authorization: `Bearer ${tok}`, accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
+    const r = await fetch(url, { redirect: 'manual', headers: { authorization: `Bearer ${tok}`, accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
     if (!r.ok) throw new Error('me'); return r.json();
   };
 

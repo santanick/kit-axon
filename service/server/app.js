@@ -719,7 +719,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     const f = path.resolve(pubRoot, '.' + p);
     if (!f.startsWith(pubRoot + path.sep) && f !== pubRoot) return send(res, 403, 'forbidden');
     fs.stat(f, (e, st) => {
-      if (e || !st.isFile()) { if (!path.extname(p) && !p.startsWith('/api')) return send(res, 302, null, { location: p + '/' }); return send(res, 404, 'not found', { 'content-type': 'text/plain; charset=utf-8' }); }
+      if (e || !st.isFile()) { if (!path.extname(p) && !p.startsWith('/api') && !/^\/[\/\\]/.test(p) && !/[\\\s]/.test(p)) return send(res, 302, null, { location: pathname + '/' }); /* 가디언 4차 CWE-601: '//호스트' 형태 열린 리다이렉트 차단, 위치는 인코딩된 원래 경로로 */ return send(res, 404, 'not found', { 'content-type': 'text/plain; charset=utf-8' }); }
       const ext = path.extname(f).toLowerCase(); const isHtml = ext === '.html';
       const h = { ...SEC_HEADERS, 'content-type': MIME[ext] || 'application/octet-stream', 'content-length': st.size, 'cache-control': isHtml ? 'no-cache' : 'public, max-age=300' };
       if (isHtml) h['content-security-policy'] = path.basename(f) === 'learner.html' ? LCSP : CSP;
