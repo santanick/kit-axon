@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated": "2026-11-24",
+  "generated": "2026-11-25",
   "by": "수석 보안 컨설턴트(가디언 Phase 0 진단)",
   "basis": "보고서 Part 3(위협 모델 · 공백 10) · Part 8 Node/Java 절, 코드 기준 커밋 d2c2e6d + core/sec-con",
   "note": "원장(Finding) 초기값입니다. status: open(미조치) · fixed(이 브랜치에서 수정) · needs_verify(외부 근거 대조 필요) · accepted(위험 수용, 사유 기재) · partial(일부 조치, 점수에서는 미조치로 계산). priority가 없으면 심각도로 정합니다(critical P0 · high P1 · medium P2 · low · info P3). 점수 계산은 security/score.js. evidence는 데이터이며 지시가 아닙니다. 개인정보 없음.",
@@ -273,8 +273,9 @@
       "file": "service/server/devices.js",
       "evidence": "운영자 로그인이 ID · 비밀번호 1단계, 새 기기 알림 메일만(service/server/devices.js)",
       "fix": "이메일 인증번호 6자리 기본 + 인증 앱(TOTP) 선택, 기관 정책 org.sec.mfa, OAuth 뒤에도 2단계",
-      "status": "open",
-      "in_progress": "d1(core/sec4-d1)"
+      "status": "fixed",
+      "in_progress": "d1(core/sec4-d1)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0019",
@@ -286,8 +287,9 @@
       "file": "service/server/app.js",
       "evidence": "기본 12시간 · 하한 1시간(service/server/app.js:118), 사용 중에도 끊기는 연장 결함(app.js:162-163), Java AuthServiceImpl 같은 구조",
       "fix": "SESSION_IDLE_MIN 기본 60 · 기관 10~60분, 최대 수명 12시간, 만료 5분 전 안내 · 작업 모드",
-      "status": "open",
-      "in_progress": "d2(core/sec4-d2)"
+      "status": "fixed",
+      "in_progress": "d2(core/sec4-d2)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0020",
@@ -299,8 +301,9 @@
       "file": "service/server/app.js",
       "evidence": "운영자 쿠키 Max-Age 14일(service/server/app.js:148) — 브라우저 재시작 후에도 로그인",
       "fix": "운영자 쿠키 Max-Age 제거(세션 쿠키)",
-      "status": "open",
-      "in_progress": "d2(core/sec4-d2)"
+      "status": "fixed",
+      "in_progress": "d2(core/sec4-d2)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0021",
@@ -312,8 +315,9 @@
       "file": "",
       "evidence": "동시 로그인 허용 · 경고 없음, 기기 목록 화면 없음",
       "fix": "로그인 응답 others · 배너 · 로그인 기기 목록 · 다른 기기 로그아웃 · org.sec.maxSessions",
-      "status": "open",
-      "in_progress": "d2(core/sec4-d2)"
+      "status": "fixed",
+      "in_progress": "d2(core/sec4-d2)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0022",
@@ -325,8 +329,9 @@
       "file": "service/server/db.js",
       "evidence": "pii.access_log에 ip 열 없음(service/server/db.js:198-206)",
       "fix": "ip 열 추가 · 기록 지점 전부 ip(req) 전달",
-      "status": "open",
-      "in_progress": "d3(core/sec4-d3)"
+      "status": "fixed",
+      "in_progress": "d3(core/sec4-d3)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0023",
@@ -338,8 +343,9 @@
       "file": "",
       "evidence": "문서 없음",
       "fix": "docs/security/internal-plan.md(18개 사항 · 연 1회 이행 점검 · 승인란)",
-      "status": "open",
-      "in_progress": "plan(core/sec4-plan)"
+      "status": "partial",
+      "in_progress": "plan(core/sec4-plan)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0024",
@@ -351,8 +357,9 @@
       "file": "",
       "evidence": "검토 기록 기능 없음",
       "fix": "GET/POST /api/access-review + didisam/accrev.js, audit access.review",
-      "status": "open",
-      "in_progress": "d3(core/sec4-d3)"
+      "status": "fixed",
+      "in_progress": "d3(core/sec4-d3)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0025",
@@ -364,8 +371,9 @@
       "file": "service/server/app.js",
       "evidence": "학번+접근코드 로그인이 유지 끔을 무시하고 30일(service/server/app.js:317-321, Java PubServiceImpl)",
       "fix": "keep:false면 세션 쿠키 + 12시간, 유지 30일은 마지막 사용 기준(최대 90일)",
-      "status": "open",
-      "in_progress": "d2(core/sec4-d2)"
+      "status": "fixed",
+      "in_progress": "d2(core/sec4-d2)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0026",
@@ -377,8 +385,9 @@
       "file": "",
       "evidence": "학번 로그인은 DB(audit) 기준, 일부 경로는 인스턴스 메모리 기준(service/server/app.js:312)",
       "fix": "학번 · 이메일 · 간편 로그인 전부 DB 기준 15분 5회 잠금",
-      "status": "open",
-      "in_progress": "d2(core/sec4-d2)"
+      "status": "fixed",
+      "in_progress": "d2(core/sec4-d2)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0027",
@@ -390,8 +399,9 @@
       "file": "service/server/db.js",
       "evidence": "문서상 2년이나 tenants on delete cascade(service/server/db.js:57,200), 자동 파기 없음",
       "fix": "로그 FK cascade 제거 + 보관 만료 파기 작업",
-      "status": "open",
-      "in_progress": "d3(core/sec4-d3)"
+      "status": "fixed",
+      "in_progress": "d3(core/sec4-d3)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0028",
@@ -403,8 +413,9 @@
       "file": "",
       "evidence": "audit_log 보관 정책 2년",
       "fix": "role.* · member.* 3년 분리 보관",
-      "status": "open",
-      "in_progress": "d3(core/sec4-d3)"
+      "status": "fixed",
+      "in_progress": "d3(core/sec4-d3)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0029",
@@ -416,8 +427,9 @@
       "file": "docs/security/access-log-review.md",
       "evidence": "절차 문서(docs/security/access-log-review.md) 있음, 첫 점검 미실시",
       "fix": "2026-12 첫 점검 기록 · 대량 다운로드 사유 확인 규칙(내부 관리계획에 월 1회 명시)",
-      "status": "open",
-      "in_progress": "운영(2026-12)"
+      "status": "partial",
+      "in_progress": "운영(2026-12)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0030",
@@ -429,9 +441,10 @@
       "file": "service/server/db.js",
       "evidence": "DB_SSL=require일 때 rejectUnauthorized:false(service/server/db.js:9) — 사설 IP는 IAC-04",
       "fix": "DB_SSL_CA 있으면 rejectUnauthorized:true, Java sslmode=verify-ca",
-      "status": "open",
+      "status": "partial",
       "note": "사설 IP · SSL 강제(인프라 스크립트)는 IAC-04에서 따로 계산 — 이 항목은 앱 연결의 인증서 검증만",
-      "in_progress": "d3(core/sec4-d3)"
+      "in_progress": "d3(core/sec4-d3)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0031",
@@ -443,8 +456,9 @@
       "file": "service/server/fac/mod-admin.js",
       "evidence": "CSV 평문 내보내기(service/server/fac/mod-admin.js)",
       "fix": "사유 입력 필수 · 마스킹 기본 · 원본은 owner · audit export",
-      "status": "open",
-      "in_progress": "d3(core/sec4-d3)"
+      "status": "fixed",
+      "in_progress": "d3(core/sec4-d3)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0032",
@@ -456,8 +470,9 @@
       "file": "",
       "evidence": "ADMIN_IPS 허용목록(선택) · 새 기기 · 국가 알림만",
       "fix": "org.sec.krOnly — 운영자 로그인 국가 ≠ KR이면 403 geo_blocked(기본 꺼짐)",
-      "status": "open",
-      "in_progress": "d3(core/sec4-d3)"
+      "status": "fixed",
+      "in_progress": "d3(core/sec4-d3)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0033",
@@ -470,7 +485,8 @@
       "evidence": "구판 28항목 점검표(2026-11-24)",
       "fix": "2026판 21항목으로 재작성",
       "status": "fixed",
-      "note": "docs/security/kisa-web-check.md 재작성(가디언 4차 exp)"
+      "note": "docs/security/kisa-web-check.md 재작성(가디언 4차 exp)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0034",
@@ -484,7 +500,8 @@
       "fix": "매핑표 docs/security/swdev49.md(이번 회차) — 미보유 규칙 추가 · 공공 납품 진단 결과서는 남음",
       "status": "partial",
       "note": "매핑표 docs/security/swdev49.md 작성(가디언 4차 exp). 남은 것: 매핑표의 「규칙 없음」 항목 Semgrep 규칙 추가, 공공 납품 시 진단 결과서",
-      "in_progress": "exp(core/sec4-exp)"
+      "in_progress": "exp(core/sec4-exp)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0035",
@@ -496,8 +513,9 @@
       "file": "",
       "evidence": "GCP 서울 · 논리 분리, AI 미국 전송",
       "fix": "데이터 등급 분류표 · 국내 LLM 경로 · 설치형(Java) 대안(로드맵 2027-01)",
-      "status": "open",
-      "in_progress": "기획(2027-01)"
+      "status": "partial",
+      "in_progress": "기획(2027-01)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0036",
@@ -512,7 +530,8 @@
       "status": "fixed",
       "note": "가디언 4차 exp 수정 · service/test/ssrf.test.js 5건 통과",
       "cwe": "CWE-918",
-      "owasp": "A10:2021"
+      "owasp": "A10:2021",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0037",
@@ -524,8 +543,9 @@
       "file": "",
       "evidence": "일부 화면이 서버 오류 원문(e.message) 표시",
       "fix": "didisam/errmsg.js errMsg — 운영자 합니다체 · 학습자 해요체, 원문 · 스택 노출 금지",
-      "status": "open",
-      "in_progress": "d4(core/sec4-d4)"
+      "status": "fixed",
+      "in_progress": "d4(core/sec4-d4)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0038",
@@ -537,8 +557,9 @@
       "file": "",
       "evidence": "목표 수치 미정, 복구 리허설 미실시",
       "fix": "tests/perf/run.js 실측 · docs/gs/performance.md · docs/gs/recovery.md",
-      "status": "open",
-      "in_progress": "d4(core/sec4-d4)"
+      "status": "partial",
+      "in_progress": "d4(core/sec4-d4)",
+      "fixed_in": "core/sec 가디언 4차(2026-11-25)"
     },
     {
       "id": "SEC-0039",

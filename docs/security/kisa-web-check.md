@@ -9,11 +9,11 @@
 ## 요약
 | 결과 | 건수 | 항목 |
 |---|---|---|
-| 양호 | 15 | CI · SI · DI · XS · CF · SF · BF · PR · PV · FU · FD · CC · AE · WM · IL |
-| 부분 | 5 | EP(#20, SEC-0037) · IN(#7, SEC-0024) · IS(#2 · #3 · #4 · #8, SEC-0019~0021 · 0025) · SN(#13, SEC-0030) · AU(#9, SEC-0026) |
-| 취약 | 1 | IA(#1 관리자 추가 인증 없음, SEC-0018) |
+| 양호 | 20 | CI · SI · DI · XS · CF · SF · BF · PR · PV · FU · FD · CC · AE · WM · IL · IA · IS · EP · IN · AU(4차 보완) |
+| 부분 | 1 | SN(#13 DB 서버 인증서 검증 — 코드 완료, 운영 CA 비밀값 등록 · 사설 IP는 대표님 콘솔 조치) |
+| 취약 | 0 | — |
 
-- **IA · IS는 개발자 1(d1, `core/sec4-d1` 2단계 인증) · 개발자 2(d2, `core/sec4-d2` 세션)가 이번 회차에 보완 중 → 통합 병합 후 「보완 반영」으로 다시 판정합니다.** 병합 전까지는 위 판정(취약 · 부분)이 현재 상태입니다.
+- (2026-11-25 통합 후 재판정 완료) **IA · IS는 개발자 1(d1, `core/sec4-d1` 2단계 인증) · 개발자 2(d2, `core/sec4-d2` 세션)가 이번 회차에 보완 중 → 통합 병합 후 「보완 반영」으로 다시 판정합니다.** 병합 전까지는 위 판정(취약 · 부분)이 현재 상태입니다.
 - 이번 회차 직접 수정(SF): 학내 LLM 주소에 메타데이터 · 링크 로컬 · 계정 정보 차단 추가(Node `service/server/ssrf.js` · Java `cmm/DdSsrf.java`), 서버 외부 요청 전부 리다이렉트 미추종(Node `redirect: 'manual'|'error'`, Java HttpClient 기본 NEVER).
 
 ## 항목별 결과
@@ -22,23 +22,23 @@
 | CI | 코드 인젝션(OS 명령 · SSI · XPath · LDAP 포함) | 양호 | `eval` · `new Function` 0건(grep). 명령 실행은 미디어 작업 1곳 `service/server/lms/media/worker.js:19` `spawn(cmd, args)`(셸 없음, 인자 배열), Java `lms/v/service/impl/LmsVWorker.java` `ProcessBuilder(List)` | SSI · XPath · LDAP 미사용(Node · Java grep 0건) |
 | SI | SQL 인젝션 | 양호 | 전 쿼리 `$n` 바인딩. 동적 조각은 고정값만(`fac/mod-admin.js` 자리표시 · `key` 3개 고정). Java `PiiMapper.xml`의 `${f}`는 `PiiServiceImpl` 허용목록(name · phone · email) 통과 후만 | Semgrep 규칙 `security/semgrep/` |
 | DI | 디렉터리 인덱싱(경로 추적 포함) | 양호 | `service/server/app.js:718-719`(폴더 요청 → `index.html`, `path.resolve` 후 공개 폴더 밖이면 403) | 목록 출력 코드 없음 |
-| EP | 에러 페이지 적용 미흡 | 부분 | 서버: 500은 고정 문구만, 스택 미노출(`app.js:778-781`), 없는 API 404 `not_found`(`app.js:761`) | **화면 일부가 서버 오류 원문(`e.message`)을 그대로 표시 → #20 SEC-0037**, 개발자 4(d4) `didisam/errmsg.js`로 보완 중 |
+| EP | 에러 페이지 적용 미흡 | **양호(가디언 4차 보완)** | 화면 오류는 `didisam/errmsg.js`가 코드별 한국어 안내로 바꿈(예외 · 스택 · 영문 원문 차단) | #20 SEC-0037 fixed — `tests/ui/errmsg.js` |
 | IL | 정보 누출 | 양호 | 서버 버전 헤더 없음, 오류 응답 고정 문구(`app.js:781`), 계정 존재 숨김 더미 해시 | 잠금 응답 계정 열거(SEC-0016, P3)는 원장에서 별도 관리 |
 | XS | 크로스사이트 스크립팅 | 양호 | CSP `script-src 'self'`(`app.js:725`, `unsafe-inline` 없음), 출력 이스케이프(`esc` · `E` · `nl`) | innerHTML 후보 기준선(SEC-0012, 확정 0건) |
 | CF | 크로스사이트 요청 변조 | 양호 | `SameSite=Strict` 쿠키(`app.js:148,242`) + 변경 요청 `x-didisam: 1`(`app.js:769`) + Origin 확인(`app.js:770`) | |
 | SF | 서버 측 요청 변조(SSRF) | 양호(이번 회차 보완) | 아래 「SF 전수 목록」. 기관 입력 주소를 부르는 곳은 2곳(벤치마크 · 학내 LLM)이고 둘 다 내부 · 메타데이터 차단. `service/test/ssrf.test.js` 5건 통과 | 새 외부 요청 지점이 생기면 시험이 실패하도록 고정 |
 | BF | 약한 비밀번호 정책 | 양호 | `service/server/pwrule.js:2-3`(2종 10자 · 3종 8자), scrypt 저장 | 고시에 구성 기준 없음(안내서 141쪽). 유출 비밀번호 목록 차단은 선택(#23) |
-| IA | 불충분한 인증 | **취약 → 보완 반영 예정** | 운영자 로그인이 ID · 비밀번호 1단계(`app.js` `POST /api/login`), 새 기기 알림 메일만(`devices.js`) | 고시 제6조② 추가 인증수단 의무(#1, SEC-0018 P0). **d1이 이메일 인증번호 6자리 기본 + 인증 앱(TOTP) 2단계 구현 중** — 병합 후 「양호」 재판정 |
-| IN | 불충분한 인가 | 부분 | FORCE RLS + `app.tenant`(`db.js`, `cmm/TenantTx.java`), owner 전용 경로, MCP 쓰기 키 owner 전용(SEC-0011 fixed) | **분기 접근권한 검토 기록 없음 → #7 SEC-0024**, d3 `GET/POST /api/access-review` 진행 중 |
+| IA | 불충분한 인증 | **양호(가디언 4차 보완)** | 운영자 매 로그인 2단계(이메일 인증번호 · 인증 앱 TOTP, `service/server/mfa.js` · `LoginMfa.java`), 소셜 로그인 뒤에도 같음 | #1 SEC-0018 fixed — 시험 `service/test/mfa.test.js` · `contract-mfa.js` |
+| IN | 불충분한 인가 | **양호(가디언 4차 보완)** | 분기 접근권한 검토 `GET/POST /api/access-review`(정운영자) · 화면 `didisam/accrev.js` | #7 SEC-0024 fixed |
 | PR | 취약한 비밀번호 복구 | 양호 | 자가 재설정 없음, 정운영자 임시 비밀번호(CSPRNG) → 첫 로그인 강제 변경, 변경 시 다른 세션 폐기 | 메일 재설정 기능 추가 시 재점검 |
 | PV | 프로세스 검증 누락 | 양호 | 결제 금액 서버 대조(`ledger/mod-pub.js` amount_mismatch), 환불 상태 전이 1회, 임시 비밀번호 상태에서 다른 API 차단 | |
 | FU | 파일 업로드(악성 콘텐츠 포함) | 양호 | 확장자 · MIME 허용목록 · 용량 · 이름 정리(`mediafile.js`), 시그니처 확인 · SVG 정화 + CSP sandbox(`media.js`) | |
 | FD | 파일 다운로드(위치 공개 포함) | 양호 | ID 정규식 + 자기 기관 확인, `content-disposition`(`mediafile.js`), 이미지에는 `didisam/`만 복사(`service/Dockerfile`) | 개인정보 CSV 통제는 #14(d3) |
-| IS | 불충분한 세션 관리 | **부분 → 보완 반영 예정** | 토큰 `randomBytes(32)` · SHA-256 저장(`app.js:154`), 로그인마다 새 토큰. 그러나 유휴 기본 12시간 · 하한 1시간(`app.js:118`), 연장 결함(`app.js:162-163`), 운영자 쿠키 `Max-Age` 14일(`app.js:148`), 동시 세션 경고 없음, 학번 로그인 유지 끔 무시 30일(`app.js:317-321`) | #2 · #3 · #4 · #8(SEC-0019 · 0020 · 0021 · 0025). **d2가 분 단위 60분(기관 10~60분) · 세션 쿠키 · 동시 접속 알림 · 학습자 12시간 구현 중** — 병합 후 재판정 |
+| IS | 불충분한 세션 관리 | **양호(가디언 4차 보완)** | 유휴 기본 60분 · 기관 10~60분 · 사용 중 연장 · 최대 12시간 · 세션 쿠키(`service/server/session.js` · `SessionPolicy.java`), 동시 접속 알림 · 원격 로그아웃, 학번 로그인 유지 끔 반영 | #2 · #3 · #4 · #8 fixed — 시험 `session.test.js` · `contract-session.js` |
 | SN | 데이터 평문 전송 | 부분 | HTTPS + HSTS(`app.js:143,727`), 쿠키 `Secure` | **DB 연결 서버 인증서 미검증(`db.js:9` `rejectUnauthorized:false`) → #13 SEC-0030**, d3 `DB_SSL_CA` 진행 중 · 사설 IP는 대표님 콘솔 조치 |
 | CC | 쿠키 변조 | 양호 | 쿠키에는 임의 토큰만(권한 · 기관 정보 없음), `HttpOnly` · `SameSite=Strict` · `Secure` | |
 | AE | 관리자 페이지 노출 | 양호 | 관리 API 로그인 · 역할 확인, 보안 API owner 전용, `ADMIN_IPS` 허용목록 선택(`app.js:120`) | 해외 IP 운영자 로그인 차단 선택은 #15(d3 `org.sec.krOnly`) |
-| AU | 자동화 공격 | 부분 | 운영자: IP 30회 · 이메일 8회/10분 + DB(audit) 기준 15분 5회 잠금(`app.js:483-484`) | **학습자 일부 경로가 인스턴스 메모리 기준(`app.js:312`) → #9 SEC-0026**, d2가 DB 기준 통일 중 |
+| AU | 자동화 공격 | **양호(가디언 4차 보완)** | 운영자 · 학습자 전 로그인 경로 DB 기준 15분 5회 잠금 | #9 SEC-0026 fixed |
 | WM | 불필요한 Method 허용 | 양호 | 정적 경로 GET · HEAD 외 405(`app.js:776`), `/api`는 메서드+경로 키로만 라우팅(`app.js:766`, 없으면 404), 변경 메서드는 CSRF 헤더 필수. Java는 내장 Tomcat 기본(TRACE 차단) | |
 
 ## SF 전수 목록(서버가 외부로 나가는 요청)
