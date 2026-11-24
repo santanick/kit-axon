@@ -71,6 +71,11 @@ test('학습자 사이트 API', async t => {
     assert.equal((await call('L', 'GET', `/api/pub/${A.tid}/me`)).status, 401);
     assert.equal((await call('L2', 'POST', `/api/pub/${A.tid}/login`, { sid: '20260001', code: 'ABC234' })).status, 401);
   });
+  await t.test('SEC-0017 학습자 지속 잠금 · 없는 번호도 같은 잠금 응답(SEC-0016 계정 열거 방지)', async () => {
+    await call('A', 'PUT', '/api/state', { doc: doc('A', [{ sid: '20260077', dept: '컴공', code: 'LCK777' }], { org: { name: 'A' }, pages: [] }), rev: 4 }); assert.equal((await call('Lk0', 'POST', `/api/pub/${A.tid}/login`, { sid: '20260077', code: 'LCK777' })).status, 200);
+    for (const sid of ['20260077', '20269999']) { for (let i = 0; i < 5; i++) await call('Lk', 'POST', `/api/pub/${A.tid}/login`, { sid, code: 'BAD00' + i });
+      const r = await call('Lk', 'POST', `/api/pub/${A.tid}/login`, { sid, code: 'LCK777' }); assert.equal(r.status, 429, sid + ' ' + JSON.stringify(r.j)); assert.equal(r.j.error, 'locked'); }
+  });
   await t.test('learner.html은 같은 출처 프레임 허용', async () => {
     const r = await fetch(U + '/learner.html'); void r; // publicDir 없음 → 404, 헤더 검사는 t16에서
   });

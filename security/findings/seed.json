@@ -257,7 +257,8 @@
       "line": 303,
       "evidence": "limit('lls:'+tid+sid, 8, 10분)은 인스턴스 메모리라 Cloud Run 인스턴스 수만큼 늘어남. 스튜디오가 만드는 코드는 6자 32문자 CSPRNG(didisam/kit.js:227, 약 10억 경우)라 실효 위험은 낮으나, 동기화 API는 4~20자 코드를 받음(app.js:185).",
       "fix": "학습자 실패도 audit 기준 지속 잠금(운영자 SEC-0014와 같은 방식) + 동기화 시 코드 최소 6자, Node+Java 함께",
-      "status": "open"
+      "status": "fixed",
+      "note": "학습자 로그인 지속 잠금(audit_log 15분 5회, 없는 번호는 메모리 계수 같은 응답) Node+Java, learner.test.js. 운영자 지정 코드 최소 길이(4자)는 기존 기관 코드 호환을 위해 유지 — 잠금으로 대입 공격 차단"
     }
   ]
 }

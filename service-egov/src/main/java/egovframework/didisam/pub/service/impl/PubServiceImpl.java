@@ -28,6 +28,7 @@ import static egovframework.didisam.cmm.Js.*;
  */
 @Service("pubService")
 public class PubServiceImpl extends EgovAbstractServiceImpl implements PubService {
+    private static final java.util.concurrent.ConcurrentHashMap<String, long[]> LLF = new java.util.concurrent.ConcurrentHashMap<>(); /* 없는 번호 실패 계수(계정 열거 방지) */
     public static final int LP_MAX = 512 * 1024; /* v43.6 셀프러닝 노트(lp.notes)로 256KB → 512KB — Node app.js와 같음 */
     static final Pattern TID_RE = Pattern.compile("tn_[a-z0-9]{8,16}"), SID_RE = Pattern.compile("[A-Za-z0-9_-]{4,20}"), UUIDISH = Pattern.compile("[0-9a-f-]{36}"),
         LPKEY = Pattern.compile("[\\w-]{1,40}"), DAY = Pattern.compile("\\d{4}-\\d{2}-\\d{2}"), HREF = Pattern.compile("#[\\w/%-]{0,120}"), ASKID = Pattern.compile("[\\w-]{1,24}"),
@@ -134,8 +135,17 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         rl.limit("ll:" + web.ip(req), props.getInt("rate.ll.max"), props.getLong("rate.ll.winMs"));
         rl.limit("lls:" + tid + ":" + sid, props.getInt("rate.lls.max"), props.getLong("rate.ll.winMs"));
         Map<String, Object> L = SID_RE.matcher(sid).matches() ? tx.inTenant(tid, () -> mapper.selectLearner(tid, sid)) : null;
+        /* 보안(SEC-0017): 학습자 지속 잠금 — Node app.js와 같은 규칙(audit_log 기준 15분 안 실패 5회, 없는 번호는 메모리 계수) */
+        final String act = "sid:" + sid;
+        if (L != null) { int fails = 0; try { Integer n = tx.inTenant(tid, () -> mapper.countLearnerFails(tid, act)); fails = n == null ? 0 : n; } catch (Exception ignore) {} if (fails >= 5) throw processException("dd.429.locked.learner"); }
+        else if (LLF.getOrDefault(tid + ":" + sid, new long[]{0, 0})[1] > System.currentTimeMillis() && LLF.get(tid + ":" + sid)[0] >= 5) throw processException("dd.429.locked.learner");
         boolean ok = L != null && L.get("pw_hash") != null ? DdCrypto.checkPw(codeRaw, (String) L.get("pw_hash")) : DdCrypto.checkPw(code, L != null ? (String) L.get("code_hash") : DdCrypto.DUMMY);
-        if (L == null || !ok) throw processException("dd.401.login.code");
+        if (L == null || !ok) {
+            if (L != null) { try { tx.audit(tid, act, "llogin.fail", null); } catch (Exception ignore) {} }
+            else { long now = System.currentTimeMillis(); LLF.compute(tid + ":" + sid, (k, v) -> v == null || v[1] < now ? new long[]{1, now + 900_000L} : new long[]{v[0] + 1, v[1]}); }
+            throw processException("dd.401.login.code");
+        }
+        try { tx.audit(tid, act, "llogin", null); } catch (Exception ignore) {}
         pii.newLearnerSession(res, tid, sid);
         return tx.inTenant(tid, () -> {
             mapper.touchLearner(tid, sid);

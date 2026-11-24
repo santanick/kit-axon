@@ -303,8 +303,14 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
       const sid = String(b.sid || '').trim(); const code = String(b.code || '').trim().toUpperCase();
       limit('ll:' + ip(req), 40, 600e3); limit(`lls:${tid}:${sid}`, 8, 600e3);
       const L = SID_RE.test(sid) ? await inTenant(pool, tid, async c => (await c.query('select sid, dept, code_hash, pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]) : null;
+      /* 보안(SEC-0017): 학습자 지속 잠금 — 마지막 성공 이후 15분 안 실패 5회면 15분 잠금(audit_log 기준, Java 동일). 없는 번호는 메모리 계수로 같은 응답(계정 열거 방지) */
+      const LK_MSG = '로그인에 5번 실패해 15분 동안 잠겼어요. 잠시 후 다시 시도하거나 선생님께 접근코드를 확인해 주세요.';
+      if (L) { const n = await inTenant(pool, tid, c => c.query(`select count(*)::int n from audit_log where tenant_id = $1 and actor = $2 and action = 'llogin.fail' and at > greatest(now() - interval '15 minutes', coalesce((select max(at) from audit_log where tenant_id = $1 and actor = $2 and action = 'llogin'), 'epoch'::timestamptz))`, [tid, 'sid:' + sid])).then(r => r.rows[0].n).catch(() => 0); if (n >= 5) throw new HttpErr(429, LK_MSG, 'locked'); }
+      else { const e = RL.get('llf:' + tid + ':' + sid); if (e && e.reset > Date.now() && e.n >= 5) throw new HttpErr(429, LK_MSG, 'locked'); }
       const ok = L && L.pw_hash ? await checkPw(String(b.code || '').trim(), L.pw_hash) : await checkPw(code, L ? L.code_hash : DUMMY);
-      if (!L || !ok) throw new HttpErr(401, '번호 또는 접근코드가 올바르지 않습니다.', 'login');
+      if (!L || !ok) { if (L) await inTenant(pool, tid, c => audit(c, tid, 'sid:' + sid, 'llogin.fail', null)).catch(() => {}); else { try { limit('llf:' + tid + ':' + sid, 1e9, 900e3); } catch (e) { } }
+        throw new HttpErr(401, '번호 또는 접근코드가 올바르지 않습니다.', 'login'); }
+      await inTenant(pool, tid, c => audit(c, tid, 'sid:' + sid, 'llogin', null)).catch(() => {});
       const token = crypto.randomBytes(32).toString('base64url');
       await pool.query('insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval \'30 days\')', [sha(token), tid, sid]);
       await cplAfterLogin(req, tid, sid, sha(token));

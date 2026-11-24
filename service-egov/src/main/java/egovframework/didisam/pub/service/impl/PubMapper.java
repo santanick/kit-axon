@@ -11,6 +11,7 @@ public interface PubMapper {
     java.util.List<String> selectCommLive(@Param("tid") String tid, @Param("seq") long seq);
     Map<String, Object> selectOg(@Param("tid") String tid); /* v37 L2 og 메타 */
     Map<String, Object> selectLearner(@Param("tid") String tid, @Param("sid") String sid);
+    int countLearnerFails(@Param("tid") String tid, @Param("actor") String actor);
     String selectIdleH(@Param("tid") String tid);
     void touchLearnerSession(@Param("id") String id);
     Map<String, Object> selectLearnerDept(@Param("tid") String tid, @Param("sid") String sid);
