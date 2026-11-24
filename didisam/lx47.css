@@ -126,3 +126,5 @@ body.tube .tb-home .tb-main{gap:10px}
   html body.lapp .l47-hp{right:12px;bottom:calc(84px + var(--ap-sb,0px))}
   html body.lapp.l47-item #ltut .lt-panel{z-index:62}
 }
+/* v47-fix(QA 높음 1): 아래 탭은 불투명 — ldads.css의 --glass(.96 / 다크 .92)와 blur를 덮어 뒤 글자가 비치지 않게(라이트 · 다크 모두 surface 토큰) */
+html body.lapp .ap-nav,html body.tube .ap-nav.tb-nav{background:var(--surface,#fff)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
