@@ -8,7 +8,7 @@
 .tb-gm{flex:none;position:relative;width:64px;height:64px;display:grid;place-items:center;border:0;padding:0;background:none;color:var(--g900);cursor:pointer;border-radius:50%}
 .tb-gm svg{position:absolute;inset:2px;width:60px;height:60px} /* v47-fix: 링 안 「14 /20분」이 선과 겹쳐 지름 48→60, 글자 줄임 */
 .tb-gm b{position:relative;max-width:40px;font-size:14px;font-weight:800;line-height:1;text-align:center}
-.tb-gm b small{display:block;margin-top:1px;font-size:9px;letter-spacing:-.03em;white-space:nowrap;font-weight:600;color:var(--g700)}
+.tb-gm b small{display:block;margin-top:1px;font-size:9px;letter-spacing:-.06em;white-space:nowrap;font-weight:600;color:var(--g700)}
 .tb-gm:focus-visible{outline:3px solid var(--gr300);outline-offset:2px}
 
 /* D1: 지금 할 일 */
@@ -118,12 +118,12 @@ body.tube .tb-home .tb-main{gap:10px}
    퀴즈 · 과제 등 항목 화면(body.l47-item)은 「질문 · 도움」(#l47Fab)만, 나머지 화면은 AI 튜터(#tbFab)만. */
 @media (max-width:899px){
   html body.lapp.l47-item #tbFab{display:none!important}
-  html body.lapp:not(.tb-watch):not(.lt-on):not(.tb-sheet):not(.ap-pickon):is(:has(> #tbFab),:has(> #l47Fab)) .ap-nav{right:80px!important}
-  html body.lapp:not(.tb-watch) #tbFab.tb-fab,html body.lapp .l47-fab{left:auto!important;right:12px!important;bottom:calc(10px + var(--ap-sb,0px))!important;width:60px!important;height:60px!important;min-height:0;padding:0!important;border-radius:20px!important;transform:none!important}
+  html body.lapp:not(.tb-watch):not(.lt-on):not(.tb-sheet):not(.ap-pickon):is(:has(> #tbFab),:has(> #l47Fab)) .ap-nav{right:70px!important} /* 탭 4칸 이름(「교과목 찾기」)이 잘리지 않는 폭 */
+  html body.lapp:not(.tb-watch) #tbFab.tb-fab,html body.lapp .l47-fab{left:auto!important;right:12px!important;bottom:calc(16px + var(--ap-sb,0px))!important;width:52px!important;height:52px!important;min-height:0;padding:0!important;border-radius:18px!important;transform:none!important}
   html body.lapp:not(.tb-watch) #tbFab.tb-fab{opacity:1!important;pointer-events:auto!important}
-  html body.lapp .l47-fab{flex-direction:column;justify-content:center;gap:2px;font-size:11px;line-height:1.1;letter-spacing:-.03em}
-  html body.lapp .l47-fab span{white-space:nowrap}
-  html body.lapp .l47-hp{right:12px;bottom:calc(84px + var(--ap-sb,0px))}
+  html body.lapp .l47-fab{justify-content:center;gap:0}
+  html body.lapp .l47-fab span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap} /* 앱은 튜터 버튼처럼 아이콘만(이름은 aria-label) */
+  html body.lapp .l47-hp{right:12px;bottom:calc(80px + var(--ap-sb,0px))}
   html body.lapp.l47-item #ltut .lt-panel{z-index:62}
 }
 /* v47-fix(QA 높음 1): 아래 탭은 불투명 — ldads.css의 --glass(.96 / 다크 .92)와 blur를 덮어 뒤 글자가 비치지 않게(라이트 · 다크 모두 surface 토큰) */

@@ -118,7 +118,7 @@ body.lapp .l47-fab{right:16px;bottom:calc(92px + env(safe-area-inset-bottom,0px)
     if (h.querySelectorAll('.l47-hps:not([hidden])').length === 0) { helpDrop(); return; }
     document.body.classList.add('l47-item');
     /* v47-fix(QA 높음 2): 앱도 항목 화면은 「질문 · 도움」(#l47Fab) 1개 — 튜터 버튼(#tbFab)은 lx47.css가 body.l47-item에서 숨긴다 */
-    if (!document.getElementById('l47Fab')) { const f = document.createElement('button'); f.type = 'button'; f.id = 'l47Fab'; f.className = 'l47-fab'; f.setAttribute('aria-controls', 'l47Help'); f.setAttribute('aria-expanded', 'false');
+    if (!document.getElementById('l47Fab')) { const f = document.createElement('button'); f.type = 'button'; f.id = 'l47Fab'; f.className = 'l47-fab'; f.setAttribute('aria-controls', 'l47Help'); f.setAttribute('aria-expanded', 'false'); f.setAttribute('aria-label', '질문 · 도움 열기');
       f.innerHTML = `${typeof ico === 'function' ? ico('spark', 18) : ''}<span>질문 · 도움</span>`; document.body.appendChild(f); }
   }
   document.addEventListener('click', e => { const t = e.target; if (!t.closest) return;
