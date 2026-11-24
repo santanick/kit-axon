@@ -14,7 +14,7 @@
   /* 학번 가입(비밀번호) 계정은 가입 때 동의했으므로 제외, 체험용 공용 샘플(tid sample)도 제외 */
   const need = () => { if (!SITE() || !LR.me || LR.mode === 'preview' || LR.tid === 'sample' || !isUniv()) return false; if (LR.me.acct) return false;
     if (LR.mode === 'live') return !!LR.me.needConsent; return !store()[LR.me.sid]; };
-  const FREE = ['home', 'privacy', 'login', 'consent'];
+  const FREE = ['privacy', 'login', 'consent']; /* v47: 로그인 후 첫 착지가 #home이라 홈도 동의 전에는 막는다(동의 없이 학습 화면이 열리던 것). 방문자(로그인 전)는 need()가 거짓이라 그대로 */
   const CN = { back: '' };
   window.lcNeedConsent = need;
 
@@ -33,7 +33,7 @@
   if (typeof LA_R === 'object') LA_R.consent = view;
 
   { const base = lrender; lrender = (...a) => {
-      try { if (need()) { const r = route(); if (!FREE.includes(r.a)) { CN.back = location.hash && location.hash !== '#consent' ? location.hash : '#my'; history.replaceState(null, '', location.pathname + location.search + '#consent'); } } } catch (e) { console.error(e); }
+      try { if (need()) { const r = route(); if (!FREE.includes(r.a)) { CN.back = location.hash && location.hash !== '#consent' ? location.hash : '#home'; history.replaceState(null, '', location.pathname + location.search + '#consent'); } } } catch (e) { console.error(e); }
       return base(...a); }; }
 
   document.addEventListener('change', e => { const t = e.target; if (!t || t.dataset.cn !== 'all') return; const f = t.closest('form'); ['tos', 'privacy'].forEach(n => { if (f.elements[n]) f.elements[n].checked = t.checked; }); });

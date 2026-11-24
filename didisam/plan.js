@@ -94,7 +94,7 @@
   const CSS = `.pl-lockc{max-width:560px;margin:24px auto;padding:28px 24px;text-align:center;display:grid;gap:10px;justify-items:center}.pl-lockc .pl-ic{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:var(--soft);color:var(--ink)}
 .pl-lockc h3{margin:0;font-size:17px}.pl-lockc p{margin:0;color:var(--muted)}.pl-lockc .pl-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px}
 .pl-tabl{display:inline-flex;margin-left:4px;vertical-align:-2px;opacity:.75}[data-pl-lock] .pl-lk{flex:none}
-.pl-chip{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);background:var(--card,#fff);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.pl-chip{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);background:var(--card,#fff);color:var(--ink);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;min-height:28px}
 .pl-chip.trial{border-color:var(--mag);color:var(--mag)}.pl-chip.exp{border-color:var(--warn)}
 .pl{display:grid;gap:14px}.pl .card{padding:18px}.pl h3{margin:0 0 10px;font-size:15px}
 .pl-k{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.pl-k div{background:var(--soft);border-radius:10px;padding:10px 12px;min-width:0}.pl-k small{display:block;color:var(--muted);font-size:12px}.pl-k b{font-size:15px;word-break:keep-all}.pl-k em{display:block;font-style:normal;color:var(--muted);font-size:12px}

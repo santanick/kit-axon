@@ -165,11 +165,11 @@ const go = async (p, h, w = 1000) => { await p.evaluate(h => { location.hash = h
   for (const [app, w] of [[false, 1280], [true, 390]]) { const tag = app ? '앱 390' : '웹 1280';
     const g = await learner(ctx, op, '20261101', codes['20261101'], { app, w });
     await go(g, '#lms', 1500); const L1 = await txt(g);
-    ok(/AI와 데이터 리터러시 01분반/.test(L1) && /1주차 과제/.test(L1) && !/수강 분반이 없습니다/.test(L1), `#1 [${tag}] #lms 과제 · 시험 · 성적에 수강 분반 · 과제가 보임`);
+    ok(/AI와 데이터 리터러시 01분반/.test(L1) && /1주차 과제/.test(L1) && !/수강 분반이 없습니다/.test(L1), `#1 [${tag}] #lms 과제 · 시험 · 성적에 수강 분반 · 과제가 보임 ${/AI와 데이터 리터러시 01분반/.test(L1) ? '' : L1.replace(/\s+/g, ' ').slice(0, 160)}`);
     const tb = await g.$('#lm [data-lact=efl-tab][data-v=exam]'); if (tb) { await tb.click(); await g.waitForTimeout(700); } ok(/중간고사/.test(await txt(g)), `#1 [${tag}] 시험 탭에 중간고사`);
     const gt = await g.$('#lm [data-lact=efl-tab][data-v=grade]'); if (gt) { await gt.click(); await g.waitForTimeout(700); } ok(!/학사 정보에 등록된 학번이 아닙니다|수강 중인 분반이 아닙니다/.test(await txt(g)), `#1 [${tag}] 성적 탭 진입`);
-    await go(g, '#my', 1500); const M1 = await txt(g, 'body');
-    ok(!/학사 정보에 등록된 학번이 아닙니다/.test(M1) && /이번 학기 강의실이 없습니다/.test(M1) === false && /AI와 데이터 리터러시\(01\)/.test(M1), `#1 [${tag}] 내 학습: 출석 · 강의실 카드 정상`);
+    await go(g, '#my', 1500); const M1 = await txt(g, 'body'); const M1x = M1 + ' ' + await g.evaluate(() => [...document.querySelectorAll('#lm details:not([open])')].map(d => d.textContent).join(' ')); /* v47: 앱 「더 보기」는 처음 접힘 — 접힌 안쪽 강의실 카드도 읽음 */
+    ok(!/학사 정보에 등록된 학번이 아닙니다/.test(M1) && /이번 학기 강의실이 없습니다/.test(M1) === false && /AI와 데이터 리터러시\(01\)/.test(M1x), `#1 [${tag}] 내 학습: 출석 · 강의실 카드 정상`);
     const bad = (M1.match(/진단하기|다음 배지까지|배지 지갑|내 디지털북|수준 로드맵|추천 튜토리얼|강좌 둘러보기|아직 수강 중인 강좌가 없/g) || []); ok(!bad.length, `#11 · #12 [${tag}] 내 학습에 진단 · 배지 · 디지털북 · 튜토리얼 · 빈 강좌 안내 없음 (${bad.join(',')})`);
     ok(!(await g.evaluate(() => [...document.querySelectorAll('#lm .lux-tabs a, #lm .lux-tabs button, #lm nav.mytab a')].some(a => a.offsetParent && /^(결제|디지털북|배지)$/.test(a.textContent.trim())))), `#11 [${tag}] 결제 · 디지털북 · 배지 탭 숨김`);
     ok(!/3차시 대면 수업 자막|자료구조\(01\)/.test(M1), `[${tag}] 빈 스튜디오 기관에 실시간 수업 데모 샘플(자막 · 자료구조) 없음`);

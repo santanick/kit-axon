@@ -66,7 +66,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; } else { fail++;
     const ring = document.querySelector('.crsh .ring'); r.ringDone = ring && ring.dataset.done; const pc = document.querySelector('.l26pc'); r.side = pc ? pc.textContent : ''; r.cert = !!document.querySelector('.l26cert, .crsh a[href^="#cert/"]');
     r.kpi = (document.querySelector('.lw-kpi') || {}).innerText || ''; r.warn = !!document.querySelector('.lw-warn'); r.crit = (document.querySelector('.l26crit') || {}).textContent || '';
     r.note = [...document.querySelectorAll('.cpl-note-l')].map(x => x.textContent).join(' | '); r.teacherRow = /교강사/.test(r.note);
-    location.hash = '#c/c1/ex1'; lrender(); await wait(200); r.why = (document.querySelector('.a2lwhy') || {}).textContent || ''; const rb = document.querySelector('[data-cpl-rv]'); r.rvBtn = !!rb; r.pass = (document.querySelector('.a2linfo') || {}).innerText || '';
+    location.hash = '#c/c1/ex1'; lrender(); await wait(200); r.why = (document.querySelector('.a2lwhy') || {}).textContent || ''; const rb = document.querySelector('[data-cpl-rv]'); r.rvBtn = !!rb; r.pass = (() => { const d = document.querySelector('.a2linfo'); return d ? (d.innerText || d.textContent) : ''; })(); /* v47 LA: 응시 안내 표는 접힌 「자세히」(.l47-infd) 안 — 접혀 있으면 innerText가 비어 textContent로 읽음 */
     if (rb) { rb.click(); await wait(50); document.getElementById('cplRt').value = '실습이 도움이 됐어요.'; document.getElementById('cplRo').click(); await wait(150); }
     const sb = document.querySelector('[data-a2="start"]'); r.start = !!sb; let loops = 0;
     if (sb) { sb.click(); await wait(50); if (document.getElementById('cplEx')) { document.getElementById('cplEx').click(); await wait(50); }

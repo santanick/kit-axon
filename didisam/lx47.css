@@ -114,18 +114,16 @@ body.tube .tb-home .tb-main{gap:10px}
 .tb-now{gap:8px}
 .tb-req{min-height:40px}
 /* v47-fix(QA 높음 2): 휴대폰 앱에서 떠 있는 AI 버튼이 본문(홈 「다른 개념으로」 · 퀴즈 「20점」)을 가리던 것 —
-   버튼을 아래 탭과 같은 줄 오른쪽에 붙이고(탭은 그만큼 왼쪽으로 줄임) 본문 위로 띄우지 않는다. 한 화면에 버튼 1개:
+   한 화면에 버튼 1개:
    퀴즈 · 과제 등 항목 화면(body.l47-item)은 「질문 · 도움」(#l47Fab)만, 나머지 화면은 AI 튜터(#tbFab)만. */
 @media (max-width:899px){
   html body.lapp.l47-item #tbFab{display:none!important}
-  html body.lapp:not(.tb-watch):not(.lt-on):not(.tb-sheet):not(.ap-pickon):is(:has(> #tbFab),:has(> #l47Fab)) .ap-nav{right:70px!important} /* 탭 4칸 이름(「교과목 찾기」)이 잘리지 않는 폭 */
-  html body.lapp:not(.tb-watch) #tbFab.tb-fab,html body.lapp .l47-fab{left:auto!important;right:12px!important;bottom:calc(16px + var(--ap-sb,0px))!important;width:52px!important;height:52px!important;min-height:0;padding:0!important;border-radius:18px!important;transform:none!important}
-  html body.lapp:not(.tb-watch) #tbFab.tb-fab{opacity:1!important;pointer-events:auto!important}
-  html body.lapp:is(:has(> #tbFab),:has(> #l47Fab)) .ap-nav a{padding-left:0!important;padding-right:0!important;min-width:0}
-  html body.lapp:is(:has(> #tbFab),:has(> #l47Fab)) .ap-nav a span{letter-spacing:-.05em;font-size:12.5px} /* 탭이 줄어도 「교과목 찾기」가 「교과목 …」으로 잘리지 않게 */
+  /* v47 통합: 버튼을 탭 줄에 붙이면 5번째 탭처럼 보여(v43 G2 「5칸처럼 보이지 않게」 대표님 결정) 탭 위에 띄우는 원래 자리로 되돌림.
+     본문 끝은 #lm 아래 여백(96px)으로 가려지지 않는다. 질문 · 도움 버튼도 같은 자리 · 같은 크기. */
+  html body.lapp:not(.tb-watch) .l47-fab{left:auto!important;right:14px!important;bottom:calc(var(--ap-nav,76px) + 12px + var(--ap-sb,0px))!important;width:52px!important;height:52px!important;min-height:0;padding:0!important;border-radius:18px!important;transform:none!important}
   html body.lapp .l47-fab{justify-content:center;gap:0}
   html body.lapp .l47-fab span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap} /* 앱은 튜터 버튼처럼 아이콘만(이름은 aria-label) */
-  html body.lapp .l47-hp{right:12px;bottom:calc(80px + var(--ap-sb,0px))}
+  html body.lapp .l47-hp{right:12px;bottom:calc(var(--ap-nav,76px) + 72px + var(--ap-sb,0px))}
   html body.lapp.l47-item #ltut .lt-panel{z-index:62}
 }
 /* v47-fix(QA 높음 1): 아래 탭은 불투명 — ldads.css의 --glass(.96 / 다크 .92)와 blur를 덮어 뒤 글자가 비치지 않게(라이트 · 다크 모두 surface 토큰) */

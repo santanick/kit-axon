@@ -89,7 +89,7 @@ const KEY = 'ntn_' + 'A1b2C3d4E5f6G7h8J9k0LmNoPq3f9a';
   /* S25 탈퇴 전 내보내기(lacct 탈퇴 폼 #laDel) */
   await p.evaluate(() => { LR.me.acct = 'mail'; location.hash = '#acct'; }); await p.waitForTimeout(350);
   { ok(!!(await p.$('#laDel .ln-leave')), '탈퇴 폼: 기존 확인 문구 위 .ln-leave 카드');
-    await p.evaluate(() => { const f = document.querySelector('.la-danger.ls-fold'); if (f) f.classList.add('ls-open'); const d = document.querySelector('#laDel').closest('details'); if (d) d.open = true; document.querySelector('#laDel .ln-leave').scrollIntoView({ block: 'center' }); }); await p.waitForTimeout(150);
+    await p.evaluate(() => { const f = document.querySelector('.la-danger.ls-fold'); if (f) f.classList.add('ls-open'); for (let d = document.querySelector('#laDel').closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true; /* v47 D12: 회원정보는 「나」의 접힌 묶음(.ls-acd) 안 — 바깥까지 모두 펼침 */ document.querySelector('#laDel .ln-leave').scrollIntoView({ block: 'center' }); }); await p.waitForTimeout(150);
     const tx = await p.textContent('#laDel'); ok(/탈퇴하면 노트도 지워져요/.test(tx) && /노트 3개 · 복습 카드 1장 · 질문 0개는 이 계정에만 있어요\. 먼저 내 기기로 내보내 두세요\./.test(tx) && /탈퇴 대신 알림만 끌 수도 있어요/.test(tx) && /노트 · 기록은 그대로 남아요/.test(tx), 'S25 문구(개수 · 알림만 끄기 줄)');
     ok(/그래도 탈퇴하기/.test(await p.textContent('#laDel button[type=submit]')), '주 버튼 「그래도 탈퇴하기」');
     { const g = await gate(p); ok(!g.over && !g.small.length, `390 관문(탈퇴): ${g.small.join(',')}`); }
