@@ -81,6 +81,11 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         long win = props.getLong("rate.login.winMs");
         rl.limit("li:" + web.ip(req), props.getInt("rate.loginIp.max"), win); rl.limit("le:" + email, props.getInt("rate.loginEmail.max"), win);
         Map<String, Object> u = mapper.selectUserByEmail(email);
+        if (u != null) { /* 보안 점검(체크리스트 06): 계정 잠금 — Node app.js와 같은 규칙(15분 안 실패 5회 → 15분) */
+            final String ltid = (String) u.get("tenant_id"); int fails = 0;
+            try { Integer n = tx.inTenant(ltid, () -> mapper.countLoginFails(ltid, email)); fails = n == null ? 0 : n; } catch (Exception ignore) {}
+            if (fails >= 5) throw processException("dd.429.locked");
+        }
         boolean ok = DdCrypto.checkPw(DdWeb.str(b, "password"), u != null ? (String) u.get("pw") : DdCrypto.DUMMY);
         if (u == null || !ok) {
             if (u != null) {

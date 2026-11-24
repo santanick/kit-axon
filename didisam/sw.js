@@ -1,6 +1,6 @@
 /* 디디쌤 학습자 앱 서비스 워커 v27 — 설치(iOS · Android) · 오프라인 첫 화면.
    네트워크 우선(배포 즉시 새 버전), 실패할 때만 저장본. API · 외부 도메인 · POST는 건드리지 않는다. */
-const C = 'didisam-app-v47.1';
+const C = 'didisam-app-v47.2';
 const SHELL = ['learner.html', 'lx47.css', 'v2.css', 'v2-learner.css', 'loop2.css', 'ljourney.css', 'llev.js', 'lv2.js', 'loop2.js', 'grade2.js', 'mastcalc.js', 'ljourney.js', 'learner.css', 'lapp.css', 'ldads.css', 'lapp.js', 'ltube.css', 'ltube.js', 'manifest.webmanifest', 'app-icon-192.png',
   /* v43.1 새 파일(학습자 · 공통) */ 'theme.js', 'ddstat.js', 'pubed.js', 'lsms.js', 'lhub.js', 'lhub.css', 'lapp43.css', 'l43.js', 'l43.css', 'l43-e1.js', 'l43-e1.css', 'da43.js', 'da43.css', 'v43ui.js', 'v43ui.css', 'hpprem.js', /* v43.5 외부 연결 카탈로그 */ 'connx.js', 'connx.css', 'lconn.js', /* v43.6 셀프러닝 노트 */ 'lnote.js', 'lnote.css', 'lnote-ai.js', 'lnote-ai.css', 'lnote-sync.js', /* v43.9 기관별 고품질 템플릿(시안 기반) */ 'hpv-univ.js', 'hpv-acad.js', 'hpv-corp.js', 'hpv-life.js', /* v44 기관 유형별 템플릿 */ 'hp44-univ.js', 'hp44-k12.js', 'hp44-adult.js', 'hp44-corp.js', 'hp44-public.js', 'hp44-voc.js', 'hp44-life.js', /* v45 가입 · 첫 진입 */ 'auth45.css', 'onb45.js'];
 /* v34.5 X2 런타임 캐시: 이름이 바뀌지 않는 파일(img/stock · fonts · /api/media/<내용 해시>)만. 최대 160개 · 약 40MB, 오래 안 쓴 것부터 지움(LRU) */

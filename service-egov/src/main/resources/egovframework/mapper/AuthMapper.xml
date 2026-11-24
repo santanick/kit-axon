@@ -8,6 +8,7 @@
     insert into users (tenant_id, email, pw, role) values (#{tid}, #{email}, #{pw}, #{role}) returning id::text
   </select>
   <select id="selectUserByEmail" resultType="map">select id::text as id, tenant_id, pw, role from users where lower(email) = #{email}</select>
+  <select id="countLoginFails" resultType="int">select count(*)::int from audit_log where tenant_id = #{tid} and actor = #{email} and action = 'login.fail' and at &gt; greatest(now() - interval '15 minutes', coalesce((select max(at) from audit_log where tenant_id = #{tid} and actor = #{email} and action = 'login'), 'epoch'::timestamptz))</select>
   <insert id="insertSession">
     insert into sessions (id, user_id, tenant_id, expires_at) values (#{id}, cast(#{uid} as uuid), #{tid}, now() + make_interval(hours => #{hours}))
   </insert>

@@ -467,7 +467,11 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       const b = await readBody(req, 4096); const email = String(b.email || '').trim().toLowerCase();
       limit('li:' + ip(req), 30, 600e3); limit('le:' + email, 8, 600e3);
       const { rows } = await pool.query('select id, tenant_id, pw, role from users where lower(email) = $1', [email]);
-      const u = rows[0]; const ok = await checkPw(String(b.password || ''), u ? u.pw : DUMMY);
+      const u = rows[0];
+      /* 보안 점검(체크리스트 06, 2026-11-24): 계정 잠금 — 마지막 성공 이후 15분 안에 실패 5회면 15분 잠금(인스턴스와 무관하게 audit_log 기준, Java 동일) */
+      if (u) { const n = await inTenant(pool, u.tenant_id, c => c.query(`select count(*)::int n from audit_log where tenant_id = $1 and actor = $2 and action = 'login.fail' and at > greatest(now() - interval '15 minutes', coalesce((select max(at) from audit_log where tenant_id = $1 and actor = $2 and action = 'login'), 'epoch'::timestamptz))`, [u.tenant_id, email])).then(r => r.rows[0].n).catch(() => 0);
+        if (n >= 5) throw new HttpErr(429, '로그인에 5번 실패해 15분 동안 잠겼습니다. 잠시 후 다시 시도하거나 비밀번호를 재설정하세요.', 'locked'); }
+      const ok = await checkPw(String(b.password || ''), u ? u.pw : DUMMY);
       if (!u || !ok) { if (u) await inTenant(pool, u.tenant_id, c => audit(c, u.tenant_id, email, 'login.fail', { ip: ip(req).replace(/[\d]+$/, 'x') })).catch(() => {}); throw new HttpErr(401, '이메일 또는 비밀번호가 올바르지 않습니다.', 'login'); }
       if (mod && !M.roleAllowed(mod, u.role)) throw new HttpErr(403, '이 주소로 로그인할 수 없는 계정입니다.', 'module');
       await pool.query('update users set last_login = now() where id = $1', [u.id]);
