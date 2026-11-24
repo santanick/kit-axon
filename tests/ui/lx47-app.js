@@ -34,7 +34,8 @@ const PRI = '#lapp .lbtn.pri, #lapp .ap-pri, #lapp button.pri, #lapp a.tb-pri, #
       /* 높이 = 본문 끝 + 아래 탭(문서 아래 여백 #lm · #lapp · body 3중은 배색 · 밀림 담당 범위라 제외) */
       return { blocks, h: (mn ? mn.getBoundingClientRect().bottom + scrollY : document.documentElement.scrollHeight) + navH, vh: innerHeight, pri: pri.map(e => e.className), mj: mj ? Math.round(mj.getBoundingClientRect().top) : -1, fold, tabs: [...document.querySelectorAll('#lapp .ap-nav > a span')].map(s => s.textContent.trim()).join('|'),
         moreOpen: more ? more.open : null, inMore: more ? ['tb-goal', 'tb-links', 'tb-tyc', 'lq-hc', 'v2-vcard', 'lna-hubw'].filter(c => more.querySelector('.' + c)) : [], ow: document.documentElement.scrollWidth - innerWidth }; }, PRI);
-    ok(M.blocks.length <= 6, `${tag}: 홈 블록 ${M.blocks.length} ≤ 6 (${M.blocks.join(', ')})`);
+    /* v47-fix: 비전을 아직 안 만든 학습자는 「나의 비전 만들기」 카드가 「오늘 익힐 것」 아래(더 보기 밖)에 1개 더 나오므로 그때만 7까지 허용 */
+    const vMax = M.blocks.includes('v2-vcard') ? 7 : 6; ok(M.blocks.length <= vMax, `${tag}: 홈 블록 ${M.blocks.length} ≤ ${vMax} (${M.blocks.join(', ')})`);
     ok(M.h <= M.vh * 1.6, `${tag}: 홈 높이 ${(M.h / M.vh).toFixed(2)}화면 ≤ 1.6`);
     ok(M.pri.length === 1, `${tag}: 첫 화면 주 버튼 1개(${M.pri.length}: ${M.pri.join(' / ')})`);
     if (pol) ok(M.mj >= 0 && M.mj < M.fold, `${tag}: 「오늘 익힐 것」 첫 화면(y ${M.mj} < ${Math.round(M.fold)})`);

@@ -286,7 +286,9 @@
   /* 홈 블록 정리: 다른 모듈이 나중에 끼운 카드를 제자리로(오늘 익힐 것 → 지금 할 일 아래, 비전 · 노트 · 캘린더 → 더 보기). 몇 번을 불러도 같은 결과 */
   function tidyHome() { const lm = $('#lm'); const mn = lm && lm.querySelector('.tb-home .tb-main'); if (!mn) return; const now = mn.querySelector(':scope > .tb-now'); const mi = mn.querySelector('.tb-more-in'); if (!mi) return;
     const mj = lm.querySelector('.mj-home'); if (mj && now && now.nextElementSibling !== mj) now.insertAdjacentElement('afterend', mj);
-    lm.querySelectorAll('.v2-vcard, .lna-hubw, a.lq-hc').forEach(x => { if (!mi.contains(x)) mi.appendChild(x); });
+    /* v47-fix(QA 중간): 비전을 아직 안 만든 학습자는 「나의 비전 만들기」를 「오늘 익힐 것」 바로 아래(더 보기 밖)에, 만든 뒤에는 더 보기 안으로 */
+    const V = (LR.lp && LR.lp.vision) || {}; const noV = !(V.at && (V.txt || (V.card && V.card.who)));
+    lm.querySelectorAll('.v2-vcard, .lna-hubw, a.lq-hc').forEach(x => { if (noV && mj && x.classList.contains('v2-vcard')) { if (mj.nextElementSibling !== x) mj.insertAdjacentElement('afterend', x); return; } if (!mi.contains(x)) mi.appendChild(x); });
     lm.querySelectorAll('.mj-home .mj-sum').forEach(x => x.remove()); /* D4: 작은 성취 요약은 「내 학습 › 기록」으로 */ }
   { const mo = new MutationObserver(() => { const a = route().a; if ((a === 'home' || (a === 'my' && !route().b)) && document.body.classList.contains('tube')) { mo.disconnect(); try { if (a === 'home') tidyHome(); else tidyMy(); } catch (e) { } watch(); } });
     const watch = () => { const r = document.getElementById('lapp') || document.body; if (r) mo.observe(r, { childList: true, subtree: true }); }; /* #lm은 다시 그릴 때마다 새로 생겨서 #lapp을 본다 */
