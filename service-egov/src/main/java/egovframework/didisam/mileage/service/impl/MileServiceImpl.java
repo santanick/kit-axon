@@ -33,8 +33,8 @@ import static egovframework.didisam.cmm.Js.*;
  *  제품 고정(서버 강제): 국비 과정 금전성 차단(D1, DB 제약 + mil_cash_ok) · 운영자 본인 지급 금지 · 충전 · 환급 · 양도 · 기관 밖 사용 경로 없음. */
 @Service("mileService")
 public class MileServiceImpl extends EgovAbstractServiceImpl implements MileService {
-    private final MileMapper m; private final javax.sql.DataSource ds; private final TenantTx tx; private final DdRateLimiter rl; private final AuthService auth; private final DdPiiCrypto pii; private final String hqReviewed;
-    public MileServiceImpl(MileMapper m, javax.sql.DataSource ds, TenantTx tx, DdRateLimiter rl, AuthService auth, DdPiiCrypto pii, @Value("${MIL_HQ_POOL_REVIEWED:}") String hq) { this.m = m; this.ds = ds; this.tx = tx; this.rl = rl; this.auth = auth; this.pii = pii; this.hqReviewed = hq == null ? "" : hq; }
+    private final MileMapper m; private final javax.sql.DataSource ds; private final TenantTx tx; private final DdRateLimiter rl; private final AuthService auth; private final DdPiiCrypto pii; private final egovframework.didisam.cmm.PiiTx ptx; private final String hqReviewed;
+    public MileServiceImpl(MileMapper m, javax.sql.DataSource ds, TenantTx tx, DdRateLimiter rl, AuthService auth, DdPiiCrypto pii, egovframework.didisam.cmm.PiiTx ptx, @Value("${MIL_HQ_POOL_REVIEWED:}") String hq) { this.m = m; this.ds = ds; this.tx = tx; this.rl = rl; this.auth = auth; this.pii = pii; this.ptx = ptx; this.hqReviewed = hq == null ? "" : hq; }
 
     // ── 오류(Node index.js STATUS · MSG) ─────────────────────
     static final Map<String, Integer> STATUS = Map.ofEntries(Map.entry("mile_off", 403), Map.entry("staff_cap", 403), Map.entry("self_grant", 403), Map.entry("penalty_off", 403), Map.entry("not_found", 404), Map.entry("bill", 404),
@@ -306,7 +306,7 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
         ObjectNode o = F.objectNode().put("ok", true).put("sid", sid); o.set("wallets", ws); o.set("timeline", list(q("select * from mil_entry where tenant_id = $1 and sid = $2 order by at desc, id desc limit 50", tid, sid), MileServiceImpl::enOut)); return o; }
     /** 본인 지급 금지: 직원 이메일과 같은 이메일로 가입한 학습자 sid(pii.identity 블라인드 인덱스) */
     Set<String> selfSids(String tid, String email) { if (!pii.ready() || email == null) return Set.of();
-        try { String b = pii.bidx(tid, "email", email); return tx.plain(() -> { Set<String> s = new HashSet<>(); for (ObjectNode r : q("select learner_id::text id from pii.identity where tid = $1 and email_bidx = $2", tid, b)) s.add(S(r.get("id"))); return s; }); } catch (Exception e) { return Set.of(); } }
+        try { String b = pii.bidx(tid, "email", email); /* SEC-0003 pii 스키마는 didisam_pii 역할 + app.tenant에서만(Node mileage inPii와 같음) */ return ptx.run(tid, rr -> rr.P(() -> { Set<String> s = new HashSet<>(); for (ObjectNode r : q("select learner_id::text id from pii.identity where tid = $1 and email_bidx = $2", tid, b)) s.add(S(r.get("id"))); return s; })); } catch (Exception e) { return Set.of(); } }
     static ObjectNode o(Object... kv) { return (ObjectNode) DdWeb.JSON.valueToTree(map(kv)); }
 
     // ── 운영자 /api/mileage/* ───────────────────────────────
@@ -611,7 +611,7 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
         Set<String> ids = new HashSet<>(); Pattern okp = Pattern.compile("연결됨|승인|ok", Pattern.CASE_INSENSITIVE);
         for (JsonNode x0 : arr(d.get("pa"))) if (truthy(x0) && strictEq(get(x0, "acct"), get(acct, "id")) && okp.matcher(nullish(get(x0, "status")) ? "" : egovframework.didisam.cmm.Js.str(get(x0, "status"))).find()) ids.add(egovframework.didisam.cmm.Js.str(get(x0, "child")));
         List<String> out = new ArrayList<>(); for (JsonNode mb : arr(d.get("mb"))) if (truthy(mb) && ids.contains(egovframework.didisam.cmm.Js.str(get(mb, "id"))) && truthy(get(mb, "sid"))) out.add(egovframework.didisam.cmm.Js.str(get(mb, "sid"))); return out; }
-    boolean hasGuardian(String tid, String sid) { try { return tx.plain(() -> !q("select 1 from pii.guardian where tid = $1 and learner_id::text = $2 and status = 'ok' limit 1", tid, sid).isEmpty()); } catch (Exception e) { return false; } }
+    boolean hasGuardian(String tid, String sid) { try { return ptx.run(tid, rr -> rr.P(() -> !q("select 1 from pii.guardian where tid = $1 and learner_id::text = $2 and status = 'ok' limit 1", tid, sid).isEmpty())); } catch (Exception e) { return false; } }
     ObjectNode myOut(String tid, String sid) {
         ObjectNode p = pol(tid); List<ObjectNode> W = wallet(tid, sid); ObjectNode w = W.get(0);
         List<ObjectNode> rules = new ArrayList<>(); for (ObjectNode r : q("select distinct on (id) * from mil_rule where tenant_id = $1 order by id, ver desc", tid)) if (r.get("active").asBoolean() && !strictEq(r.get("trigger"), "penalty")) rules.add(r);

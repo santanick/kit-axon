@@ -52,7 +52,9 @@ function createMileage(ctx) {
   const bidx = (tid, v) => K && crypto.createHmac('sha256', K.idx).update(`${tid}|email|${String(v).trim().toLowerCase()}`).digest('base64url');
   /* 본인 지급 금지: 직원 이메일과 같은 이메일로 가입한 학습자 sid 집합(pii.identity 블라인드 인덱스 대조, Java DdPii와 같은 규칙) */
   async function selfSids(tid, email) { const b = bidx(tid, email); if (!b) return new Set();
-    try { return new Set((await pool.query('select learner_id::text id from pii.identity where tid = $1 and email_bidx = $2', [tid, b])).rows.map(r => r.id)); } catch { return new Set(); } }
+    try { return new Set((await inPii(tid, 'select learner_id::text id from pii.identity where tid = $1 and email_bidx = $2', [tid, b])).rows.map(r => r.id)); } catch { return new Set(); } }
+  /* SEC-0003 pii 스키마는 didisam_pii 역할 + app.tenant 트랜잭션에서만 읽는다(RLS FORCE — 맨 연결로 읽으면 0행이 되어 본인 지급 금지 · 보호자 확인이 조용히 꺼진다) */
+  async function inPii(tid, sql, args) { const c = await pool.connect(); try { await c.query('begin'); await c.query('set local role didisam_pii'); await c.query("select set_config('app.tenant', $1, true)", [tid]); const r = await c.query(sql, args); await c.query('commit'); return r; } catch (e) { await c.query('rollback').catch(() => {}); throw e; } finally { c.release(); } }
   async function docOf(c, tid) { const r = (await c.query("select doc->'org' org, doc->'mileage' mil from tenant_state where tenant_id = $1", [tid])).rows[0]; return r || {}; }
   /* 모듈 플래그: 기관 문서 org.mileage_on === false 또는 mileage.on === false면 꺼짐(D2: 탭은 기본 보이고 제도는 마법사로 켬) */
   async function modOn(c, tid) { const d = await docOf(c, tid); return !(d.org && d.org.mileage_on === false) && !(d.mil && d.mil.on === false); }
@@ -92,7 +94,7 @@ function createMileage(ctx) {
     if (d.fulfil.until && new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10) > d.fulfil.until) return { ok: false, msg: '사용 기한이 지난 쿠폰이에요.' };
     return { ok: true, personal: true, off: d.won, label: `마일리지 쿠폰 ${d.won.toLocaleString('ko-KR')}원 할인` }; }
 
-  const shared = { E, ok, one, str, int, sha, rid, couponCode, SID_OK, TRIG, PARTICIPATION, FIXED, MC, polOut, ruleOut, rwOut, enOut, rdOut, needMod, modOn, pol, ensurePol, policyOn, selfSids, docOf, hook, env };
+  const shared = { E, ok, one, str, int, sha, rid, couponCode, SID_OK, TRIG, PARTICIPATION, FIXED, MC, polOut, ruleOut, rwOut, enOut, rdOut, needMod, modOn, pol, ensurePol, policyOn, selfSids, inPii, docOf, hook, env };
   const adm = require('./mod-admin')(ctx, shared);
   const pubR = require('./mod-pub')(ctx, shared);
   const sweep = require('./sweep');

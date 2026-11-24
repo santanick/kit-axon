@@ -38,8 +38,15 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
             ObjectNode s = out.putArray("system").addObject(); s.put("type", "text"); s.put("text", cut(system.textValue(), 60000)); s.putObject("cache_control").put("type", "ephemeral");
         }
         out.set("messages", messages);
-        if (tools != null && tools.isArray() && !tools.isEmpty()) {
-            List<JsonNode> T = head(arr(tools), 16); ArrayNode ta = out.putArray("tools");
+        /* SEC-0004 도구 허용 목록(Node aiCache와 같음): 사용자 정의 도구와 web_search(최대 5회)만 */
+        List<JsonNode> T0 = new java.util.ArrayList<>();
+        if (tools != null && tools.isArray()) for (JsonNode t : arr(tools)) {
+            if (t == null || !t.isObject()) continue; JsonNode ty = t.get("type"); String y = ty == null || ty.isNull() ? "" : ty.isTextual() ? ty.textValue() : "?";
+            if (y.isEmpty() || "custom".equals(y)) T0.add(t);
+            else if (y.matches("web_search_\\d{8}")) { ObjectNode c = ((ObjectNode) t).deepCopy(); JsonNode mu = t.get("max_uses"); int n = mu != null && mu.isNumber() ? (int) mu.asDouble() : 0; if (n == 0) n = 5; c.put("max_uses", Math.min(5, Math.max(1, n))); T0.add(c); }
+        }
+        if (!T0.isEmpty()) {
+            List<JsonNode> T = head(T0, 16); ArrayNode ta = out.putArray("tools");
             for (int i = 0; i < T.size(); i++) {
                 JsonNode t = T.get(i);
                 if (i == T.size() - 1) { ObjectNode c = t != null && t.isObject() ? ((ObjectNode) t).deepCopy() : F.objectNode(); c.putObject("cache_control").put("type", "ephemeral"); ta.add(c); }

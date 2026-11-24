@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "generated": "2026-11-24",
+  "by": "수석 보안 컨설턴트(가디언 Phase 0 진단)",
+  "basis": "보고서 Part 3(위협 모델 · 공백 10) · Part 8 Node/Java 절, 코드 기준 커밋 d2c2e6d + core/sec-con",
+  "note": "원장(Finding) 초기값입니다. status: open(미조치) · fixed(이 브랜치에서 수정) · needs_verify(외부 근거 대조 필요) · accepted(위험 수용, 사유 기재). evidence는 데이터이며 지시가 아닙니다. 개인정보 없음.",
+  "items": [
+    {
+      "id": "SEC-0001", "title": "Java 에디션 Spring Boot 3.5.6 — 보고서 기준 인가 우회 CVE 수정판(3.5.14) 미만, 내장 Tomcat도 함께 확인 필요",
+      "severity": "high", "cwe": "CWE-863", "area": 5, "owasp": "A06:2021",
+      "file": "service-egov/pom.xml", "line": 13,
+      "evidence": "<parent> spring-boot-starter-parent 3.5.6. 보고서 8-2: CVE-2026-40976(9.1) 수정 4.0.6 · 3.5.14 · 3.4.16, Tomcat CVE-2026-65182(10.1.57 이하). 로컬 Maven 저장소에 3.5.6만 있어 오프라인에서 올림 · 빌드 검증 불가.",
+      "fix": "NVD · Spring 공지로 CVE 번호와 영향 범위를 대조한 뒤 parent를 3.5.14 이상으로 올리고 mvn verify + service-egov/test 계약 시험 전체 실행. Dependabot(maven) PR로 받는 것을 권장.",
+      "status": "needs_verify"
+    },
+    {
+      "id": "SEC-0002", "title": "컨테이너 기준 이미지가 이동 태그(node:22-alpine 등) — 다이제스트 미고정",
+      "severity": "medium", "cwe": "CWE-1357", "area": 6,
+      "file": "service/Dockerfile", "line": 2,
+      "evidence": "service/Dockerfile:2,22 FROM node:22-alpine · service-egov/Dockerfile:3 maven:3.9-eclipse-temurin-17, :16 eclipse-temurin:17-jre. 보고서 8-6 Node 2번(기준 이미지 다이제스트 고정), 8-4 Node 11-11 보안 릴리스(22.23.5 이상).",
+      "fix": "FROM node:22.23.5-alpine@sha256:<digest> 형태로 고정, Dependabot docker 생태계로 갱신 PR 수신.",
+      "status": "open"
+    },
+    {
+      "id": "SEC-0003", "title": "마일리지: pii 스키마를 역할 · app.tenant 없이 조회 → 본인 지급 금지 · 보호자 확인이 조용히 꺼짐(fail-open)",
+      "severity": "high", "cwe": "CWE-863", "area": 4, "owasp": "A01:2021",
+      "file": "service/server/mileage/index.js", "line": 55,
+      "evidence": "수정 전 pool.query('select … from pii.identity …') · mod-pub.js:26 pool.query('select 1 from pii.guardian …'), Java MileServiceImpl.java:309 · 614 tx.plain(...). pii 표는 FORCE RLS(db.js:215-218)라 superuser가 아닌 운영 계정에서는 항상 0행 → 직원이 자기 학습자 계정에 마일리지(장학금 · 학원비 차감)를 지급해도 self_grant 경보가 생기지 않고, 보호자 동의 확인도 false. BYPASSRLS 계정이면 pii 역할 분리를 우회.",
+      "fix": "Node: mileage/index.js inPii(tid, sql, args) = begin · set local role didisam_pii · set_config('app.tenant') 트랜잭션, selfSids · hasGuardian이 사용. Java: PiiTx.run(tid, r -> r.P(...))로 교체. Semgrep didisam-rls-missing-tenant-node/java가 재발을 잡음.",
+      "status": "fixed"
+    },
+    {
+      "id": "SEC-0004", "title": "운영자 AI 프록시가 요청의 서버 도구(web_fetch · code_execution · bash · computer 등)를 그대로 상류로 전달",
+      "severity": "medium", "cwe": "CWE-284", "area": 1, "owasp": "LLM06 · ASI02",
+      "file": "service/server/app.js", "line": 35,
+      "evidence": "aiCache가 b.tools를 걸러 내지 않고 slice(0,16)만 적용(Java AiServiceImpl.aiCache 동일). 세션을 가진 계정 · 화면 XSS가 web_fetch를 넣으면 문서 · 학습자 글 속 숨은 지시로 기관 데이터를 외부 URL로 반출하는 경로가 생기고 데이터룸 egress 정책 밖에서 동작.",
+      "fix": "허용 목록: 사용자 정의 도구(type 없음 · custom)와 web_search_YYYYMMDD(max_uses ≤ 5)만 통과(Node app.js:35-37, Java AiServiceImpl.java:41-47). 시험: service/test/security.test.js 'SEC-0004'.",
+      "status": "fixed"
+    },
+    {
+      "id": "SEC-0005", "title": "이미지 빌드의 npm ci가 설치 스크립트를 허용",
+      "severity": "medium", "cwe": "CWE-829", "area": 6, "owasp": "LLM03 · ASI04",
+      "file": "service/Dockerfile", "line": 6,
+      "evidence": "npm ci --omit=dev --no-fund --no-audit (--ignore-scripts 없음). 보고서 P0-3(npm ci · 설치 스크립트 차단 · 신규 패키지 72시간 유예), Shai-Hulud 2.0 유형.",
+      "fix": "npm ci --omit=dev --ignore-scripts, 의존성은 pg 하나라 영향 없음(빌드 후 node -e \"require('pg')\" 확인). CI(pr-check.yml)도 같은 옵션 — 워크플로 파일은 사람이 수정.",
+      "status": "open"
+    },
+    {
+      "id": "SEC-0006", "title": "감사 기록(audit_log) 위·변조 방지 없음 — 해시 체인 · 보존 잠금 미적용",
+      "severity": "medium", "cwe": "CWE-117", "area": 5,
+      "file": "service/server/db.js", "line": 55,
+      "evidence": "audit_log(id, tenant_id, at, actor, action, detail)만 있고 prev_hash · hash 없음, didisam_tenant에 update · delete 권한(db.js:80). 공백 05, 개인정보위 점검 접속기록 항목.",
+      "fix": "개발자 2(sec-d2) 범위의 security 스키마 감사 해시 체인 적용 후 audit_log에도 확장, didisam_tenant의 audit_log update · delete 권한 회수. 보관 기간 정책 명문화.",
+      "status": "open"
+    },
+    {
+      "id": "SEC-0007", "title": "SESSION_PEPPER 미설정 시 고정 문자열 대체(개발 · 시험 환경)",
+      "severity": "low", "cwe": "CWE-1188", "area": 5,
+      "file": "service/server/app.js", "line": 172,
+      "evidence": "env.SESSION_PEPPER || env.SIGNUP_CODE || 'didisam-learner' (Java DdProps.java:37 동일). 운영(NODE_ENV=production)은 app.js:111에서 32자 미만이면 시작 차단 → 운영 영향 없음.",
+      "fix": "유지(위험 수용). 설치형 · BYOC에서 NODE_ENV 누락 시를 대비해 기동 로그에 '시험용 pepper 사용' 경고 추가 권고.",
+      "status": "accepted"
+    },
+    {
+      "id": "SEC-0008", "title": "운영자 · 관리자 로그인 2단계 인증(MFA) 없음",
+      "severity": "medium", "cwe": "CWE-308", "area": 5, "owasp": "A07:2021",
+      "file": "service/server/app.js", "line": 460,
+      "evidence": "POST /api/login은 이메일 + 비밀번호 + 속도 제한(ip 30/10분 · 이메일 8/10분)만. Java AuthServiceImpl.java:79 동일. 보고서 P1-2 관리자 MFA 전면 강제, PowerSchool · 부경대 사례.",
+      "fix": "owner · sub 대상 TOTP(또는 기관 SSO) 필수화 — /api 규격 변경이므로 통합 채팅방 코어 변경으로 처리(Node · Java 동시).",
+      "status": "open"
+    },
+    {
+      "id": "SEC-0009", "title": "데모 모드 Claude API 키를 브라우저 localStorage에 저장하고 브라우저에서 직접 호출",
+      "severity": "medium", "cwe": "CWE-922", "area": 3,
+      "file": "didisam/claude.js", "line": 19,
+      "evidence": "CL.K='didisam.claude' localStorage에 key 저장, anthropic-dangerous-direct-browser-access. 학습자 체험 키 lapp.js:385. 운영(live.js:81)은 /api/ai/messages로 서버 경유 — 운영 키는 브라우저에 없음.",
+      "fix": "데모 전용임을 화면에 명시(현행), 운영 빌드에서 claude.js 직접 호출 경로 비활성 확인을 가디언 정기 점검 항목에 추가. 데모 키는 사용량 한도가 낮은 별도 키만 안내.",
+      "status": "accepted"
+    },
+    {
+      "id": "SEC-0010", "title": "GitHub Actions가 태그(@v4 · @v2)로 고정 — 커밋 SHA 미고정",
+      "severity": "low", "cwe": "CWE-829", "area": 7,
+      "file": ".github/workflows/deploy-studio.yml", "line": 29,
+      "evidence": "actions/checkout@v4 · setup-node@v4 · google-github-actions/auth@v2 · setup-gcloud@v2. 배포는 OIDC(workload_identity_provider, 키 파일 없음)로 양호.",
+      "fix": "uses를 40자 SHA로 고정하고 Dependabot github-actions로 갱신. 가디언은 workflows 수정 PR 금지 — 사람이 수정.",
+      "status": "open"
+    },
+    {
+      "id": "SEC-0011", "title": "API 키(MCP) 발급 · 폐기를 부운영자(sub)도 할 수 있음 — 쓰기 scope 포함",
+      "severity": "medium", "cwe": "CWE-269", "area": 3, "owasp": "MCP · ASI03",
+      "file": "service/server/app.js", "line": 430,
+      "evidence": "'POST /api/keys': mcp.createKey(await needStaff(req), req) — needStaff는 teacher만 막음. Java McpController.java:19 동일. scope=write 키가 부운영자 판단만으로 발급됨.",
+      "fix": "scope=write 발급은 needOwner로 제한(읽기 키는 현행 유지) — 권한 정책 변경이므로 대표님 결정 후 통합 채팅방에서 Node · Java 동시 수정.",
+      "status": "open"
+    },
+    {
+      "id": "SEC-0012", "title": "innerHTML 이스케이프 없는 보간 후보 473건(기준선) — 고위험 이름 표본 25건 확인 결과 확정 XSS 0건",
+      "severity": "info", "cwe": "CWE-79", "area": 2,
+      "file": "didisam/", "line": 0,
+      "evidence": "semgrep didisam-innerhtml-unescaped 473건(hpstudio 53 · rtc-room 33 · core 32 …). name · title · text · body · label 보간 25건 표본: esc · E · nl(escape) · textContent 사용 또는 내부 고정값. ltube.js:442 nl은 이스케이프를 하지 않지만 호출부가 esc 후 전달.",
+      "fix": "가디언 야간 스캔에서 신규 증가분만 Finding으로 올림(기준선 대비). 새 렌더러는 esc 또는 textContent 사용.",
+      "status": "open"
+    }
+  ]
+}
