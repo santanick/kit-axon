@@ -25,6 +25,8 @@ MAILENV=""
 if has smtp-url; then SEC="$SEC,SMTP_URL=didisam-mail-smtp-url:latest"; MAILENV=",MAIL_PROVIDER=smtp"
 elif has webhook-url; then SEC="$SEC,MAIL_WEBHOOK_URL=didisam-mail-webhook-url:latest"; MAILENV=",MAIL_PROVIDER=webhook"; has webhook-token && SEC="$SEC,MAIL_WEBHOOK_TOKEN=didisam-mail-webhook-token:latest"; fi
 [ -n "$MAILENV" ] && has from && SEC="$SEC,MAIL_FROM=didisam-mail-from:latest"
+# 가디언 4차 #1: 운영자 로그인 2단계(이메일 인증번호)는 메일 발송이 없으면 로그인이 막힌다(503 mfa_mail) → 메일 설정 없이 배포하지 않는다
+if [ -z "$MAILENV" ] && [ "${ALLOW_NO_MAIL:-0}" != "1" ]; then echo "✗ 메일 발송 설정(didisam-mail-smtp-url 또는 didisam-mail-webhook-url)이 없어 배포를 멈춥니다. 운영자 2단계 인증 메일이 나가지 않으면 관리자가 로그인할 수 없습니다. bash service/gcp/mail.sh 로 먼저 등록하십시오."; exit 1; fi
 # 가디언 4차 #13 DB 전송 구간 서버 인증서 검증: Cloud SQL 서버 CA(PEM)를 비밀값 didisam-db-ca로 등록하면 DB_SSL_CA로 넘긴다(Node: rejectUnauthorized true).
 #   등록: gcloud sql instances describe didisam-pg --format='value(serverCaCert.cert)' | gcloud secrets create didisam-db-ca --data-file=-
 #   Java(전자정부 에디션)는 JDBC_URL에 ?sslmode=verify-ca&sslrootcert=<PEM 경로> (docs/security/db-tls.md). 커넥터(unix 소켓) 연결은 커넥터가 암호화한다.
