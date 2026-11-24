@@ -89,8 +89,13 @@ AI SAM은 세 가지 역할로 돕습니다: ① ${T ? '강의 준비(설계 · 
 /* 체크리스트 09: 서버 toolGuard.confirm 항목은 운영자 확인 → POST /api/ai/tool-confirm 토큰(3등급은 비밀번호 재확인) */
 async function agHuman(tu, gd, tc) {
   const lbl = String((tu.input && (tu.input.instruction || tu.input.command || tu.input.intent)) || tu.name).slice(0, 120);
-  if (!window.confirm(`AI SAM이 외부 출처(학습자 글 · 웹 검색 · 첨부)를 읽은 뒤 다음 작업을 하려고 합니다.\n\n「${lbl}」\n\n직접 요청하신 작업이 맞으면 [확인]을 눌러 주십시오.`)) return false;
-  try { const pw = gd.tier >= 3 ? window.prompt('고위험 작업입니다. 비밀번호를 다시 입력해 주십시오.') : undefined; if (gd.tier >= 3 && !pw) return false;
+  /* 통합: 브라우저 기본 confirm · prompt 대신 스튜디오 모달(비밀번호는 type=password, 닫기 · 바깥 누름 = 거부) */
+  const pw0 = await new Promise(done => { let fin = false; const end = v => { if (!fin) { fin = true; done(v); } };
+    const w = modal('AI 작업 확인', `<p>AI SAM이 외부 출처(학습자 글 · 웹 검색 · 첨부)를 읽은 뒤 다음 작업을 하려고 합니다.</p><p><b>「${esc(lbl)}」</b></p><p class="mini">직접 요청하신 작업이 맞을 때만 확인을 눌러 주십시오. 글 속 지시로 생긴 작업이면 취소하십시오.</p>${gd.tier >= 3 ? '<label class="fl">고위험 작업 — 비밀번호 재확인<input type="password" name="agpw" autocomplete="current-password" maxlength="200"></label>' : ''}`,
+      [{ id: 'c', label: '취소', run: () => { end(false); } }, { id: 'ok', label: '확인하고 진행', kind: 'pri', run: w2 => { const v = gd.tier >= 3 ? fv(w2, 'agpw') : ''; if (gd.tier >= 3 && !v) { toast && toast('비밀번호를 입력해 주십시오.', 'warn'); return false; } end({ pw: v }); } }]);
+    new MutationObserver((m, o) => { if (!document.body.contains(w)) { o.disconnect(); end(false); } }).observe(document.body, { childList: true }); });
+  if (!pw0) return false;
+  try { const pw = pw0.pw || undefined;
     const r = await api('POST', '/api/ai/tool-confirm', { id: tu.id, name: tu.name, ...(pw ? { password: pw } : {}) }); tc[tu.id] = r.token; return true; }
   catch (e) { toast && toast(e.message); return false; }
 }
