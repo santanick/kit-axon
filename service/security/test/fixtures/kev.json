@@ -1,0 +1,8 @@
+{
+  "title": "CISA KEV (fixture — 시험용 가상 항목)",
+  "catalogVersion": "fixture",
+  "vulnerabilities": [
+    { "cveID": "CVE-2099-0002", "vendorProject": "fixture", "product": "fixture-kev-lib", "vulnerabilityName": "Fixture RCE", "dateAdded": "2099-01-03", "shortDescription": "시험용 가상 항목." },
+    { "cveID": "CVE-2099-0100", "vendorProject": "Acme", "product": "Router", "vulnerabilityName": "Unrelated device bug", "dateAdded": "2099-01-03", "shortDescription": "디디쌤과 무관한 시험 항목." }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "GHSA-fx00-kev0-0002",
+  "summary": "fixture-kev-lib 원격 코드 실행 — 시험용 가상 항목(KEV 등재 경로 시험)",
+  "aliases": ["CVE-2099-0002"],
+  "modified": "2099-01-02T00:00:00Z",
+  "published": "2099-01-02T00:00:00Z",
+  "severity": [{ "type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" }],
+  "affected": [{ "package": { "ecosystem": "npm", "name": "fixture-kev-lib" }, "ranges": [{ "type": "SEMVER", "events": [{ "introduced": "2.0.0" }, { "fixed": "2.0.5" }] }] }]
+}
