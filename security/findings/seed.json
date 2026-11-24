@@ -107,7 +107,8 @@
       "line": 460,
       "evidence": "POST /api/login은 이메일 + 비밀번호 + 속도 제한(ip 30/10분 · 이메일 8/10분)만. Java AuthServiceImpl.java:79 동일. 보고서 P1-2 관리자 MFA 전면 강제, PowerSchool · 부경대 사례.",
       "fix": "owner · sub 대상 TOTP(또는 기관 SSO) 필수화 — /api 규격 변경이므로 통합 채팅방 코어 변경으로 처리(Node · Java 동시).",
-      "status": "open"
+      "status": "accepted",
+      "note": "대표님 결정(2026-11-24 22:28): 접근성 저하로 관리자 2단계 인증 미도입 — 위험 수용. 보완 통제: 계정 잠금(SEC-0014) · 로그인 속도 제한 · 새 환경 로그인 알림 · 보안 승인 재인증 · 유휴 세션 만료"
     },
     {
       "id": "SEC-0009",
