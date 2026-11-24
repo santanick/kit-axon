@@ -55,7 +55,7 @@ const ago = d => new Date(Date.now() - d * 864e5).toISOString();
     ok(await p.evaluate(() => (LR.lp.mtoday || {}).ids && LR.lp.mtoday.ids.length > 0), '오늘 고른 개념을 lp.mtoday에 저장(같은 날 유지)');
     ok(await p.evaluate(() => window.__ev.some(e => e[0] === 'mastery' && e[1] === 'c2/w1' && e[2].st === 'done')), '숙달 변화 → mastery 이벤트(글 원문 없음)');
     ok(!(await p.$('.mj-home .mj-sum')), 'v47 D4: 홈 카드에 작은 성취 요약 줄 없음(「내 학습」으로 옮김)');
-    await go(p, '#my', 500); ok(/이번 주 작은 성취/.test(await T(p, '.mj-sum')) && /연속 학습/.test(await T(p, '.mj-sum')), '요약 줄(v47 D4: 홈 → 마이페이지): 이번 주 작은 성취 · 연속 학습'); await go(p, '#home', 600);
+    await go(p, '#my', 500); if (!(await p.$('.mj-sum'))) await go(p, '#rec', 500); /* v47 통합: 웹 내 학습은 성취 3칸 대신 「기록」(#rec) */ ok(/이번 주 작은 성취/.test(await T(p, '.mj-sum')) && /연속 학습/.test(await T(p, '.mj-sum')), '요약 줄(v47 D4: 홈 → 마이페이지): 이번 주 작은 성취 · 연속 학습'); await go(p, '#home', 600);
     /* 바로 학습 이동 */
     const h0 = rows[0].go; await p.click('.mj-row .mj-go'); await p.waitForTimeout(500); ok(decodeURIComponent(await p.evaluate(() => location.hash)) === decodeURIComponent(h0), '[바로 학습] 누르면 그 항목으로 이동');
     ok(await p.evaluate(() => !!document.querySelector('.lp2l, #lm h2')), '항목 화면 표시'); await go(p, '#home', 600);
