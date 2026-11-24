@@ -23,6 +23,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     static final Pattern HAS_ALPHA = Pattern.compile("[a-zA-Z]"), HAS_DIGIT = Pattern.compile("\\d");
 
     @Resource(name = "propertiesService") private EgovPropertyService props;
+    @org.springframework.beans.factory.annotation.Autowired private LoginDevices devices; /* 보안 2차 새 환경 로그인 알림 */
     private final AuthMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final DdOAuth oa;
     @org.springframework.beans.factory.annotation.Value("${TOSS_SECRET_KEY:}") private String tossKey = "";
     @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:}") private String santaEnv = ""; /* v47 산타 관리자 표시(user.santa) */
@@ -46,6 +47,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         String token = DdCrypto.newToken();
         mapper.insertSession(DdCrypto.sha(token), uid, tid, Math.min(p.idleH, props.getInt("session.days") * 24));
         web.setSid(res, token);
+        devices.seen(res, uid, tid); /* 보안 2차: 새 환경 로그인 알림(가입 · 로그인 · 소셜 로그인 공통) */
     }
 
     @Override public Map<String, Object> signup(byte[] body, HttpServletRequest req, HttpServletResponse res) throws Exception {
@@ -127,6 +129,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         mapper.updatePw(uid, DdCrypto.hashPw(b.get("next").asText())); mapper.deleteOtherSessions(uid, (String) a.get("sid"));
         tx.audit(tid, (String) a.get("email"), "password.change", null); return Map.of("ok", true);
     }
+    @Override public Map<String, Object> devices(Map<String, Object> a, HttpServletRequest req) { return devices.list(a, req); }
     @Override public Map<String, Object> staffList(Map<String, Object> a) throws Exception { Map<String, Object> o = new LinkedHashMap<>(); o.put("rows", mapper.selectStaff((String) a.get("tid"))); return o; }
     @Override public Map<String, Object> staffCreate(Map<String, Object> a, JsonNode b) throws Exception {
         String tid = (String) a.get("tid"); rl.limit("staff:" + tid, 30, 3600_000L);

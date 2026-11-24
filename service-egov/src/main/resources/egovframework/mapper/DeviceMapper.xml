@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 보안 2차: 새 환경 로그인 알림(Node service/server/devices.js와 같은 SQL). 표는 Node 마이그레이션(core/user_devices_v1)이 만든다 -->
+<mapper namespace="egovframework.didisam.auth.service.impl.DeviceMapper">
+  <select id="selectPrev" resultType="map">select dev_hash, band, country from user_devices where user_id = cast(#{uid} as uuid)</select>
+  <insert id="upsert">
+    insert into user_devices (user_id, dev_hash, agent, band, country) values (cast(#{uid} as uuid), #{h}, #{agent}, #{band}, #{country})
+    on conflict (user_id, dev_hash) do update set agent = excluded.agent, band = excluded.band, country = case when excluded.country = '' then user_devices.country else excluded.country end, last_at = now()
+  </insert>
+  <delete id="trim">delete from user_devices where user_id = cast(#{uid} as uuid) and dev_hash not in (select dev_hash from user_devices where user_id = cast(#{uid} as uuid) order by last_at desc limit 20)</delete>
+  <select id="selectEmail" resultType="string">select email from users where id = cast(#{uid} as uuid)</select>
+  <select id="selectTenantName" resultType="string">select name from tenants where id = #{tid}</select>
+  <select id="selectList" resultType="map">
+    select dev_hash, agent, band, country, to_char(first_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') first_at, to_char(last_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') last_at
+      from user_devices where user_id = cast(#{uid} as uuid) order by last_at desc limit 20
+  </select>
+</mapper>

@@ -51,6 +51,7 @@ const AP = require('./aiprice'); /* v47 AI 월 포함량 · 추가 충전 요금
 const { createPay } = require('./fac/pay');
 const LEV = require('./lev'); /* v46 Ver2 학습 이벤트 */
 const { createOAuth } = require('./oauth');
+const { createDevices } = require('./devices'); /* 보안 2차: 새 환경 로그인 알림(2단계 인증 대신) */
 const COOKIE = '__Host-dd_sid';
 
 /* ── 도우미 ── */
@@ -152,6 +153,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     const token = crypto.randomBytes(32).toString('base64url');
     await pool.query('insert into sessions (id, user_id, tenant_id, expires_at) values ($1, $2, $3, now() + $4::interval)', [sha(token), userId, tid, `${Math.min(idleH, SESSION_DAYS * 24)} hours`]);
     setSid(res, token);
+    await devices.seen(res.req, res, userId, tid); /* 보안 2차: 새 기기 · 대역 로그인 알림(가입 · 로그인 · 소셜 로그인 공통, 실패해도 로그인은 진행) */
   }
   async function auth(req) {
     const t = cookies(req)[cookieName]; if (!t || t.length > 100) return null;
@@ -167,6 +169,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   const stateDoc = a => inTenant(pool, a.tid, async c => { const { rows } = await c.query('select doc, rev from tenant_state where tenant_id = $1', [a.tid]); return rows[0] || null; });
   const tScope = async a => { const r = await stateDoc(a); return M.scope(r ? crypt.open(r.doc, a.tid) : null, a.email); };
   const audit = (c, tid, actor, action, detail) => c.query('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, actor, action, detail ? JSON.stringify(detail) : null]);
+  const devices = createDevices({ pool, env, inTenant, audit, cookies, secure, ip, hops, log });
   const meOut = a => ({ user: { email: a.email, role: a.role, ...(a.pw_temp ? { pwTemp: true } : {}), ...(isSanta(a) ? { santa: true } : {}) }, tenant: { tid: a.tid, name: a.name, type: a.type, mode: a.mode } });
 
   /* ── 학습자(v10) ── */
@@ -483,6 +486,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     },
     'POST /api/logout': async (req, res) => { const t = cookies(req)[cookieName]; if (t) await pool.query('delete from sessions where id = $1', [sha(t)]); clearSid(res); return { ok: true }; },
     'GET /api/me': async req => meOut(await need(req)),
+    'GET /api/me/devices': async req => devices.list(await need(req), req), /* 보안 2차: 본인 최근 로그인 기기 */
     'POST /api/password': async req => {
       const a = await need(req); limit('pw:' + a.uid, 8, 600e3); const b = await readBody(req, 4096);
       const { rows } = await pool.query('select pw from users where id = $1', [a.uid]);

@@ -10,7 +10,8 @@ public interface McpMapper {
     List<Map<String, Object>> selectKeys(@Param("tid") String tid);
     int countActiveKeys(@Param("tid") String tid);
     void insertKey(@Param("id") String id, @Param("tid") String tid, @Param("name") String name, @Param("prefix") String prefix, @Param("hash") String hash, @Param("scope") String scope, @Param("by") String by);
-    int revokeKey(@Param("tid") String tid, @Param("id") String id);
+    int revokeKey(@Param("tid") String tid, @Param("id") String id, @Param("readOnly") boolean readOnly);
+    int countActiveWrite(@Param("tid") String tid, @Param("id") String id);
     Map<String, Object> selectKeyAuth(@Param("hash") String hash);
     int touchKey(@Param("id") String id);
     Map<String, Object> selectDoc(@Param("tid") String tid);

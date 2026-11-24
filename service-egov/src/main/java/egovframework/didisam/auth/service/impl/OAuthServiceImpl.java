@@ -34,6 +34,7 @@ import org.springframework.stereotype.Service;
 public class OAuthServiceImpl extends EgovAbstractServiceImpl implements OAuthService {
     static final int PEND_MIN = 15;
     @Resource(name = "propertiesService") private EgovPropertyService props;
+    @org.springframework.beans.factory.annotation.Autowired private LoginDevices devices; /* 보안 2차 */
     private final AuthMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final DdOAuth oa;
     private final HttpClient http = HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(10)).build();
     public OAuthServiceImpl(AuthMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, DdOAuth oa) { this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.oa = oa; }
@@ -131,6 +132,7 @@ public class OAuthServiceImpl extends EgovAbstractServiceImpl implements OAuthSe
         String token = DdCrypto.newToken();
         mapper.insertSession(DdCrypto.sha(token), uid, tid, Math.min(p.idleH, props.getInt("session.days") * 24));
         web.setSid(res, token);
+        devices.seen(res, uid, tid); /* 보안 2차: 새 환경 로그인 알림(가입 · 로그인 · 소셜 로그인 공통) */
     }
 
     @Override public Map<String, Object> pending(HttpServletRequest req) throws Exception {

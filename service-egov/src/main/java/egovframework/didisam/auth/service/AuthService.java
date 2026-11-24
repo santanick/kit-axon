@@ -16,6 +16,8 @@ public interface AuthService {
     /** 세션 필수. 없으면 401 */
     Map<String, Object> need(HttpServletRequest req) throws Exception;
     Map<String, Object> meOut(Map<String, Object> a);
+    /** 보안 2차: 본인 최근 로그인 기기(GET /api/me/devices) */
+    Map<String, Object> devices(Map<String, Object> a, HttpServletRequest req);
     /** 교강사 제외 */
     Map<String, Object> needStaff(HttpServletRequest req) throws Exception;
     /** 정운영자만 */

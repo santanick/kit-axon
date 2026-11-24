@@ -23,4 +23,5 @@ public class AuthController {
     }
     @PostMapping("/logout") public Map<String, Object> logout(HttpServletRequest req, HttpServletResponse res) throws Exception { return authService.logout(req, res); }
     @GetMapping("/me") public Map<String, Object> me(HttpServletRequest req) throws Exception { return authService.meOut(authService.need(req)); }
+    @GetMapping("/me/devices") public Map<String, Object> devices(HttpServletRequest req) throws Exception { return authService.devices(authService.need(req), req); }
 }
