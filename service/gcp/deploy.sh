@@ -25,6 +25,10 @@ MAILENV=""
 if has smtp-url; then SEC="$SEC,SMTP_URL=didisam-mail-smtp-url:latest"; MAILENV=",MAIL_PROVIDER=smtp"
 elif has webhook-url; then SEC="$SEC,MAIL_WEBHOOK_URL=didisam-mail-webhook-url:latest"; MAILENV=",MAIL_PROVIDER=webhook"; has webhook-token && SEC="$SEC,MAIL_WEBHOOK_TOKEN=didisam-mail-webhook-token:latest"; fi
 [ -n "$MAILENV" ] && has from && SEC="$SEC,MAIL_FROM=didisam-mail-from:latest"
+# 가디언 4차 #13 DB 전송 구간 서버 인증서 검증: Cloud SQL 서버 CA(PEM)를 비밀값 didisam-db-ca로 등록하면 DB_SSL_CA로 넘긴다(Node: rejectUnauthorized true).
+#   등록: gcloud sql instances describe didisam-pg --format='value(serverCaCert.cert)' | gcloud secrets create didisam-db-ca --data-file=-
+#   Java(전자정부 에디션)는 JDBC_URL에 ?sslmode=verify-ca&sslrootcert=<PEM 경로> (docs/security/db-tls.md). 커넥터(unix 소켓) 연결은 커넥터가 암호화한다.
+gcloud secrets describe didisam-db-ca --project "$PROJECT" >/dev/null 2>&1 && SEC="$SEC,DB_SSL_CA=didisam-db-ca:latest"
 gcloud secrets describe GUARD_TOKEN --project "$PROJECT" >/dev/null 2>&1 && SEC="$SEC,GUARD_TOKEN=GUARD_TOKEN:latest" # 가디언 서비스 토큰(guardian-setup.sh) — 있으면 함께 고정
 # 보안 점검 IAC-06(가디언 2차): 비밀값은 :latest가 아니라 배포 시점의 숫자 버전으로 고정한다 — 리비전마다 어떤 값을 썼는지 남고,
 #   이전 리비전으로 되돌리면 그때의 비밀값 버전으로 정확히 돌아간다. 값은 출력하지 않고 이름:버전만 보여 준다.

@@ -60,7 +60,9 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         return d.length() == 11 ? d.substring(0, 3) + "-" + d.substring(3, 7) + "-" + d.substring(7) : d.length() == 10 ? d.substring(0, 3) + "-" + d.substring(3, 6) + "-" + d.substring(6) : "";
     }
     private void plog(String tid, String actor, String action, String lid, String purpose, List<String> fields) {
-        mapper.insertLog(tid, cut(String.valueOf(actor), 80), action, lid, purpose, String.join(",", fields));
+        /* 가디언 4차 #5: 접속지(ip) — 현재 요청의 원값(요청 밖 파기 작업 등은 빈 값). Node pii.js plog와 같다 */
+        String ip = ""; try { var at = (org.springframework.web.context.request.ServletRequestAttributes) org.springframework.web.context.request.RequestContextHolder.getRequestAttributes(); if (at != null) ip = cut(web.ip(at.getRequest()), 64); } catch (Exception e) { ip = ""; }
+        mapper.insertLog(tid, cut(String.valueOf(actor), 80), action, lid, purpose, String.join(",", fields), ip);
     }
     record Org(String type, JsonNode mode, boolean under14, JsonNode social, boolean idvOn, String idvReason, boolean manual, boolean parent) {}
     /** v33 메일 미설정: 운영(NODE_ENV=production)은 '발송 미설정' 안내(503), 개발은 응답에 인증번호(dev_code) */

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 가디언 4차 기록 · 데이터(Node service/server/records.js와 같은 SQL) -->
+<mapper namespace="egovframework.didisam.records.RecordsMapper">
+  <select id="selectStaff" resultType="map">
+    select email, role, to_char(last_login at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') last_login from users where tenant_id = #{tid}
+     order by case role when 'owner' then 0 when 'sub' then 1 else 2 end, email
+  </select>
+  <select id="selectLastReview" resultType="map">
+    select actor, detail->>'note' note, to_char(at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') at, at &gt; now() - interval '92 days' fresh
+      from audit_log where tenant_id = #{tid} and action = 'access.review' order by id desc limit 1
+  </select>
+  <select id="selectKrOnly" resultType="string">select doc->'org'->'sec'->>'krOnly' from tenant_state where tenant_id = #{tid}</select>
+  <update id="updateKrOnly">
+    update tenant_state set doc = jsonb_set(jsonb_set(doc, '{org,sec}', coalesce(doc->'org'->'sec', '{}'::jsonb)), '{org,sec,krOnly}', to_jsonb(#{on}::boolean)) where tenant_id = #{tid}
+  </update>
+  <select id="purge" resultType="string">select records_purge()::text</select>
+</mapper>

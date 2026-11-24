@@ -44,7 +44,7 @@ public interface PiiMapper {
     void insertIdentity(@Param("tid") String tid, @Param("lid") String lid, @Param("provider") String provider, @Param("sub") String sub, @Param("ebidx") String ebidx,
                         @Param("eenc") String eenc, @Param("emask") String emask, @Param("pw") String pw, @Param("consent") String consent);
     void insertGuardian(@Param("tid") String tid, @Param("lid") String lid, @Param("contact") String contact, @Param("th") String th);
-    void insertLog(@Param("tid") String tid, @Param("actor") String actor, @Param("action") String action, @Param("lid") String lid, @Param("purpose") String purpose, @Param("fields") String fields);
+    void insertLog(@Param("tid") String tid, @Param("actor") String actor, @Param("action") String action, @Param("lid") String lid, @Param("purpose") String purpose, @Param("fields") String fields, @Param("ip") String ip);
     Map<String, Object> selectGuardianPending(@Param("tid") String tid, @Param("th") String th);
     int deleteGuardianById(@Param("id") String id);
     int deleteGuardianOf(@Param("tid") String tid, @Param("lid") String lid);

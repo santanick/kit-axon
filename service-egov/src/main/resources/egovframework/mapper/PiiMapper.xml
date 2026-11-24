@@ -72,7 +72,7 @@
     insert into pii.guardian (tid, learner_id, contact_enc, token_hash, expires_at) values (#{tid}, cast(#{lid} as uuid), #{contact}, #{th}, now() + interval '7 days')
   </insert>
   <insert id="insertLog">
-    insert into pii.access_log (tid, actor, action, learner_id, purpose, fields) values (#{tid}, #{actor}, #{action}, cast(#{lid} as uuid), #{purpose}, string_to_array(#{fields}, ','))
+    insert into pii.access_log (tid, actor, action, learner_id, purpose, fields, ip) values (#{tid}, #{actor}, #{action}, cast(#{lid} as uuid), #{purpose}, string_to_array(#{fields}, ','), #{ip})
   </insert>
   <select id="selectGuardianPending" resultType="java.util.LinkedHashMap">
     select id::text id, learner_id::text learner_id from pii.guardian where tid = #{tid} and token_hash = #{th} and status = 'pending' and expires_at &gt; now()

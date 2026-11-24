@@ -143,7 +143,7 @@ async function run(U, tag, mock) {
   R.closeReason = (await call('A', 'POST', '/api/ledger/close', { unitId: 'lu_dept1', day: kst(), cashCounted: 1, cardCounted: 0 })).j.error;
   const cl = await call('A', 'POST', '/api/ledger/close', { unitId: 'lu_dept1', day: kst(), cashCounted: cg.j.cashSystem, cardCounted: cg.j.cardSystem }); R.close = [cl.st, cl.j.close && cl.j.close.cashCounted];
   R.close2 = (await call('A', 'POST', '/api/ledger/close', { unitId: 'lu_dept1', day: kst(), cashCounted: 0, cardCounted: 0, diffReason: 'x' })).j.error;
-  const ex = await call('A', 'GET', `/api/ledger/export?from=${kst(-1)}&to=${kst(1)}`); R.export = [ex.st, /text\/csv/.test(ex.ct), (ex.j._text || '').charCodeAt(0) === 0xFEFF, (ex.j._text || '').split('\r\n').length > 5];
+  const ex = await call('A', 'GET', `/api/ledger/export?from=${kst(-1)}&to=${kst(1)}&reason=%EC%A0%95%EC%82%B0`); R.export = [ex.st, /text\/csv/.test(ex.ct), (ex.j._text || '').charCodeAt(0) === 0xFEFF, (ex.j._text || '').split('\r\n').length > 5];
 
   // Lv2 단말 에이전트(모의)
   const dv = await call('A', 'POST', '/api/ledger/devices', { unitId: 'lu_dept1', label: '데스크 1', mode: 'mock' }); R.device = [dv.st, !!dv.j.agentKey, dv.j.device && dv.j.device.mode];

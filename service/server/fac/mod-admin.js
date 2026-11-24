@@ -177,12 +177,12 @@ module.exports = (ctx, S) => {
           const rf = (await c.query("select coalesce(sum(amount), 0)::int n from fac_refund where tenant_id = $1 and status = 'done' and (at at time zone 'Asia/Seoul')::date between $2 and $3", [a.tid, from, to])).rows[0].n; res.sales = { online: m.online, onsite: m.onsite, refunds: rf, net: m.online + m.onsite - rf }; }
         return res; }); },
 
-    'GET /api/fac/export': async (req, res) => { const a = await needOwner(req); const Q = q(req); const to = S.DAY_RE.test(Q.get('to') || '') ? Q.get('to') : calc.kstDay(Date.now()), from = S.DAY_RE.test(Q.get('from') || '') ? Q.get('from') : calc.addDays(to, -29);
+    'GET /api/fac/export': async (req, res) => { const a = await needOwner(req); const X = ctx.exportGate ? ctx.exportGate(req, a) : null; /* 가디언 4차 #14 사유 필수 · 학번은 끝자리만(sidTail) */ const Q = q(req); const to = S.DAY_RE.test(Q.get('to') || '') ? Q.get('to') : calc.kstDay(Date.now()), from = S.DAY_RE.test(Q.get('from') || '') ? Q.get('from') : calc.addDays(to, -29);
       const rows = await T(a, async c => { const C = await S.cfg(c, a.tid); return (await c.query("select *, to_char(day, 'YYYY-MM-DD') as day from fac_booking where tenant_id = $1 and day between $2 and $3 order by start_at limit 20000", [a.tid, from, to])).rows.map(b => listRow(C, b)); });
       const esc = v => { const s = String(v == null ? '' : v); return /^[=+\-@]/.test(s) ? "'" + s : /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
       const H = ['id', 'facName', 'resName', 'day', 'from', 'to', 'status', 'aud', 'sidTail', 'amount', 'payMode', 'payStatus'];
       const csv = '﻿' + [H.join(','), ...rows.map(r => H.map(k => esc(r[k])).join(','))].join('\n');
-      await T(a, c => audit(c, a.tid, a.email, 'fac.export', { from, to, n: rows.length }));
+      await T(a, c => audit(c, a.tid, a.email, 'fac.export', { from, to, n: rows.length })); if (X) await X.done('fac', rows.length);
       res.writeHead(200, { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="fac-${from}-${to}.csv"`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }); res.end(csv); return null; }
   };
 
