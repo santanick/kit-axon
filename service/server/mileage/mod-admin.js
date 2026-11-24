@@ -246,10 +246,11 @@ module.exports = (ctx, S) => {
     'GET /api/mileage/log': async req => { const a = await need(req); const area = q(req).get('area'); return T(a, async c => ({ ok: true, log: (await c.query('select id, ver, area, before, after, reason, by_staff "by", at from mil_policy_log where tenant_id = $1 and ($2::text is null or area = $2) order by id desc limit 200', [a.tid, area || null])).rows })); },
     'GET /api/mileage/shop/payouts': async req => { const a = await needStaff(req); const ym = ymOf(q(req).get('ym')); return T(a, c => payouts(c, a.tid, ym)); },
     'POST /api/mileage/shop/payouts/send': async req => { const a = await needOwner(req); const b = await readBody(req, 2048); const ym = ymOf(b.ym); const to = str(b.to, 120).trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw E('bad_rule', { field: 'to' }, 400);
-      limit(`milpay:${a.tid}`, 5, 3600e3);
-      const P = await T(a, c => payouts(c, a.tid, ym)); const csv = ['내부ID,소속,품목,수량,지급일,시가(원)', ...P.rows.map(r => [r.sid, r.dept, r.item, r.qty, r.at, r.priceWon].map(x => `"${String(x == null ? '' : x).replace(/"/g, '""')}"`).join(','))].join('\r\n');
+      const X = ctx.exportGateOf ? ctx.exportGateOf(b, a) : null; /* 가디언 4차 #14(d5) 사유 필수 · 학번(내부ID) 기본 가림 · 원본(raw)은 정운영자 */
+      limit(`milpay:${a.tid}`, 5, 3600e3); const { mask } = require('../records');
+      const P = await T(a, c => payouts(c, a.tid, ym)); const csv = ['내부ID,소속,품목,수량,지급일,시가(원)', ...P.rows.map(r => [X && !X.raw ? mask(r.sid) : r.sid, r.dept, r.item, r.qty, r.at, r.priceWon].map(x => `"${String(x == null ? '' : x).replace(/"/g, '""')}"`).join(','))].join('\r\n');
       const M = createMailer(env); let sent = false; if (M.on) { try { await M.send({ to, subject: `[디디쌤] ${ym} 리워드 숍 지급 내역(급여 담당용)`, text: `${ym} 리워드 숍 지급 내역입니다. 복지포인트성 지급은 근로소득 과세 대상일 수 있습니다(안내 G).\n\n${csv}` }); sent = true; } catch { sent = false; } }
-      await T(a, c => log(c, a.tid, 'reward', null, { payoutYm: ym, to: to.replace(/^(.).*(@.*)$/, '$1***$2'), rows: P.rows.length, sent }, null, a.email));
+      await T(a, c => log(c, a.tid, 'reward', null, { payoutYm: ym, to: to.replace(/^(.).*(@.*)$/, '$1***$2'), rows: P.rows.length, sent }, null, a.email)); if (X) await X.done('mileage_payout', P.rows.length);
       return { ok: true, ym, rows: P.rows.length, sent, csv: sent ? null : csv }; }
   };
   async function payouts(c, tid, ym) {

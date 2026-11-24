@@ -248,7 +248,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   /* v42 학습 마일리지(mileage/): 공개 mile-* · 운영자 /api/mileage/* · 수집 훅(가입 · 로그인 · cpl · progress 차이분 · 원장 환불) */
   /* 가디언: owner + 산타 관리자 전용 /api/security/*, 긴급 차단(기본 dry-run · SECURITY_KILL_LIVE=1일 때만 적용) */
   const sec = createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, checkPw, isSanta, env, log });
-  const mileage = require('./mileage').createMileage({ pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, env, log });
+  const mileage = require('./mileage').createMileage({ exportGateOf: (...x) => rec.exportGateOf(...x), pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, env, log });
   const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook: mileage.hook });
   { const base = pii.mailTo; pii.mailTo = async (tid, ...r) => (await sec.egressBlocked(tid)) ? false : base(tid, ...r); } /* 가디언 egress 차단: 기관 알림 메일 발송 중단 */
   const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env, mileHook: mileage.hook });
@@ -705,7 +705,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     }
   };
   /* v30 학사 LMS 묶음 라우트(lms/mod-*.js) — 핵심 라우트와 이름이 겹치면 기동을 멈춘다 */
-  for (const [k, fn] of Object.entries(require('./lms').loadRoutes({ pool, inTenant, need, readBody, HttpErr, audit, today, limit, log }))) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
+  for (const [k, fn] of Object.entries(require('./lms').loadRoutes({ exportGate: (...x) => rec.exportGate(...x), pool, inTenant, need, readBody, HttpErr, audit, today, limit, log }))) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
   /* v40 시설 · 장비 예약(fac/): 공개 fac-* 와 운영자 /api/fac/* */
   const fac = require('./fac').createFac({ exportGate: (...x) => rec.exportGate(...x), mail: pii.mailTo, pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
   /* v41 통합 수납 원장(ledger/): 공개 ledger-* 와 운영자 /api/ledger/* */

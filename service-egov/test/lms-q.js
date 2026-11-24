@@ -51,7 +51,7 @@ async function scenario(base, db, tag) {
   await rec('statusReject', C('POST', 'applicants/status', { ...su, body: { program_id: pid, member_nos: ['20261006'], status: 'rejected' } }), 200);
   await rec('applicant', C('GET', 'applicant?program_id=' + pid + '&member_no=20261001', su), 200);
   await rec('filter', C('GET', 'applicants?program_id=' + pid + '&status=waiting', su), 200);
-  await rec('export', C('GET', 'applicants/export?program_id=' + pid, su), 200);
+  await rec('export', C('GET', 'applicants/export?reason=%EC%A0%90%EA%B2%80&program_id=' + pid, su), 200);
   await rec('notify', C('POST', 'notify', { ...su, body: { program_id: pid, body: '캠프 안내드립니다.' } }), 200);
   const sv = await rec('surveyAuto', C('POST', 'survey/auto', { ...su, body: { program_id: pid } }), 200);
   await rec('surveyAuto2', C('POST', 'survey/auto', { ...su, body: { program_id: pid } }), 409);
@@ -80,7 +80,7 @@ async function scenario(base, db, tag) {
   await rec('cqiSubDecide', C('POST', 'cqi/decide', { ...su, body: { program_id: pid, approve: true } }), 403);
   await rec('cqiDecide', C('POST', 'cqi/decide', { ...ow, body: { program_id: pid, approve: true } }), 200);
   await rec('cqiDoc', C('GET', 'cqi/doc?program_id=' + pid, ow), 200);
-  await rec('surveyAll', C('GET', 'survey/results?program_id=' + pid, su), 200);
+  await rec('surveyAll', C('GET', 'survey/results?reason=%EC%A0%90%EA%B2%80&program_id=' + pid, su), 200);
   await tr('close', pid, 'close', ow, 200);
   await rec('lockedAttend', C('POST', 'attend', { ...su, body: { program_id: pid, session_id: s1[0], records: [] } }), 409);
   await rec('lockedSet', C('POST', 'completion/set', { ...su, body: { program_id: pid, member_no: '20261003', completion: 'failed' } }), 409);

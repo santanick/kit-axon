@@ -35,7 +35,7 @@ const lib = {
     await c.query("insert into lms_term (tenant_id, term_id, name, starts_on, ends_on) values ($1,'2026-2','2026학년도 2학기','2026-09-01','2026-12-20')", [tid]);
     await c.query("insert into lms_course (tenant_id, course_code, name, credits, unit_code, category) values ($1,'CSE2001','자료구조',3,'CSE','major')", [tid]);
     const sec = (await c.query("insert into lms_section (tenant_id, term_id, course_code, section_no, title, source) values ($1,'2026-2','CSE2001','01','자료구조 01분반','manual') returning section_id", [tid])).rows[0].section_id;
-    await c.query("insert into lms_enrollment (tenant_id, section_id, person_id, source) select $1, $2, person_id, 'manual' from lms_person where member_no in ('20261001','20261002','20261003')", [tid, sec]);
+    await c.query("insert into lms_enrollment (tenant_id, section_id, person_id, source) select $1, $2, person_id, 'manual' from lms_person where tenant_id = $1 and member_no in ('20261001','20261002','20261003')", [tid, sec]);
     await c.query('commit'); await c.end();
     return { tid, ck, sec, em };
   },
@@ -106,7 +106,7 @@ async function scenario(base, db, tag) {
   await rec('import', C('POST', 'import', { ...ow, body: { survey_id: sid, rows: [{ member_no: '20261004', answers: { 1: 0, 2: '0;1', 3: 4 } }, { member_no: '20261005', answers: { 1: 0 } }] } }), 200);
   await rec('pending', C('GET', 'pending?member_no=20261002', ow), 200);
   await rec('stats', C('GET', 'stats?survey_id=' + sid + '&by=grade_year', ow), 200);
-  await rec('export', C('GET', 'export?survey_id=' + sid, ow), 200);
+  await rec('export', C('GET', 'export?reason=%EC%A0%90%EA%B2%80&survey_id=' + sid, ow), 200);
   await rec('remind', C('POST', 'remind', { ...ow, body: { survey_id: sid } }), 200);
   await rec('qLocked', C('POST', 'survey/save', { ...ow, body: { survey_id: sid, title: '2026 학과 설문', questions: qs } }), 409);
   await rec('teacherDel', C('POST', 'survey/delete', { ...te, body: { survey_id: sid } }), 403);

@@ -21,6 +21,8 @@ const ROUTES = [
   ['POST', 'eval/public', 'eval_public', 'os', 'w']
 ];
 const ROLE = { o: 'owner', s: 'sub', t: 'teacher' };
+/* 가디언 4차 #14(d5): 학번이 든 내려받기 — 사유 필수 · 학번 기본 가림 · 원본(raw=1)은 정운영자 · audit 'export'(records.js exportGate와 같은 규칙). Java LmsCall.EXPORTS와 같다 */
+const EXPORTS = { 'k.export': 'lms_k_survey', 'q.applicants_export': 'lms_q_applicants', 'q.survey_results': 'lms_q_survey' };
 const crypto = require('node:crypto');
 
 /* 학습자 본인 세션(L): 학습자 포털 쿠키(dd_lsid) → learner_sessions.sid = 학번(lms_person.member_no).
@@ -46,12 +48,15 @@ function bind(ctx, pfx, routes) {
       else { args = await ctx.readBody(req, 2 * 1024 * 1024); if (!args || typeof args !== 'object' || Array.isArray(args)) throw new ctx.HttpErr(400, '형식이 올바르지 않습니다.', 'bad_json'); }
       const tid = a ? a.tid : ls.tenant_id; const by = a ? a.email : 'learner:' + ls.sid;
       const actor = a ? { role: a.role, email: a.email } : { role: 'learner', email: by, member_no: ls.sid };
+      const xk = EXPORTS[`${pfx}.${op}`]; let X = null;
+      if (xk) { if (!a || !ctx.exportGate) throw new ctx.HttpErr(403, '이 작업을 할 권한이 없습니다.', 'role'); X = ctx.exportGate(req, a); actor.raw = X.raw; delete args.reason; delete args.raw; }
       if (ls) { args.member_no = ls.sid; delete args.by_operator; delete args.all; }
       try {
         return await ctx.inTenant(ctx.pool, tid, async c => {
           const r = (await c.query('select lms_k_call($1, $2, $3::jsonb, $4::jsonb)::text j', [pfx, op, JSON.stringify(actor), JSON.stringify(args)])).rows[0].j;
           const j = JSON.parse(r);
           if (w) await ctx.audit(c, tid, by, `lms.${pfx}.${op}`, { id: (j && (j.survey_id || j.program_id || j.course_id || j.id)) || null });
+          if (X) await ctx.audit(c, tid, by, 'export', { kind: xk, n: (j && +j.n) || 0, raw: X.raw, reason: X.reason });
           return j;
         });
       } catch (e) {
@@ -66,3 +71,4 @@ function bind(ctx, pfx, routes) {
 
 module.exports = ctx => bind(ctx, 'k', ROUTES);
 module.exports.bind = bind;
+module.exports.EXPORTS = EXPORTS;

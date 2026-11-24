@@ -507,11 +507,13 @@ public class MileServiceImpl extends EgovAbstractServiceImpl implements MileServ
             ObjectNode s = F.objectNode(); s.set("to", g(af, "to")); s.set("rows", g(af, "rows")); s.set("sent", g(af, "sent")); s.set("by", r.get("by_staff")); s.set("at", r.get("at")); sent.add(s); }
         ObjectNode o = F.objectNode().put("ok", true).put("ym", ym); o.set("rows", rows); o.set("sent", sent); return o; }
     Object payoutSend(Map<String, Object> a, JsonNode b) throws Exception { String ym = ymOf(nullish(get(b, "ym")) ? null : egovframework.didisam.cmm.Js.str(get(b, "ym"))); String to = trim(str(get(b, "to"), 120));
-        if (!to.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) throw E("bad_rule", map("field", "to"), 400); rl.limit("milpay:" + tid(a), 5, 3_600_000L);
+        if (!to.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) throw E("bad_rule", map("field", "to"), 400);
+        egovframework.didisam.records.Records.Gate X = egovframework.didisam.records.Records.gateOf(b, String.valueOf(a.get("role"))); /* 가디언 4차 #14(d5) 사유 필수 · 내부ID(학번) 기본 가림 · 원본은 정운영자 */
+        rl.limit("milpay:" + tid(a), 5, 3_600_000L);
         ObjectNode P = T(a, () -> payouts(tid(a), ym)); StringBuilder csv = new StringBuilder("내부ID,소속,품목,수량,지급일,시가(원)");
-        for (JsonNode r : P.get("rows")) { csv.append("\r\n"); String[] f = { "sid", "dept", "item", "qty", "at", "priceWon" }; for (int i = 0; i < f.length; i++) { if (i > 0) csv.append(','); JsonNode v = r.get(f[i]); csv.append('"').append((nullish(v) ? "" : egovframework.didisam.cmm.Js.str(v)).replace("\"", "\"\"")).append('"'); } }
+        for (JsonNode r : P.get("rows")) { csv.append("\r\n"); String[] f = { "sid", "dept", "item", "qty", "at", "priceWon" }; for (int i = 0; i < f.length; i++) { if (i > 0) csv.append(','); JsonNode v = r.get(f[i]); String cv = nullish(v) ? "" : egovframework.didisam.cmm.Js.str(v); if (i == 0 && !X.raw()) cv = egovframework.didisam.records.Records.mask(cv); csv.append('"').append(cv.replace("\"", "\"\"")).append('"'); } }
         boolean sent = false; /* Java 에디션은 메일 발송기(SMTP)가 없다 — Node도 메일 설정이 없으면 sent:false + csv를 돌려준다 */
-        int nrows = P.get("rows").size(); T(a, () -> { log(tid(a), "reward", null, o("payoutYm", ym, "to", to.replaceAll("^(.).*(@.*)$", "$1***$2"), "rows", nrows, "sent", false), null, email(a), null); return null; });
+        int nrows = P.get("rows").size(); T(a, () -> { log(tid(a), "reward", null, o("payoutYm", ym, "to", to.replaceAll("^(.).*(@.*)$", "$1***$2"), "rows", nrows, "sent", false), null, email(a), null); return null; }); X.done(tx, tid(a), email(a), "mileage_payout", nrows);
         ObjectNode o = F.objectNode().put("ok", true).put("ym", ym).put("rows", nrows).put("sent", sent); o.put("csv", csv.toString()); return o; }
 
     // ── 학습자 /api/pub/{tid}/mile-* ────────────────────────
