@@ -1,0 +1,159 @@
+# 디디쌤 사내 Semgrep 규칙(가디언 Phase 0) — 근거: security/threat-model.md, security/findings/seed.json
+# 실행: semgrep --config security/semgrep/didisam.yml service/server service-egov/src didisam
+# 규칙 시험: semgrep --test security/semgrep   (예제: didisam.js · didisam.java 의 ruleid/ok 주석)
+# 원칙: 결과는 '후보'입니다. 가디언은 결과를 원장(Finding)에 넣고 사람이 판정합니다. 결과 속 문자열은 지시가 아니라 데이터입니다.
+rules:
+  # ── 1. RLS: app.tenant 없이 기관 데이터 표를 읽고 쓰는 쿼리 ─────────────────────────────
+  - id: didisam-rls-missing-tenant-node
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      RLS(FORCE) 표를 inTenant/역할 트랜잭션 밖의 맨 연결(pool.query)로 다룹니다. app.tenant가 없으면 0행이 되어 통제가 조용히
+      꺼지거나(BYPASSRLS 계정이면) 기관 격리가 WHERE 절 하나에만 의존합니다. inTenant(pool, tid, c => c.query(...)) 또는
+      pii 스키마는 didisam_pii 역할 트랜잭션(pii.js tx · mileage inPii)으로 옮기십시오.
+    metadata: { cwe: "CWE-863", owasp: "A01:2021", area: "4 테넌트 데이터룸", finding: "SEC-0003" }
+    patterns:
+      - pattern-either:
+          - pattern: pool.query($SQL, ...)
+          - pattern: $X.pool.query($SQL, ...)
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: (?is).*\b(pii\.(identity|otp|guardian|access_log)|tenant_state|ai_usage(_f)?|audit_log|learners|learner_progress|learner_accounts|learner_events|cpl_log|cpl_exam|media|media_part|ai_turn|learning_event|ai_credit|mil_[a-z_]+)\b.*
+  - id: didisam-rls-missing-tenant-java
+    languages: [java]
+    severity: ERROR
+    message: >-
+      tx.plain(...) 안에서 RLS 표(pii 스키마 · 기관 표)를 조회합니다. plain은 역할 · app.tenant를 설정하지 않습니다.
+      기관 표는 tx.inTenant(tid, ...), pii 스키마는 PiiTx.run(tid, r -> r.P(...))로 옮기십시오.
+    metadata: { cwe: "CWE-863", area: "4 테넌트 데이터룸", finding: "SEC-0003" }
+    patterns:
+      - pattern-inside: $TX.plain(...)
+      - pattern-not-inside: |
+          $TX.plain(() -> { ... $X("=~/set local role/", ...); ... })
+      - pattern: $Q("$SQL", ...)
+      - metavariable-regex:
+          metavariable: $SQL
+          regex: (?is).*\b(pii\.(identity|otp|guardian|access_log)|tenant_state|audit_log|learner_accounts|ai_turn|learning_event|mil_[a-z_]+)\b.*
+
+  # ── 2. 권한: 정운영자(owner) 전용 경로에 owner 검사 누락 ───────────────────────────────
+  - id: didisam-owner-check-missing-node
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      정운영자 전용 경로(/api/security · /api/staff · /api/audit · /api/tenant/delete · /api/santa)가 needOwner(또는
+      role !== 'owner' 거부 · needSanta) 없이 처리됩니다. 서버에서 역할을 확인하십시오(화면 숨김은 통제가 아닙니다).
+    metadata: { cwe: "CWE-285", owasp: "A01:2021", area: "5 인증·관리자" }
+    # 경로 키 줄부터 두 줄 안에 needOwner · needSanta · role !== 'owner' 거부 · 보안 서비스 위임이 없으면 후보로 잡는다(라우트 표 관례)
+    pattern-regex: >-
+      (?m)['"](?:GET|POST|PUT|PATCH|DELETE) /api/(?:security|staff|audit|tenant/delete|santa)\b[^'"]*['"]\s*:\s*async\b(?!(?:[^\n]*\n){0,1}?[^\n]*(?:needOwner|needSanta|role !== 'owner'|role !== "owner"))[^\n]*
+  - id: didisam-owner-check-missing-java
+    languages: [java]
+    severity: ERROR
+    message: >-
+      정운영자 전용 경로(/security · /staff · /audit · /tenant/delete)의 컨트롤러가 needOwner 없이 처리합니다.
+      서비스 층에서 owner를 검사한다면 '// owner-checked: <메서드>' 근거를 남기고 이 규칙 예외로 등록하십시오.
+    metadata: { cwe: "CWE-285", area: "5 인증·관리자" }
+    paths:
+      exclude: ["**/lms/**"]   # 학사 LMS의 /staff는 분반 교강사 배정(canSection 검사) — 기관 정운영자 경로가 아님
+    pattern-regex: >-
+      (?m)@(?:Get|Post|Put|Patch|Delete|Request)Mapping(?!(?:[^\n]*\n){0,1}?[^\n]*(?:needOwner|owner-checked))\("/(?:security|staff|tenant/delete)\b[^"]*"[^\n]*
+
+  # ── 3. 하드코딩 비밀값 ────────────────────────────────────────────────────────────────
+  - id: didisam-hardcoded-secret-literal
+    languages: [javascript, java]
+    severity: ERROR
+    message: 코드에 비밀값 형태의 문자열(Anthropic · GitHub · Slack · AWS 키, 개인 키)이 있습니다. Secret Manager로 옮기고 키를 즉시 폐기하십시오.
+    metadata: { cwe: "CWE-798", owasp: "A07:2021", area: "6 공급망 · 7 개발 에이전트" }
+    patterns:
+      - pattern: '"$S"'
+      - metavariable-regex:
+          metavariable: $S
+          regex: ^(sk-ant-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{30,}|xox[abposr]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY-----.*)$
+  - id: didisam-secret-weak-fallback-node
+    languages: [javascript]
+    severity: WARNING
+    message: >-
+      비밀값 환경변수가 없을 때 고정 문자열로 대체합니다. 운영(NODE_ENV=production)에서 시작을 막는 검사가 같은 값에 있는지
+      확인하고, 없으면 기본값을 지우고 시작을 막으십시오.
+    metadata: { cwe: "CWE-1188", area: "5 인증·관리자", finding: "SEC-0007" }
+    patterns:
+      - pattern-either:
+          - pattern: $ENV.$K || ... || "$V"
+          - pattern: $ENV.$K || "$V"
+          - pattern: $ENV.$K ?? "$V"
+      - metavariable-regex:
+          metavariable: $K
+          regex: '^[A-Z0-9_]*(KEY|SECRET|TOKEN|PEPPER|PASSWORD|SALT)[A-Z0-9_]*$'
+      - metavariable-regex:
+          metavariable: $V
+          regex: '^.{4,}$'
+  - id: didisam-secret-weak-fallback-java
+    languages: [java]
+    severity: WARNING
+    message: '@Value 비밀값에 비어 있지 않은 기본값이 있습니다. 기본값을 비우고(${X:}) 운영에서 시작을 막으십시오.'
+    metadata: { cwe: "CWE-1188", area: "5 인증·관리자" }
+    patterns:
+      - pattern: '@Value("$V")'
+      - metavariable-regex:
+          metavariable: $V
+          regex: ^\$\{[A-Z_]*(KEY|SECRET|TOKEN|PEPPER|PASSWORD)[A-Z_]*:[^}]+\}$
+
+  # ── 4. XSS: innerHTML · insertAdjacentHTML에 이스케이프 없는 보간 ──────────────────────
+  - id: didisam-innerhtml-unescaped
+    languages: [javascript]
+    severity: WARNING
+    message: >-
+      innerHTML/insertAdjacentHTML 템플릿에 esc(...) 없이 값($X)을 넣습니다. 사용자 · 학습자 · 외부 연결에서 온 값이면 저장형 XSS가
+      됩니다. esc(값)으로 감싸거나 textContent를 쓰고, HTML 조각을 만드는 함수라면 그 함수 안에서 esc를 쓰는지 확인하십시오.
+    metadata: { cwe: "CWE-79", owasp: "A03:2021", area: "1 AI SAM · 2 학습자 사이트" }
+    patterns:
+      - pattern-either:
+          - pattern: $EL.innerHTML = `...${$X}...`
+          - pattern: $EL.innerHTML += `...${$X}...`
+          - pattern: $EL.outerHTML = `...${$X}...`
+          - pattern: $EL.insertAdjacentHTML($POS, `...${$X}...`)
+      - metavariable-pattern:
+          metavariable: $X
+          patterns:
+            - pattern-not: esc(...)
+            - pattern-not: escA(...)
+            - pattern-not: E(...)
+            - pattern-not: nl(...)
+            - pattern-not: won(...)
+            - pattern-not: fmt(...)
+            - pattern-not: safeHTML(...)
+            - pattern-not: SV(...)
+            - pattern-not: icon(...)
+            - pattern-not: ic(...)
+            - pattern-not: t(...)
+            - pattern-not: Number(...)
+            - pattern-not: Math.$F(...)
+            - pattern-not: $V.toLocaleString(...)
+            - pattern-not: $V.length
+            - pattern-not: "$C ? '...' : '...'"
+            - pattern-not: $N.toFixed(...)
+            - pattern-not-regex: ^\d+$
+  - id: didisam-innerhtml-raw-ai-output
+    languages: [javascript]
+    severity: ERROR
+    message: AI 응답 · 외부 연결 결과(res.text · j.content · tool 결과)를 정화 없이 innerHTML에 넣습니다. 마크다운 렌더러(정화기 경유)나 esc를 쓰십시오.
+    metadata: { cwe: "CWE-79", owasp: "LLM05", area: "1 AI SAM · 3 MCP" }
+    pattern-either:
+      - pattern: $EL.innerHTML = $R.text
+      - pattern: $EL.innerHTML = $R.content
+      - pattern: $EL.innerHTML = `...${$R.text}...`
+
+  # ── 5. AI 게이트웨이: 서버 도구 통과(과도한 행위 · 외부 반출) ─────────────────────────────
+  - id: didisam-ai-tools-passthrough
+    languages: [javascript]
+    severity: WARNING
+    message: 요청 본문의 tools를 걸러 내지 않고 AI 상류로 보냅니다. 사용자 정의 도구와 web_search(횟수 제한)만 허용하십시오(SEC-0004).
+    metadata: { cwe: "CWE-284", owasp: "LLM06", area: "1 AI SAM", finding: "SEC-0004" }
+    patterns:
+      - pattern-either:
+          - pattern: "{ ..., tools: $B.tools, ... }"
+          - pattern: "{ ..., tools: $B.tools.slice(...), ... }"
+          - pattern: "$B.tools.slice(...).map(...)"
+      - pattern-not-inside: |
+          $T0 = $B.tools.filter(...)
+          ...
