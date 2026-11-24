@@ -49,15 +49,17 @@ async function run(U, tag) {
   const s = await call('A', 'POST', '/api/staff', { email: SUB, role: 'sub' });
   const sl = await call('S', 'POST', '/api/login', { email: SUB, password: s.j.password }); await call('S', 'POST', '/api/login/mfa', { ticket: sl.j.ticket, code: sl.j.devCode });
   await call('S', 'POST', '/api/password', { current: s.j.password, next: 'Passw0rd-sub1' });
-  const cur = (await call('A', 'GET', '/api/state')).j; const doc = cur.doc || { org: { name: 'M' } }; const put = (who, m, rev) => call(who, 'PUT', '/api/state', { doc: { ...doc, org: { ...doc.org, sec: { mfa: m } } }, rev });
-  R.polBad = (await put('A', 'sms', cur.rev)).err; R.polSub = (await put('S', 'totp', cur.rev)).err; R.polOwn = (await put('A', 'totp', cur.rev)).st;
+  /* 통합(가디언 4차): 기관 보안 정책은 POST /api/org/security 한 경로(PUT /api/state의 org.sec는 서버 값 유지) */
+  if (!(await call('A', 'GET', '/api/state')).j.doc) await call('A', 'PUT', '/api/state', { doc: { org: { name: 'M' } }, rev: 0 });
+  const put = (who, m) => call(who, 'POST', '/api/org/security', { mfa: m });
+  R.polBad = (await put('A', 'sms')).err; R.polSub = (await put('S', 'totp')).st; R.polOwn = (await put('A', 'totp')).st;
   R.polGet = (await call('B', 'GET', '/api/me/mfa')).j.policy;
   R.delPolicy = (await call('B', 'DELETE', '/api/me/mfa', { password: PW })).err;
   const sl2 = await call('S2', 'POST', '/api/login', { email: SUB, password: 'Passw0rd-sub1' }); R.subSetup = { mfa: sl2.j.mfa, setup: sl2.j.totpSetup };
   R.subDone = (await call('S2', 'POST', '/api/login/mfa', { ticket: sl2.j.ticket, code: sl2.j.devCode })).j.totpSetup;
-  const c2 = (await call('A', 'GET', '/api/state')).j; R.polBack = (await call('A', 'PUT', '/api/state', { doc: { ...c2.doc, org: { ...c2.doc.org, sec: { mfa: 'email' } } }, rev: c2.rev })).st;
+  R.polBack = (await put('A', 'email')).st;
   R.delNoPw = (await call('B', 'DELETE', '/api/me/mfa', {})).err; R.del = (await call('B', 'DELETE', '/api/me/mfa', { password: PW })).j;
-  R.audit = (await pool.query("select action, detail from audit_log where actor = $1 and action in ('login', 'mfa.fail', 'mfa.totp.on', 'mfa.totp.off', 'org.mfa') order by id", [OW])).rows.map(r => r.action + ':' + JSON.stringify(typeof r.detail === 'string' ? JSON.parse(r.detail) : r.detail));
+  R.audit = (await pool.query("select action, detail from audit_log where actor = $1 and action in ('login', 'mfa.fail', 'mfa.totp.on', 'mfa.totp.off', 'org.sec') order by id", [OW])).rows.map(r => r.action + ':' + JSON.stringify(typeof r.detail === 'string' ? JSON.parse(r.detail) : r.detail));
   R.plain = (await pool.query("select count(*)::int n from mfa_tickets t join users u on u.id = t.user_id where u.email = $1 and t.code_hash ~ '^[0-9]{6}$'", [OW])).rows[0].n;
   return R;
 }
@@ -75,7 +77,7 @@ async function run(U, tag) {
   ok(a.resend.st === 200 && a.newCode === 200, '재발송');
   ok(a.enrollBadPw.st === 401 && a.enroll.st === 200 && a.confirmBad.err === 'mfa_code' && a.confirm.st === 200, '인증 앱 등록');
   ok(a.tlogin.mfa === 'totp' && a.tresend === 'mfa_kind' && a.treuse === 'mfa_code' && a.tgood === 'tenant,user', '인증 앱 로그인');
-  ok(a.polBad === 'mfa_policy' && a.polSub === 'mfa_policy' && a.polOwn === 200 && a.polGet === 'totp' && a.delPolicy === 'mfa_policy', '기관 정책');
+  ok(a.polBad === 'sec_mfa' && a.polSub === 403 && a.polOwn === 200 && a.polGet === 'totp' && a.delPolicy === 'mfa_policy', '기관 정책');
   ok(a.subSetup.mfa === 'email' && a.subSetup.setup === true && a.subDone === true && a.delNoPw === 'login' && a.del.method === 'email' && a.plain === 0, '등록 안내 · 해제 · 해시');
   console.log(`contract-mfa: ${pass} 통과, ${fail} 실패`); await pool.end(); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
