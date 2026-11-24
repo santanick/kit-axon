@@ -3,7 +3,7 @@ FROM node:22-alpine AS build
 WORKDIR /w
 COPY service/server/package.json service/server/package-lock.json ./server/
 # (선택) 사내 프록시 CA: docker build --secret id=ca,src=ca.crt …
-RUN --mount=type=secret,id=ca,required=false cd server && if [ -f /run/secrets/ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/ca; fi && npm ci --omit=dev --no-fund --no-audit
+RUN --mount=type=secret,id=ca,required=false cd server && if [ -f /run/secrets/ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/ca; fi && npm ci --omit=dev --ignore-scripts --no-fund --no-audit
 COPY didisam ./didisam
 COPY service/build-public.js ./
 RUN node build-public.js ./didisam ./public
