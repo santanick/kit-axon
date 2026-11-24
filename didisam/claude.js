@@ -67,7 +67,7 @@ function mdHTML(s) {
     delete ph.typing; Object.assign(ph, r, { via: '규칙 엔진', note: `Claude 연결 실패(${err.message}) — 규칙 엔진으로 처리했습니다.` }); S.chat = S.chat.slice(-60); save(); renderThreads(); if (r.nav) setTimeout(() => go(r.nav, true), 350);
   });
 }; }
-{ const base = aiBody; aiBody = m => { let h = ''; if (m.note) h += `<p class="cnote2">${esc(m.note)}</p>`; if (m.md) h += `<div class="mdx">${mdHTML(m.md)}</div>`; if (m.act) h += `<p class="actline">${ic('spark', 12)} 실행 지시 → 「${esc(m.act)}」</p>`; h += base(m); if (m.via) h += `<div class="via">${m.via === '규칙 엔진' ? '' : '<i class="vdot"></i>'}${esc(m.via)}${m.tok ? ` · ${m.tok.toLocaleString()} tokens` : ''}</div>`; return h; }; }
+{ const base = aiBody; aiBody = m => { let h = ''; if (m.note) h += `<p class="cnote2">${esc(m.note)}</p>`; if (m.md) h += `<div class="mdx">${mdHTML(m.md)}</div>`; if (m.act) h += `<p class="actline">${ic('spark', 12)} 실행 지시 → 「${esc(m.act)}」</p>`; h += base(m); if (m.via) h += `<div class="via">${(m.md || m.tok) && m.via !== '규칙 엔진' && typeof aiMark === 'function' ? aiMark('sam') : ''}${m.via === '규칙 엔진' ? '' : '<i class="vdot"></i>'}${esc(m.via)}${m.tok ? ` · ${m.tok.toLocaleString()} tokens` : ''}</div>`; return h; }; }
 /* ── 문서 AI 수정 ── */
 { const base = docEdit; docEdit = async (d, q, c) => {
   if (!CL.on('docs') || d._rules) return base(d, q, c);

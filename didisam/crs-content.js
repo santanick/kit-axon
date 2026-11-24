@@ -200,7 +200,7 @@
       <section class="ct-a4box"><b>학습 목표</b><ul>${D.goals.map((g, i) => `<li>${ce(`goals.${i}`, g)}${xdel(`goals.${i}`, '목표')}</li>`).join('')}</ul>${xadd('goals', '목표 추가')}</section>
       ${D.secs.map((s, i) => `<div class="ct-blk"><h2>${i + 1}. ${ce(`secs.${i}.h`, s.h)}${xdel(`secs.${i}`, `${i + 1}절`)}</h2>${f === 'slide' ? '' : ce(`secs.${i}.body`, s.body, 'p', 'ml')}<ul>${(s.pts || []).map((p, j) => `<li>${ce(`secs.${i}.pts.${j}`, p)}</li>`).join('')}</ul>${f === 'work' ? '<div class="ct-ln"></div><div class="ct-ln"></div>' : ''}</div>`).join('')}
       ${xadd('secs', '+ 절 추가', 'sec')}
-      <h2>실습 활동</h2>${ce('act', D.act, 'p', 'ml')}<h2>확인 문제</h2><ol>${D.check.map((q, i) => `<li>${ce(`check.${i}`, q)}${xdel(`check.${i}`, '문제')}${f === 'work' ? '<div class="ct-ln"></div>' : ''}</li>`).join('')}</ol>${xadd('check', '확인 문제 추가')}<footer>AI 초안을 바탕으로 담당자가 검토한 자료입니다 · ${E(today())}</footer></article>`;
+      <h2>실습 활동</h2>${ce('act', D.act, 'p', 'ml')}<h2>확인 문제</h2><ol>${D.check.map((q, i) => `<li>${ce(`check.${i}`, q)}${xdel(`check.${i}`, '문제')}${f === 'work' ? '<div class="ct-ln"></div>' : ''}</li>`).join('')}</ol>${xadd('check', '확인 문제 추가')}<footer>${typeof aiMark === 'function' ? aiMark('content') : ''}AI 초안을 바탕으로 담당자가 검토한 자료입니다 · ${E(today())}</footer></article>`;
   }
   const xdel = (p, what) => `<button type="button" class="ct-x" data-act="ct-x-del" data-p="${E(p)}" aria-label="${E(what)} 빼기" title="빼기">${svg('x', 14)}</button>`;
   const xadd = (p, lab, t) => `<button type="button" class="ct-xadd" data-act="ct-x-add" data-p="${E(p)}" ${t ? `data-t="${t}"` : ''}>${E(lab.startsWith('+') ? lab : '+ ' + lab)}</button>`;

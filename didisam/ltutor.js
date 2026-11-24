@@ -190,7 +190,9 @@ function ltEscalate(q) {
 }
 
 /* ── 화면 ── */
-function ltMsgHTML(m) { return `<div class="lt-m ${m.me ? 'u' : ''}">${m.me ? '' : '<span class="lt-orb sm" aria-hidden="true"></span>'}<div class="lt-b">${m.t ? `<p>${nl(m.t)}</p>` : ''}${m.h || ''}${!m.me && m.src ? `<small class="lt-src"><i></i>${esc(m.src)}</small>` : ''}</div></div>`; }
+function ltMsgHTML(m) { return `<div class="lt-m ${m.me ? 'u' : ''}">${m.me ? '' : '<span class="lt-orb sm" aria-hidden="true"></span>'}<div class="lt-b">${m.t ? `<p>${nl(m.t)}</p>` : ''}${m.h || ''}${!m.me && m.src ? `<small class="lt-src"><i></i>${ltIsAI(m) && typeof aiMark === 'function' ? aiMark('tutor') : ''}${esc(m.src)}</small>` : ''}</div></div>`; }
+/* 01 AI 생성물 표시: Claude가 만든 답 · 노트 초안(src에 Claude) 또는 ai 표시가 있는 말풍선 */
+function ltIsAI(m) { return !!m && !m.me && (!!m.ai || /(^|·\s*)Claude\b/.test(String(m.src || ''))); }
 /* v25 대표님(2026-11-03): '학습자 모드에서도 AI SAM이 챗 형태로(관리자처럼)' — 오른쪽 아래 버튼 → 대화창(머리 · 지금 화면 카드 · 말풍선 · 입력)
    이름은 기관 튜터 이름 + '내 AI 학습 비서', 화면이 바뀌면 '지금 화면' 칩만 바뀌고 창은 사람이 열 때만 열린다 */
 function ltStatus() {
