@@ -484,6 +484,65 @@ const MIGRATIONS = [
      action text not null, target text not null default '', detail text not null default '', ip_masked text not null default '', prev_hash text not null, hash text not null);
    revoke all on all tables in schema security from didisam_tenant;
    revoke all on schema security from didisam_tenant;`,
+  /* 가디언 2차(SEC-0006) — 일반 audit_log 해시 체인. 기관별 체인: hash = sha256(prev_hash || audit_row_text(행)), 첫 행 prev = '0'×64.
+     계산은 DB 트리거(BEFORE INSERT)가 한다 — 기존 insert 호출부(Node · Java · LMS SQL 함수)는 그대로이고 두 서버 결과가 자동으로 같다.
+     동시성: 기관 단위 advisory xact lock(820824, hashtext(기관)) 안에서 id를 다시 뽑아(nextval) 체인 순서 = id 순서를 보장한다.
+     위변조 방지: UPDATE는 트리거가 거부, 기관 역할(didisam_tenant)의 update · delete 권한 회수(기관 파기 cascade는 로그인 계정이라 유지).
+     기존 행(hash 없음)은 마이그레이션 때 기관마다 'audit.chain.start' 행(legacy 건수 · 다이제스트)을 체인 첫 행으로 남겨 이후 변조도 잡는다.
+     검증은 audit_verify(기관) 한 함수 — GET /api/audit/verify(Node app.js · Java TenantServiceImpl)가 그대로 돌려준다. */
+  `alter table audit_log add column if not exists prev_hash text;
+   alter table audit_log add column if not exists hash text;
+   create index if not exists audit_tenant_id on audit_log (tenant_id, id);
+   create or replace function audit_row_text(p_id bigint, p_tenant text, p_at timestamptz, p_actor text, p_action text, p_detail jsonb) returns text
+     language sql stable as $f$ select jsonb_build_array(p_id, p_tenant, to_char(p_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), p_actor, p_action, p_detail)::text $f$;
+   create or replace function audit_log_chain() returns trigger language plpgsql as $f$
+     declare p text;
+     begin
+       if tg_op = 'UPDATE' then raise exception 'audit_log is append-only' using errcode = '42501'; end if;
+       perform pg_advisory_xact_lock(820824, hashtext(NEW.tenant_id));
+       NEW.id := nextval('audit_log_id_seq'::regclass);
+       NEW.at := coalesce(NEW.at, now());
+       select hash into p from audit_log where tenant_id = NEW.tenant_id and hash is not null order by id desc limit 1;
+       NEW.prev_hash := coalesce(p, repeat('0', 64));
+       NEW.hash := encode(sha256(convert_to(NEW.prev_hash || audit_row_text(NEW.id, NEW.tenant_id, NEW.at, NEW.actor, NEW.action, NEW.detail), 'UTF8')), 'hex');
+       return NEW;
+     end $f$;
+   drop trigger if exists audit_log_chain on audit_log;
+   create trigger audit_log_chain before insert or update on audit_log for each row execute function audit_log_chain();
+   revoke update, delete on audit_log from didisam_tenant;
+   create or replace function audit_legacy_digest(p_tenant text, p_below bigint) returns jsonb language sql stable as $f$
+     select jsonb_build_object('legacy', count(*), 'legacyDigest', encode(sha256(convert_to(coalesce(string_agg(audit_row_text(id, tenant_id, at, actor, action, detail), E'\\n' order by id), ''), 'UTF8')), 'hex'))
+       from audit_log where tenant_id = p_tenant and hash is null and id < p_below $f$;
+   create or replace function audit_verify(p_tenant text) returns jsonb language plpgsql stable as $f$
+     declare r record; prev text := repeat('0', 64); started boolean := false; n integer := 0; legacy integer := 0; d jsonb;
+     begin
+       for r in select id, tenant_id, at, actor, action, detail, prev_hash, hash from audit_log where tenant_id = p_tenant order by id loop
+         if r.hash is null then
+           if started then return jsonb_build_object('ok', false, 'n', n, 'legacy', legacy, 'brokenAt', r.id, 'reason', 'unhashed'); end if;
+           legacy := legacy + 1; continue;
+         end if;
+         started := true; n := n + 1;
+         if r.prev_hash is distinct from prev or r.hash <> encode(sha256(convert_to(prev || audit_row_text(r.id, r.tenant_id, r.at, r.actor, r.action, r.detail), 'UTF8')), 'hex') then
+           return jsonb_build_object('ok', false, 'n', n, 'legacy', legacy, 'brokenAt', r.id, 'reason', 'hash');
+         end if;
+         if r.action = 'audit.chain.start' then
+           d := audit_legacy_digest(p_tenant, r.id);
+           if (d->>'legacy')::int <> legacy or d->>'legacy' is distinct from r.detail->>'legacy' or d->>'legacyDigest' is distinct from r.detail->>'legacyDigest' then
+             return jsonb_build_object('ok', false, 'n', n, 'legacy', legacy, 'brokenAt', r.id, 'reason', 'legacy');
+           end if;
+         end if;
+         prev := r.hash;
+       end loop;
+       return jsonb_build_object('ok', true, 'n', n, 'legacy', legacy, 'head', prev);
+     end $f$;
+   do $$ declare t text; d jsonb; begin
+     for t in select distinct tenant_id from audit_log where hash is null loop
+       perform set_config('app.tenant', t, true);
+       d := audit_legacy_digest(t, 9223372036854775807);
+       if (d->>'legacy')::int > 0 then insert into audit_log (tenant_id, actor, action, detail) values (t, 'system', 'audit.chain.start', d); end if;
+     end loop;
+     perform set_config('app.tenant', '', true);
+   end $$;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).

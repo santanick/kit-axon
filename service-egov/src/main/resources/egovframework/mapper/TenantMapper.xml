@@ -6,6 +6,7 @@
     select to_char(a.at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') at, a.actor, a.action, a.detail::text detail
       from audit_log a where a.tenant_id = #{tid} order by a.at desc limit 200
   </select>
+  <select id="selectAuditVerify" resultType="string">select audit_verify(#{tid})::text</select>
   <select id="selectProgress" resultType="java.util.LinkedHashMap">
     select sid, lp::text lp from learner_progress where tenant_id = #{tid} order by updated_at desc limit 5000
   </select>

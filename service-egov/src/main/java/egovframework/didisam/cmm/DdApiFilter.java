@@ -28,7 +28,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "GET /api/keys", "POST /api/keys", "POST /api/keys/revoke",
         "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage", "GET /api/lev", "POST /api/ai/topup", "POST /api/ai/topup/confirm", "GET /api/santa/orgs",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log", "POST /api/learners/sync",
-        "GET /api/audit", "POST /api/tenant/delete", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion",
+        "GET /api/audit", "GET /api/audit/verify", "POST /api/tenant/delete", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion",
         "POST /api/password", "GET /api/staff", "POST /api/media", "GET /api/media", "POST /api/media/f", "POST /api/staff", "POST /api/staff/remove",
         /* v32.4 운영자 소셜 로그인 */
         "GET /api/oauth/google/start", "GET /api/oauth/google/callback", "GET /api/oauth/kakao/start", "GET /api/oauth/kakao/callback",
