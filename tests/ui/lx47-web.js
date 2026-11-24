@@ -39,7 +39,7 @@ const TYPES = (process.env.TYPES || 'univ,corp,voc,adult').split(',');
       return { ord, more: !!more, open: more && more.open, inMore: more ? [...more.querySelectorAll('.lhb-mb > *')].map(e => e.className.split(' ')[0]) : [], heroSts: !!hm.querySelector('.lhb-hero .sts'), heroTut: !!hm.querySelector('.lhb-hero .tut'), docH: document.documentElement.scrollHeight }; });
     ok(H && H.ord[0] === 'lhb-hero' && H.ord[H.ord.length - 1] === 'lhb-more', `${K} 홈 순서 ${H && H.ord.join(' > ')}`);
     ok(H && H.more && !H.open && !H.heroSts && !H.heroTut, `${K} 홈 「더 보기」 접힘 · 히어로 지표 칩 · 튜터 버튼은 더 보기 안`);
-    if (pol) ok(H && !H.ord.includes('v2-vcard') && !H.ord.includes('lna-hubw'), `${K} 비전 · 노트 카드는 홈 본문이 아닌 더 보기 안(${H && H.inMore.join(',')})`);
+    if (pol) ok(H && !H.ord.includes('lna-hubw') && (!H.ord.includes('v2-vcard') || H.ord[H.ord.indexOf('v2-vcard') - 1] === 'mj-home'), `${K} 노트 카드는 더 보기 안, 비전 카드는 아직 안 만든 학습자만 「오늘 익힐 것」 바로 아래(v47-fix) (${H && H.ord.join(',')})`);
     const dH = await dupMax(p); ok(dH[1] <= 2, `${K} 홈 같은 목적지 링크 최대 ${dH[1]}개(${dH[0]}) ≤ 2`);
     if (w === 1440) ok(H && H.docH <= vh * 2.3, `${K} 홈 길이 ${(H.docH / vh).toFixed(1)}화면 ≤ 2.3(오늘 익힐 것 축소 D4는 앱 담당 — 반영 후 1.8 목표)`);
 

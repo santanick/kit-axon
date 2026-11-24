@@ -125,7 +125,7 @@ body.lapp .l47-fab{right:16px;bottom:calc(92px + env(safe-area-inset-bottom,0px)
     if (t.closest('#l47Fab')) { e.preventDefault(); helpToggle(); return; }
     if (t.closest('#tbFab') && document.getElementById('l47Help') && document.body.classList.contains('l47-item')) { e.preventDefault(); e.stopImmediatePropagation(); helpToggle(); return; }
     if (t.closest('[data-l47h="x"]')) { helpClose(); return; }
-    if (t.closest('#l47Help [data-pl43q], #l47Help [data-v2], #l47Help a[href]')) setTimeout(helpClose, 0); }, true);
+    if (t.closest('#l47Help [data-pl43q], #l47Help [data-v2="ladder"], #l47Help a[href]')) setTimeout(helpClose, 0); }, true);
   /* v47-fix: 튜터 패널(body.lt-on)이 열리면 시트는 닫는다(한 번에 하나만) */
   new MutationObserver(() => { if (document.body.classList.contains('lt-on')) helpClose(); }).observe(document.body || document.documentElement, { attributes: true, attributeFilter: ['class'] });
   addEventListener('keydown', e => { if (e.key === 'Escape') helpClose(); });

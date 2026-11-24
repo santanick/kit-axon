@@ -139,7 +139,8 @@
 @media (max-width:760px){.lhb-r1.l47-r1{grid-template-columns:1fr}.lhb-more>summary small{display:none}}`; (document.head || document.documentElement).appendChild(st); }
   /* v47 D7: 다른 모듈이 웹 홈에 나중에 꽂는 카드(비전 · 노트 · 「앱 화면으로 보기」)는 「더 보기」 안으로 옮긴다(꽂는 쪽은 그대로) */
   function tidyHome() { const lm = document.getElementById('lm'); const hm = lm && lm.querySelector('.lhb-home'); if (!hm) return; const mb = hm.querySelector('.lhb-more .lhb-mb'); if (!mb) return;
-    hm.querySelectorAll('.lhb-in > .v2-vcard, .lhb-in > .lna-hubw, .lhb-in > .mj-home > .mj-sum').forEach(el => mb.appendChild(el)); /* 성취 3칸(#journey 3회)은 웹 홈 「더 보기」로(LX-SPEC 3-2 「합침 → 기록」, 앱 D4와 별개) */
+    { const V = (LR.lp && LR.lp.vision) || {}; const vc = hm.querySelector('.lhb-in > .v2-vcard'); const mj = hm.querySelector('.lhb-in > .mj-home'); if (vc && mj && !(V.at && (V.txt || (V.card && V.card.who)))) { if (mj.nextElementSibling !== vc) mj.after(vc); vc.dataset.l47v = '1'; } } /* v47-fix: 비전을 아직 안 만든 학습자는 「오늘 익힐 것」 바로 아래(더 보기 밖) — 앱과 같게 */
+    hm.querySelectorAll('.lhb-in > .v2-vcard:not([data-l47v]), .lhb-in > .lna-hubw, .lhb-in > .mj-home > .mj-sum').forEach(el => mb.appendChild(el)); /* 성취 3칸(#journey 3회)은 웹 홈 「더 보기」로(LX-SPEC 3-2 「합침 → 기록」, 앱 D4와 별개) */
     const ab = lm.querySelector(':scope > .ap-back'); const mt = mb.querySelector('.lhb-mt .tut'); if (ab && mt) { ab.classList.add('lhb-apb'); mt.appendChild(ab); } }
   { let q = 0; const tick = () => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { tidyHome(); } catch (e) { console.error('lhub tidy', e); } }); };
     const go = () => new MutationObserver(tick).observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go(); }
