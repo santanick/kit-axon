@@ -43,6 +43,7 @@ const OG = require('./ogmeta'); /* v37 L2 링크 공유 미리보기 */
 const commlive = require('./commlive'); /* v38 C#17 학습자 글 · 댓글 즉시 게시 */
 const { createStateCrypto } = require('./statecrypt');
 const AG = require('./aigw'); /* v46 Ver2 AI 게이트웨이 */
+const { createSecurity } = require('./security'); /* 가디언(보안봇) Phase 0 — /api/security/* · 긴급 차단 실행 지점 */
 const PF = require('./planfeat'); /* v47 요금제 기능 묶음(plan 없는 · 정책 off 기관은 판정 없음) */
 const AP = require('./aiprice'); /* v47 AI 월 포함량 · 추가 충전 요금표 */
 const { createPay } = require('./fac/pay');
@@ -238,8 +239,11 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   }
   /* v23 간편가입 · 개인정보 분리(pii.js) — 학습 경로는 가명 learner_id만 쓴다 */
   /* v42 학습 마일리지(mileage/): 공개 mile-* · 운영자 /api/mileage/* · 수집 훅(가입 · 로그인 · cpl · progress 차이분 · 원장 환불) */
+  /* 가디언: owner + 산타 관리자 전용 /api/security/*, 긴급 차단(기본 dry-run · SECURITY_KILL_LIVE=1일 때만 적용) */
+  const sec = createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, checkPw, isSanta, env, log });
   const mileage = require('./mileage').createMileage({ pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, env, log });
   const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook: mileage.hook });
+  { const base = pii.mailTo; pii.mailTo = async (tid, ...r) => (await sec.egressBlocked(tid)) ? false : base(tid, ...r); } /* 가디언 egress 차단: 기관 알림 메일 발송 중단 */
   const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env, mileHook: mileage.hook });
   /* 단체가입 최초 로그인 · 중도탈락 표시 */
   const meFlags = async (c, tid, sid, doc) => { const o0 = await consentFlag(c, tid, sid, doc); const P = doc && doc.org && doc.org.cpl; if (!P || !P.on) return o0; const o = o0; { const L = (await c.query('select pw_hash from learners where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; if (L && !L.pw_hash && P.groupFirst) o.groupFirst = true; if (L && L.pw_hash) o.pwSet = true; } const m = (doc.members || []).find(x => x && x.sid === sid); if (m) { const D = (doc.classes || []).filter(x => x && x.drop && x.drop[m.id]).map(x => x.id); if (D.length) o.dropped = D; } return o; };
@@ -340,6 +344,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     const rq = G.redact(q0); const q = rq.text; const inj = G.injectScore(q0); const who = sid || ('g:' + gip);
     if (inj) { await inTenant(pool, tid, c => audit(c, tid, guest ? 'guest' : 'learner:' + sid, 'ai.injection_suspect', { n: inj, route: 'tutor' })).catch(() => {});
       try { limit(`inj:${tid}:${who}`, 5, 864e5); } catch (e) { throw new HttpErr(429, '안전 정책에 맞지 않는 요청이 반복되어 오늘은 AI 튜터 이용이 제한되었습니다. 학습 질문은 선생님께 질문 넘기기를 이용해 주세요.', 'ai_guard'); } }
+    const SK = await sec.gate(tid); sec.preAi(SK); /* 가디언 긴급 차단 */
     const ctx = await inTenant(pool, tid, async c => {
       const d = (await c.query("select doc->'settings'->'tutor' tu, doc->'org'->'room' room, doc->'org'->>'type' type, doc->'lsite'->'pub' pub, doc->'members' members, doc->'classes' classes, doc->'badges' badges, doc->'tq' tq, doc->'bkgrades' bkgrades, doc->'aipol' aipol, doc->'aiplan' aiplan, doc->'plan' plan from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
       const tu = d.tu || {}; if (tu.enabled === false) throw new HttpErr(403, 'AI 튜터가 꺼져 있습니다.', 'tutor_off');
@@ -348,6 +353,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
       else limit(`lt:${tid}:${sid}`, Math.min(500, Math.max(1, Math.round(+tu.daily) || 20)), 864e5);
       const u = await c.query('insert into ai_usage (tenant_id, day, calls) values ($1, $2, 1) on conflict (tenant_id, day) do update set calls = ai_usage.calls + 1 returning calls', [tid, today()]);
       if (u.rows[0].calls > aiDaily) throw new HttpErr(429, `오늘 기관 AI 사용 한도(${aiDaily}회)를 넘었습니다.`, 'quota');
+      sec.postAi(SK, u.rows[0].calls);
       await monthGuard(c, tid, d.aiplan, true);
       /* v46 Ver2(정책 on 기관만): 과제 레벨은 서버가 기관 문서에서 직접 찾음(클라이언트 lvl 불신) · L0 차단 · 힌트 단계 검증 · 기능별 집계 */
       const pol = AG.polOf(d.aipol); const ik = b.item && typeof b.item === 'object' ? b.item.key : b.cls && b.item ? `${b.cls}/${b.item}` : ''; const F = pol.on && ik ? AG.findItem(d.classes, ik) : null;
@@ -414,7 +420,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   const oauth = createOAuth({ env, pool, HttpErr, readBody, limit, ip, cookies, secure, newSession, inTenant, audit, hashPw, newTid, sha, safeEq, pepper, mod, M, TYPES, emailOk, allowSignup, signupCode });
 
   /* ── 외부 AI 연결(MCP) · API 키(v16) ── */
-  const mcp = createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt });
+  const mcp = createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, blocked: sec.keyBlocked }); /* 가디언 키 비활성 · egress 차단이면 키 인증 실패(401) */
 
   /* ── 홈페이지 이미지(v34.5 media.js) ── */
   const sendHead = (res, status, headers) => { const h = { ...SEC_HEADERS, 'cache-control': 'no-store', ...headers }; if (secure) h['strict-transport-security'] = 'max-age=31536000; includeSubDomains'; res.writeHead(status, h); }; /* v35 강의 파일 스트리밍 */
@@ -543,12 +549,14 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       const feature = b.feature === 'grade' ? 'grade' : 'studio'; delete b.feature; /* v46 게이트웨이 집계용(외부 본문에는 넣지 않음) */
       if (!Array.isArray(b.messages) || !b.messages.length || b.messages.length > 40) throw new HttpErr(400, '메시지 형식이 올바르지 않습니다.', 'messages');
       // 데이터룸 정책: 이 기관의 AI 경로 · 외부 연결 허용을 서버에서도 확인
+      const SK = await sec.gate(a.tid); sec.preAi(SK); /* 가디언 긴급 차단 */
       const pol = await inTenant(pool, a.tid, async c => {
         const st = await c.query("select doc->'org'->'room' room, doc->'aipol' aipol, doc->'aiplan' aiplan, doc->'plan' plan from tenant_state where tenant_id = $1", [a.tid]);
         const room = st.rows[0] && st.rows[0].room || {};
         if ((room.ai && room.ai !== 'anthropic') || (room.egress && room.egress.ai === false)) throw new HttpErr(403, '이 기관의 데이터룸 정책에서 AI 외부 연결이 꺼져 있습니다.', 'policy');
         const u = await c.query('insert into ai_usage (tenant_id, day, calls) values ($1, $2, 1) on conflict (tenant_id, day) do update set calls = ai_usage.calls + 1 returning calls', [a.tid, today()]);
         if (u.rows[0].calls > aiDaily) throw new HttpErr(429, `오늘 AI 사용 한도(${aiDaily}회)를 넘었습니다.`, 'quota');
+        sec.postAi(SK, u.rows[0].calls);
         PF.guard(HttpErr, st.rows[0] && st.rows[0].plan, AG.polOf(st.rows[0] && st.rows[0].aipol), { feature }, today(), false); /* v47 요금제 밖 기능(grade 채점 초안) → 403 plan_feature */
         await monthGuard(c, a.tid, st.rows[0] && st.rows[0].aiplan, false);
         await gw.count(c, a.tid, feature, AG.polOf(st.rows[0] && st.rows[0].aipol)); /* v46 기능별 집계(studio · grade) */
@@ -717,7 +725,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
         const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?)$/);
         const sp = req.method === 'PUT' && url.pathname.match(/^\/api\/santa\/orgs\/(tn_[a-z0-9]{8,16})\/plan$/);
-        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
+        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname) || sec.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처
           if (req.headers['x-didisam'] !== '1') throw new HttpErr(403, '허용되지 않은 요청입니다.', 'csrf');
@@ -735,7 +743,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       return send(res, 500, { error: 'server', message: '서버 오류가 발생했습니다.' });
     }
   });
-  srv.piiPurge = pii.purge; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
+  srv.piiPurge = pii.purge; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; srv.secTick = sec.tick; /* 가디언 기능 끄기 TTL 자동 복구 기록 */ /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
   return srv;
 }
 

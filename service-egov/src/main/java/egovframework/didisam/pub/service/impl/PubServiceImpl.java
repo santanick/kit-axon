@@ -38,6 +38,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     private final DdStateCrypto crypt;
     private final PubMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final PiiService pii; private final DdAiClient ai; private final egovframework.didisam.cpl.service.CplService cpl;
     private final egovframework.didisam.auth.service.AuthService auth; private final TenantTxMapper txm;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.sec.service.SecService sec; /* 가디언 긴급 차단 실행 지점 */
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.fac.service.FacService fac;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.ledger.service.LedgerService ledger;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.mileage.service.MileService mile;
@@ -471,6 +472,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             try { tx.audit(tid, actor, "ai.injection_suspect", stringify(d)); } catch (Exception ignore) { }
             try { rl.limit("inj:" + tid + ":" + who, props.getInt("rate.inj.max"), props.getLong("rate.day.winMs")); } catch (Exception e) { throw processException("dd.429.ai_guard"); }
         }
+        egovframework.didisam.sec.service.SecService.Kill SK = sec.gate(tid); sec.preAi(SK); /* 가디언 긴급 차단(Node와 같은 순서) */
         Object[] gw = new Object[7]; /* v46 게이트웨이 판정: 0 항목 키 · 1 레벨 · 3 힌트 판정 · 4 정책 · 5 기능 · 6 항목 */
         JsonNode[] ctx = tx.inTenant(tid, () -> {
             Map<String, Object> r = mapper.selectTutorCtx(tid);
@@ -489,6 +491,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             }
             int calls = mapper.incUsage(tid, kstToday());
             if (calls > p.aiDaily) throw processException("dd.429.quota.tutor", new String[]{ String.valueOf(p.aiDaily) });
+            sec.postAi(SK, calls);
             { java.util.Map<String, Object> plan = egovframework.didisam.cmm.DdAiPrice.planOf(col.apply("aiplan")); /* v47 이달 AI 한도(aiplan 있는 기관만) — 학습자 문구 */
               if (Boolean.TRUE.equals(plan.get("on"))) { String m = egovframework.didisam.cmm.DdAiPrice.monthOf(kstToday()); String td = kstToday(); java.util.List<java.util.Map<String, Object>> cr = mapper.selectCreditRows(tid, egovframework.didisam.cmm.DdAiPrice.creditFrom(td));
                 long credit = cr.isEmpty() ? 0 : egovframework.didisam.cmm.DdAiPrice.sim(cr, mapper.selectUsageFrom(tid, egovframework.didisam.cmm.DdAiPrice.usageFrom(cr, td)), ((Number) plan.get("monthTokens")).longValue(), td).credit();

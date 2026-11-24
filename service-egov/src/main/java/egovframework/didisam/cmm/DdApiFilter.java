@@ -46,6 +46,8 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** v34.5 홈페이지 이미지: GET /api/media/{id}(공개) · DELETE /api/media/{id}(운영자) — Node media.match와 같음 */
     public static final java.util.regex.Pattern MEDIA = java.util.regex.Pattern.compile("^/api/media/(?:f/)?[^/]+\\z"); /* v35: 강의 파일 /api/media/f/{id} 포함 */
     /** v47 산타 관리: PUT /api/santa/orgs/{tid}/plan — Node santaPlan 경로와 같음 */
+    /** 가디언 /api/security/* — 메서드 · 경로 세부 판정은 SecServiceImpl.route(없으면 404) */
+    public static final java.util.regex.Pattern SECURITY = java.util.regex.Pattern.compile("^/api/security/[\\w./:-]{1,140}\\z");
     public static final java.util.regex.Pattern SANTA = java.util.regex.Pattern.compile("^/api/santa/orgs/tn_[a-z0-9]{8,16}/plan\\z");
     static boolean mediaRoute(String m, String path) {
         return (("GET".equals(m) || "DELETE".equals(m)) && MEDIA.matcher(path).matches())
@@ -76,7 +78,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         if ("admin".equals(props.module) && !("GET".equals(m) && "/api/health".equals(path)) && !DdModule.ipAllowed(props.adminIps, web.ip(req))) { res.setHeader("cache-control", "no-store"); json(res, 403, "ip", "허용되지 않은 접속 위치입니다."); return; }
         if (path.startsWith("/api/")) {
             res.setHeader("cache-control", "no-store");
-            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !MILEAGE.matcher(path).matches() && !mediaRoute(m, path) && !("PUT".equals(m) && SANTA.matcher(path).matches())) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
+            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !MILEAGE.matcher(path).matches() && !mediaRoute(m, path) && !("PUT".equals(m) && SANTA.matcher(path).matches()) && !SECURITY.matcher(path).matches()) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
             if (!"GET".equals(m)) {
                 if (!"1".equals(req.getHeader("x-didisam"))) { json(res, 403, "csrf", "허용되지 않은 요청입니다."); return; }
                 String o = req.getHeader("origin");

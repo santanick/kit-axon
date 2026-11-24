@@ -33,6 +33,7 @@ public class McpServiceImpl extends EgovAbstractServiceImpl implements McpServic
     @Resource(name = "propertiesService") private EgovPropertyService props;
     @Resource(name = "messageSource") private MessageSource ms;
     private final DdStateCrypto crypt;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.sec.service.SecService sec; /* 가디언 긴급 차단 실행 지점 */
     private final McpMapper mapper; private final TenantTx tx; private final TenantTxMapper txm; private final DdProps p; private final DdRateLimiter rl;
     private final List<ObjectNode> tools = new ArrayList<>();
     public McpServiceImpl(McpMapper mapper, TenantTx tx, TenantTxMapper txm, DdProps p, DdRateLimiter rl, DdStateCrypto crypt) throws Exception {
@@ -77,6 +78,7 @@ public class McpServiceImpl extends EgovAbstractServiceImpl implements McpServic
         Matcher m = BEARER.matcher(h); String key = m.find() ? m.group(1) : "";
         if (!KEY_RE.matcher(key).matches()) return null;
         Map<String, Object> r = mapper.selectKeyAuth(fp(key)); if (r == null) return null;
+        if (sec.keyBlocked((String) r.get("tid"))) return null; /* 가디언 키 비활성 · egress 차단(키는 지우지 않음) */
         try { mapper.touchKey((String) r.get("id")); } catch (Exception ignore) { }
         return r;
     }
