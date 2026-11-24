@@ -45,7 +45,7 @@
       if (LR.mode === 'live') { const r = await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/consent`, { tos: true, privacy: true, ver: VER }); LR.me.needConsent = false; LR.me.consentAt = r.consentAt || at; }
       else { const s = store(); s[LR.me.sid] = { at, ver: VER }; localStorage.setItem(K(), JSON.stringify(s)); }
     } catch (x) { b.disabled = false; return say(x.message || '저장하지 못했어요. 다시 시도해 주세요.'); }
-    toast('동의를 마쳤어요. 학습을 시작해요.', 'ok'); const to = CN.back || '#my'; CN.back = ''; if (location.hash === to) lrender(); else location.hash = to; });
+    toast('동의를 마쳤어요. 학습을 시작해요.', 'ok'); const to = CN.back || '#home'; /* v47-fix: 첫 착지 홈 */ CN.back = ''; if (location.hash === to) lrender(); else location.hash = to; });
 
   /* 운영: 새로 고침 뒤에도 계정 회원의 닉네임 · 종류를 화면 상태에 둔다(lacct.js laLiveMe) */
   { const base = LR.api.load; LR.api.load = async (...a) => { const r = await base(...a); try { if (LR.mode === 'live' && LR.me && typeof laLiveMe === 'function') laLiveMe({ me: LR.me }); } catch (e) { console.error(e); } return r; }; }

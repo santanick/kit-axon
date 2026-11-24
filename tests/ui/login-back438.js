@@ -78,7 +78,7 @@ const snsDlg = async (pg, act, sub, nick) => { if (act === 'jsns') { await pg.wa
         await go(pg, '#login/' + bad); const db = await pg.evaluate(() => (document.querySelector('#laLogin') || {}).dataset?.back || '');
         ok(!/evil|javascript|:|\/\//i.test(db), `${tag}: 로그인 양식 back에 외부 주소 없음 '${bad}' → '${db}'`);
         await loginOtp(pg, `back${sfx}@ex.kr`); const h = await hashOf(pg);
-        ok(h === 'my' && (await pg.evaluate(() => location.origin)) === base.slice(0, -1), `${tag}: 외부 back '${bad}' 로그인 후 기본 #my (${h})`); await logout(pg); }
+        ok(h === 'home' && (await pg.evaluate(() => location.origin)) === base.slice(0, -1), `${tag}: 외부 back '${bad}' 로그인 후 기본 #home (${h}) — v47-fix: 첫 착지는 홈(지금 할 일 · 오늘 익힐 것)`); await logout(pg); }
       /* lSafeBack 단위 점검 */
       const U = await pg.evaluate(() => [['my', 'my'], ['class/qc0', 'class/qc0'], ['#pay/class/qc1', 'pay/class/qc1'], ['c/qc0/l1', 'c/qc0/l1'], ['https://evil.example', ''], ['//evil.example', ''], ['javascript:alert(1)', ''], ['JAVASCRIPT%3Aalert(1)', ''], ['/\\evil.example', ''], ['login/my', ''], ['join', ''], ['', ''], ['x'.repeat(300), ''], ['data:text/html,1', ''], ['my\nx', '']].map(([i, e]) => [i.slice(0, 30), lSafeBack(i), e]));
       U.forEach(([i, g, e]) => ok(g === e, `${tag}: lSafeBack(${JSON.stringify(i)}) = '${g}' (기대 '${e}')`));

@@ -146,7 +146,7 @@ const laPrivV = () => laSec('개인정보 처리방침 요약', laPolicyHTML(laU
   const form = ((h.match(/<form id="li"[\s\S]*?<\/form>/) || [''])[0]).replace(/(<button[^>]*type="submit")/, m => lKeepHTML() + m); const pwMode = U || LA.lmode === 'pw';
   const lgr = `<div class="lgr"><h2>로그인</h2>
     ${U ? `<p class="mini">학번과 비밀번호로 로그인하세요.</p>` : `${laSoc(cfg, 'soclogin')}${cfg.social.length ? '<p class="la-or"><span>또는 이메일로</span></p>' : ''}`}
-    <form id="laLogin" data-back="${esc(back || 'my')}"><label class="fl">${U ? '학번' : '이메일'}<input name="lid" ${U ? 'inputmode="numeric"' : 'type="email"'} autocomplete="username" required maxlength="80" value="${esc((LA.lv && LA.lv.email) || '')}"></label>
+    <form id="laLogin" data-back="${esc(back || 'home')}"><label class="fl">${U ? '학번' : '이메일'}<input name="lid" ${U ? 'inputmode="numeric"' : 'type="email"'} autocomplete="username" required maxlength="80" value="${esc((LA.lv && LA.lv.email) || '')}"></label>
       ${U ? '' : `<div class="la-seg sm">${[['otp', '인증번호로 로그인'], ['pw', '비밀번호로 로그인']].map(([k, l]) => `<button type="button" class="${(pwMode ? 'pw' : 'otp') === k ? 'on' : ''}" data-ac="lmode" data-v="${k}">${l}</button>`).join('')}</div>`}
       ${pwMode ? '<label class="fl">비밀번호<input name="pw" type="password" autocomplete="current-password" maxlength="20"></label>' : laOtpBox('lv')}
       ${lKeepHTML()}<p class="err" id="laErr" role="alert"></p><button class="lbtn pri blk" type="submit">로그인 ${ico('arrow', 16)}</button></form>
@@ -161,7 +161,7 @@ async function laLogin(f) { laFresh(); const U = laUniv(); const id = String(f.e
     else if (pe) body = { via: 'email', email: id, pw: pe.value };
     else { const s = LA.lv || {}; if (!s.sent) throw new Error('먼저 인증번호를 받으세요.'); if (s.email !== id) throw new Error('인증번호를 받은 이메일과 다릅니다.'); const vc = String(f.elements.vcode && f.elements.vcode.value || '').trim(); if (!/^\d{6}$/.test(vc)) throw new Error('이메일로 받은 인증번호 6자리를 입력하세요.'); body = { via: 'email', email: id, code: vc }; }
     let r; try { r = await api('POST', laP('login'), { ...body, keep: lKeepOn() }); } catch (x) { if (x.code === 'pending') { LA.pend = 'live'; laPendKeep('live'); location.hash = '#pending'; return; } if (x.status === 401 && x.code === 'login' && body.code) throw new Error('가입한 계정이 없습니다. [회원가입]에서 먼저 가입해 주세요.'); throw x; }
-    LA.lv = null; laLiveMe(r); try { localStorage.removeItem('didisam.app.pend.' + (LR.tid || '')); } catch (e) { } toast(`${LR.me.nick || '회원'}님, 반갑습니다.`, 'ok'); location.hash = '#' + (back || 'my'); lrender(); return; }
+    LA.lv = null; laLiveMe(r); try { localStorage.removeItem('didisam.app.pend.' + (LR.tid || '')); } catch (e) { } toast(`${LR.me.nick || '회원'}님, 반갑습니다.`, 'ok'); location.hash = '#' + (back || 'home'); lrender(); return; } /* v47-fix: 첫 로그인은 홈(지금 할 일 · 오늘 익힐 것), 링크로 온 목적지가 있으면 그곳 */
   const bad = U ? '학번 또는 비밀번호가 올바르지 않습니다.' : '이메일 또는 비밀번호가 올바르지 않습니다.';
   const pwEl = f.elements.pw; const acc = laFind(id);
   if (pwEl) { if (!acc || !acc.pw) throw new Error(acc && !acc.pw ? '비밀번호를 설정하지 않은 계정입니다. 이메일 인증번호로 로그인하세요.' : bad); if (acc.pw !== laPw(acc.pwKey, pwEl.value)) throw new Error(bad); const r0 = laAfterAuth(acc, back); laTempPw(); return r0; }
