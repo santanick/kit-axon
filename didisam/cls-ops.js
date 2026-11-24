@@ -88,12 +88,15 @@
   function clsLCols(c) { const L = LCOLS(false); if (hasAtt(c)) L.splice(L.indexOf('과제') + 1, 0, '출석률(%)'); return L; }
   function clsLRow(c, id) { const r = lRow(c, id, false); if (hasAtt(c)) r.splice(clsLCols(c).indexOf('출석률(%)'), 0, attOf(c, id)); return r; }
   const xlsW = () => S && S.org && S.org.type === 'k12' ? '수강' : t('done'); /* v36 R4 학원(초중고)은 '수료'가 아니라 '수강 현황 엑셀' */
+  const XG = (k, rows, o) => typeof window.exportGuard === 'function' ? window.exportGuard(k, rows, o) : Promise.resolve(window.prompt('개인정보가 포함된 파일입니다. 내려받는 사유를 입력하십시오.', '') ? { rows, raw: false } : null); /* 가디언 4차 d6 */
   function xlsClass(c) { if (!c) return; try { if (typeof c2Ensure === 'function') c2Ensure(c); } catch (e) { }
-    xlsx(`${c.name}_${xlsW()}현황_${today()}.xlsx`, [{ name: '요약', cols: SUMCOLS(), rows: [sumRow(c)] }, { name: `${xlsW()} 현황`, cols: clsLCols(c), rows: A(c.learners).map(id => clsLRow(c, id)) }]);
-    logAudit(`${c.name} ${xlsW()} 현황 엑셀 내려받기`); toast(`「${c.name}」 ${xlsW()} 현황 엑셀을 내려받았습니다.`, 'ok'); }
+    const cols = clsLCols(c); return XG('cls_xlsx', A(c.learners).map(id => clsLRow(c, id)), { cols }).then(g => { if (!g) return; /* 가디언 4차 d6 사유 · 학번 가림 */
+    xlsx(`${c.name}_${xlsW()}현황_${today()}.xlsx`, [{ name: '요약', cols: SUMCOLS(), rows: [sumRow(c)] }, { name: `${xlsW()} 현황`, cols, rows: g.rows }]);
+    logAudit(`${c.name} ${xlsW()} 현황 엑셀 내려받기`); toast(`「${c.name}」 ${xlsW()} 현황 엑셀을 내려받았습니다.`, 'ok'); }); }
   function xlsAll() { const CL = visCls(); try { if (typeof c2EnsureAll === 'function') c2EnsureAll(); } catch (e) { }
-    xlsx(`전체_${xlsW()}현황_${today()}.xlsx`, [{ name: `${t('cls')}별 요약`, cols: SUMCOLS(), rows: CL.map(sumRow) }, { name: '전체 명단', cols: LCOLS(true), rows: CL.flatMap(c => A(c.learners).map(id => lRow(c, id, true))) }]);
-    logAudit(`전체 ${xlsW()} 현황 엑셀 내려받기`); toast(`전체 ${xlsW()} 현황 엑셀(${t('cls')}별 요약 · 전체 명단)을 내려받았습니다.`, 'ok'); }
+    const cols = LCOLS(true); return XG('cls_xlsx_all', CL.flatMap(c => A(c.learners).map(id => lRow(c, id, true))), { cols }).then(g => { if (!g) return; /* 가디언 4차 d6 */
+    xlsx(`전체_${xlsW()}현황_${today()}.xlsx`, [{ name: `${t('cls')}별 요약`, cols: SUMCOLS(), rows: CL.map(sumRow) }, { name: '전체 명단', cols, rows: g.rows }]);
+    logAudit(`전체 ${xlsW()} 현황 엑셀 내려받기`); toast(`전체 ${xlsW()} 현황 엑셀(${t('cls')}별 요약 · 전체 명단)을 내려받았습니다.`, 'ok'); }); }
   const visCls = () => { const tc = S.me.role === 'teacher' && typeof tMe === 'function' && tMe() ? tMe().classes || [] : null; return S.classes.filter(c => !tc || tc.includes(c.id)); };
   window.OPS36.xlsClass = xlsClass; window.OPS36.xlsAll = xlsAll; window.OPS36.sum = sumOf; window.OPS36.lCols = clsLCols; window.OPS36.lRow = clsLRow;
   ACT['ops-xls'] = el => { const v = el && el.dataset && el.dataset.v; if (v && C(v)) xlsClass(C(v)); else xlsAll(); };

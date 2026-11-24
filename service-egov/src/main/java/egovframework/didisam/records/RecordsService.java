@@ -41,6 +41,18 @@ public class RecordsService {
         tx.audit(tid, (String) a.get("email"), "access.review", d.toString());
         return new LinkedHashMap<>(Map.of("ok", true));
     }
+    static final Pattern KIND = Pattern.compile("^[\\w.:-]{1,60}$");
+    /** d6: 화면에서 직접 만드는 CSV 기록 — Node records.js 'POST /api/export/log'와 같은 규칙 · 같은 오류 코드 · audit 'export' {…, via:'client'} */
+    public Map<String, Object> exportLog(Map<String, Object> a, JsonNode b) throws Exception {
+        Records.Gate g = Records.gateOf(b, String.valueOf(a.get("role")));
+        JsonNode kv = b == null ? null : b.get("kind"); String kind = kv == null || kv.isNull() ? "" : (kv.isTextual() ? kv.textValue() : kv.toString()).trim();
+        if (!KIND.matcher(kind).matches()) throw new DdException(400, "내려받기 종류가 올바르지 않습니다.", "export_kind");
+        JsonNode nv = b == null ? null : b.get("n"); double d = 0; if (nv != null) { if (nv.isNumber()) d = nv.asDouble(); else if (nv.isTextual()) { try { d = Double.parseDouble(nv.textValue().trim()); } catch (NumberFormatException e) { d = 0; } } }
+        long n = Double.isNaN(d) ? 0 : Math.max(0, Math.min(10_000_000L, (long) Math.floor(d)));
+        String tid = (String) a.get("tid");
+        tx.audit(tid, (String) a.get("email"), "export", DdWeb.JSON.createObjectNode().put("kind", kind).put("n", n).put("raw", g.raw()).put("reason", g.reason()).put("via", "client").toString());
+        Map<String, Object> out = new LinkedHashMap<>(); out.put("ok", true); out.put("raw", g.raw()); return out;
+    }
     boolean krOnly(String tid) { try { return "true".equals(tx.inTenant(tid, () -> m.selectKrOnly(tid))); } catch (Exception e) { return false; } }
     public Map<String, Object> geoGet(Map<String, Object> a) { return new LinkedHashMap<>(Map.of("krOnly", krOnly((String) a.get("tid")))); }
     public Map<String, Object> geoPost(Map<String, Object> a, JsonNode b) throws Exception {

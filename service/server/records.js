@@ -6,6 +6,7 @@
        감사기록은 해시 체인의 앞부분(연속 구간)만 지우고 'audit.purge' 행(lastHash)을 남겨 audit_verify가 이어서 검증한다.
    #7  분기 접근권한 검토: GET/POST /api/access-review(정운영자) → audit 'access.review'
    #14 개인정보 포함 내려받기: reason 필수 · 기본 마스킹 · 원본(raw=1)은 정운영자 · audit 'export'
+       화면 CSV(d6): POST /api/export/log {kind, n, reason, raw} → audit 'export' {…, via:'client'} · { ok, raw }
    #15 기관 선택 org.sec.krOnly: 운영자 로그인 시 GEO 국가 ≠ KR이면 403 geo_blocked — geoCheck(req, tid)를 로그인 성공 직후 호출 */
 const { AsyncLocalStorage } = require('node:async_hooks');
 const als = new AsyncLocalStorage();
@@ -125,7 +126,13 @@ function createRecords({ pool, inTenant, need, needOwner, readBody, HttpErr, aud
       if (typeof b.krOnly !== 'boolean') throw new HttpErr(400, '설정 값이 올바르지 않습니다.', 'krOnly');
       await inTenant(pool, a.tid, async c => { const u = await c.query("update tenant_state set doc = jsonb_set(jsonb_set(doc, '{org,sec}', coalesce(doc->'org'->'sec', '{}'::jsonb)), '{org,sec,krOnly}', to_jsonb($2::boolean)) where tenant_id = $1", [a.tid, b.krOnly]); if (!u.rowCount) throw new HttpErr(409, '기관 정보를 먼저 저장한 뒤 다시 시도하십시오.', 'no_state'); await audit(c, a.tid, a.email, 'org.sec.geo', { krOnly: b.krOnly }); });
       return { ok: true, krOnly: b.krOnly }; },
-    'GET /api/org/sec/geo': async req => { const a = await need(req); return { krOnly: await krOnly(a.tid) }; }
+    'GET /api/org/sec/geo': async req => { const a = await need(req); return { krOnly: await krOnly(a.tid) }; },
+    /* d6: 화면에서 직접 만드는 CSV(수강생 · 성적 · 이수 · 지급액 등) — 서버 내보내기와 같은 규칙(사유 필수 · 원본은 정운영자)으로 기록만 남긴다 */
+    'POST /api/export/log': async req => { const a = await need(req); const b = await readBody(req, 4096); const g = exportGateOf(b, a);
+      const kind = String((b && b.kind) || '').trim(); if (!/^[\w.:-]{1,60}$/.test(kind)) throw new HttpErr(400, '내려받기 종류가 올바르지 않습니다.', 'export_kind');
+      const n = Math.max(0, Math.min(1e7, Math.floor(Number(b && b.n) || 0)));
+      await inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'export', { kind, n, raw: g.raw, reason: g.reason, via: 'client' }));
+      return { ok: true, raw: g.raw }; }
   };
 
   /* 보관 만료 파기(index.js tick, 하루 1회) */

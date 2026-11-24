@@ -46,5 +46,17 @@ test('가디언 4차 d5 남은 내려받기 통제', async t => {
     const n0 = await C('POST', '/api/mileage/shop/payouts/send', { ...ow, body: { ym: '2026-11', to: 'pay@example.com' } }); assert.equal(n0.st, 400); assert.equal(n0.j.error, 'export_reason');
     assert.equal((await C('POST', '/api/mileage/shop/payouts/send', { ...su, body: { ym: '2026-11', to: 'pay@example.com', reason: '급여 정산' } })).st, 403);
   });
+  await t.test('화면 CSV 기록(POST /api/export/log, d6)', async () => {
+    const L = (o, body) => C('POST', '/api/export/log', { ...o, body });
+    const n0 = await L(ow, { kind: 'lms_a_roster', n: 3 }); assert.equal(n0.st, 400); assert.equal(n0.j.error, 'export_reason'); assert.equal(n0.j.message, '개인정보가 포함된 파일을 내려받으려면 사유를 입력하십시오.');
+    assert.equal((await L(ow, { kind: 'lms_a_roster', n: 3, reason: ' ' })).j.error, 'export_reason');
+    const r1 = await L(su, { kind: 'lms_a_roster', n: 3, reason: '학사 점검', raw: true }); assert.equal(r1.st, 403); assert.equal(r1.j.error, 'export_raw'); assert.equal(r1.j.message, '원본(가리지 않은) 내려받기는 정운영자만 할 수 있습니다.');
+    assert.equal((await L(te, { kind: 'lms_a_roster', n: 3, reason: '학사 점검', raw: true })).st, 403);
+    const k0 = await L(ow, { kind: '<x>', n: 1, reason: '학사 점검' }); assert.equal(k0.st, 400); assert.equal(k0.j.error, 'export_kind');
+    const m = await L(te, { kind: 'mods_grades', n: 7, reason: '학사 점검' }); assert.equal(m.st, 200); assert.deepEqual(m.j, { ok: true, raw: false });
+    const r = await L(ow, { kind: 'milrw_payout', n: '2', reason: '급여 정산', raw: true }); assert.equal(r.st, 200); assert.deepEqual(r.j, { ok: true, raw: true });
+    assert.equal((await C('POST', '/api/export/log', { body: { kind: 'x', n: 1, reason: '학사 점검' } })).st, 401);
+    const a = (await auditOf()).filter(x => x.via === 'client'); assert.deepEqual(a, [{ kind: 'mods_grades', n: 7, raw: false, reason: '학사 점검', via: 'client' }, { kind: 'milrw_payout', n: 2, raw: true, reason: '급여 정산', via: 'client' }]);
+  });
   await new Promise(ok => app.close(ok)); await pool.end();
 });
