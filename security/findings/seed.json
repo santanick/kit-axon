@@ -204,8 +204,8 @@
       "line": 0,
       "evidence": "security/checkov/NOTES.md IAC-04 — setup.sh · setup-gcp.sh의 gcloud sql instances create에 --no-assign-ip · --ssl-mode 없음",
       "fix": "--ssl-mode=ENCRYPTED_ONLY(가능하면 사설 IP). 운영 인스턴스 적용은 대표님 조치",
-      "status": "open",
-      "note": "개발자 2(core/sec2-d2) 진행 중 — 병합 후 통합 담당이 status 갱신"
+      "status": "partial",
+      "note": "SSL 강제(ENCRYPTED_ONLY) 적용, 공인 IP 제거는 사설 IP · VPC 구성 후"
     },
     {
       "id": "IAC-05",
@@ -217,8 +217,8 @@
       "line": 0,
       "evidence": "security/checkov/NOTES.md IAC-05",
       "fix": "버킷 단위 storage.objectAdmin · 서비스 단위 run.developer로 축소",
-      "status": "open",
-      "note": "개발자 2(core/sec2-d2) 진행 중"
+      "status": "fixed",
+      "note": "저장소 스크립트 수정(core/sec2-d2). 운영 GCP 적용은 대표님 조치"
     },
     {
       "id": "IAC-06",
@@ -230,8 +230,8 @@
       "line": 0,
       "evidence": "security/checkov/NOTES.md IAC-06",
       "fix": "숫자 버전 고정 + 교체 절차(docs/security/secrets.md)",
-      "status": "open",
-      "note": "개발자 2(core/sec2-d2) 진행 중"
+      "status": "fixed",
+      "note": "저장소 스크립트 수정(core/sec2-d2). 운영 GCP 적용은 대표님 조치"
     },
     {
       "id": "SEC-0016",

@@ -7,104 +7,188 @@
   "score": "충족 1 · 부분 0.5 · 미흡 0, 15항목 평균 × 100",
   "items": [
     {
-      "id": "01", "title": "AI 생성물 표시", "group": "법령",
-      "status": "부분",
-      "evidence": ["didisam/ulms.js:160", "didisam/build.js", "didisam/crs-content.js", "didisam/lms/o.js"],
-      "remaining": "표시가 화면마다 따로 있어 학습자 AI 튜터 · 스튜디오 AI SAM · AI 채점 초안 · AI 생성 콘텐츠에 일관 적용되지 않음",
-      "in_progress": { "owner": "보안전문가", "branch": "core/sec2-exp", "expect": "공통 배지 함수 하나로 4개 경로 일관 적용" }
-    },
-    {
-      "id": "02", "title": "고영향 AI 자가판정(초 · 중등 평가 · 채용 면접)", "group": "법령",
-      "status": "부분",
-      "evidence": ["didisam/ulms.js:160", "security/threat-model.md"],
-      "remaining": "대상 기능별 자가판정 기록 · 사람 최종 판단 기록을 남기는 기능과 문서 없음",
-      "in_progress": { "owner": "수석 기획자", "branch": "core/sec2-plan", "expect": "docs/security/ai-impact-assessment.md + ulms.js LAW 목록 확장" }
-    },
-    {
-      "id": "03", "title": "만 14세 미만 법정대리인 동의", "group": "법령",
+      "id": "01",
+      "title": "AI 생성물 표시",
+      "group": "법령",
       "status": "충족",
-      "evidence": ["service/server/pii.js", "service/server/db.js", "service-egov/src/main/java/egovframework/didisam/pii/service/impl/PiiServiceImpl.java", "service/test/pii.test.js", "service/test/invite38.test.js", "tests/ui/acct38.js"],
+      "evidence": [
+        "didisam/aiguard.js",
+        "tests/ui/ai-mark.js"
+      ],
       "remaining": ""
     },
     {
-      "id": "04", "title": "국외이전 · 처리위탁 고지, API 입력 학습 미사용 확인", "group": "법령",
+      "id": "02",
+      "title": "고영향 AI 자가판정(초 · 중등 평가 · 채용 면접)",
+      "group": "법령",
       "status": "충족",
-      "evidence": ["didisam/lacct.js", "security/findings/seed.json"],
+      "evidence": [
+        "didisam/ulms.js",
+        "docs/security/ai-impact-assessment.md",
+        "tests/ui/hia.js"
+      ],
+      "remaining": ""
+    },
+    {
+      "id": "03",
+      "title": "만 14세 미만 법정대리인 동의",
+      "group": "법령",
+      "status": "충족",
+      "evidence": [
+        "service/server/pii.js",
+        "service/server/db.js",
+        "service-egov/src/main/java/egovframework/didisam/pii/service/impl/PiiServiceImpl.java",
+        "service/test/pii.test.js",
+        "service/test/invite38.test.js",
+        "tests/ui/acct38.js"
+      ],
+      "remaining": ""
+    },
+    {
+      "id": "04",
+      "title": "국외이전 · 처리위탁 고지, API 입력 학습 미사용 확인",
+      "group": "법령",
+      "status": "충족",
+      "evidence": [
+        "didisam/lacct.js",
+        "security/findings/seed.json"
+      ],
       "remaining": "Anthropic 상용 약관(입력 학습 미사용) 원문 대조는 계약 시점마다 사람이 재확인(SEC-0013 고지 반영 완료)"
     },
     {
-      "id": "05", "title": "LLM 전송 전 PII 가명화, 면접 음성 · 영상 보관기간 · 자동 파기", "group": "데이터",
+      "id": "05",
+      "title": "LLM 전송 전 PII 가명화, 면접 음성 · 영상 보관기간 · 자동 파기",
+      "group": "데이터",
       "status": "충족",
-      "evidence": ["service/server/aiguard.js", "service/server/pii.js", "service/test/security.test.js", "service/test/tutor.test.js", "security/redteam/cases.json"],
+      "evidence": [
+        "service/server/aiguard.js",
+        "service/server/pii.js",
+        "service/test/security.test.js",
+        "service/test/tutor.test.js",
+        "security/redteam/cases.json"
+      ],
       "remaining": "AI 면접 서비스는 이 저장소 밖 — 그 서비스의 영상 미저장 증적은 별도 제출(저장소 범위에서는 충족)"
     },
     {
-      "id": "06", "title": "관리자 MFA · 실패 잠금 · 권한 차등", "group": "기술",
+      "id": "06",
+      "title": "관리자 MFA · 실패 잠금 · 권한 차등",
+      "group": "기술",
       "status": "부분",
-      "evidence": ["service/server/app.js:471", "service-egov/src/main/java/egovframework/didisam/auth/service/impl/AuthServiceImpl.java", "service/test/api.test.js"],
-      "remaining": "MFA 없음(SEC-0008, P1). 잠금(SEC-0014)과 역할 차등(owner · sub · teacher)은 있음. 잠금 응답의 계정 열거(SEC-0016)",
-      "in_progress": { "owner": "개발자 1", "branch": "core/sec2-d1", "expect": "TOTP — 정운영자 · 산타 관리자 필수, 복구 코드 10개" }
+      "evidence": [
+        "service/server/app.js",
+        "service/test/security.test.js"
+      ],
+      "remaining": "관리자 MFA는 대표님 결정으로 미도입(위험 수용, 접근성) — 계정 잠금 · 속도 제한 · 권한 차등 · 새 환경 로그인 알림(병합 대기)으로 보완"
     },
     {
-      "id": "07", "title": "접속기록 위 · 변조 방지 · 보관(해시 체인 · 보존 잠금)", "group": "기술",
-      "status": "부분",
-      "evidence": ["service/server/security.js", "service-egov/src/main/resources/egovframework/mapper/SecMapper.xml"],
-      "remaining": "가디언 행동 기록(security 스키마)만 해시 체인. 일반 audit_log 체인 · 검증 API 없음(SEC-0006), 월간 점검 절차 문서 없음",
-      "in_progress": { "owner": "개발자 2 · 수석 기획자", "branch": "core/sec2-d2 · core/sec2-plan", "expect": "audit_log prev_hash · hash + GET /api/audit/verify, 월간 점검 절차" }
-    },
-    {
-      "id": "08", "title": "테넌트 격리 규칙(auth != null 단독 허용 금지 · CI 규칙 테스트)", "group": "기술",
+      "id": "07",
+      "title": "접속기록 위 · 변조 방지 · 보관(해시 체인 · 보존 잠금)",
+      "group": "기술",
       "status": "충족",
-      "evidence": ["service/server/db.js", "service-egov/src/main/java/egovframework/didisam/cmm/TenantTx.java", "security/semgrep/didisam.yml", "server/firestore.rules", "server/storage.rules", "service/test/api.test.js"],
+      "evidence": [
+        "service/server/db.js",
+        "service/test/audit-chain.test.js",
+        "docs/security/access-log-review.md"
+      ],
+      "remaining": ""
+    },
+    {
+      "id": "08",
+      "title": "테넌트 격리 규칙(auth != null 단독 허용 금지 · CI 규칙 테스트)",
+      "group": "기술",
+      "status": "충족",
+      "evidence": [
+        "service/server/db.js",
+        "service-egov/src/main/java/egovframework/didisam/cmm/TenantTx.java",
+        "security/semgrep/didisam.yml",
+        "server/firestore.rules",
+        "server/storage.rules",
+        "service/test/api.test.js"
+      ],
       "remaining": "Semgrep 규칙을 CI에서 돌리는 잡은 초안 단계(14와 연계)"
     },
     {
-      "id": "09", "title": "에이전트 최소 권한 + 사람 승인, 인가는 서버", "group": "AI",
-      "status": "부분",
-      "evidence": ["service/server/app.js", "service/test/security.test.js"],
-      "remaining": "서버 도구 차단(SEC-0004)은 됨. 도구 4등급 서버 강제 · 외부 출처 후 2등급 이상 사람 확인 · 미등록 도구 거부 없음",
-      "in_progress": { "owner": "개발자 3", "branch": "core/sec2-d3", "expect": "도구 등급 서버 강제 Node+Java" }
+      "id": "09",
+      "title": "에이전트 최소 권한 + 사람 승인, 인가는 서버",
+      "group": "AI",
+      "status": "충족",
+      "evidence": [
+        "service/server/aitools.js",
+        "service/test/aitools.test.js"
+      ],
+      "remaining": ""
     },
     {
-      "id": "10", "title": "인젝션 방어 계층 · 출력 검증 · 비용 상한", "group": "AI",
+      "id": "10",
+      "title": "인젝션 방어 계층 · 출력 검증 · 비용 상한",
+      "group": "AI",
       "status": "충족",
-      "evidence": ["service/server/aiguard.js", "service/server/aigw.js", "security/redteam/run.js", "security/redteam/cases.json", "service/test/aigw.test.js", "service/test/aiusage47.test.js"],
+      "evidence": [
+        "service/server/aiguard.js",
+        "service/server/aigw.js",
+        "security/redteam/run.js",
+        "security/redteam/cases.json",
+        "service/test/aigw.test.js",
+        "service/test/aiusage47.test.js"
+      ],
       "remaining": "인젝션 신호는 탐지 · 기록 위주(차단은 도구 경로에서) — 레드팀 회귀로 유지"
     },
     {
-      "id": "11", "title": "MCP 거버넌스(허용목록 · 해시 고정 · 감사)", "group": "AI",
+      "id": "11",
+      "title": "MCP 거버넌스(허용목록 · 해시 고정 · 감사)",
+      "group": "AI",
       "status": "부분",
-      "evidence": ["service/server/mcp.js", "service/test/mcp.test.js"],
-      "remaining": "외부 MCP 허용목록 · 도구 목록 해시 고정 없음, 부운영자 쓰기 키 발급(SEC-0011)",
-      "in_progress": { "owner": "개발자 3 · 개발자 1", "branch": "core/sec2-d3 · core/sec2-d1", "expect": "허용목록 · 해시 변경 시 연결 정지, write 키는 정운영자만" }
+      "evidence": [
+        "service/server/aitools.js",
+        "service/server/mcp.js"
+      ],
+      "remaining": "write MCP 키 정운영자 한정(SEC-0011) 병합 대기(개발자 1)"
     },
     {
-      "id": "12", "title": "시크릿 관리(Secret Manager · 교체 · 스캔)", "group": "기술",
-      "status": "부분",
-      "evidence": ["service/gcp/deploy.sh", ".gitleaks.toml", "security/semgrep/didisam.yml"],
-      "remaining": "비밀값 :latest 참조(IAC-06), 교체 주기 · 절차 문서 없음, gitleaks는 설정만 있고 CI 잡 미배치",
-      "in_progress": { "owner": "개발자 2 · 보안전문가", "branch": "core/sec2-d2 · core/sec2-exp", "expect": "숫자 버전 고정, docs/security/secrets.md, CI 보안 잡 초안" }
+      "id": "12",
+      "title": "시크릿 관리(Secret Manager · 교체 · 스캔)",
+      "group": "기술",
+      "status": "충족",
+      "evidence": [
+        "docs/security/secrets.md",
+        "service/gcp/deploy.sh",
+        ".gitleaks.toml",
+        ".github/workflows/security-scan.yml"
+      ],
+      "remaining": ""
     },
     {
-      "id": "13", "title": "릴리스별 SBOM / AIBOM", "group": "공급망",
-      "status": "부분",
-      "evidence": ["service/security/sbom.js", "service/security/test/guard.test.js"],
-      "remaining": "CycloneDX SBOM은 있음. 모델 · MCP · 플러그인 · 프롬프트 AIBOM 없음",
-      "in_progress": { "owner": "보안전문가", "branch": "core/sec2-exp", "expect": "service/security/aibom.js(CycloneDX ML-BOM)" }
+      "id": "13",
+      "title": "릴리스별 SBOM / AIBOM",
+      "group": "공급망",
+      "status": "충족",
+      "evidence": [
+        "service/security/aibom.js",
+        "security/aibom.lock.json"
+      ],
+      "remaining": ""
     },
     {
-      "id": "14", "title": "KISA · OWASP 기준 점검(배포 전 · 분기), 레드팀 보고서 보관", "group": "운영",
+      "id": "14",
+      "title": "KISA · OWASP 기준 점검(배포 전 · 분기), 레드팀 보고서 보관",
+      "group": "운영",
       "status": "부분",
-      "evidence": ["docs/security/kisa-web-check.md", "security/threat-model.md", "security/redteam/run.js"],
-      "remaining": "KISA 웹 28항목 자가 점검(정적 · 코드 근거) 완료 — 양호 18 · 부분 5 · 해당 없음 5. 동적 점검(ZAP) 미실행, 배포 전 게이트 · CI 정기 실행 미배치, 2025-12 개정판 항목 번호 원문 대조 필요",
-      "in_progress": { "owner": "보안전문가", "branch": "core/sec2-exp", "expect": "ZAP baseline 설정 · CI 보안 잡 초안" }
+      "evidence": [
+        "docs/security/kisa-web-check.md",
+        "security/zap/run.sh",
+        ".github/workflows/security-scan.yml"
+      ],
+      "remaining": "ZAP 동적 점검 실제 실행 기록 없음(대표님 결정 대기), 외부 모의해킹 없음"
     },
     {
-      "id": "15", "title": "고객군별 인증 로드맵(공공 N2SF · 대학 ISMS-P · 직훈 본인인증 · OTP · 초중고 필수기준)", "group": "운영",
-      "status": "미흡",
-      "evidence": [],
-      "remaining": "로드맵 문서 없음",
-      "in_progress": { "owner": "수석 기획자", "branch": "core/sec2-plan", "expect": "docs/security/cert-roadmap.md" }
+      "id": "15",
+      "title": "고객군별 인증 로드맵(공공 N2SF · 대학 ISMS-P · 직훈 본인인증 · OTP · 초중고 필수기준)",
+      "group": "운영",
+      "status": "부분",
+      "evidence": [
+        "docs/security/cert-roadmap.md"
+      ],
+      "remaining": "로드맵은 마련 — 데이터 등급 분류표 · ISMS-P 점검표 등 산출물은 2026-12~2027-01 예정"
     }
   ]
 }
