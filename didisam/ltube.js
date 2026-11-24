@@ -438,7 +438,7 @@
   function chapHTML(c, it) { const C = chapsOf(it); if (!C.length) return ''; const t = nowT() || +lpItem(c.id, it.id).pos || 0; const ci = C.reduce((k, x, j) => (x.t <= t ? j : k), -1); const anyK = C.some(x => seekOK(c, it, x.t));
     return `<div class="tbw-ch" role="list" aria-label="챕터">${C.map((x, j) => seekOK(c, it, x.t) ? `<button type="button" role="listitem" class="tbw-c${j === ci ? ' on' : ''}" data-tb="seek" data-v="${x.t}" aria-label="${esc(x.n)} ${mmss(x.t)}로 이동">${String(j + 1).padStart(2, '0')} ${esc(x.n)}</button>` : `<span role="listitem" class="tbw-c${j === ci ? ' on' : ''}">${String(j + 1).padStart(2, '0')} ${esc(x.n)}</span>`).join('')}</div><p class="tbw-cn">강사가 넣은 챕터예요${anyK ? (C.every(x => seekOK(c, it, x.t)) ? '' : ' · 본 구간까지만 이동할 수 있어요') : ' · 이 과정은 앞으로 건너뛸 수 없어요'}</p>`; }
   const thread = iid => (TB.msgs[iid] = TB.msgs[iid] || []);
-  function msgHTML(m) { return m.me ? `<div class="tbw-m me">${esc(m.t)}</div>` : `<div class="tbw-m">${nl(esc(m.t)).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')}${m.ev ? `<small class="tbw-ev">${esc(m.ev)}</small>` : ''}${m.h || ''}</div>`; }
+  function msgHTML(m) { return m.me ? `<div class="tbw-m me">${esc(m.t)}</div>` : `<div class="tbw-m">${nl(esc(m.t)).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')}${m.ai && typeof aiMark === 'function' ? aiMark('tutor') : ''}${m.ev ? `<small class="tbw-ev">${esc(m.ev)}</small>` : ''}${m.h || ''}</div>`; }
   const nl = s => String(s).replace(/\n/g, '<br>');
   function panelHTML(c, it) { const t = nowT(); const M = thread(it.id);
     return `<section class="tbw" aria-label="${unit()} 정보와 AI 튜터"><div class="tbw-hd"><h2>${nOf(c, it)}${unit()} · ${esc(it.title)}</h2>${chapHTML(c, it)}</div>
@@ -482,10 +482,10 @@
     const lim = +C.daily || 20; if (typeof ltUsed === 'function' && ltUsed() >= lim) { M.push({ me: 1, t: label || q }, { t: `오늘 질문 한도(${lim}회)를 모두 썼어요. 내일 다시 이어 가거나, 급한 질문은 선생님께 넘겨 주세요.` }); paint(); return; }
     M.push({ me: 1, t: label || q }); if (M.length > 20) M.splice(0, M.length - 20); try { typeof ltUse === 'function' && ltUse(); } catch (e) { } TB.busy = true; paint();
     let r = null; try { r = typeof ltAI === 'function' ? await ltAI(q) : null; } catch (e) { r = null; }
-    let ev = ''; const ch = t != null && typeof ltChap === 'function' ? ltChap(k.it, t) : null;
+    const isAI = !!(r && r.t); let ev = ''; const ch = t != null && typeof ltChap === 'function' ? ltChap(k.it, t) : null;
     if (r && r.t) { const m = /\n?\s*근거\s*[:：]\s*([^\n]+)\s*$/.exec(r.t); if (m) { ev = '근거: ' + m[1].trim(); r.t = r.t.slice(0, m.index).trim(); } else if (ch && ch.ch) ev = `근거: ${nOf(k.c, k.it)}${unit()} ${mmss(ch.ch.t)}~${ch.end != null ? mmss(ch.end) : ''} 「${ch.ch.n}」 구간`; }
     else { try { r = (typeof ltRule === 'function' && (ltRule(q) || ltRule('?'))) || null; } catch (e) { r = null; } if (!r) r = { t: '지금은 답을 만들지 못했어요. 잠시 후 다시 물어봐 주세요.' }; ev = t != null ? `${mmss(t)} 장면 기준 · 기본 안내` : '기본 안내'; }
-    M.push({ t: String(r.t || '').slice(0, 2000), ev, h: '' }); TB.busy = false; paint(); }
+    M.push({ t: String(r.t || '').slice(0, 2000), ev, h: '', ai: isAI }); TB.busy = false; paint(); }
   function paint() { const k = cur(); const box = $('#lm .tbw'); if (!k || !box) return; const ms = box.querySelector('.tbw-ms'); if (ms) { ms.innerHTML = thread(k.it.id).map(msgHTML).join('') + (TB.busy ? '<div class="tbw-m"><span class="lt-dots"><i></i><i></i><i></i></span></div>' : ''); ms.scrollTop = ms.scrollHeight; } }
   function mountWatch() { const k = cur(); if (!k || locked(k.c, k.it)) return; if (!tOn() && !chapsOf(k.it).length) return; const lm = $('#lm'); if (!lm || lm.querySelector('.tbw')) return;
     const anchor = ['.imain .lw-rule', '.imain #wtxt', '.imain .wbar', '.imain .vbox', '.imain .novid', '.imain .lc'].map(q => lm.querySelector(q)).find(Boolean); const main = lm.querySelector('.imain');

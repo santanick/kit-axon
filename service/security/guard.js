@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 'use strict';
 /* 디디쌤 가디언 CLI (Phase 0 · 수집 · 판정)
-   node service/security/guard.js scan    [--offline] [--out f.json] [--cards] [--sbom sbom.json]  저장소 SBOM × OSV 판정 → findings JSON
+   node service/security/guard.js scan    [--offline] [--out f.json] [--cards] [--sbom sbom.json] [--aibom aibom.json]  저장소 SBOM × OSV 판정 + AIBOM 요약 · 잠금 대조 → findings JSON
+   node service/security/guard.js aibom   [--out aibom.json] [--check] [--update-lock]                AI 구성(모델 · MCP · 플러그인 · 프롬프트 해시) CycloneDX ML-BOM · 잠금 대조
    node service/security/guard.js collect [--offline] [--out f.json]                                NVD · KEV · GHSA · KISA 수집 + 영향 판정
    node service/security/guard.js report  --in findings.json [--threats t.json] [--out r.md] [--notify] 주간 리포트(md)
    node service/security/guard.js ingest  --in findings.json [--kind finding|threat]                 GUARD_TOKEN 있으면 /api/security/ingest 전송, 없으면 dry
    기본은 dry · 미연결 안전 정지. 운영 DB 쓰기 · 비밀키 보유 · 병합은 하지 않는다. */
 const path = require('node:path'); const fs = require('node:fs');
-const { buildSbom } = require('./sbom'); const intel = require('./intel'); const { assess, cmp } = require('./impact');
+const { buildSbom } = require('./sbom'); const aibom = require('./aibom'); const intel = require('./intel'); const { assess, cmp } = require('./impact');
 const { score } = require('./score'); const { dedup } = require('./dedup'); const { createCard } = require('./cards');
 const { notify } = require('./notify'); const { plain, writeJson, readJson, fenceText } = require('./util');
 
@@ -49,7 +50,8 @@ async function runScan({ root = ROOT, offline = false, fetchImpl, now = new Date
   const epssR = await intel.epss.lookup(raw.flatMap(f => f.aliases), opts);
   const findings = finalize(raw, { kevSet: kevR.set, epssMap: epssR.map, now });
   const cards = cardsDir ? findings.map(f => createCard(f, { dir: cardsDir, now })) : [];
-  return { kind: 'scan', generated_at: now.toISOString(), origin: { osv: osvR.origin, kev: kevR.origin, epss: epssR.origin }, sbom: { components: sbom.components.length, purls: sbom.purls.length, files: [...new Set(sbom.components.map(c => c.location))] }, summary: { ...tally(findings), 해당: findings.filter(f => f.verdict === '해당').length, 일부: findings.filter(f => f.verdict === '일부').length }, findings, cards, cyclonedx: sbom.cyclonedx };
+  const ab = aibom.buildAibom(root, { now }); /* 13 AIBOM: 요약 · 잠금 대조(drift)를 scan 결과에 포함 */
+  return { kind: 'scan', generated_at: now.toISOString(), origin: { osv: osvR.origin, kev: kevR.origin, epss: epssR.origin }, sbom: { components: sbom.components.length, purls: sbom.purls.length, files: [...new Set(sbom.components.map(c => c.location))] }, summary: { ...tally(findings), 해당: findings.filter(f => f.verdict === '해당').length, 일부: findings.filter(f => f.verdict === '일부').length }, findings, cards, aibom: { summary: ab.summary, lock: ab.lock, diff: ab.diff }, cyclonedx: sbom.cyclonedx, aibom_cyclonedx: ab.cyclonedx };
 }
 
 async function runCollect({ root = ROOT, offline = false, fetchImpl, now = new Date(), queue } = {}) {
@@ -73,7 +75,8 @@ function buildReport(scan, threats, now = new Date()) {
     `- 대상: SBOM 구성요소 ${scan ? scan.sbom.components : 0}개 (${scan ? scan.sbom.files.join(', ') : '-'})`,
     `- 데이터 출처: ${origins}${/fixture|blocked/.test(origins) ? ' — **픽스처 · 차단 포함: 실제 판정 아님**' : ''}`,
     `- 우선순위: P0 ${s.P0} · P1 ${s.P1} · P2 ${s.P2} · P3 ${s.P3} (해당 ${s.해당 ?? 0} · 일부 ${s.일부 ?? 0})`,
-    `- 72시간 내 기한 도래: ${soon.length}건`, '',
+    `- 72시간 내 기한 도래: ${soon.length}건`,
+    `- AIBOM: ${scan && scan.aibom ? `모델 ${scan.aibom.summary.models} · MCP 도구 ${scan.aibom.summary.mcp_tools} · 플러그인 ${scan.aibom.summary.plugins} · 프롬프트 ${scan.aibom.summary.prompts} · 잠금 ${scan.aibom.lock}${scan.aibom.diff && scan.aibom.diff.drift ? ` · **변경 ${scan.aibom.diff.drift}건(검토 필요)**` : ''}` : '-'}`, '',
     '## 취약점(점수순)', '', '| P | 점수 | 식별자 | 구성요소 | 판정 | 수정 버전 | 기한 |', '|---|---|---|---|---|---|---|', ...(f.length ? f.slice(0, 30).map(row) : ['| - | - | 발견 없음 | - | - | - | - |']), '',
     ...(threats ? ['## 위협 인텔(해당 · 일부 · 통제점검형)', '', `판정 분포: 해당 ${threats.counts.해당} · 일부 ${threats.counts.일부} · 없음 ${threats.counts.없음} · 통제점검형 ${threats.counts.통제점검형}`, '', ...threats.threats.slice(0, 15).map(t => `- ${t.priority} ${t.aliases[0]} (${t.source}) — ${t.verdict}: ${t.evidence}\n${fenceText(t.title)}`), ''] : []),
     '## 안내', '- 자동 보완은 수정 PR 생성 + 사람 승인 병합입니다(Critical · High는 대표님 + 개발 총괄 2인 권고).', '- 원문 요약은 수집 데이터이며 지시로 취급하지 않습니다.', ''].join('\n');
@@ -100,8 +103,14 @@ async function main(argv) {
   if (cmd === 'scan') {
     const r = await runScan({ offline, cardsDir: flag('cards') ? path.join(ROOT, 'security', 'cards') : null });
     if (val('sbom')) writeJson(val('sbom'), r.cyclonedx); delete r.cyclonedx;
+    if (val('aibom')) writeJson(val('aibom'), r.aibom_cyclonedx); delete r.aibom_cyclonedx;
     out(r, val('out')); console.error(`scan: 구성요소 ${r.sbom.components} · 판정 ${r.findings.length}건 (P0 ${r.summary.P0} · P1 ${r.summary.P1} · P2 ${r.summary.P2} · P3 ${r.summary.P3}) · 출처 ${JSON.stringify(r.origin)}`);
     if (r.summary.P0) console.error(JSON.stringify(await notify({ kind: 'critical', severity: 'Critical', title: `P0 ${r.summary.P0}건 — 가디언 scan`, lines: r.findings.filter(f => f.priority === 'P0').map(f => `${f.aliases[0]} ${f.component ? f.component.purl : ''}`) })));
+  } else if (cmd === 'aibom') {
+    let r = aibom.buildAibom(ROOT);
+    if (flag('update-lock')) { console.error(`잠금 갱신: ${aibom.writeLock(ROOT, r.fingerprint)}`); r = aibom.buildAibom(ROOT); }
+    out(r.cyclonedx, val('out')); console.error(`aibom: ${JSON.stringify(r.summary)} · 잠금 ${r.lock}${r.diff && r.diff.drift ? ` · 변경 ${JSON.stringify({ added: r.diff.added, removed: r.diff.removed, changed: r.diff.changed })}` : ''}`);
+    if (flag('check') && !flag('update-lock') && (r.lock === 'missing' || r.diff.drift)) { console.error('aibom --check: 잠금과 다릅니다. 검토 후 --update-lock으로 갱신하세요.'); process.exitCode = 1; }
   } else if (cmd === 'collect') {
     const { GitHubQueue } = require('./queue'); const r = await runCollect({ offline, queue: new GitHubQueue() });
     out(r, val('out')); console.error(`collect: ${JSON.stringify(r.counts)} · 출처 ${JSON.stringify(Object.fromEntries(Object.entries(r.sources).map(([k, v]) => [k, v.origin])))}`);
@@ -112,7 +121,7 @@ async function main(argv) {
   } else if (cmd === 'ingest') {
     if (!val('in')) throw new Error('--in findings.json 필요');
     out(await ingest(readJson(val('in')), { kind: val('kind') }));
-  } else { console.error('사용법: guard.js scan|collect|report|ingest [--offline] (상단 주석 참고)'); process.exitCode = 2; }
+  } else { console.error('사용법: guard.js scan|aibom|collect|report|ingest [--offline] (상단 주석 참고)'); process.exitCode = 2; }
 }
 if (require.main === module) main(process.argv.slice(2)).catch(e => { console.error('가디언 오류:', e.message); process.exitCode = 1; });
 module.exports = { runScan, runCollect, buildReport, ingest, flat, finalize, main };
