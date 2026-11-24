@@ -39,7 +39,6 @@ function aiCache(b) {
   return { ...(sys ? { system: sys } : {}), messages: b.messages, ...(tools ? { tools } : {}) };
 }
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.yaml': 'text/plain; charset=utf-8', '.yml': 'text/plain; charset=utf-8', '.tf': 'text/plain; charset=utf-8', '.example': 'text/plain; charset=utf-8', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', /* v44.1: 샘플 사진(img/stock/*.webp)이 application/octet-stream + nosniff로 나가던 것 */ '.mjs': 'text/javascript; charset=utf-8' };
-const SESSION_DAYS = 14;
 const STATE_MAX = 8 * 1024 * 1024;      // 기관 상태 최대 8MB(JSON)
 const M = require('./modules');
 const OG = require('./ogmeta'); /* v37 L2 링크 공유 미리보기 */
@@ -52,7 +51,7 @@ const AP = require('./aiprice'); /* v47 AI 월 포함량 · 추가 충전 요금
 const { createPay } = require('./fac/pay');
 const LEV = require('./lev'); /* v46 Ver2 학습 이벤트 */
 const { createOAuth } = require('./oauth');
-const { createDevices } = require('./devices'); /* 보안 2차: 새 환경 로그인 알림(2단계 인증 대신) */
+const { createDevices } = require('./devices'); const { createSessions } = require('./session'); /* 가디언 4차 세션 정책 */ /* 보안 2차: 새 환경 로그인 알림(2단계 인증 대신) */
 const COOKIE = '__Host-dd_sid';
 
 /* ── 도우미 ── */
@@ -115,7 +114,6 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   /* v25 운영 필수 비밀값 — 약한 기본값으로 뜨지 않게 운영(NODE_ENV=production)에서는 시작을 막는다 */
   if (env.NODE_ENV === 'production') { const miss = ['SESSION_PEPPER', 'PII_KEY'].filter(k => !String(env[k] || '').trim() || String(env[k]).trim().length < 32); if (miss.length) throw new Error(`운영 필수 비밀값이 없거나 짧습니다(32자 이상): ${miss.join(', ')}`); if (!secure) throw new Error('운영에서는 COOKIE_SECURE=0을 쓸 수 없습니다.'); }
   const hops = Math.max(0, Math.min(5, Number(env.TRUST_PROXY_HOPS == null ? 1 : env.TRUST_PROXY_HOPS)));
-  const idleH = Math.max(1, Math.min(24 * 14, Number(env.SESSION_IDLE_H || 12)));
   const crypt = createStateCrypto(piiKeys(env), HttpErr);
   const mod = M.moduleOf(env); const adminIps = M.parseIps(env.ADMIN_IPS); const learnerTid = String(env.LEARNER_TID || '').trim();
   const cookieName = (secure ? COOKIE : 'dd_sid') + (mod ? '_' + mod : ''); // __Host- 접두어는 Secure 필수
@@ -145,24 +143,19 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (Buffer.isBuffer(body) || typeof body === 'string') { res.writeHead(status, h); return res.end(body); }
     h['content-type'] = 'application/json; charset=utf-8'; res.writeHead(status, h); res.end(JSON.stringify(body));
   }
-  const setSid = (res, token) => res.setHeader('set-cookie', `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_DAYS * 86400}${secure ? '; Secure' : ''}`);
-  const clearSid = res => res.setHeader('set-cookie', `${cookieName}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure ? '; Secure' : ''}`);
   /* v25 X-Forwarded-For는 앞쪽을 클라이언트가 위조할 수 있다 → 신뢰하는 프록시 수(TRUST_PROXY_HOPS)만큼 오른쪽에서 센다 */
   const ip = req => { const L = String(req.headers['x-forwarded-for'] || '').split(',').map(x => x.trim()).filter(Boolean); return (hops && L.length >= hops ? L[L.length - hops] : '') || String(req.socket.remoteAddress || ''); };
 
+  /* 가디언 4차 세션 정책(session.js): 유휴 60분(기관 10~60) · 최대 12시간 · 세션 쿠키 · 동시 접속 알림 · 작업 모드 */
   async function newSession(res, userId, tid) {
-    const token = crypto.randomBytes(32).toString('base64url');
-    await pool.query('insert into sessions (id, user_id, tenant_id, expires_at) values ($1, $2, $3, now() + $4::interval)', [sha(token), userId, tid, `${Math.min(idleH, SESSION_DAYS * 24)} hours`]);
-    setSid(res, token);
+    const out = await sess.create(res, res.req, userId, tid);
     await devices.seen(res.req, res, userId, tid); /* 보안 2차: 새 기기 · 대역 로그인 알림(가입 · 로그인 · 소셜 로그인 공통, 실패해도 로그인은 진행) */
+    return out; /* { others } — 다른 활성 세션 수(d1 MFA 완료 응답에도 쓴다) */
   }
-  async function auth(req) {
-    const t = cookies(req)[cookieName]; if (!t || t.length > 100) return null;
-    const { rows } = await pool.query(`select s.id sid, u.id uid, u.email, u.role, u.pw_temp, t.id tid, t.name, t.type, t.mode, (s.expires_at < now() + $2::interval) slide from sessions s join users u on u.id = s.user_id join tenants t on t.id = s.tenant_id where s.id = $1 and s.expires_at > now() and s.created_at > now() - $3::interval`, [sha(t), `${Math.max(0, idleH - 1)} hours`, `${SESSION_DAYS} days`]);
-    /* v25 유휴 만료: 쓰는 동안만 연장(최대 SESSION_DAYS), idleH시간 동안 안 쓰면 다시 로그인 */
-    if (rows[0] && rows[0].slide) await pool.query('update sessions set expires_at = least(created_at + $2::interval, now() + $3::interval) where id = $1', [rows[0].sid, `${SESSION_DAYS} days`, `${idleH} hours`]);
-    if (rows[0] && mod && !M.roleAllowed(mod, rows[0].role)) return null;
-    return rows[0] || null;
+  async function auth(req, opt) {
+    const a = await sess.check(req, opt);
+    if (a && mod && !M.roleAllowed(mod, a.role)) return null;
+    return a || null;
   }
   const need = async req => { const a = await auth(req); if (!a) throw new HttpErr(401, '로그인이 필요합니다.', 'auth'); if (a.pw_temp && !['/api/me', '/api/password'].includes(new URL(req.url, 'http://x').pathname)) throw new HttpErr(403, '임시 비밀번호를 먼저 변경해 주십시오.', 'pw_temp'); return a; };
   const needOwner = async req => { const a = await need(req); if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 볼 수 있습니다.', 'role'); return a; };
@@ -171,6 +164,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   const tScope = async a => { const r = await stateDoc(a); return M.scope(r ? crypt.open(r.doc, a.tid) : null, a.email); };
   const audit = (c, tid, actor, action, detail) => c.query('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, actor, action, detail ? JSON.stringify(detail) : null]);
   const devices = createDevices({ pool, env, inTenant, audit, cookies, secure, ip, hops, log });
+  const sess = createSessions({ pool, env, inTenant, HttpErr, readBody, cookies, cookieName, secure, audit, ip, limit }); const { setSid, clearSid } = sess;
   const meOut = a => ({ user: { email: a.email, role: a.role, ...(a.pw_temp ? { pwTemp: true } : {}), ...(isSanta(a) ? { santa: true } : {}) }, tenant: { tid: a.tid, name: a.name, type: a.type, mode: a.mode } });
 
   /* ── 학습자(v10) ── */
@@ -206,7 +200,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     /* 무활동 자동 로그아웃: 규정 준수 정책의 시간을 서버에서도 적용한다 */
     const h = await inTenant(pool, tid, async c => { const P = (await c.query("select doc->'org'->'cpl' p from tenant_state where tenant_id = $1", [tid])).rows[0]; return P && P.p && P.p.on ? +P.p.idleH || 0 : 0; });
     if (h > 0 && +s.idle >= h * 3600) { await pool.query('delete from learner_sessions where id = $1', [sha(t)]); return null; }
-    await pool.query('update learner_sessions set last_at = now() where id = $1', [sha(t)]); return s;
+    await pool.query("update learner_sessions set last_at = now(), expires_at = case when keep then least(created_at + interval '90 days', now() + interval '30 days') else expires_at end where id = $1", [sha(t)]); return s; /* 가디언 4차 #8 */
   }
   /* 학습자 본인 데이터만: 배지 · 과정 진도(어드민 상태에서 학번으로 찾음) */
   /* v46 기능 5: 채점 피드백은 승인 발송(fbSent)됐거나 확정 상태(graded · returned · failed)일 때만 학습자에게 — AI 초안(p.ai)은 노출하지 않음. 초안 흐름(p.ai)이 없는 기존 기록은 그대로 보임 */
@@ -238,7 +232,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   async function newLearnerSession(res, tid, sid) {
     const token = crypto.randomBytes(32).toString('base64url');
     const keep = res.ddKeep !== false; /* v38 '이 기기에서 로그인 유지'를 끄면(공용 PC) 브라우저를 닫을 때 끝나는 쿠키 · 서버 세션 12시간 */
-    await pool.query(`insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval '${keep ? '30 days' : '12 hours'}')`, [sha(token), tid, sid]);
+    await pool.query(`insert into learner_sessions (id, tenant_id, sid, expires_at, keep) values ($1, $2, $3, now() + interval '${keep ? '30 days' : '12 hours'}', $4)`, [sha(token), tid, sid, keep]); /* 가디언 4차 #8: 유지 켬은 마지막 사용 + 30일(최대 90일, lauth) */
     res.setHeader('set-cookie', `${lcookieName}=${token}; Path=/; HttpOnly; SameSite=Strict${keep ? `; Max-Age=${30 * 86400}` : ''}${secure ? '; Secure' : ''}`);
     if (res.req) await cplAfterLogin(res.req, tid, sid, sha(token));
     await inTenant(pool, tid, c => mileage.hook((q, a) => c.query(q, a), tid, sid, 'first_login', 'acct', sid, null, 'A')).catch(() => {}); /* v42 첫 로그인(사건 유일키로 1회) */
@@ -314,11 +308,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
       if (!L || !ok) { if (L) await inTenant(pool, tid, c => audit(c, tid, 'sid:' + sid, 'llogin.fail', null)).catch(() => {}); else { try { limit('llf:' + tid + ':' + sid, 1e9, 900e3); } catch (e) { } }
         throw new HttpErr(401, '번호 또는 접근코드가 올바르지 않습니다.', 'login'); }
       await inTenant(pool, tid, c => audit(c, tid, 'sid:' + sid, 'llogin', null)).catch(() => {});
-      const token = crypto.randomBytes(32).toString('base64url');
-      await pool.query('insert into learner_sessions (id, tenant_id, sid, expires_at) values ($1, $2, $3, now() + interval \'30 days\')', [sha(token), tid, sid]);
-      await cplAfterLogin(req, tid, sid, sha(token));
-      await inTenant(pool, tid, c => mileage.hook((q, a) => c.query(q, a), tid, sid, 'first_login', 'acct', sid, null, 'A')).catch(() => {}); /* v42 */
-      res.setHeader('set-cookie', `${lcookieName}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${30 * 86400}${secure ? '; Secure' : ''}`);
+      await newLearnerSession(res, tid, sid); /* 가디언 4차 #9: 학번 로그인도 keep:false면 세션 쿠키 + 서버 12시간(Java와 같음) */
       return inTenant(pool, tid, async c => { await c.query('update learners set last_login = now() where tenant_id = $1 and sid = $2', [tid, sid]); const lp = (await c.query('select lp from learner_progress where tenant_id = $1 and sid = $2', [tid, sid])).rows[0]; const d = (await c.query('select doc from tenant_state where tenant_id = $1', [tid])).rows[0]; return { me: { sid, dept: L.dept, ...(await meFlags(c, tid, sid, d && d.doc)) }, lp: lp ? lp.lp : null, mine: d ? mineOf(d.doc, sid, tid) : { badges: [], cls: {} } }; });
     }
     const s = await lauth(req, tid);
@@ -441,6 +431,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   /* ── API ── */
   const routes = {
     ...media.routes,
+    ...sess.routes({ auth, need, needStaff, needOwner }), /* 가디언 4차: /api/session · /api/me/sessions · /api/org/security */
     ...((!mod || mod === 'admin') ? oauth.routes : {}),
     'GET /api/keys': async req => mcp.listKeys(await needStaff(req)),
     'POST /api/keys': async req => mcp.createKey(await needStaff(req), req),
@@ -540,7 +531,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (JSON.stringify(doc).length > STATE_MAX) throw new HttpErr(413, '데이터가 8MB를 넘었습니다. 오래된 기록을 정리하세요.', 'too_large');
       return inTenant(pool, a.tid, async c => {
         /* v47 요금제(plan) · 월 포함량(aiplan.monthTokens)은 산타가 넣은 저장값이 원천(기관이 보낸 값은 버림). 초과 처리(overage)는 정운영자만 바꾼다 */
-        const cur = (await c.query("select doc->'aiplan' aiplan, doc->'plan' plan from tenant_state where tenant_id = $1 for update", [a.tid])).rows[0] || null;
+        const cur = (await c.query("select doc->'aiplan' aiplan, doc->'plan' plan, doc->'org'->'sec' sec from tenant_state where tenant_id = $1 for update", [a.tid])).rows[0] || null;
+        if (cur && cur.sec && typeof cur.sec === 'object') doc.org.sec = cur.sec; else delete doc.org.sec; /* 가디언 4차: 기관 보안 정책은 POST /api/org/security(정운영자)로만 바꾼다 */
         if (a.role !== 'owner' && AP.ovKey(cur && cur.aiplan) !== AP.ovKey(doc.aiplan)) throw new HttpErr(403, 'AI 초과 처리는 정운영자만 바꿀 수 있습니다.', 'aiplan_role');
         doc = AP.keepPlan(doc, cur, today()); const s = JSON.stringify(crypt.seal(doc, a.tid));
         if (rev === 0) {
@@ -770,7 +762,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
           const o = req.headers.origin; if (o && new URL(o).host !== req.headers.host) throw new HttpErr(403, '허용되지 않은 출처입니다.', 'origin');
         }
         const out = await fn(req, res);
-        if (res.headersSent) return; /* v32 스트리밍 경로(GET /api/lms/v/hls)는 직접 응답한다 */
+        if (res.headersSent) return;
+        if (res.ddOthers > 0 && out && typeof out === 'object' && out.user && !Array.isArray(out)) out.others = res.ddOthers; /* 가디언 4차 #4: 로그인 응답에 다른 활성 세션 수 */ /* v32 스트리밍 경로(GET /api/lms/v/hls)는 직접 응답한다 */
         return send(res, 200, out);
       }
       if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'method');

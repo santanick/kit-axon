@@ -29,7 +29,7 @@ public class DdWeb {
         return null;
     }
     public void setSid(HttpServletResponse res, String token) {
-        res.setHeader("set-cookie", p.cookieName + "=" + token + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=" + (SESSION_DAYS * 86400) + (p.secure ? "; Secure" : ""));
+        res.setHeader("set-cookie", p.cookieName + "=" + token + "; Path=/; HttpOnly; SameSite=Strict" + (p.secure ? "; Secure" : "")); /* 가디언 4차: 운영자는 세션 쿠키(Max-Age 없음) */
     }
     public void clearSid(HttpServletResponse res) {
         res.setHeader("set-cookie", p.cookieName + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" + (p.secure ? "; Secure" : ""));

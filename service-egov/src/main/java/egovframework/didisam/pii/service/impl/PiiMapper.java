@@ -64,6 +64,8 @@ public interface PiiMapper {
     List<String> purgeGuardians(@Param("tid") String tid);
     /* plain */
     void insertLearnerSession(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
+    int countLockFails(@Param("tid") String tid, @Param("actor") String actor);
+    void insertLockLog(@Param("tid") String tid, @Param("actor") String actor, @Param("action") String action);
     void insertLearnerSessionShort(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
     int deleteLearnerSessionsOf(@Param("tid") String tid, @Param("sid") String sid);
     List<String> selectTenantIds();

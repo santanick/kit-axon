@@ -292,7 +292,7 @@ async function stage2(base, tag, other) {
   await putDoc(base, ck, d => { d.settings.tutor = { guestDaily: 0 }; });
   R.tutorGuestOff = await call(base, 'POST', `/api/pub/${tid}/tutor`, { body: { q: '질문' } });
   R.pLogout = await call(base, 'POST', `/api/pub/${tid}/logout`, { cookie: lck }); R.pMeAfter = await call(base, 'GET', `/api/pub/${tid}/me`, { cookie: lck });
-  R.audit = await call(base, 'GET', '/api/audit', { cookie: ck }); D.audit = (R.audit.j.rows || []).map(r => [r.actor === em ? 'owner' : String(r.actor).replace(/[0-9a-f-]{36}/, 'L'), r.action, canon(omit(r.detail, 'id', 'key'))]);
+  R.audit = await call(base, 'GET', '/api/audit', { cookie: ck }); D.audit = (R.audit.j.rows || []).map(r => [r.actor === em ? 'owner' : String(r.actor).replace(/[0-9a-f-]{36}/, 'L').replace(/^(lk:[eu]:).*/, '$1H') /* 가디언 4차: 잠금 식별자 해시는 기관마다 다름 */, r.action, canon(omit(r.detail, 'id', 'key'))]);
   return { R, D, X };
 }
 

@@ -121,6 +121,13 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         mapper.deleteOtp(tid, b, purpose);
     }
 
+    private static boolean lockable(Exception e) {
+        if (e instanceof egovframework.didisam.cmm.DdException d) return d.getStatus() == 401 || "otp_bad".equals(d.getCode());
+        if (e instanceof org.egovframe.rte.fdl.cmmn.exception.EgovBizException b) { String[] k = String.valueOf(b.getMessageKey()).split("\\."); return k.length >= 3 && ("401".equals(k[1]) || "otp_bad".equals(k[2])); }
+        return false;
+    }
+    private void lockLog(String tid, String actor, String action) { try { ptx.run(tid, r -> r.L(() -> { mapper.insertLockLog(tid, actor, action); return null; })); } catch (Exception ignore) { } }
+
     @Override public void newLearnerSession(HttpServletResponse res, String tid, String sid) throws Exception {
         org.springframework.web.context.request.RequestAttributes ra = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
         boolean keep = !(ra instanceof org.springframework.web.context.request.ServletRequestAttributes sa0 && Boolean.FALSE.equals(sa0.getRequest().getAttribute("ddKeep")));
@@ -260,7 +267,13 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
 
     @Override public String login(HttpServletRequest req, HttpServletResponse res, String tid, JsonNode b) throws Exception {
         limit("ll:" + web.ip(req), "rate.ll.max", "rate.ll.winMs"); String via = sOr(get(b, "via"));
-        String lid = ptx.run(tid, r -> {
+        /* 가디언 4차 #9: 이메일 · 학번(간편가입) 로그인도 DB 기준 15분 5회 잠금(Node pii.js와 같은 actor lk:e:… · lk:u:…, 계정 유무 무관) */
+        String lk = null;
+        if ("email".equals(via)) { String e0 = trim(sOr(get(b, "email"))).toLowerCase(Locale.ROOT); if (MAIL_RE.matcher(e0).matches()) lk = "lk:e:" + bidx(tid, "email", e0).substring(0, 32); }
+        else if ("univ".equals(via)) { String u0 = trim(sOr(get(b, "student_no"))); if (STU_RE.matcher(u0).matches()) lk = "lk:u:" + bidx(tid, "univ", u0).substring(0, 32); }
+        final String LK = lk;
+        if (LK != null) { int n = 0; try { Integer c = ptx.run(tid, r -> r.L(() -> mapper.countLockFails(tid, LK))); n = c == null ? 0 : c; } catch (Exception ignore) { } if (n >= 5) throw processException("dd.429.locked.learner"); }
+        String lid; try { lid = ptx.run(tid, r -> {
             String id;
             if ("email".equals(via)) {
                 String email = trim(sOr(get(b, "email"))).toLowerCase(Locale.ROOT); if (!MAIL_RE.matcher(email).matches()) throw processException("dd.400.email");
@@ -287,7 +300,8 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             if ("guardian_pending".equals(st)) throw processException("dd.403.guardian_pending");
             r.L(() -> { approval(tid, fid); return null; });
             return id;
-        });
+        }); } catch (Exception e) { if (LK != null && lockable(e)) lockLog(tid, LK, "llogin.fail"); throw e; }
+        if (LK != null) lockLog(tid, LK, "llogin");
         newLearnerSession(res, tid, lid);
         return lid;
     }

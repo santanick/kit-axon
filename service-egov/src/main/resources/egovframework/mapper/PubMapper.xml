@@ -52,7 +52,7 @@
   <insert id="insertLearnerSession">insert into learner_sessions (id, tenant_id, sid, expires_at) values (#{id}, #{tid}, #{sid}, now() + interval '30 days')</insert>
   <select id="selectLearnerSession" resultType="java.util.LinkedHashMap">select tenant_id, sid, extract(epoch from now() - last_at)::float8 idle from learner_sessions where id = #{id} and expires_at &gt; now()</select>
   <select id="selectIdleH" resultType="java.lang.String">select doc->'org'->'cpl'->>'idleH' from tenant_state where tenant_id = #{tid} and (doc->'org'->'cpl'->>'on')::boolean</select>
-  <update id="touchLearnerSession">update learner_sessions set last_at = now() where id = #{id}</update>
+  <update id="touchLearnerSession">update learner_sessions set last_at = now(), expires_at = case when keep then least(created_at + interval '90 days', now() + interval '30 days') else expires_at end where id = #{id}</update><!-- 가디언 4차 #8: 유지 켬은 마지막 사용 + 30일(최대 90일) -->
   <delete id="deleteLearnerSession">delete from learner_sessions where id = #{id}</delete>
   <!-- v33 학습자 → 운영자 요청함 · 대학 첫 로그인 동의 -->
   <select id="selectEvents" resultType="java.util.LinkedHashMap">

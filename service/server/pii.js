@@ -183,9 +183,16 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
     });
   }
 
+  /* 가디언 4차 #9: 학습자 이메일 · 학번(간편가입) 로그인도 DB 기준 15분 5회 잠금(학번+접근코드 경로와 같은 규칙 · 문구, Java 동일).
+     계정 유무와 관계없이 식별자 해시(actor lk:e:… · lk:u:…)로 센다 → 계정 열거 방지. 비밀값 · 이메일 원문은 남기지 않는다 */
+  const LK_MSG = '로그인에 5번 실패해 15분 동안 잠겼어요. 잠시 후 다시 시도하거나 선생님께 접근코드를 확인해 주세요.';
+  const lockKey = (tid, via, b) => { if (via === 'email') { const e = String(b.email || '').trim().toLowerCase(); return MAIL_RE.test(e) ? 'lk:e:' + bidx(tid, 'email', e).slice(0, 32) : null; } if (via === 'univ') { const u = String(b.student_no || '').trim(); return STU_RE.test(u) ? 'lk:u:' + bidx(tid, 'univ', u).slice(0, 32) : null; } return null; };
+  const lockLog = (tid, actor, action) => tx(tid, ({ L }) => L('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, null)', [tid, actor, action])).catch(() => {});
   async function login(req, res, tid, b) {
     limit('ll:' + ip(req), 40, 600e3); const via = String(b.via || '');
-    const lid = await tx(tid, async ({ L, P }) => {
+    const lk = lockKey(tid, via, b);
+    if (lk) { const n = await tx(tid, ({ L }) => L(`select count(*)::int n from audit_log where tenant_id = $1 and actor = $2 and action = 'llogin.fail' and at > greatest(now() - interval '15 minutes', coalesce((select max(at) from audit_log where tenant_id = $1 and actor = $2 and action = 'llogin'), 'epoch'::timestamptz))`, [tid, lk])).then(r => r.rows[0].n).catch(() => 0); if (n >= 5) throw new HttpErr(429, LK_MSG, 'locked'); }
+    let lid; try { lid = await tx(tid, async ({ L, P }) => {
       let row = null;
       if (via === 'email') { const email = String(b.email || '').trim().toLowerCase(); if (!MAIL_RE.test(email)) throw new HttpErr(400, '이메일 형식을 확인하세요.', 'email'); const e = bidx(tid, 'email', email); limit(`lle:${tid}:${e}`, 8, 600e3);
         row = (await P('select learner_id, pw_hash from pii.identity where tid = $1 and email_bidx = $2', [tid, e])).rows[0];
@@ -200,7 +207,8 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       if (a.status === 'guardian_pending') throw new HttpErr(403, '보호자 동의를 기다리고 있습니다. 보호자에게 보낸 동의 링크를 확인해 주세요.', 'guardian_pending');
       await approval(L, tid, row.learner_id);
       return row.learner_id;
-    });
+    }); } catch (e) { if (lk && e && (e.status === 401 || e.code === 'otp_bad')) await lockLog(tid, lk, 'llogin.fail'); throw e; }
+    if (lk) await lockLog(tid, lk, 'llogin');
     await newLearnerSession(res, tid, lid);
     return lid;
   }

@@ -25,6 +25,7 @@ public class DdApiFilter extends OncePerRequestFilter {
     public static final Set<String> ROUTES = Set.of(
         "GET /api/health", "GET /api/config", "POST /api/signup", "POST /api/login", "POST /api/logout",
         "GET /api/me", "GET /api/me/devices", "GET /api/state", "PUT /api/state",
+        "GET /api/session", "POST /api/session/touch", "POST /api/session/work", "GET /api/me/sessions", "POST /api/me/sessions/logout-others", "GET /api/org/security", "POST /api/org/security", /* 가디언 4차 세션 정책 */
         "GET /api/keys", "POST /api/keys", "POST /api/keys/revoke",
         "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage", "GET /api/lev", "POST /api/ai/topup", "POST /api/ai/topup/confirm", "GET /api/santa/orgs",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log", "POST /api/learners/sync",
