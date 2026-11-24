@@ -25,12 +25,12 @@
   /* 화면은 동기 렌더 — 캐시에 없으면 불러온 뒤 다시 그린다 */
   LMP.load = (key, b, op, q) => {
     const c = LMP.cache[key]; if (c && c.ok) return c.v;
-    if (!c || !c.busy) { LMP.cache[key] = { busy: true }; LMP.call(b, op, q).then(v => { LMP.cache[key] = { ok: true, v }; render(); }).catch(e => { LMP.cache[key] = { ok: true, v: null, err: e.message }; render(); }); }
+    if (!c || !c.busy) { LMP.cache[key] = { busy: true }; LMP.call(b, op, q).then(v => { LMP.cache[key] = { ok: true, v }; render(); }).catch(e => { LMP.cache[key] = { ok: true, v: null, err: errMsg(e) }; render(); }); }
     return null;
   };
   LMP.err = key => LMP.cache[key] && LMP.cache[key].err;
   LMP.drop = pre => Object.keys(LMP.cache).forEach(k => { if (k.startsWith(pre)) delete LMP.cache[k]; });
-  LMP.run = async (b, op, q, okMsg, drop) => { try { const r = await LMP.call(b, op, q); if (drop) LMP.drop(drop); if (okMsg) toast(typeof okMsg === 'function' ? okMsg(r) : okMsg, 'ok'); render(); return r; } catch (e) { toast(e.message, 'warn'); return null; } };
+  LMP.run = async (b, op, q, okMsg, drop) => { try { const r = await LMP.call(b, op, q); if (drop) LMP.drop(drop); if (okMsg) toast(typeof okMsg === 'function' ? okMsg(r) : okMsg, 'ok'); render(); return r; } catch (e) { toast(errMsg(e), 'warn'); return null; } };
   LMP.ts = s => s ? String(s).replace('T', ' ').slice(0, 16) : '—';
   LMP.mode = () => LMP.live() ? tag('운영 모드 · 서버 저장') : tag('데모 동작 · 이 브라우저에 저장', 'y');
   LMP.uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
@@ -220,9 +220,9 @@
   ACT['lmsl-send'] = async el => { const t = $('#lmslMsg'); const f = $('#lmslFile'); const att = [];
     /* 첨부 바이트는 파일 저장소(lms_file)에 먼저 올리고 file_id만 보낸다(파일당 2MB · 실행 파일 차단) */
     for (const x of (f && f.files ? [...f.files].slice(0, 10) : [])) { const mime = x.type || 'application/octet-stream'; const bad = LMP.fileOk ? LMP.fileOk(x.name, mime) : null; if (bad) return toast(`${x.name}: ${bad}`, 'warn'); if (x.size > 2 * 1048576) return toast(`${x.name}: 대화 첨부는 2MB까지입니다(큰 파일은 공통 설정 › 업로드).`, 'warn');
-      try { const r = await LMP.putBlob(x, x.name, mime); att.push({ file_id: r.file_id, name: x.name, size: x.size, mime }); } catch (e) { return toast(e.message, 'warn'); } }
+      try { const r = await LMP.putBlob(x, x.name, mime); att.push({ file_id: r.file_id, name: x.name, size: x.size, mime }); } catch (e) { return toast(errMsg(e), 'warn'); } }
     const r = await LMP.run('l', 'dm.send', { room_id: el.dataset.id, body: t ? t.value : '', attachments: att }, null, 'l:'); if (r && t) t.value = ''; };
-  ACT['lmsl-att'] = async el => { if (!el.dataset.id) return; try { if (!LMP.live()) return LMP.saveBlob(LMP.BLOBS[el.dataset.id] || new Blob([]), el.dataset.name); const r = await LMP.call('l', 'dm.file', { room_id: el.dataset.room, file_id: el.dataset.id }, true); const bin = atob(r.b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); LMP.saveBlob(new Blob([u], { type: r.mime }), r.name); } catch (e) { toast(e.message, 'warn'); } };
+  ACT['lmsl-att'] = async el => { if (!el.dataset.id) return; try { if (!LMP.live()) return LMP.saveBlob(LMP.BLOBS[el.dataset.id] || new Blob([]), el.dataset.name); const r = await LMP.call('l', 'dm.file', { room_id: el.dataset.room, file_id: el.dataset.id }, true); const bin = atob(r.b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); LMP.saveBlob(new Blob([u], { type: r.mime }), r.name); } catch (e) { toast(errMsg(e), 'warn'); } };
   ACT['lmsl-bc'] = () => modal('일괄 발송', `<label class="fl">제목<input name="title" maxlength="60" value="안내"></label><label class="fl">받는 사람 학번(쉼표, 비우면 데모 분반 전체)<input name="m"></label><label class="fl">내용<textarea name="body" rows="4" maxlength="2000"></textarea></label><label class="ul-ck"><input type="checkbox" name="push" checked> 푸시 알림도 보내기(방해금지 시간이면 보류 · 연동 후 발송)</label>`,
     [{ id: 'c', label: '취소' }, { id: 'ok', label: '보내기', kind: 'pri', run: async w => !!(await LMP.run('l', 'dm.broadcast', { title: fv(w, 'title'), body: fv(w, 'body'), push: fv(w, 'push'), members: fv(w, 'm').split(/[,\s]+/).filter(Boolean).map(x => 'p:' + x) }, r => `${r.to}명에게 보냈습니다 · 푸시 대기열 ${r.push_queued}건 · 보류 ${r.push_held}건`, 'l:')) }]);
   ACT['lmsl-tr'] = async () => { const to = (typeof I18N === 'function' && I18N().ui !== 'ko') ? I18N().ui : 'en'; let n = 0;

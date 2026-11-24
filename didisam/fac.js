@@ -135,7 +135,7 @@
 
   /* ── 운영 서버(/api/fac/*) ── */
   const LV = { b: null, rt: null, ps: null, ov: null, st: null, stKey: '', key: '', err: '', busy: false };
-  const liveErr = e => `운영 서버의 시설 예약 기능에 연결하지 못했습니다${e && e.status ? `(${e.status}${e.code ? ' ' + e.code : ''})` : ''}. ${e && e.message ? e.message + ' ' : ''}잠시 뒤 다시 시도하고, 계속되면 관리자에게 알려 주십시오.`;
+  const liveErr = e => `운영 서버의 시설 예약 기능에 연결하지 못했습니다${e && e.status ? `(${e.status})` : ''}. ${e && e.message && ERRMSG.safe(e.message) ? e.message + ' ' : ''}잠시 뒤 다시 시도하고, 계속되면 관리자에게 알려 주십시오.`;
   const mapR = x => ({ id: x.id, fac: x.fac, res: x.res, product: x.productId || '', sid: x.sidTail || '', who: '학번 끝 ' + (x.sidTail || '----'), aud: x.aud, from: x.fromDay, due: x.dueDay, returned: '', deposit: +x.deposit || 0, status: x.status, amount: +x.amount || 0, payStatus: x.payStatus || 'none', live: 1 });
   const mapB = x => { const D = F(); const f = (x.fac && fac(x.fac)) || D.facilities.find(y => y.name === x.facName) || { id: x.fac || x.facName, resources: [] }; const r = (x.res && resOf(f, x.res)) || f.resources.find(y => y.name === x.resName) || { id: x.res || x.resName }; return { id: x.id, fac: f.id, res: r.id, day: x.day, sm: MIN(x.from), em: MIN(x.to), sid: x.sidTail || '', who: '학번 끝 ' + (x.sidTail || '----'), aud: x.aud, status: x.status, amount: +x.amount || 0, payStatus: x.payStatus || 'none', pay: x.payMode || '', n: x.n || 1, label: x.label || '', live: 1 }; };
   function livePull(day) { const key = day; if (LV.busy || (LV.key === key && LV.b && (!LV.err || Date.now() - LV.errAt < 5000))) return; LV.busy = true; LV.key = key;
@@ -175,7 +175,7 @@
     const td = todo(); const n = (v, l, t, tone) => `<button class="fc-todo ${v ? tone : ''}" data-act="tab" data-key="fac" data-v="${t}">${v ? `<b>${v}</b>${esc(l)}` : `${esc(l)} 없음` /* v43.7 Q3: 「0 노쇼」 → 「노쇼 없음」 */}</button>`;
     const top = `<div class="fc-todos" aria-label="오늘 처리할 일"><span class="fc-tdl">오늘 처리할 일</span>${n(td.appr, '승인 대기', 'appr', 'warn')}${n(td.due, '반납 예정', 'ns', '')}${n(td.over, '연체', 'ns', 'bad')}${n(td.ns, '노쇼', 'ns', 'bad')}</div>`;
     const warn = LIVEON() && LV.err ? `<div class="fc-err" role="alert">${esc(LV.err)}</div>` : '';
-    let body = ''; try { body = ({ list: vList, tl: vTl, appr: vAppr, chk: vChk, pay: vPay, ref: vRef, ns: vNs, stat: vStat })[tab](); } catch (e) { console.error('fac view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(e.message)}</div>`; }
+    let body = ''; try { body = ({ list: vList, tl: vTl, appr: vAppr, chk: vChk, pay: vPay, ref: vRef, ns: vNs, stat: vStat })[tab](); } catch (e) { console.error('fac view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(errMsg(e))}</div>`; }
     let today43 = ''; try { if (tab === 'list' && !teacher()) today43 = todayCard(); } catch (e) { console.error('fac today', e); }
     return `<div class="fc">${today43}${top}${warn}${tabs('fac', T, tab)}<div class="fc-body" data-tab="${tab}">${body}</div></div>`; };
 

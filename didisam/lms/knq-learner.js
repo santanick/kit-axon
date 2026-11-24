@@ -47,7 +47,7 @@
       if (tab === 'n') { if (live()) { const [s, m, d] = await Promise.all([call('GET', '/api/lms/n/search' + qs({ q: ST.nq, tag: ST.ntag || '', level: ST.nlv || '', free: ST.nfree ? 1 : '' })), call('GET', '/api/lms/n/mypage'), call('GET', '/api/lms/n/diags')]); ST.n = s.items; ST.ntags = s.tags; ST.nmy = m; ST.diags = d.items; }
         else { const d = demoN(); ST.n = d.items.filter(c => (!ST.nq || c.title.includes(ST.nq) || c.tags.some(t => t.includes(ST.nq))) && (!ST.ntag || c.tags.includes(ST.ntag)) && (!ST.nlv || c.level === ST.nlv) && (!ST.nfree || !c.price)); ST.ntags = [...new Set(d.items.flatMap(c => c.tags))].sort(); ST.nmy = d.my; ST.diags = d.diags; } }
       if (tab === 'k') { ST.k = live() ? (await call('GET', '/api/lms/k/pending')).items : demoK(); }
-    } catch (e) { ST.err = e.message; }
+    } catch (e) { ST.err = errMsg(e); }
     rr();
   }
   const ensure = tab => { const key = { q: 'q', n: 'n', k: 'k' }[tab]; if (ST[key] === null && !ST.busy) { ST.busy = true; ST[key] = []; load(tab).finally(() => { ST.busy = false; }); } };
@@ -152,7 +152,7 @@
     if (covCache[fid]) return set(covCache[fid]); call('GET', '/api/lms/q/file' + qs({ program_id: pid, file_id: fid })).then(f => { covCache[fid] = URL.createObjectURL(new Blob([Uint8Array.from(atob(f.b64), c => c.charCodeAt(0))], { type: f.mime })); set(covCache[fid]); }).catch(() => { }); }); }).observe(document.body, { childList: true, subtree: true });
 
   /* ── 동작 ── */
-  const W = async (fn, ok) => { try { const r = await fn(); if (ok) toast(typeof ok === 'function' ? ok(r) : ok); return r; } catch (e) { toast(e.message, 'bad'); return null; } };
+  const W = async (fn, ok) => { try { const r = await fn(); if (ok) toast(typeof ok === 'function' ? ok(r) : ok); return r; } catch (e) { toast(errMsg(e), 'bad'); return null; } };
   const A = {
     'knq-qfind': () => { ST.qq = ($('#knqQq') || {}).value || ''; ST.q = null; rr(); },
     'knq-qwish': async el => { if (!live()) return demoMsg(); if (await W(() => call('POST', '/api/lms/q/wish', { program_id: el.dataset.id }))) { ST.q = null; rr(); } },

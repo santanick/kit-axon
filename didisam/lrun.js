@@ -52,7 +52,7 @@ LR.api = {
     if (!LR.site && !Q.get('demo')) { try { const c = await fetch('/api/config', { credentials: 'same-origin' }); const j = c.ok ? await c.json() : null; if (j && j.live) { LR.mode = 'live'; try { Object.keys(localStorage).filter(k => /^didisam\.(?:claude$|app\.claude\.|room\..*\.claude$)/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) { } } /* v25 운영에서는 브라우저에 AI 키를 남기지 않는다 */ } catch (e) { } }
     if (LR.mode === 'live') {
       if (!LR.tid) { LR.err = '학습자 사이트 주소에 기관 정보(t=)가 없습니다.'; return; }
-      try { LR.site = (await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/site`)).site; } catch (e) { LR.err = e.status === 404 ? '아직 게시되지 않은 학습자 사이트입니다.' : e.message; return; }
+      try { LR.site = (await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/site`)).site; } catch (e) { LR.err = e.status === 404 ? '아직 게시되지 않은 학습자 사이트입니다.' : errMsg(e); return; }
       try { const me = await api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/me`); LR.me = me.me; LR.lp = me.lp || LR.lp; LR.mine = me.mine || LR.mine; } catch (e) { }
     } else if (LR.mode === 'demo') {
       const st = demoRoom(); LR.site = st && st.lsite && st.lsite.pub; LR._codes = (st && st.codes) || [];
@@ -79,7 +79,7 @@ LR.api = {
     if (!LR.me) return; LR.lp.at = nowISO(); clearTimeout(LR.timer);
     const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10); LR.lp.days = LR.lp.days || {}; LR.lp.days[day] = Math.min(999, (LR.lp.days[day] || 0) + 1); const ks = Object.keys(LR.lp.days).sort(); if (ks.length > 370) ks.slice(0, ks.length - 370).forEach(k => delete LR.lp.days[k]);
     LR.timer = setTimeout(async () => {
-      if (LR.mode === 'live') { try { await api('PUT', `/api/pub/${encodeURIComponent(LR.tid)}/progress`, { lp: LR.lp }); } catch (e) { toast('저장하지 못했습니다 — ' + e.message, 'bad'); } return; }
+      if (LR.mode === 'live') { try { await api('PUT', `/api/pub/${encodeURIComponent(LR.tid)}/progress`, { lp: LR.lp }); } catch (e) { toast('저장하지 못했습니다 — ' + errMsg(e), 'bad'); } return; }
       if (LR.mode === 'preview') return;
       try { const k = demoLPKey(); const all = JSON.parse(localStorage.getItem(k) || '{}'); all[LR.me.sid] = LR.lp; localStorage.setItem(k, JSON.stringify(all)); } catch (e) { toast('브라우저 저장 공간에 저장하지 못했습니다.', 'bad'); }
     }, 500);

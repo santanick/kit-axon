@@ -27,8 +27,8 @@
     do { code = `C${yy}${String(n++).padStart(3, '0')}`; } while (A.courses.some(c => c.course_code === code));
     const live = typeof LIVE !== 'undefined' && LIVE && LIVE.user; const sec = { term_id: term, course_code: code, section_no: '01', mode: 'blended', capacity: 40 };
     const ex = A.courses.find(c => c.name === name);
-    if (live && typeof window.lmsaX === 'function') { window.lmsaX('course', { course_code: ex ? ex.course_code : code, name, credits: 3, category: 'general' }).then(() => window.lmsaX('section', { ...sec, course_code: ex ? ex.course_code : code })).catch(e => toast(e.message, 'warn')); }
-    else { try { if (!ex) window.lmsaDemo('course', { course_code: code, name, credits: 3, category: 'general' }); } catch (e) { if (typeof toast === 'function') toast(e.message, 'warn'); } try { if (term) window.lmsaDemo('section', { ...sec, course_code: ex ? ex.course_code : code }); } catch (e) { /* 같은 분반이 이미 있으면 건너뜀 */ } }
+    if (live && typeof window.lmsaX === 'function') { window.lmsaX('course', { course_code: ex ? ex.course_code : code, name, credits: 3, category: 'general' }).then(() => window.lmsaX('section', { ...sec, course_code: ex ? ex.course_code : code })).catch(e => toast(errMsg(e), 'warn')); }
+    else { try { if (!ex) window.lmsaDemo('course', { course_code: code, name, credits: 3, category: 'general' }); } catch (e) { if (typeof toast === 'function') toast(errMsg(e), 'warn'); } try { if (term) window.lmsaDemo('section', { ...sec, course_code: ex ? ex.course_code : code }); } catch (e) { /* 같은 분반이 이미 있으면 건너뜀 */ } }
     UI.lmsaMade = Date.now(); if (typeof logAudit === 'function') logAudit(`학사 교과목 ${ex ? ex.course_code : code} ${name} · 01분반 개설(AI SAM)`);
     return { id: 'lmsa:' + (ex ? ex.course_code : code), name, weekPlan: Array.from({ length: 15 }, (_, i) => ({ w: i + 1, title: `${i + 1}주차` })), curriculum: [], learners: [], status: '준비중', lmsa: true }; }; } });
   /* 만든 뒤 「과정」 화면으로 가려는 이동은 학기 · 강좌로 */

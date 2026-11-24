@@ -33,7 +33,7 @@ document.addEventListener('click', e => { const b = e.target.closest && e.target
   }
   function data() {
     if (LR.mode !== 'live') return demo();
-    if (!ST.live && !ST.busy && !ST.err) { ST.busy = true; api('GET', '/api/lms/a/my').then(r => { ST.live = r; }).catch(e => { ST.err = e.message; }).finally(() => { ST.busy = false; if (typeof lrender === 'function') lrender(); }); }
+    if (!ST.live && !ST.busy && !ST.err) { ST.busy = true; api('GET', '/api/lms/a/my').then(r => { ST.live = r; }).catch(e => { ST.err = errMsg(e); }).finally(() => { ST.busy = false; if (typeof lrender === 'function') lrender(); }); }
     return ST.live;
   }
   function card() {
@@ -50,7 +50,7 @@ document.addEventListener('click', e => { const b = e.target.closest && e.target
   document.addEventListener('click', async e => {
     const el = e.target.closest('[data-lact="lmsa-req"],[data-lact="lmsa-cancel"]'); if (!el) return; e.preventDefault(); el.disabled = true;
     try { await api('POST', '/api/lms/a/my', { act: el.dataset.lact === 'lmsa-req' ? 'request' : 'cancel', kind: el.dataset.k || 'audit', section_id: el.dataset.s }); toast(el.dataset.lact === 'lmsa-req' ? '청강을 신청했습니다. 교수 승인 후 수강 목록에 들어갑니다.' : '신청을 취소했습니다.'); ST.live = null; if (typeof lrender === 'function') lrender(); }
-    catch (x) { toast(x.message, 'bad'); el.disabled = false; }
+    catch (x) { toast(errMsg(x), 'bad'); el.disabled = false; }
   });
   try { const s = document.createElement('style'); s.textContent = '#lmsaMy .lmsa-ul{list-style:none;padding:0;margin:6px 0;display:grid;gap:8px}#lmsaMy .lmsa-ul small{color:var(--mut,#666)}#lmsaMy .lmsa-sch{display:block}'; document.head.appendChild(s); } catch (e) { }
 })();

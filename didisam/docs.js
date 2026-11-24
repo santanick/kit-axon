@@ -645,7 +645,7 @@ document.addEventListener('change', async e => { if (e.target.id !== 'docUp') re
   try { const raw = (await readDocFile(f)).replace(/\r/g, '').slice(0, 60000); if (!raw.trim()) throw new Error('글자를 찾지 못했습니다(스캔 이미지 PDF는 읽을 수 없습니다).');
     const st = standardize(raw); const d = { id: uid('dc'), name: f.name.replace(/\.[^.]+$/, ''), cat: DCAT.find(k => f.name.includes(k.split(' ')[0])) || '운영', body: st.body, src: 'upload', file: f.name, vis: '내부', at: nowStr(), vers: [], sent: [] };
     DOCS().unshift(d); logAudit(`문서 업로드 — ${f.name}`); save(); UI.docT = 'mine'; render(); toast(`${f.name}을 읽었습니다(${raw.length.toLocaleString()}자). 기관명 · 과정명 · 날짜 ${st.n}곳을 {변수}로 바꿔 표준 문서로 만들었습니다.`, 'ok'); openDoc(d.id);
-  } catch (x) { toast(x.message === 'zip' || /^no /.test(x.message) ? 'Word 파일을 읽지 못했습니다. .docx 형식인지 확인하세요.' : x.message, 'warn'); } e.target.value = ''; });
+  } catch (x) { toast(x.message === 'zip' || /^no /.test(x.message) ? 'Word 파일을 읽지 못했습니다. .docx 형식인지 확인하세요.' : errMsg(x), 'warn'); } e.target.value = ''; });
 
 /* ── 편집기: 왼쪽 원문 · 오른쪽 미리보기 · AI 수정 ── */
 let DE = null;

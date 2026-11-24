@@ -365,7 +365,7 @@
   }
   async function upItem() {
     const f = X.file; const fn = upFn(); let meta = {};
-    if (fn) { X.busy = true; draw(); try { meta = (await fn(f.raw, { kind: f.k, course: X.ctx.course && X.ctx.course.id, onProgress: p => { const b = $1('#ctUpP'); if (b) b.textContent = Math.round(p * 100) + '%'; } })) || {}; } catch (e) { X.busy = false; X.upErr = `올리지 못했습니다: ${e.message || e}`; draw(); return null; } X.busy = false; }
+    if (fn) { X.busy = true; draw(); try { meta = (await fn(f.raw, { kind: f.k, course: X.ctx.course && X.ctx.course.id, onProgress: p => { const b = $1('#ctUpP'); if (b) b.textContent = Math.round(p * 100) + '%'; } })) || {}; } catch (e) { X.busy = false; X.upErr = `올리지 못했습니다: ${errMsg(e)}`; draw(); return null; } X.busy = false; }
     return upMake(f, meta, X.upTitle);
   }
   /* 올린 파일(f: {name,size,mime,k,dur,bid}) + 저장 결과(meta) → 과정 항목. 영상 · 자료 S.lib에도 기록(하나 올리기 · 여러 개 올리기 공용) */
@@ -640,7 +640,7 @@
   async function bxGo() {
     if (!BX || BX.busy || !F) return; const d = F.d; const U = unit(); const TG = bxTargets(d, BX.k === 'v' ? 'quiz' : BX.k); const L = itemsOf(d); const ids = [];
     if (BX.k === 'v') { const P = bxPlan(d); const jobs = []; P.rows.forEach(r => { if (r.v) jobs.push([r.s, r.v]); if (r.d) jobs.push([r.s, r.d]); }); if (!jobs.length) return; BX.busy = true; BX.tot = jobs.length; BX.at = 0; bxDraw(); const fn = upFn(); let fail = 0;
-      for (const [s, f] of jobs) { BX.at++; bxDraw(); let meta = {}; if (fn) { try { meta = (await fn(f.raw, { kind: f.k, onProgress: () => { } })) || {}; } catch (e) { fail++; if (e && e.message) BX.lastErr = `${f.name}: ${String(e.message).split(/\.\s/)[0].replace(/\.$/, '')}`; continue; } }
+      for (const [s, f] of jobs) { BX.at++; bxDraw(); let meta = {}; if (fn) { try { meta = (await fn(f.raw, { kind: f.k, onProgress: () => { } })) || {}; } catch (e) { fail++; if (e && e.message) BX.lastErr = `${f.name}: ${String(errMsg(e)).split(/\.\s/)[0].replace(/\.$/, '')}`; continue; } }
         const base = String(f.name).replace(/\.[^.]+$/, '').slice(0, 60); const it = upMake(f, meta, isDocF(f) ? (genericT(s.title) ? base : `${s.title} 자료`) : (genericT(s.title) ? base : s.title)); it.id = nid('it'); it.week = s.w; settle(it, null); L.push(it); ids.push(it.id); }
       BX.busy = false; if (fail) BX.failMsg = `${fail}개는 올리지 못했습니다${BX.lastErr ? `(${BX.lastErr})` : ''}. 그 ${jo(U, '은')} 하나씩 다시 올려 주십시오.`; }
     else { BX.busy = true; BX.tot = TG.length; BX.at = 0; bxDraw();

@@ -462,7 +462,7 @@
     if (x.type === 'classes' || x.type === 'books') { if (x.type === 'books' && !mb.querySelector('[name=layout]')) mb.insertAdjacentHTML('beforeend', `<label class="fl">배치<select name="layout"><option value="grid">고정형(최대 4개)</option><option value="slide" ${x.data.layout === 'slide' ? 'selected' : ''}>슬라이드형(최대 12개)</option></select></label>`); }
     mb.insertAdjacentHTML('beforeend', designFS(x)); w.querySelector('.modal')?.classList.add('wide');
     const ok = w.querySelector('[data-mact="ok"]');
-    ok && ok.addEventListener('click', e => { try { designRead(w, x); } catch (er) { e.stopPropagation(); toast(er.message, 'warn'); } });
+    ok && ok.addEventListener('click', e => { try { designRead(w, x); } catch (er) { e.stopPropagation(); toast(errMsg(er), 'warn'); } });
   }; }
 
   /* ── 템플릿 바꾸기: 추가 메뉴 · GNB · 푸터 · 투명도 유지 ── */
@@ -561,7 +561,7 @@
     acts.push({ id: 'ok', label: '저장', kind: 'pri', run: w => {
       const l = fv(w, 'l'); if (!l) { toast('메뉴 이름을 입력하세요.', 'warn'); return false; }
       const kws = fv(w, 'sk').split(',').map(v => v.trim()).filter(Boolean); if (kws.length > 20) { toast('키워드는 20개 이내로 입력하세요.', 'warn'); return false; }
-      let link; try { link = linkRead(w, 'link'); } catch (er) { toast(er.message, 'warn'); return false; }
+      let link; try { link = linkRead(w, 'link'); } catch (er) { toast(errMsg(er), 'warn'); return false; }
       const key = sb ? `s-${m.id}-${sb.id}` : 'm-' + m.id; if (link === 'page:' + key) { toast('자기 자신으로는 이동 경로를 지정할 수 없습니다.', 'warn'); return false; }
       if (!isHome) { const acc = fv(w, 'acc'); const tg = fv(w, 'tgOn') ? $$('[data-pick]:checked', w).map(e => e.value) : []; if (acc === '지정 회원' && !tg.length) { toast('지정 회원을 1명(또는 1개 팀) 이상 선택하세요.', 'warn'); return false; } it.access = acc; it.targets = tg; it.hide = !!fv(w, 'hide') && tg.length > 0; it.himg = w.querySelector('[name=himg]')?.value || ''; }
       if (link !== undefined) it.link = link;
@@ -647,7 +647,7 @@
   function popModal() { const st = stNorm(); if (st.popups.length >= 4) { toast('팝업은 최대 4개까지 추가할 수 있습니다.', 'warn'); return; }
     modal('팝업 추가', `<label class="fl">제목<input name="t" maxlength="40"></label><label class="fl">내용<input name="body" maxlength="120"></label><div class="fl">이미지${upField('name="img"', '')}</div><label class="fl">이동 경로(URL 또는 ${esc(t('cls'))} 페이지)${linkSel('lk', '')}</label><div class="form2"><label>시작<input type="date" name="s" value="${today()}"></label><label>종료<input type="date" name="e" value="${addDays(today(), 14)}"></label></div><p class="mini">약관이 바뀌었을 때도 팝업 · 공지로 안내하세요.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '추가', kind: 'pri', run: w => {
       if (!fv(w, 't')) { toast('제목을 입력하세요.', 'warn'); return false; } if (fv(w, 'e') < fv(w, 's')) { toast('종료일이 시작일보다 빠릅니다.', 'warn'); return false; }
-      let lk; try { lk = linkRead(w, 'lk'); } catch (er) { toast(er.message, 'warn'); return false; }
+      let lk; try { lk = linkRead(w, 'lk'); } catch (er) { toast(errMsg(er), 'warn'); return false; }
       st.popups.push({ id: uid('pp'), t: fv(w, 't'), body: fv(w, 'body'), img: w.querySelector('[name=img]').value, link: lk || '', s: fv(w, 's'), e: fv(w, 'e'), on: true }); save(); render(); toast('팝업을 추가했습니다.', 'ok'); } }], true); }
   ACT['popup-new'] = popModal; ACT['s2-popnew'] = popModal;
 

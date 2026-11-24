@@ -24,7 +24,7 @@
   /* 화면 동작: 실패하면 토스트, 성공하면 다시 그린다 */
   LW4.run = async (pfx, method, name, args, okMsg) => {
     try { const r = await LW4.call(pfx, method, name, args); if (okMsg) toast(okMsg, 'ok'); return r; }
-    catch (e) { toast(e.message || '오류가 발생했습니다.', 'warn'); return null; }
+    catch (e) { toast(errMsg(e, '오류가 발생했습니다.'), 'warn'); return null; }
   };
   LW4.uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => (Math.random() * 16 | 0).toString(16)));
   LW4.now = () => new Date().toISOString();
@@ -153,7 +153,7 @@
     'POST survey/delete': (a, actor) => { LW4.need(actor, ['owner', 'sub']); const s = getS(a.survey_id); if (s.responses.length) LW4.err(409, '응답이 있는 설문은 지울 수 없습니다. 마감하세요.'); ens().surveys = ens().surveys.filter(x => x !== s); return { ok: true, survey_id: s.survey_id }; },
     'POST survey/copy': (a, actor) => D['GET survey']({ survey_id: copyS(a.survey_id, a.title, a.scope, a.scope_ref, a.kind, actor).survey_id }),
     'POST respond': a => { const s = getS(a.survey_id); const no = LW4.no(a.member_no); if (s.status !== 'open') LW4.err(409, '응답 기간이 아닌 설문입니다.'); if (!eligible(s, no)) LW4.err(403, '설문 대상이 아닙니다.'); store(s, no, a.answers || {}, 'web'); return { ok: true, survey_id: s.survey_id }; },
-    'POST import': (a, actor) => { LW4.need(actor, ['owner', 'sub']); const s = getS(a.survey_id); let ok = 0; const errors = []; (a.rows || []).forEach((r, i) => { try { store(s, LW4.no(r.member_no), r.answers || {}, 'import'); ok++; } catch (e) { errors.push({ row: i + 1, message: e.message }); } }); return { ok, failed: errors.length, errors }; },
+    'POST import': (a, actor) => { LW4.need(actor, ['owner', 'sub']); const s = getS(a.survey_id); let ok = 0; const errors = []; (a.rows || []).forEach((r, i) => { try { store(s, LW4.no(r.member_no), r.answers || {}, 'import'); ok++; } catch (e) { errors.push({ row: i + 1, message: errMsg(e) }); } }); return { ok, failed: errors.length, errors }; },
     'GET pending': a => { const no = LW4.no(a.member_no); return { items: ens().surveys.filter(s => s.status === 'open' && !s.is_template && !s.responses.find(r => r.member_hash === no) && eligible(s, no)).map(s => ({ survey_id: s.survey_id, title: s.title, kind: s.kind, scope: s.scope, scope_ref: s.scope_ref, closes_at: s.closes_at, gate_steps: s.gate_steps })) }; },
     'GET gate': a => { if (!GATES.includes(a.step)) LW4.err(400, '단계는 completion · certificate · next · grade · classroom 중 하나입니다.'); return gateCheck(LW4.no(a.member_no), a.step, a.scope || '', a.ref || ''); },
     'GET stats': (a, actor) => { const s = getS(a.survey_id); if (actor.role === 'teacher' && s.kind === 'course_eval' && !s.prof_public) LW4.err(403, '강의평가 결과가 교수자에게 공개되지 않았습니다.'); return stats(s, a.by || 'unit_code', a.lang || 'ko'); },
@@ -335,7 +335,7 @@
     const txt = await LW4.pickFile('.csv,text/csv'); if (!txt) return; const rows = LW4.parseCSV(txt); if (rows.length < 2) return toast('CSV에 응답 행이 없습니다. 첫 줄: 학번,1,2,3…(문항 번호)', 'warn');
     const H = rows[0].map(h => h.trim()); const iNo = H.findIndex(h => /학번/.test(h)); if (iNo < 0) return toast('첫 줄에 「학번」 열이 있어야 합니다.', 'warn');
     const data = rows.slice(1).map(r => ({ member_no: (r[iNo] || '').trim(), answers: Object.fromEntries(H.map((h, i) => [h.match(/^(\d+)/)?.[1], r[i]]).filter(([k, v]) => k && v !== undefined && v !== '')) }));
-    const r = await LW4.run('k', 'POST', 'import', { survey_id: el.dataset.id, rows: data }); if (r) { toast(`업로드 ${r.ok}건 반영 · ${r.failed}건 실패`, r.failed ? 'warn' : 'ok'); if (r.failed) modal('업로드 오류', table(['행', '사유'], r.errors.slice(0, 50).map(e => [String(e.row), esc(e.message)]))); refresh(); }
+    const r = await LW4.run('k', 'POST', 'import', { survey_id: el.dataset.id, rows: data }); if (r) { toast(`업로드 ${r.ok}건 반영 · ${r.failed}건 실패`, r.failed ? 'warn' : 'ok'); if (r.failed) modal('업로드 오류', table(['행', '사유'], r.errors.slice(0, 50).map(e => [String(e.row), esc(errMsg(e))]))); refresh(); }
   };
   ACT['lmsk-remind'] = async el => { const r = await LW4.run('k', 'POST', 'remind', { survey_id: el.dataset.id }); if (r) toast(`미응답 ${r.targets}명 독려를 발송 대기열에 넣었습니다(${r.note})`, 'ok'); };
   ACT['lmsk-eval'] = async () => { const r = await LW4.run('k', 'POST', 'course-eval', { section_id: $('#lmskSec').value, template_id: $('#lmskTpl').value || undefined, prof_public: $('#lmskPub').checked, gate_steps: [...document.querySelectorAll('.lmskG:checked')].map(x => x.value) }, '강의평가를 만들었습니다. 배포하면 학생이 참여합니다.'); if (r) refresh(); };

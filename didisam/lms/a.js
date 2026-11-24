@@ -366,7 +366,7 @@
       return api(get ? 'GET' : 'POST', '/api/lms/a/' + name + qs, get ? undefined : body); }
     const r = DEMO[name](body || {}); if (!get) { bump(); try { ens(); } catch (e) { } try { save(); } catch (e) { } } return r;
   }
-  async function reload() { if (!LIVEM()) { AC.ov = null; return; } AC.loading = true; try { AC.ov = await X('overview', null, true); AC.err = ''; } catch (e) { AC.err = e.message; } finally { AC.loading = false; } }
+  async function reload() { if (!LIVEM()) { AC.ov = null; return; } AC.loading = true; try { AC.ov = await X('overview', null, true); AC.err = ''; } catch (e) { AC.err = errMsg(e); } finally { AC.loading = false; } }
   const OV = () => { if (!LIVEM()) return demoOverview(); if (!AC.ov && !AC.loading && !AC.err) reload().then(() => { if (CUR.tab === 'lmsa') render(); }); return AC.ov; };
   /* 서버가 기관 문서를 고친 뒤(동기화 · 합반): 저장 대기분을 먼저 보내고, 처리 후 최신 문서를 다시 받는다 */
   async function docOp(name, body) {
@@ -378,7 +378,7 @@
   }
   async function act(name, body, okMsg, { doc = false, after } = {}) {
     try { const r = doc ? await docOp(name, body) : await X(name, body); if (typeof logAudit === 'function') logAudit('강좌 · 분반 — ' + name); await reload(); if (after) after(r); render(); if (okMsg) toast(typeof okMsg === 'function' ? okMsg(r) : okMsg, 'ok'); return r; }
-    catch (e) { toast(e.message, 'warn'); return null; }
+    catch (e) { toast(errMsg(e), 'warn'); return null; }
   }
 
   /* ═════════ 화면 ═════════ */
@@ -424,7 +424,7 @@
     }
     const top2 = top + bar;
     let b = '';
-    try { b = ({ term: vTerm, course: vCourse, section: vSection, enr: vEnr, upload: vUpload, req: vReq, org: vOrg })[tb](ov, term, secs); } catch (e) { console.error(e); b = `<div class="warn">${esc(e.message)}</div>`; }
+    try { b = ({ term: vTerm, course: vCourse, section: vSection, enr: vEnr, upload: vUpload, req: vReq, org: vOrg })[tb](ov, term, secs); } catch (e) { console.error(e); b = `<div class="warn">${esc(errMsg(e))}</div>`; }
     return `<div class="lmsa">${top2}${b}</div>`;
   };
   ACT['lmsa-term'] = el => { UI.lmsaTerm = el.value; render(); };
@@ -489,7 +489,7 @@
   ACT['lmsa-sync'] = el => { const ov = OV(); const s = (ov.sections || []).find(y => y.section_id === el.dataset.v); if (!s) return; const sib = (ov.sections || []).filter(y => y.term_id === s.term_id && y.course_code === s.course_code && y !== s && !y.rep_section_id);
     modal('분반 동기화', `<p><b>${esc(s.course_name)} ${esc(s.section_no)}분반</b>(대표)의 공지 · 자료 · 차시 학습 · 과제 · 토론 · 시험을 ${sib.map(y => esc(y.section_no) + '분반').join(' · ')}에 반영합니다.</p><p class="mini">분반에서 따로 고치거나 지운 항목은 「제외」로 기록하고 덮어쓰지 않습니다. 대표 분반에서 지운 항목은 분반에서도 지웁니다(분반에서 고치지 않은 경우).</p>`,
       [{ id: 'c', label: '취소' }, { id: 'ok', label: '동기화', kind: 'pri', run: () => { act('sync', { section_id: s.section_id }, r => `${r.sections}개 분반 — 복제 ${r.copied} · 갱신 ${r.updated} · 삭제 ${r.deleted} · 제외 ${r.excluded}${r.noclass ? ` · 강의실 미연결 ${r.noclass}` : ''}`, { doc: true, after: r => { AC.lastSync = r; } }); } }]); };
-  ACT['lmsa-hist'] = async el => { let r; try { r = await X('sync-history', { section_id: el.dataset.v }, true); } catch (e) { return toast(e.message, 'warn'); } const ov = OV();
+  ACT['lmsa-hist'] = async el => { let r; try { r = await X('sync-history', { section_id: el.dataset.v }, true); } catch (e) { return toast(errMsg(e), 'warn'); } const ov = OV();
     modal('분반 동기화 이력', table(['시각', '대상 분반', '항목', '원본 번호', '결과'], (r.rows || []).map(h => [esc(new Date(h.at).toLocaleString('ko-KR', { hour12: false })), esc((h.dst_no || '') + '분반'), esc(L.obj[h.object_type] || h.object_type), `<code>${esc(h.object_id)}</code>`, h.action === 'excluded' ? tag(L.act.excluded, 'y') : tag(L.act[h.action] || h.action)]), '아직 동기화 기록이 없습니다.') + `<p class="mini">${esc(secName(ov, el.dataset.v))} 기준 · 최근 200건</p>`, [{ id: 'c', label: '닫기' }], true); };
   ACT['lmsa-merge'] = el => { const ov = OV(); const rep = (ov.sections || []).find(y => y.section_id === el.dataset.v); if (!rep) return;
     const cand = (ov.sections || []).filter(y => y.term_id === rep.term_id && y !== rep && !y.rep_section_id && !(ov.sections || []).some(z => z.rep_section_id === y.section_id));
@@ -502,8 +502,8 @@
     const vis = secs.filter(s => !s.rep_section_id); const sid = vis.some(s => s.section_id === UI.lmsaSec) ? UI.lmsaSec : (vis[0] || {}).section_id;
     if (!sid) return '<div class="empty">이 학기에 분반이 아직 없습니다. 「분반」 단계에서 분반을 먼저 개설하세요.</div>';
     const grading = UI.lmsaGrade === '1'; const key = sid + '|' + (grading ? 1 : 0);
-    let rows = null; if (!LIVEM()) { try { rows = DEMO.enrollments({ section_id: sid, grading: grading ? '1' : '' }).rows; } catch (e) { return `<div class="warn">${esc(e.message)}</div>`; } }
-    else { rows = AC.enr[key] || null; if (!rows) X('enrollments', { section_id: sid, grading: grading ? '1' : '' }, true).then(r => { AC.enr[key] = r.rows; render(); }).catch(e => toast(e.message, 'warn')); }
+    let rows = null; if (!LIVEM()) { try { rows = DEMO.enrollments({ section_id: sid, grading: grading ? '1' : '' }).rows; } catch (e) { return `<div class="warn">${esc(errMsg(e))}</div>`; } }
+    else { rows = AC.enr[key] || null; if (!rows) X('enrollments', { section_id: sid, grading: grading ? '1' : '' }, true).then(r => { AC.enr[key] = r.rows; render(); }).catch(e => toast(errMsg(e), 'warn')); }
     const s = vis.find(y => y.section_id === sid); const tch = isTeacher(ov);
     const look = UI.lmsaLook || ''; const vis0 = new Set((ov.sections || []).map(y => y.section_id)); const sv = !LIVEM() && look ? studentView(look).filter(v => vis0.has(v.section_id)) : null;
     return `<div class="card"><div class="ch"><b>수강생</b><select data-chg="lmsa-sec" aria-label="분반">${vis.map(y => `<option value="${esc(y.section_id)}" ${y.section_id === sid ? 'selected' : ''}>${esc(y.course_code)} ${esc(y.course_name)} ${esc(y.section_no)}분반</option>`).join('')}</select>
@@ -523,7 +523,7 @@
   ACT['lmsa-bulk'] = el => { const L0 = T(($('#lmsaBulk') || {}).value).split(/[\s,;]+/).filter(Boolean); if (!L0.length) return toast('학번을 입력하세요.', 'warn');
     act('enroll', { section_id: el.dataset.v, member_nos: L0, kind: ($('#lmsaBulkKind') || {}).value || 'regular' }, r => `등록 ${r.added}명 · 이미 수강 ${r.skipped}명${r.errors.length ? ` · 오류 ${r.errors.length}건(${r.errors.slice(0, 3).map(e => e.member_no + ': ' + e.msg).join(', ')})${r.errors.some(e => e.msg === R.NOPERSON) ? ' — ' + NOP_HINT : ''}` : ''}`, { after: () => { AC.enr = {}; } }); };
   const NOP_HINT = '학생 › 학번 등록(접근코드 발급)에서 학번을 먼저 등록하면 바로 수강 등록됩니다.';
-  ACT['lmsa-roster-csv'] = async el => { try { const r = await X('enrollments', { section_id: el.dataset.v, grading: UI.lmsaGrade === '1' ? '1' : '' }, true); downloadCSV(`수강생_${today()}.csv`, ['학번', '학과코드', '학적', '구분', '상태', '분반'], r.rows.map(x => [x.member_no, x.unit_code || '', L.status[x.status] || '', L.enr[x.kind], x.enr_status === 'pending' ? '승인 대기' : '수강', x.section_no])); } catch (e) { toast(e.message, 'warn'); } };
+  ACT['lmsa-roster-csv'] = async el => { try { const r = await X('enrollments', { section_id: el.dataset.v, grading: UI.lmsaGrade === '1' ? '1' : '' }, true); downloadCSV(`수강생_${today()}.csv`, ['학번', '학과코드', '학적', '구분', '상태', '분반'], r.rows.map(x => [x.member_no, x.unit_code || '', L.status[x.status] || '', L.enr[x.kind], x.enr_status === 'pending' ? '승인 대기' : '수강', x.section_no])); } catch (e) { toast(errMsg(e), 'warn'); } };
 
   const TPL = { person: '학번,구분,학과코드,학적,학년\n20269001,학생,CSE,휴학,3\nX0001,외부,,재학,\n', section: '학수번호,교과목명,분반,학점,학과코드,수업방식,정원,교과구분\nGEN2001,글쓰기와 소통,1,2,CSE,블렌디드,40,교양\n', enrollment: '학번,학수번호,분반,구분\n20261001,GEN1001,1,정규\n20261002,GEN1001,2,청강\n' };
   function vUpload(ov, term) {
@@ -543,7 +543,7 @@
   ACT['lmsa-file'] = el => { const f = el.files && el.files[0]; if (!f) return; if (f.size > 3 * 1024 * 1024) return toast('3MB 이하 CSV만 올릴 수 있습니다.', 'warn'); const rd = new FileReader(); rd.onload = () => { UI.lmsaCsv = String(rd.result || ''); AC.prev = null; render(); }; rd.readAsText(f, 'utf-8'); };
   ACT['lmsa-tpl'] = () => { const k = UI.lmsaImp || 'enrollment'; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + TPL[k]], { type: 'text/csv' })); a.download = `학사업로드_${L.imp[k].replace(/[^가-힣]/g, '')}_양식.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
   const impBody = apply => { const k = UI.lmsaImp || 'enrollment'; UI.lmsaCsv = ($('#lmsaCsv') || {}).value || UI.lmsaCsv || ''; const tsel = $('select[name="impTerm"]'); return { kind: k, term_id: k === 'person' ? undefined : (tsel ? tsel.value : curTerm(OV())), csv: UI.lmsaCsv, apply }; };
-  ACT['lmsa-prev'] = async () => { try { AC.prev = await X('import', impBody(false)); render(); const p = $('#lmsaPrev'); p && p.scrollIntoView && p.scrollIntoView({ block: 'nearest' }); } catch (e) { AC.prev = null; toast(e.message, 'warn'); render(); } };
+  ACT['lmsa-prev'] = async () => { try { AC.prev = await X('import', impBody(false)); render(); const p = $('#lmsaPrev'); p && p.scrollIntoView && p.scrollIntoView({ block: 'nearest' }); } catch (e) { AC.prev = null; toast(errMsg(e), 'warn'); render(); } };
   ACT['lmsa-apply'] = () => { const P = AC.prev; modal('학사 데이터 반영', `<p>정상 <b>${P.ok}</b>행을 반영합니다.${P.error ? ` 오류 ${P.error}행은 빼고 기록으로 남깁니다.` : ''}${P.skip ? ` 이미 있는 ${P.skip}행은 건너뜁니다.` : ''}</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '반영', kind: 'pri', run: () => { act('import', impBody(true), r => `반영 ${r.counts.inserted}행 · 건너뜀 ${r.counts.skipped} · 오류 ${r.counts.error} (기록 #${r.run_id})${r.codes ? ` · 접근코드 ${r.codes}건 발급` : ''}`, { after: r => { AC.prev = r; AC.enr = {}; if (LIVEM() && Array.isArray(r.students) && r.students.length) { r.codes = issueCodes(r.students.map(x => ({ sid: x.member_no, dept: x.dept }))); try { save(); } catch (e) { } } } }); } }]); }; /* v38 운영: 서버가 돌려준 학생 학번으로 접근코드 발급(기관 문서 저장 → 학습자 로그인 표) */
 
   function vReq(ov, term, secs) {
@@ -592,5 +592,5 @@
   { const base = ACT['en-codes']; if (typeof base === 'function') ACT['en-codes'] = (...a) => { const before = new Set((S.codes || []).map(c => c.sid)); const r = base(...a); try { if (ON() && !LIVEM()) { ens(); save(); }
       /* 운영: 새로 발급한 학번을 학사 구성원(학생 · 학과 이름)으로 서버에 함께 등록 — 수강 등록이 바로 되게 */
       else if (ON() && LIVEM()) { const nw = (S.codes || []).filter(c => !before.has(c.sid) && RE.stu.test(c.sid)); if (nw.length) { const q2 = v => /[",\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
-        X('import', { kind: 'person', csv: '학번,구분,학과코드\n' + nw.map(c => `${c.sid},학생,${q2(c.dept || '')}`).join('\n') + '\n', apply: true }).then(x => { if (x && x.error) toast(`학사 구성원 등록 오류 ${x.error}건 — 학기 · 강좌 › 엑셀로 올리기에서 확인하세요.`, 'warn'); }).catch(e => toast(e.message, 'warn')); } } } catch (e) { console.error(e); } return r; }; }
+        X('import', { kind: 'person', csv: '학번,구분,학과코드\n' + nw.map(c => `${c.sid},학생,${q2(c.dept || '')}`).join('\n') + '\n', apply: true }).then(x => { if (x && x.error) toast(`학사 구성원 등록 오류 ${x.error}건 — 학기 · 강좌 › 엑셀로 올리기에서 확인하세요.`, 'warn'); }).catch(e => toast(errMsg(e), 'warn')); } } } catch (e) { console.error(e); } return r; }; }
 })();

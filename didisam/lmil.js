@@ -373,7 +373,7 @@
   /* ═════ 동작 ═════ */
   let rerT = 0; const rer = soft => { if (soft && !['mile', 'acct', 'home', 'my', 'done', 'family'].includes(route().a)) return; clearTimeout(rerT); rerT = setTimeout(() => { const y = scrollY; lrender(); requestAnimationFrame(() => scrollTo(0, y)); }, 0); };
   const ERR = { insufficient: '쓸 수 있는 마일리지가 모자라요.', below_threshold: '아직 신청할 수 있는 기준점에 닿지 않았어요.', negative_balance: '정정된 적립을 먼저 채워야 신청할 수 있어요.', out_of_stock: '지금은 재고가 없어요.', funded_blocked: '국비 지원 과정에서 쌓은 마일리지는 이 보상에 쓸 수 없어요.', mile_off: '이 기관은 지금 마일리지를 쓰지 않아요.', already: '이미 처리된 신청이에요.', rate: '요청이 많아요. 잠시 후 다시 시도해 주세요.', amount_mismatch: '마일리지가 바뀌었어요. 화면을 새로 불러온 뒤 다시 신청해 주세요.', state: '이미 처리된 신청이에요.', not_found: '신청을 찾지 못했어요.', repair_need: '복구 학습 시간을 먼저 채워 주세요.' };
-  const errMsg = e => ERR[e && e.code] || (e && e.status === 401 ? '로그인이 끝났어요. 다시 로그인해 주세요.' : '') || (e && e.message) || '신청하지 못했어요.';
+  const errMsg = e => ERR[e && e.code] || (e && e.status === 401 ? '로그인이 끝났어요. 다시 로그인해 주세요.' : '') || window.errMsg(e, '신청하지 못했어요.');
   function openRedeem(id) { const M = model(); const r = M.R.find(x => x.id === id); if (!r) return; const pool = r.cash ? M.convertible : Math.max(0, M.balance); const v = r.cost != null ? r.cost : Math.max(r.min || r.step, Math.min(r.max || pool, pool - pool % r.step));
     MI.idem = 'lm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); MI.sheet = { t: 'redeem', id, points: v, err: '' }; rer(); }
   async function submitRedeem(fm) { const s = MI.sheet; if (!s || MI.sending) return; const M = model(); const r = M.R.find(x => x.id === s.id); if (!r) return; let v = s.points; if (fm.p) { v = int(fm.p.value); s.points = v; }

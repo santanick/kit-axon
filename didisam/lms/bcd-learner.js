@@ -34,7 +34,7 @@
 
   /* 내 학습 화면 카드 */
   if (typeof viewMy === 'function') { const base = viewMy; viewMy = function (...a) { const h = base.apply(this, a); if (!on()) return h; // eslint-disable-line no-global-assign
-    let c; if (!ST.secs) { c = `<div class="mycard" id="lmsxMy"><div class="myhead"><h2>내 강의실</h2></div><p class="mini">${ST.err ? esc(ST.err) : '불러오는 중입니다.'}</p></div>`; if (!ST.busy.secs) { ST.busy.secs = 1; secs().catch(e => { ST.err = e.message; ST.secs = []; }).finally(() => { ST.busy.secs = 0; lrender(); }); } }
+    let c; if (!ST.secs) { c = `<div class="mycard" id="lmsxMy"><div class="myhead"><h2>내 강의실</h2></div><p class="mini">${ST.err ? esc(ST.err) : '불러오는 중입니다.'}</p></div>`; if (!ST.busy.secs) { ST.busy.secs = 1; secs().catch(e => { ST.err = errMsg(e); ST.secs = []; }).finally(() => { ST.busy.secs = 0; lrender(); }); } }
     else c = `<div class="mycard" id="lmsxMy"><div class="myhead"><h2>내 강의실</h2></div><p class="mini">주차별 학습 · 토론 · 위키 · 팀 · 동료 평가 · 게시판</p><ul class="lmsx-ul">${ST.secs.map(s => `<li><a href="${link(s.id, 'room')}"><b>${esc(s.title)}</b></a> <small>${esc(s.term)} · ${esc(s.course || '')}</small></li>`).join('') || '<li class="mini">이번 학기 강의실이 없습니다.</li>'}</ul></div>`;
     return h.includes('<div class="mygrid">') ? h.replace('<div class="mygrid">', '<div class="mygrid">' + c) : c + h; }; }
 
@@ -43,7 +43,7 @@
     if (route().a !== 'lmsx' || !SITE()) return base.apply(this, a);
     if (!LR.me) { location.hash = '#login'; return base.apply(this, a); }
     const app = $('#lapp'); app.innerHTML = shell(`<section class="lmsxl"><div id="lmsxL"><p class="mini">불러오는 중입니다…</p></div></section>`, 'my'); document.title = `${SITE().org.name} · 내 강의실`;
-    fill().catch(e => { const el = $('#lmsxL'); if (el) el.innerHTML = `<p class="lerr2">${esc(e.message || '불러오지 못했습니다.')}</p>`; }); }; }
+    fill().catch(e => { const el = $('#lmsxL'); if (el) el.innerHTML = `<p class="lerr2">${esc(errMsg(e, '불러오지 못했습니다.'))}</p>`; }); }; }
   async function fill() {
     const { sec, tab, sub } = rt(); const el = () => $('#lmsxL'); let body = '';
     const ss = await secs(); const s = ss.find(x => x.id === sec); if (!s) { el().innerHTML = '<p class="mini">이 강의실의 수강생이 아닙니다.</p><a class="lbtn sm ghost" href="#my">내 학습으로</a>'; return; }
@@ -83,15 +83,15 @@
       ${w.sessions.map(x => `<h3>${x.seq}차시 ${esc(x.title || '')} <small>${esc(SKN[x.kind] || x.kind)}${x.close_at ? ' · 인정 ~' + fmt(x.close_at) : ''}</small></h3><ul class="lmsx-ul">${x.resources.map(r => resLi(r, demo)).join('') || '<li class="mini">자료가 없습니다.</li>'}</ul>`).join('')}</div>`).join('') || '<p class="mini">아직 등록된 주차가 없습니다.</p>'}`;
   }
   const allRes = () => { const O = ST.cache.ov; return O ? [...O.common, ...O.weeks.flatMap(w => w.sessions.flatMap(s => s.resources))] : []; };
-  const mark = async (id, extra) => { try { await P('b', 'progress-mark', { resource: id, ...(extra || {}) }); } catch (e) { toast(e.message, 'bad'); } };
-  const dl = async fid => { try { const f = await G('b', 'file', { id: fid }); const bin = atob(f.b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([u], { type: f.mime })); a.download = f.name; a.click(); } catch (e) { toast(e.message, 'bad'); } };
+  const mark = async (id, extra) => { try { await P('b', 'progress-mark', { resource: id, ...(extra || {}) }); } catch (e) { toast(errMsg(e), 'bad'); } };
+  const dl = async fid => { try { const f = await G('b', 'file', { id: fid }); const bin = atob(f.b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([u], { type: f.mime })); a.download = f.name; a.click(); } catch (e) { toast(errMsg(e), 'bad'); } };
   /* 패키지 재생: 학습자 화면은 iframe을 허용하지 않으므로(CSP) 새 창으로 열고, SCO는 window.opener에서 API를 찾는다 */
   const loadRTE = () => window.LMSRTE ? Promise.resolve() : new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'lms/bcd-rte.js?v=30.1'; s.onload = ok; s.onerror = () => no(new Error('SCORM 런타임을 불러오지 못했습니다.')); document.head.appendChild(s); });
   async function play(id) {
     const info = await G('b', 'scorm', { resource: id }); await loadRTE();
     const reg = await navigator.serviceWorker.register('lms/bpkg-sw.js', { scope: 'lms/bpkg/' }); const w0 = reg.active || reg.installing || reg.waiting; if (w0 && w0.state !== 'activated') await new Promise(ok => { w0.addEventListener('statechange', () => { if (w0.state === 'activated') ok(); }); setTimeout(ok, 4000); });
     const sco = (info.manifest.scos || [])[0]; if (!sco) throw new Error('실행할 SCO가 없습니다.');
-    const rte = LMSRTE.make(info.version === '2004' ? '2004' : '1.2', sco, (info.att || {})[sco.id], info.me, { res: id, commit: b => P('b', 'scorm-commit', b), onCommit: (r, fin) => { if (fin) { toast(`학습 기록을 저장했습니다(${r.status || '—'}).`, 'ok'); lrender(); } }, onError: e => toast(e.message, 'bad') });
+    const rte = LMSRTE.make(info.version === '2004' ? '2004' : '1.2', sco, (info.att || {})[sco.id], info.me, { res: id, commit: b => P('b', 'scorm-commit', b), onCommit: (r, fin) => { if (fin) { toast(`학습 기록을 저장했습니다(${r.status || '—'}).`, 'ok'); lrender(); } }, onError: e => toast(errMsg(e), 'bad') });
     delete window.API; delete window.API_1484_11; if (info.version === '2004') window.API_1484_11 = rte.api; else window.API = rte.api; window.__lmsxRTE = rte;
     if (info.version === 'none') mark(id);
     const w = window.open(`lms/bpkg/${info.pkg_id}/${sco.href}`, 'lmsxsco'); if (!w) toast('팝업이 막혀 있습니다. 이 사이트의 팝업을 허용하세요.', 'warn');
@@ -99,7 +99,7 @@
   }
   function openRes(id) {
     const r = allRes().find(x => x.id === id); if (!r) return; const B = r.body || {}; const { sec } = rt();
-    if (['scorm', 'html5'].includes(r.kind)) return play(id).catch(e => toast(e.message, 'bad'));
+    if (['scorm', 'html5'].includes(r.kind)) return play(id).catch(e => toast(errMsg(e), 'bad'));
     if (['assign', 'exam'].includes(r.kind)) return toast(`${r.kind === 'assign' ? '과제' : '시험'} 화면에서 ${r.kind === 'assign' ? '제출' : '응시'}하세요. 결과는 자동으로 반영됩니다.`, 'ok');
     let h = '';
     if (r.kind === 'page') h = typeof safeHTML === 'function' ? safeHTML(B.html || '') : nl(B.html || '');
@@ -131,7 +131,7 @@
   /* 강의자료(SFR-038): PDF는 새 창(학습자 화면 CSP가 프레임 차단), 이미지 · 텍스트는 바로 보기, 문서는 HTML 변환(연동 지점), 내려받기 허용 · 기록 */
   const b2u = b64 => { const s2 = atob(b64); const u = new Uint8Array(s2.length); for (let i = 0; i < s2.length; i++) u[i] = s2.charCodeAt(i); return u; };
   async function material(r) {
-    const M = await G('b', 'material', { resource: r.id }).catch(e => { toast(e.message, 'bad'); return null; }); if (!M) return;
+    const M = await G('b', 'material', { resource: r.id }).catch(e => { toast(errMsg(e), 'bad'); return null; }); if (!M) return;
     const box = document.createElement('div'); box.className = 'lmsxl-dlg'; box.dataset.t0 = Date.now();
     box.innerHTML = `<div class="lmsxl-dlgin" role="dialog" aria-label="${esc(r.title)}"><h2>${esc(r.title)}</h2><p class="mini">${M.download ? '내려받기 허용' : '이 자료는 화면에서 보기만 할 수 있습니다(내려받기 금지).'}</p>
       ${M.files.map(f => `<div class="lmsxl-post"><b>${esc(f.name)}</b> <small>${Math.ceil(f.size / 1024)}KB</small><br>
@@ -169,8 +169,8 @@
       if (k === 'answer') { await P('d', 'answer', { post: el.dataset.p, body: ($('#lxAns') || {}).value || '' }); toast('올렸습니다.', 'ok'); el.dataset.id = el.dataset.p; return document.querySelector(`[data-lx="bopen"][data-id="${el.dataset.p}"]`).click(); }
       if (k === 'comment') { await P('d', 'comment', { post: el.dataset.p, body: ($('#lxCm') || {}).value || '' }); return document.querySelector(`[data-lx="bopen"][data-id="${el.dataset.p}"]`).click(); }
       if (k === 'accept') { await P('d', 'answer-accept', { id: el.dataset.id }); toast('채택했습니다.', 'ok'); return document.querySelector(`[data-lx="bopen"][data-id="${el.dataset.p}"]`).click(); }
-    } catch (x) { toast(x.message, 'bad'); }
+    } catch (x) { toast(errMsg(x), 'bad'); }
     void sec;
   });
-  document.addEventListener('change', async e => { const el = e.target.closest('[data-lxchg="task"]'); if (!el) return; try { await P('c', 'task-status', { task: el.dataset.k, team: el.dataset.t, status: el.value }); toast('진행 상태를 바꿨습니다.', 'ok'); } catch (x) { toast(x.message, 'bad'); lrender(); } });
+  document.addEventListener('change', async e => { const el = e.target.closest('[data-lxchg="task"]'); if (!el) return; try { await P('c', 'task-status', { task: el.dataset.k, team: el.dataset.t, status: el.value }); toast('진행 상태를 바꿨습니다.', 'ok'); } catch (x) { toast(errMsg(x), 'bad'); lrender(); } });
 })();

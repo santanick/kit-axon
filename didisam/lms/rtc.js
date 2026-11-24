@@ -23,10 +23,10 @@
   const ts = v => v ? new Date(v).toLocaleString('ko-KR', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
   const mmss = s => `${Math.floor(s / 60)}분 ${s % 60}초`;
   const busy = '<div class="empty">불러오는 중…</div>';
-  function load(k, p) { if (C.c[k] !== undefined) return C.c[k]; C.c[k] = null; api('GET', p).then(j => { C.c[k] = j; render(); }).catch(e => { C.c[k] = { _err: e.message }; render(); }); return null; }
+  function load(k, p) { if (C.c[k] !== undefined) return C.c[k]; C.c[k] = null; api('GET', p).then(j => { C.c[k] = j; render(); }).catch(e => { C.c[k] = { _err: errMsg(e) }; render(); }); return null; }
   const errBox = d => `<div class="empty">${esc(d._err)}</div>`;
   const refresh = () => { C.c = {}; render(); };
-  async function act(fn, ok) { try { const r = await fn(); if (ok) toast(ok, 'ok'); refresh(); return r; } catch (e) { toast(e.message || '처리하지 못했습니다.', 'warn'); return null; } }
+  async function act(fn, ok) { try { const r = await fn(); if (ok) toast(ok, 'ok'); refresh(); return r; } catch (e) { toast(errMsg(e, '처리하지 못했습니다.'), 'warn'); return null; } }
   const modeTag = () => LIVEM() ? tag('운영 서버') : tag('데모: 브라우저에만 저장', 'y');
   const sections = () => { const d = LIVEM() ? load('secs', '/api/lms/o/sections') : { sections: LV.demoDb().sections }; return d && d.sections || []; };
   const secName = id => { const s = sections().find(x => x.section_id === id); return s ? s.title : '—'; };
@@ -110,7 +110,7 @@
         c.status === 'deleted' ? '' : `<button class="btn sm" data-act="lvs-recplay" data-id="${esc(c.rec_id)}">보기</button> <button class="btn sm ghost" data-act="lvs-recviews" data-id="${esc(c.rec_id)}">열람 기록</button> <button class="btn sm ghost" data-act="lvs-recdel" data-id="${esc(c.rec_id)}">파기</button>`]), '녹화가 없습니다.')}</div>`;
   }
   ACT['lvs-recplay'] = el => open('rec=' + encodeURIComponent(el.dataset.id));
-  ACT['lvs-recviews'] = async el => { try { const j = await api('GET', '/api/lms/live/rec-views?rec_id=' + encodeURIComponent(el.dataset.id)); modal('녹화 열람 기록', table(['누가', '언제'], j.views.map(v => [esc(v.who.replace(/^m:/, '학번 ')), esc(ts(v.at))]), '열람 기록이 없습니다.'), [{ id: 'c', label: '닫기' }]); } catch (e) { toast(e.message, 'warn'); } };
+  ACT['lvs-recviews'] = async el => { try { const j = await api('GET', '/api/lms/live/rec-views?rec_id=' + encodeURIComponent(el.dataset.id)); modal('녹화 열람 기록', table(['누가', '언제'], j.views.map(v => [esc(v.who.replace(/^m:/, '학번 ')), esc(ts(v.at))]), '열람 기록이 없습니다.'), [{ id: 'c', label: '닫기' }]); } catch (e) { toast(errMsg(e), 'warn'); } };
   ACT['lvs-recdel'] = el => modal('녹화 파기', '<p>녹화 파일을 지우고 강의자료에서도 내립니다. 되돌릴 수 없습니다.</p>', [{ id: 'c', label: '취소' }, { id: 'ok', label: '파기', kind: 'pri', run: () => { act(() => api('POST', '/api/lms/live/rec-delete', { rec_id: el.dataset.id }), '녹화를 파기했습니다.'); } }]);
 
   /* ── 실시간 자막 ── */

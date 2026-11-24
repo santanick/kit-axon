@@ -55,7 +55,7 @@ const RG = {
         if (old >= 0) D.splice(old, 1, doc); else D.push(doc);
         msgs.push(`${doc.name}: ${doc.chunks.length}개 조각으로 읽었습니다${cut ? '(앞 15만 자까지)' : ''}.`);
         if (typeof logAudit === 'function') logAudit(`AI SAM 문서 첨부: ${doc.name}`);
-      } catch (e) { msgs.push(`${f.name}: ${e.message}`); } }
+      } catch (e) { msgs.push(`${f.name}: ${errMsg(e)}`); } }
     save(); return msgs; }
 };
 /* ── 입력창에 [문서 첨부] · 첨부 문서 칩 ── */
@@ -109,5 +109,5 @@ async function rgAsk(sys, msgs) { let web = true, res;
   const msgs = []; [...hist, { role: 'user', content: `<sources>\n${ctx}\n</sources>\n\n질문: ${q}` }].forEach(m => { const l = msgs[msgs.length - 1]; if (l && l.role === m.role) l.content += '\n' + m.content; else msgs.push({ ...m }); }); while (msgs.length && msgs[0].role !== 'user') msgs.shift();
   rgAsk(w => rgSys(w), msgs).then(({ res, web }) => { const P = rgParse(res);
     done({ md: P.text || '답변을 만들지 못했습니다. 다시 물어봐 주세요.', web: P.web, via: CL.label(res.model) + (src.length ? ' · 문서 맥락' : '') + (P.searched ? ' · 웹 검색' : web ? '' : ' · 일반 지식'), tok: (res.usage.input_tokens || 0) + (res.usage.output_tokens || 0) }); })
-    .catch(err => fallback(`Claude 연결 실패(${err.message}) — 문서에서 찾은 내용만 보여 드립니다.`)); }; }
+    .catch(err => fallback(`Claude 연결 실패(${errMsg(err)}) — 문서에서 찾은 내용만 보여 드립니다.`)); }; }
 { const base = aiBody; aiBody = m => { let h = base(m); if (m.rg && m.rg.length) h += `<details class="rg-src"><summary>참고한 문서 ${m.rg.length}곳 · 첨부 문서</summary><ol>${m.rg.map(s => `<li><b>[${s.n}] ${esc(s.name)}</b> <small>조각 ${s.part}${s.k && s.k !== '관련' ? ' · ' + s.k : ''}</small><p>${esc(s.t.slice(0, 280))}${s.t.length > 280 ? '…' : ''}</p></li>`).join('')}</ol></details>`; if (m.web && m.web.length) h += `<details class="rg-src rg-web" open><summary>웹 출처 ${m.web.length}개 · 웹 검색</summary><ol>${m.web.map(w => `<li><a href="${esc(w.u)}" target="_blank" rel="noopener noreferrer">${esc(w.t)}</a> <small>${esc((w.u.match(/^https?:\/\/([^/]+)/) || [])[1] || '')}</small></li>`).join('')}</ol></details>`; return h; }; }

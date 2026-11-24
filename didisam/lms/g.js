@@ -59,18 +59,18 @@
     /* 화면 캐시: 키별로 한 번 불러와 render() — 화면 함수는 동기라 캐시만 읽는다 */
     get(key, m, p, b) {
       if (key in W3.cache) return W3.cache[key];
-      if (!W3.busy[key]) { W3.busy[key] = 1; W3.call(m, p, b).then(v => { W3.cache[key] = v; }).catch(e => { W3.cache[key] = { __err: e.message }; }).finally(() => { delete W3.busy[key]; render(); }); }
+      if (!W3.busy[key]) { W3.busy[key] = 1; W3.call(m, p, b).then(v => { W3.cache[key] = v; }).catch(e => { W3.cache[key] = { __err: errMsg(e) }; }).finally(() => { delete W3.busy[key]; render(); }); }
       return undefined;
     },
     drop(prefix) { Object.keys(W3.cache).forEach(k => { if (!prefix || k.startsWith(prefix)) delete W3.cache[k]; }); },
-    async act(fn, ok) { try { const r = await fn(); if (ok) toast(typeof ok === 'function' ? ok(r) : ok, 'ok'); return r; } catch (e) { toast(e.message, 'warn'); return null; } },
+    async act(fn, ok) { try { const r = await fn(); if (ok) toast(typeof ok === 'function' ? ok(r) : ok, 'ok'); return r; } catch (e) { toast(errMsg(e), 'warn'); return null; } },
     loading: '<div class="empty">불러오는 중입니다…</div>',
     /* 분반 선택(모든 묶음 화면 공통): 데모 첫 진입 시 데모 분반을 만든다 */
     section() {
       const L = W3.get('sections', 'GET', '/api/lms/g/sections'); if (L === undefined) return undefined;
       if (L.__err) return L;
       if (!L.length && S.org && S.org.empty) return { __err: '이번 학기에 개설된 분반이 없습니다. 학기 · 강좌에서 교과목과 분반을 먼저 개설하세요.' };
-      if (!L.length) { if (!W3.busy.seed) { W3.busy.seed = 1; W3.call('POST', '/api/lms/g/seed', {}).catch(e => toast(e.message, 'warn')).finally(() => { delete W3.busy.seed; W3.drop(); render(); }); } return undefined; }
+      if (!L.length) { if (!W3.busy.seed) { W3.busy.seed = 1; W3.call('POST', '/api/lms/g/seed', {}).catch(e => toast(errMsg(e), 'warn')).finally(() => { delete W3.busy.seed; W3.drop(); render(); }); } return undefined; }
       UI.w3sec = UI.w3sec && L.find(s => s.section_id === UI.w3sec) ? UI.w3sec : L[0].section_id; return L.find(s => s.section_id === UI.w3sec);
     },
     secPick() { const L = W3.cache.sections || []; return L.length > 1 ? `<select data-chg="w3-sec" aria-label="분반 선택">${L.map(s => `<option value="${esc(s.section_id)}" ${s.section_id === UI.w3sec ? 'selected' : ''}>${esc(s.title)}</option>`).join('')}</select>` : ''; },
@@ -361,7 +361,7 @@
       ${r ? `<div class="w3-res ${r.ok ? 'ok' : 'bad'}" role="status">${r.ok ? `${esc(ST[r.status][0])} 처리되었습니다 · ${esc(MTH[r.method])} · ${esc(W3.fmt(r.evidence.at))}` : esc(r.msg)}</div>` : ''}</div>`;
   }
   ACT['w3g-m'] = el => { UI.w3gM = el.dataset.v; UI.w3gR = null; render(); };
-  ACT['w3g-scan'] = async () => { const c = UI.w3gCode; if (!W3.live() && c) { try { const q = await W3.call('GET', '/api/lms/g/qr', { session_id: c.session_id }); $('#w3in').value = q.qr; } catch (e) { toast(e.message, 'warn'); } } else if (navigator.clipboard?.readText) { try { $('#w3in').value = await navigator.clipboard.readText(); } catch (e) { toast('카메라 스캔은 앱 연동 후 동작합니다.', 'warn'); } } else toast('먼저 「출석 진행」에서 발급하세요.', 'warn'); };
+  ACT['w3g-scan'] = async () => { const c = UI.w3gCode; if (!W3.live() && c) { try { const q = await W3.call('GET', '/api/lms/g/qr', { session_id: c.session_id }); $('#w3in').value = q.qr; } catch (e) { toast(errMsg(e), 'warn'); } } else if (navigator.clipboard?.readText) { try { $('#w3in').value = await navigator.clipboard.readText(); } catch (e) { toast('카메라 스캔은 앱 연동 후 동작합니다.', 'warn'); } } else toast('먼저 「출석 진행」에서 발급하세요.', 'warn'); };
   ACT['w3g-nfc'] = async () => { if (!('NDEFReader' in window)) { toast('이 기기 · 브라우저는 Web NFC를 지원하지 않습니다(앱 연동 후 동작).', 'warn'); return; } try { const r = new NDEFReader(); await r.scan(); r.onreading = e => { $('#w3in').value = e.serialNumber || ''; toast('태그를 읽었습니다.', 'ok'); }; } catch (e) { toast('NFC 권한이 필요합니다.', 'warn'); } };
   ACT['w3g-ble'] = async () => { if (window.DidisamApp?.scanBeacon) { try { $('#w3in').value = await window.DidisamApp.scanBeacon(); } catch (e) { toast('비콘을 찾지 못했습니다.', 'warn'); } } else toast('비콘 탐색은 학교 비콘 장비 · 앱 연동 후 동작합니다. 비콘 ID를 직접 입력해 보세요.', 'warn'); };
   ACT['w3g-go'] = async () => {
@@ -370,7 +370,7 @@
     if (m === 'code') b.code = v; if (m === 'qr') b.qr = v; if (m === 'nfc' || m === 'ble') b.tag_id = v;
     if (m === 'photo') { const la = $('#w3lat')?.value.trim(), lo = $('#w3lng')?.value.trim(); if (la) b.lat = +la; if (lo) b.lng = +lo; const f = $('#w3ph')?.files?.[0]; b.taken_at = new Date(f && f.lastModified ? f.lastModified : Date.now()).toISOString(); }
     if ($('#w3idv')?.checked) b.idv = 'sso-reauth-pending'; if ($('#w3idvd')?.checked) b.idv_demo = 1;
-    try { const r = await W3.call('POST', '/api/lms/g/checkin', b); UI.w3gR = { ok: 1, ...r }; W3.drop('roster:'); } catch (e) { UI.w3gR = { ok: 0, msg: e.message }; }
+    try { const r = await W3.call('POST', '/api/lms/g/checkin', b); UI.w3gR = { ok: 1, ...r }; W3.drop('roster:'); } catch (e) { UI.w3gR = { ok: 0, msg: errMsg(e) }; }
     render();
   };
 

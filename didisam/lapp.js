@@ -381,7 +381,7 @@
     b.disabled = true; msg.className = 'ap-aimsg'; msg.textContent = '연결을 확인하는 중…';
     try { const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: m, max_tokens: 8, messages: [{ role: 'user', content: 'ping' }] }) });
       if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(r.status === 401 ? 'API 키가 올바르지 않습니다.' : r.status === 404 ? '이 키로는 고른 모델을 쓸 수 없습니다.' : r.status === 429 ? '요청이 많습니다. 잠시 후 다시 눌러 주세요.' : ((j.error && j.error.message) || '오류 ' + r.status)); }
-    } catch (e) { b.disabled = false; msg.className = 'ap-aimsg bad'; msg.textContent = e instanceof TypeError ? '네트워크에 연결하지 못했습니다.' : e.message; return; }
+    } catch (e) { b.disabled = false; msg.className = 'ap-aimsg bad'; msg.textContent = e instanceof TypeError ? '네트워크에 연결하지 못했습니다.' : errMsg(e); return; }
     try { localStorage.setItem(KEYK(), JSON.stringify({ ...(c || {}), key, model: m, chat: true, docs: true, site: true })); } catch (e) { }
     f.closest('dialog').close(); lrender(); toast(`Claude 연결 완료 · ${aiSt().t}. 이제 질문해 보세요.`, 'ok'); }
 

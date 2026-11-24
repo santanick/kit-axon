@@ -265,7 +265,7 @@ async function ltAsk(q, opts = {}) {
   const actionish = /(계획|스케줄|퀴즈|복습|문제\s*내|리포트|진도|현황|할\s*일|브리핑|마감|추천|대신|정답)/.test(q);
   if (!opts.ro && (opts.ai || !actionish) && (LR.me || !/(로그인|가입|접근\s*코드|비밀번호)/.test(q))) {
     LT.busy = true; ltRender();
-    try { const a = await ltAI(opts.extra ? q + '\n\n' + opts.extra : q); if (a && a.t) r = { t: a.t, h: LR.me && !(typeof lGuard === 'function' && lGuard()) ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: `Claude · ${String(a.src || '').replace('claude-', '')}` }; } catch (e) { r = e && e.code === 'ai_month_quota' ? { t: e.message, h: LR.me ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: '이번 달 AI 사용량 소진' } /* v47 기관 월 AI 한도 */ : { ...r, src: `기본 안내 · AI 연결 오류(${String(e.message || '').slice(0, 40)})` }; }
+    try { const a = await ltAI(opts.extra ? q + '\n\n' + opts.extra : q); if (a && a.t) r = { t: a.t, h: LR.me && !(typeof lGuard === 'function' && lGuard()) ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: `Claude · ${String(a.src || '').replace('claude-', '')}` }; } catch (e) { r = e && e.code === 'ai_month_quota' ? { t: errMsg(e), h: LR.me ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: '이번 달 AI 사용량 소진' } /* v47 기관 월 AI 한도 */ : { ...r, src: `기본 안내 · AI 연결 오류(${String(errMsg(e, '')).slice(0, 40)})` }; }
     LT.busy = false;
   }
   LT.msgs.push({ src: r.src || (LR.mode === 'live' ? '기본 안내' : '기본 안내 · 데모'), ...r }); LT.msgs = LT.msgs.slice(-30); ltRender();
