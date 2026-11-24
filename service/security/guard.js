@@ -6,6 +6,8 @@
    node service/security/guard.js collect [--offline] [--out f.json]                                NVD · KEV · GHSA · KISA 수집 + 영향 판정
    node service/security/guard.js report  --in findings.json [--threats t.json] [--out r.md] [--notify] 주간 리포트(md)
    node service/security/guard.js ingest  --in findings.json [--kind finding|threat]                 GUARD_TOKEN 있으면 /api/security/ingest 전송, 없으면 dry
+   node service/security/guard.js weekly  [--offline] [--force] [--dir security/weekly] [--no-cards] [--notify]  자가 보완 루프: collect(+ATLAS · OWASP · AI 3사) → scan → 레드팀 생성 · 실행 → 결과 · 보고서 · 대책 카드
+                                          종료 코드: P0 있으면 4, 뚫린 공격 있으면 3, 정상 0. 주말 · 공휴일은 --force 없으면 실행 안 함(0)
    기본은 dry · 미연결 안전 정지. 운영 DB 쓰기 · 비밀키 보유 · 병합은 하지 않는다. */
 const path = require('node:path'); const fs = require('node:fs');
 const { buildSbom } = require('./sbom'); const aibom = require('./aibom'); const intel = require('./intel'); const { assess, cmp } = require('./impact');
@@ -25,7 +27,8 @@ function fixedFor(item, c) {
 function toFinding(item, imp, extra = {}) {
   return { source: item.source, sources: [item.source], external_id: item.external_id, aliases: [...new Set(item.aliases || [item.external_id])], cve: item.cve || (item.aliases || []).find(a => /^CVE-/.test(a)) || null,
     title: item.title, summary: item.summary, url: item.url, cvss: item.cvss ?? null, kev: !!item.kev, malicious: !!item.malicious, fixed: fixedFor(item, imp.component),
-    verdict: imp.verdict, evidence: imp.evidence, confidence: imp.confidence, component: imp.component, origin: item.origin, ...extra };
+    verdict: imp.verdict, evidence: imp.evidence, confidence: imp.confidence, component: imp.component, origin: item.origin,
+    ...(item.technique ? { technique: item.technique } : {}), ...(item.vendor ? { vendor: item.vendor } : {}), ...('new' in item ? { new: !!item.new } : {}), ...extra };
 }
 function finalize(list, { kevSet, epssMap, now }) {
   return dedup(list).map(f => {
@@ -54,16 +57,17 @@ async function runScan({ root = ROOT, offline = false, fetchImpl, now = new Date
   return { kind: 'scan', generated_at: now.toISOString(), origin: { osv: osvR.origin, kev: kevR.origin, epss: epssR.origin }, sbom: { components: sbom.components.length, purls: sbom.purls.length, files: [...new Set(sbom.components.map(c => c.location))] }, summary: { ...tally(findings), 해당: findings.filter(f => f.verdict === '해당').length, 일부: findings.filter(f => f.verdict === '일부').length }, findings, cards, aibom: { summary: ab.summary, lock: ab.lock, diff: ab.diff }, cyclonedx: sbom.cyclonedx, aibom_cyclonedx: ab.cyclonedx };
 }
 
-async function runCollect({ root = ROOT, offline = false, fetchImpl, now = new Date(), queue } = {}) {
-  const opts = { offline, fetchImpl, now, queue };
+async function runCollect({ root = ROOT, offline = false, fetchImpl, now = new Date(), queue, seen, ai } = {}) {
+  const opts = { offline, fetchImpl, now, queue, seen, ai };
   const sbom = buildSbom(root, { now });
   const all = await intel.collectAll(opts);
   const kevSet = all.sources.KEV && all.sources.KEV.set; if (all.sources.KEV) delete all.sources.KEV.set;
+  const catalog = all.sources.ATLAS && all.sources.ATLAS.catalog; if (catalog) delete all.sources.ATLAS.catalog; // ATLAS 기법 목록은 상태(seen) 갱신용
   const judged = []; const counts = { 해당: 0, 일부: 0, 없음: 0, 통제점검형: 0 };
   for (const it of all.items) for (const imp of assess(it, sbom.components)) { counts[imp.verdict]++; if (imp.verdict !== '없음') judged.push(toFinding(it, imp)); }
   const epssR = await intel.epss.lookup(judged.flatMap(f => f.aliases), opts);
   const threats = finalize(judged, { kevSet, epssMap: epssR.map, now });
-  return { kind: 'threat', generated_at: now.toISOString(), sources: { ...all.sources, EPSS: { origin: epssR.origin } }, counts, threats };
+  return { kind: 'threat', generated_at: now.toISOString(), sources: { ...all.sources, EPSS: { origin: epssR.origin } }, counts, threats, ...(catalog ? { atlas_catalog: catalog } : {}) };
 }
 
 function buildReport(scan, threats, now = new Date()) {
@@ -121,7 +125,11 @@ async function main(argv) {
   } else if (cmd === 'ingest') {
     if (!val('in')) throw new Error('--in findings.json 필요');
     out(await ingest(readJson(val('in')), { kind: val('kind') }));
-  } else { console.error('사용법: guard.js scan|aibom|collect|report|ingest [--offline] (상단 주석 참고)'); process.exitCode = 2; }
+  } else if (cmd === 'weekly') {
+    const { runWeekly } = require('./weekly');
+    const r = await runWeekly({ offline, force: flag('force'), dir: val('dir') ? path.resolve(val('dir')) : undefined, cards: !flag('no-cards'), notify: flag('notify') });
+    console.error(r.skipped ? `weekly: ${r.reason} — 건너뜀(--force로 강제)` : `weekly: ${r.headline} · 저장 ${r.files.json} · ${r.files.md}`); process.exitCode = r.code;
+  } else { console.error('사용법: guard.js scan|aibom|collect|report|ingest|weekly [--offline] (상단 주석 참고)'); process.exitCode = 2; }
 }
+module.exports = { runScan, runCollect, buildReport, ingest, flat, finalize, main, tally };
 if (require.main === module) main(process.argv.slice(2)).catch(e => { console.error('가디언 오류:', e.message); process.exitCode = 1; });
-module.exports = { runScan, runCollect, buildReport, ingest, flat, finalize, main };

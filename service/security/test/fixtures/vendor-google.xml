@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Google Online Security Blog (fixture)</title>
+<entry><id>tag:blogger.com,1999:fixture-1</id><published>2026-11-20T09:00:00Z</published><title type="text">Securing AI agents that use tools: a layered defense</title><content type="html">&lt;p&gt;Mitigating attacks on agentic tool use.&lt;/p&gt;</content><link rel="alternate" type="text/html" href="https://security.googleblog.com/2026/11/fixture-agents.html"/></entry>
+<entry><id>tag:blogger.com,1999:fixture-2</id><published>2026-11-19T09:00:00Z</published><title type="text">Android memory safety progress</title><content type="html">Rust adoption.</content><link rel="alternate" type="text/html" href="https://security.googleblog.com/2026/11/fixture-rust.html"/></entry>
+</feed>
