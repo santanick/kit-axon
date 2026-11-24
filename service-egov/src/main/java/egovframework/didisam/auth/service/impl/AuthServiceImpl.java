@@ -27,6 +27,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.records.RecordsService rec; /* 가디언 4차 #15 국내 전용 로그인 */
     @org.springframework.beans.factory.annotation.Autowired private LoginDevices devices;
     @org.springframework.beans.factory.annotation.Autowired private LoginMfa mfa; /* 보안 4차 #1 관리자 추가 인증 */ /* 보안 2차 새 환경 로그인 알림 */
+    @org.springframework.beans.factory.annotation.Autowired private SessionPolicy sessions; /* 가디언 4차 세션 정책 */
     private final AuthMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final DdOAuth oa;
     @org.springframework.beans.factory.annotation.Value("${TOSS_SECRET_KEY:}") private String tossKey = "";
     @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:}") private String santaEnv = ""; /* v47 산타 관리자 표시(user.santa) */
@@ -46,11 +47,13 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         return m;
     }
 
-    private void newSession(HttpServletResponse res, String uid, String tid) throws Exception {
-        String token = DdCrypto.newToken();
-        mapper.insertSession(DdCrypto.sha(token), uid, tid, Math.min(p.idleH, props.getInt("session.days") * 24));
-        web.setSid(res, token);
+    /** 가디언 4차: SessionPolicy(유휴 60분 · 기관 10~60 · 최대 12시간 · 세션 쿠키 · 동시 세션 제한). 반환 = 다른 활성 세션 수(others) */
+    int newSession(HttpServletResponse res, String uid, String tid) throws Exception {
+        org.springframework.web.context.request.RequestAttributes ra = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        HttpServletRequest req = ra instanceof org.springframework.web.context.request.ServletRequestAttributes sa ? sa.getRequest() : null;
+        int others = sessions.create(req, res, uid, tid);
         devices.seen(res, uid, tid); /* 보안 2차: 새 환경 로그인 알림(가입 · 로그인 · 소셜 로그인 공통) */
+        return others;
     }
 
     @Override public Map<String, Object> signup(byte[] body, HttpServletRequest req, HttpServletResponse res) throws Exception {
@@ -111,9 +114,9 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     /** 보안 4차 #1: 2단계까지 끝난 운영자 로그인의 공통 마무리(Node finishLogin과 같음) */
     Map<String, Object> finishLogin(HttpServletResponse res, String uid, String tid, String email, String detail, boolean totpSetup) throws Exception {
         mapper.updateLastLogin(uid); mapper.deleteExpiredSessions(uid);
-        newSession(res, uid, tid);
+        int others = newSession(res, uid, tid);
         tx.audit(tid, email, "login", detail);
-        Map<String, Object> o = meOut(mapper.selectMe(uid, email)); if (totpSetup) o.put("totpSetup", true); return o;
+        Map<String, Object> o = meOut(mapper.selectMe(uid, email)); if (others > 0) o.put("others", others); /* 가디언 4차 #4 */ if (totpSetup) o.put("totpSetup", true); return o;
     }
     @Override public Map<String, Object> loginMfa(JsonNode b, HttpServletRequest req, HttpServletResponse res) throws Exception {
         Map<String, Object> v = mfa.verify(b, req, res);
@@ -133,9 +136,8 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
 
     @Override public Map<String, Object> auth(HttpServletRequest req) throws Exception {
         String t = web.sidToken(req); if (t == null || t.isEmpty() || t.length() > 100) return null;
-        Map<String, Object> a = mapper.selectAuth(DdCrypto.sha(t), Math.max(0, p.idleH - 1), props.getInt("session.days"));
+        Map<String, Object> a = sessions.check(req, false);
         if (a != null && !p.module.isEmpty() && !DdModule.roleAllowed(p.module, a.get("role"))) return null;
-        if (a != null && Boolean.TRUE.equals(a.get("slide"))) mapper.slideSession((String) a.get("sid"), props.getInt("session.days"), p.idleH);
         return a;
     }
     @Override public Map<String, Object> need(HttpServletRequest req) throws Exception {

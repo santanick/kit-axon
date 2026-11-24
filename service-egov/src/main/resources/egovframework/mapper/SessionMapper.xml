@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 가디언 4차 운영자 세션 정책 — Node service/server/session.js와 같은 SQL -->
+<mapper namespace="egovframework.didisam.auth.service.impl.SessionMapper">
+  <delete id="deleteById">delete from sessions where id = #{id}</delete>
+  <insert id="insert">insert into sessions (id, user_id, tenant_id, expires_at, agent, band) values (#{id}, cast(#{uid} as uuid), #{tid}, now() + make_interval(mins => #{min}), #{agent}, #{band})</insert>
+  <delete id="evict">delete from sessions where user_id = cast(#{uid} as uuid) and id in (select id from sessions where user_id = cast(#{uid} as uuid) and expires_at &gt; now() order by created_at desc, id offset #{keep})</delete>
+  <select id="selectEmail" resultType="string">select email from users where id = cast(#{uid} as uuid)</select>
+  <select id="countOthers" resultType="int" flushCache="true" useCache="false">select count(*)::int from sessions where user_id = cast(#{uid} as uuid) and id &lt;&gt; #{id} and expires_at &gt; now() and created_at &gt; now() - make_interval(hours => #{maxH})</select>
+  <select id="selectAuth" resultType="map" flushCache="true" useCache="false">
+    select s.id sid, u.id::text uid, u.email, u.role, u.pw_temp, t.id tid, t.name, t.type, t.mode, extract(epoch from s.expires_at - now())::float8 remain
+      from sessions s join users u on u.id = s.user_id join tenants t on t.id = s.tenant_id
+     where s.id = #{id} and s.expires_at &gt; now() and s.created_at &gt; now() - make_interval(hours => #{maxH})
+  </select>
+  <update id="slide">update sessions set expires_at = least(created_at + make_interval(hours => #{maxH}), greatest(now() + make_interval(mins => #{idle}), coalesce(work_until, now()))), last_at = now() where id = #{id}</update>
+  <select id="selectInfo" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">
+    select to_char(expires_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') exp, to_char((created_at + make_interval(hours => #{maxH})) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') maxat,
+           greatest(0, floor(extract(epoch from expires_at - now())))::int remain, case when work_until &gt; now() then to_char(work_until at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') end wu, work_reason
+      from sessions where id = #{id}
+  </select>
+  <update id="workEnd">update sessions set work_until = null, work_reason = null where id = #{id}</update>
+  <update id="workStart">update sessions set work_until = least(created_at + make_interval(hours => #{maxH}), now() + make_interval(mins => #{min})), work_reason = #{reason}, last_at = now() where id = #{id}</update>
+  <select id="selectList" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">
+    select id, agent, band, to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') c, to_char(last_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') l, to_char(expires_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') e
+      from sessions where user_id = cast(#{uid} as uuid) and expires_at &gt; now() and created_at &gt; now() - make_interval(hours => #{maxH}) order by last_at desc, created_at desc limit 50
+  </select>
+  <delete id="deleteOthers">delete from sessions where user_id = cast(#{uid} as uuid) and id &lt;&gt; #{id}</delete>
+  <select id="selectSec" resultType="string" flushCache="true" useCache="false">select (doc->'org'->'sec')::text from tenant_state where tenant_id = #{tid}</select>
+  <update id="mergeSec">update tenant_state set doc = jsonb_set(doc, '{org,sec}', coalesce(doc->'org'->'sec', '{}'::jsonb) || cast(#{json} as jsonb)) where tenant_id = #{tid} and jsonb_typeof(doc->'org') = 'object'</update>
+</mapper>

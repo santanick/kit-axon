@@ -109,8 +109,11 @@
 
   <!-- ── plain: 학습자 세션 · 기관 목록 ── -->
   <insert id="insertLearnerSession">
-    insert into learner_sessions (id, tenant_id, sid, expires_at) values (#{id}, #{tid}, #{sid}, now() + interval '30 days')
+    insert into learner_sessions (id, tenant_id, sid, expires_at, keep) values (#{id}, #{tid}, #{sid}, now() + interval '30 days', true)
   </insert>
+  <!-- 가디언 4차 #9: 학습자 이메일 · 학번(간편가입) 로그인 잠금(Node pii.js lockKey와 같은 actor · 규칙) -->
+  <select id="countLockFails" resultType="int" flushCache="true" useCache="false">select count(*)::int from audit_log where tenant_id = #{tid} and actor = #{actor} and action = 'llogin.fail' and at &gt; greatest(now() - interval '15 minutes', coalesce((select max(at) from audit_log where tenant_id = #{tid} and actor = #{actor} and action = 'llogin'), 'epoch'::timestamptz))</select>
+  <insert id="insertLockLog">insert into audit_log (tenant_id, actor, action, detail) values (#{tid}, #{actor}, #{action}, null)</insert>
   <insert id="insertLearnerSessionShort">insert into learner_sessions (id, tenant_id, sid, expires_at) values (#{id}, #{tid}, #{sid}, now() + interval '12 hours')</insert>
   <delete id="deleteLearnerSessionsOf">delete from learner_sessions where tenant_id = #{tid} and sid = #{sid}</delete>
   <select id="selectTenantIds" resultType="string">select id from tenants</select>

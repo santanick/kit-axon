@@ -62,6 +62,7 @@ public class StateServiceImpl extends EgovAbstractServiceImpl implements StateSe
         List<String> gone = new ArrayList<>(); boolean owner = "owner".equals(a.get("role")); final String[] mfaChg = new String[2];
         Map<String, Object> out = tx.inTenant(tid, () -> {
             Map<String, Object> pc = mapper.selectPlanCur(tid);
+            { JsonNode sec = pc == null || pc.get("sec") == null ? null : DdWeb.JSON.readTree(String.valueOf(pc.get("sec"))); if (doc.get("org") instanceof com.fasterxml.jackson.databind.node.ObjectNode on) { if (sec != null && sec.isObject()) on.set("sec", sec); else on.remove("sec"); } } /* 가디언 4차: 기관 보안 정책은 POST /api/org/security(정운영자)로만 */
             JsonNode cap = pc == null || pc.get("aiplan") == null ? null : DdWeb.JSON.readTree(String.valueOf(pc.get("aiplan"))), cpl = pc == null || pc.get("plan") == null ? null : DdWeb.JSON.readTree(String.valueOf(pc.get("plan")));
             if (!owner && !egovframework.didisam.cmm.DdAiPrice.ovKey(cap).equals(egovframework.didisam.cmm.DdAiPrice.ovKey(doc.get("aiplan")))) throw new egovframework.didisam.cmm.DdException(403, "AI 초과 처리는 정운영자만 바꿀 수 있습니다.", "aiplan_role");
             egovframework.didisam.cmm.DdAiPrice.keepPlan(doc, cap, cpl, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).toString());

@@ -6,7 +6,9 @@ import org.springframework.stereotype.Component;
 /** Node 서버와 같은 환경변수 이름을 그대로 쓴다(운영 설정 공유) */
 @Component
 public class DdProps {
-    public final boolean secure; public final int hops; public final int idleH; public final String cookieName;
+    public final boolean secure; public final int hops; public final String cookieName;
+    /** 가디언 4차: 운영자 유휴 차단(분, SESSION_IDLE_MIN 기본 60 · 1~60) · 세션 최대 수명(시간, SESSION_MAX_H 기본 12 · 1~24) */
+    public final int idleMin, maxH;
     /** 학습자 포털 세션 쿠키(Node lcookieName) */
     public final String lcookieName;
     public final String signupCode; public final boolean allowSignup; public final String pepper; public final int aiDaily; public final boolean ai;
@@ -20,7 +22,7 @@ public class DdProps {
     public final String module, learnerTid; public final java.util.List<String> adminIps;
     /** 본인인증 이력 서버 강제(제공사 연동 후 켠다) */
     public final boolean idvEnforce;
-    public DdProps(@Value("${COOKIE_SECURE:1}") String cs, @Value("${TRUST_PROXY_HOPS:1}") int hops, @Value("${SESSION_IDLE_H:12}") int idle,
+    public DdProps(@Value("${COOKIE_SECURE:1}") String cs, @Value("${TRUST_PROXY_HOPS:1}") int hops, @Value("${SESSION_IDLE_MIN:60}") int idle, @Value("${SESSION_MAX_H:12}") int maxH,
                    @Value("${SIGNUP_CODE:}") String code, @Value("${SIGNUP:on}") String signup, @Value("${SESSION_PEPPER:}") String pepper,
                    @Value("${AI_DAILY_CALLS:400}") int aiDaily, @Value("${ANTHROPIC_API_KEY:}") String aiKey, @Value("${NODE_ENV:}") String env,
                    @Value("${ANTHROPIC_URL:}") String aiUrl, @Value("${PII_KEY:}") String piiKey,
@@ -30,7 +32,7 @@ public class DdProps {
         this.adminIps = DdModule.parseIps(adminIps); this.learnerTid = learnerTid.trim();
         this.secure = !"0".equals(cs);
         this.hops = Math.max(0, Math.min(5, hops));
-        this.idleH = Math.max(1, Math.min(24 * 14, idle));
+        this.idleMin = Math.max(1, Math.min(60, idle)); this.maxH = Math.max(1, Math.min(24, maxH));
         this.cookieName = (secure ? "__Host-dd_sid" : "dd_sid") + (this.module.isEmpty() ? "" : "_" + this.module);
         this.lcookieName = secure ? "__Host-dd_lsid" : "dd_lsid";
         this.signupCode = code.trim(); this.allowSignup = !"off".equals(signup);
