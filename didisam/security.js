@@ -205,7 +205,7 @@
   async function approve(id, ra, cb) {
     const p = prOf(id); if (!p) return;
     if (live()) {
-      try { const r = await api('POST', `/api/security/prs/${encodeURIComponent(id)}/approve`, { reauth: ra }); const st = (r && (r.status || r.state)) || ''; toast(st === 'pending' ? '승인을 서버에 기록했습니다. 필요 인원이 모자라 다른 승인자를 기다립니다.' : '승인을 서버에 기록했습니다.', 'ok'); load('prs', true); load('sum', true); cb && cb(st || 'approved'); }
+      try { const r = await api('POST', `/api/security/prs/${encodeURIComponent(id)}/approve`, (ra && typeof ra === 'object' ? ra : { reauth: ra })); const st = (r && (r.status || r.state)) || ''; toast(st === 'pending' ? '승인을 서버에 기록했습니다. 필요 인원이 모자라 다른 승인자를 기다립니다.' : '승인을 서버에 기록했습니다.', 'ok'); load('prs', true); load('sum', true); cb && cb(st || 'approved'); }
       catch (e) { toast(e.status === 401 || e.status === 403 ? '재인증에 실패했거나 권한이 없습니다. 승인은 기록되지 않았습니다.' : e.message, 'warn'); cb && cb('fail'); }
       return;
     }
@@ -224,9 +224,9 @@
 
   /* ⑦ 휴대폰 1탭 승인 — 1회용 링크 15분 */
   const M = { id: null, exp: 0, step: 'auth', timer: 0, tok: '' };
-  async function mobileOpen(id, tok, expAt) {
-    M.id = id; M.tok = tok || ''; M.step = 'auth'; M.exp = expAt || Date.now() + 15 * 60e3;
-    if (live() && !tok) { try { const r = await api('POST', '/api/security/approve-link', { pr: id }); M.tok = r.token || ''; M.exp = r.exp ? +new Date(r.exp) : M.exp; M.url = r.url || ''; } catch (e) { toast(e.message, 'warn'); return; } }
+  async function mobileOpen(id, tok, expAt, ra, sec) {
+    M.id = id; M.tok = tok || ''; M.sec = sec || ''; M.step = live() && M.tok && M.sec ? 'ok' : 'auth'; /* 서버 계약: 링크 = 재인증 후 발급된 1회용 token+secret, 링크를 연 사람은 그것으로 승인 */ M.exp = expAt || Date.now() + 15 * 60e3;
+    if (live() && !tok) { try { const r = await api('POST', '/api/security/approve-link', { pr: id, reauth: ra || '' }); M.tok = r.token || ''; M.sec = r.secret || ''; M.exp = r.exp ? +new Date(r.exp) : M.exp; M.url = r.url || ''; } catch (e) { toast(e.message, 'warn'); return; } }
     mobileDraw(); clearInterval(M.timer); M.timer = setInterval(() => { const t = document.getElementById('secMt'); if (!t) { clearInterval(M.timer); return; } if (Date.now() >= M.exp) { mobileDraw(); clearInterval(M.timer); return; } t.textContent = left(); }, 1000);
   }
   const left = () => { const s = Math.max(0, Math.round((M.exp - Date.now()) / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')} 남음`; };
@@ -241,12 +241,12 @@
     else body = `<div class="sec-m-ok">재인증 완료</div><div class="sec-m-c">${sv(p.sev)} <b>#${esc(p.id)}</b><h3>${esc(p.title)}</h3><ol>${p.plain.map(t => `<li>${esc(t)}</li>`).join('')}</ol><ul class="sec-m-a">${p.appr.map(a => `<li class="${a.done ? 'ok' : ''}">${esc(a.role)} ${a.done ? '승인 완료' : '승인 대기'}</li>`).join('')}</ul></div><label class="sec-ck sec-m-ck"><input type="checkbox" id="secMag"> 병합 후 배포 시작에 동의합니다</label><button class="btn pri sec-m-b" data-act="sec-m-go" ${p.ok ? '' : 'disabled'}>승인하고 병합</button><button class="btn sec-m-b" data-act="sec-m-close">반려 · 자세히는 스튜디오에서</button>`;
     w.innerHTML = `<div class="sec-m-in"><header><button class="sec-m-bk" data-act="sec-m-close" aria-label="닫기">‹</button><b>디디쌤 스튜디오 · 보안 승인</b></header>${body}<footer><span>1회용 링크</span><b id="secMt" class="${exp ? 'bad' : ''}">${exp ? '만료됨' : left()}</b><small>재인증 없는 승인과 서버 기록 없는 승인은 무효입니다.</small></footer></div>`;
   }
-  ACT['sec-mobile'] = el => { if (!own()) { toast('산타 관리자만 승인할 수 있습니다.', 'warn'); return; } mobileOpen(el.dataset.v); };
+  ACT['sec-mobile'] = el => { if (!own()) { toast('산타 관리자만 승인할 수 있습니다.', 'warn'); return; } const id = el.dataset.v; if (live()) reauth('휴대폰 승인 링크 발급', '1회용 링크(15분)를 만들기 전에 본인 확인이 필요합니다.', ra => mobileOpen(id, '', undefined, ra)); else mobileOpen(id); };
   ACT['sec-m-close'] = () => { clearInterval(M.timer); const w = document.getElementById('secM'); if (w) w.remove(); };
   ACT['sec-m-auth'] = () => { if (Date.now() >= M.exp) return mobileDraw(); if (live()) { const v = (document.getElementById('secMra') || {}).value || ''; if (!v) { toast('재인증이 필요합니다.', 'warn'); return; } M.ra = v; } else M.ra = 'demo'; M.step = 'ok'; mobileDraw(); };
-  ACT['sec-m-go'] = () => { if (Date.now() >= M.exp) return mobileDraw(); if (!(document.getElementById('secMag') || {}).checked) { toast('배포 시작 동의에 체크해 주십시오.', 'warn'); return; } const ra = M.tok ? { token: M.tok, secret: M.ra } : M.ra; M.ra = ''; approve(M.id, ra, st => { if (st !== 'fail') { M.step = 'done'; M.exp = Math.min(M.exp, Date.now() + 5e3); } mobileDraw(); }); };
-  /* 알림 카드의 링크: index.html#sec-approve=<PR>.<token> */
-  function hashOpen() { const m = /^#sec-approve=([\w-]+)(?:\.([\w-]+))?/.exec(location.hash || ''); if (!m || !S || !S.org) return; if (!own()) { toast('산타 관리자만 승인할 수 있습니다.', 'warn'); return; } mobileOpen(m[1], m[2] || '', live() ? 0 : undefined); }
+  ACT['sec-m-go'] = () => { if (Date.now() >= M.exp) return mobileDraw(); if (!(document.getElementById('secMag') || {}).checked) { toast('배포 시작 동의에 체크해 주십시오.', 'warn'); return; } const ra = M.tok && M.sec ? { token: M.tok, secret: M.sec } : M.ra; M.ra = ''; approve(M.id, ra, st => { if (st !== 'fail') { M.step = 'done'; M.exp = Math.min(M.exp, Date.now() + 5e3); } mobileDraw(); }); };
+  /* 알림 카드의 링크: 서버 url = #sec-approve:<PR>:<token>:<secret> (시연판 #sec-approve=<PR>.<token>도 받음) */
+  function hashOpen() { const h = location.hash || ''; const k = /^#sec-approve:([\w-]+):([\w-]+):([\w-]+)/.exec(h); if (k && S && S.org && own()) { mobileOpen(k[1], k[2], undefined, '', k[3]); history.replaceState(null, '', location.pathname + location.search); return; } const m = /^#sec-approve=([\w-]+)(?:\.([\w-]+))?/.exec(h); if (!m || !S || !S.org) return; if (!own()) { toast('산타 관리자만 승인할 수 있습니다.', 'warn'); return; } mobileOpen(m[1], m[2] || '', live() ? 0 : undefined); }
   window.addEventListener('hashchange', hashOpen); if (typeof AFTER !== 'undefined' && AFTER.push) { let once = false; AFTER.push(() => { if (!once) { once = true; hashOpen(); } }); }
 
   /* ④ 위협 인텔 피드 */
