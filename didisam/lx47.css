@@ -113,3 +113,16 @@ body.tube .tb-home .tb-main{gap:12px}
 body.tube .tb-home .tb-main{gap:10px}
 .tb-now{gap:8px}
 .tb-req{min-height:40px}
+/* v47-fix(QA 높음 2): 휴대폰 앱에서 떠 있는 AI 버튼이 본문(홈 「다른 개념으로」 · 퀴즈 「20점」)을 가리던 것 —
+   버튼을 아래 탭과 같은 줄 오른쪽에 붙이고(탭은 그만큼 왼쪽으로 줄임) 본문 위로 띄우지 않는다. 한 화면에 버튼 1개:
+   퀴즈 · 과제 등 항목 화면(body.l47-item)은 「질문 · 도움」(#l47Fab)만, 나머지 화면은 AI 튜터(#tbFab)만. */
+@media (max-width:899px){
+  html body.lapp.l47-item #tbFab{display:none!important}
+  html body.lapp:not(.tb-watch):not(.lt-on):not(.tb-sheet):not(.ap-pickon):is(:has(> #tbFab),:has(> #l47Fab)) .ap-nav{right:80px!important}
+  html body.lapp:not(.tb-watch) #tbFab.tb-fab,html body.lapp .l47-fab{left:auto!important;right:12px!important;bottom:calc(10px + var(--ap-sb,0px))!important;width:60px!important;height:60px!important;min-height:0;padding:0!important;border-radius:20px!important;transform:none!important}
+  html body.lapp:not(.tb-watch) #tbFab.tb-fab{opacity:1!important;pointer-events:auto!important}
+  html body.lapp .l47-fab{flex-direction:column;justify-content:center;gap:2px;font-size:11px;line-height:1.1;letter-spacing:-.03em}
+  html body.lapp .l47-fab span{white-space:nowrap}
+  html body.lapp .l47-hp{right:12px;bottom:calc(84px + var(--ap-sb,0px))}
+  html body.lapp.l47-item #ltut .lt-panel{z-index:62}
+}
