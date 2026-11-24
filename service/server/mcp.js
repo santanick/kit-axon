@@ -21,8 +21,10 @@ function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, versi
     return { keys: rows };
   }
   async function createKey(a, req) {
-    if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 API 키를 발급할 수 있습니다.', 'role');
+    /* 보안 2차 SEC-0011: 쓰기(write) 키 발급은 정운영자만, 부운영자는 읽기(read) 키만. 교강사는 needStaff에서 막힌다 */
+    if (a.role !== 'owner' && a.role !== 'sub') throw new HttpErr(403, '정운영자만 API 키를 발급할 수 있습니다.', 'role');
     const b = await readBody(req, 2048); const name = String(b.name || '').trim().slice(0, 40); const scope = b.scope === 'write' ? 'write' : 'read';
+    if (scope === 'write' && a.role !== 'owner') throw new HttpErr(403, '쓰기 권한 키는 정운영자만 발급할 수 있습니다. 부운영자는 읽기 전용 키만 발급할 수 있습니다.', 'role');
     if (!name) throw new HttpErr(400, '키 이름(어디에 쓰는지)을 입력하세요.', 'name');
     const n = (await pool.query('select count(*)::int n from api_keys where tenant_id = $1 and revoked_at is null', [a.tid])).rows[0].n;
     if (n >= MAX_KEYS) throw new HttpErr(400, `사용 중인 키는 ${MAX_KEYS}개까지입니다. 쓰지 않는 키를 폐기하세요.`, 'max');
@@ -32,9 +34,11 @@ function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, versi
     return { id, name, scope, prefix: key.slice(0, 12), key };
   }
   async function revokeKey(a, req) {
-    if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 폐기할 수 있습니다.', 'role');
+    if (a.role !== 'owner' && a.role !== 'sub') throw new HttpErr(403, '정운영자만 폐기할 수 있습니다.', 'role');
     const b = await readBody(req, 1024); const id = String(b.id || '');
-    const r = await pool.query('update api_keys set revoked_at = now() where tenant_id = $1 and id = $2 and revoked_at is null', [a.tid, id]);
+    /* 보안 2차 SEC-0011: 부운영자는 읽기 키만 폐기(쓰기 키는 정운영자만) */
+    const r = await pool.query(`update api_keys set revoked_at = now() where tenant_id = $1 and id = $2 and revoked_at is null${a.role === 'owner' ? '' : " and scope = 'read'"}`, [a.tid, id]);
+    if (!r.rowCount && a.role !== 'owner' && (await pool.query("select 1 from api_keys where tenant_id = $1 and id = $2 and revoked_at is null and scope = 'write'", [a.tid, id])).rowCount) throw new HttpErr(403, '쓰기 권한 키는 정운영자만 폐기할 수 있습니다.', 'role');
     if (!r.rowCount) throw new HttpErr(404, '없는 키이거나 이미 폐기되었습니다.', 'key');
     await inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'apikey.revoke', { id }));
     return { ok: true };

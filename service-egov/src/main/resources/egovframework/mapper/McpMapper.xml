@@ -15,7 +15,8 @@
   <insert id="insertKey">
     insert into api_keys (id, tenant_id, name, prefix, hash, scope, created_by) values (#{id}, #{tid}, #{name}, #{prefix}, #{hash}, #{scope}, #{by})
   </insert>
-  <update id="revokeKey">update api_keys set revoked_at = now() where tenant_id = #{tid} and id = #{id} and revoked_at is null</update>
+  <update id="revokeKey">update api_keys set revoked_at = now() where tenant_id = #{tid} and id = #{id} and revoked_at is null<if test="readOnly"> and scope = 'read'</if></update>
+  <select id="countActiveWrite" resultType="int">select count(*)::int from api_keys where tenant_id = #{tid} and id = #{id} and revoked_at is null and scope = 'write'</select>
   <select id="selectKeyAuth" resultType="java.util.LinkedHashMap">
     select k.id, k.tenant_id tid, k.name, k.scope, t.name org, t.type from api_keys k join tenants t on t.id = k.tenant_id where k.hash = #{hash} and k.revoked_at is null
   </select>

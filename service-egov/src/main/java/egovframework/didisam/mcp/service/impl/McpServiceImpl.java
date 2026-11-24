@@ -50,9 +50,11 @@ public class McpServiceImpl extends EgovAbstractServiceImpl implements McpServic
         return new LinkedHashMap<>(Map.of("keys", mapper.selectKeys((String) a.get("tid"))));
     }
     @Override public Map<String, Object> createKey(Map<String, Object> a, byte[] body) throws Exception {
-        if (!"owner".equals(a.get("role"))) throw processException("dd.403.role.keycreate");
+        /* 보안 2차 SEC-0011: 쓰기(write) 키는 정운영자만, 부운영자는 읽기 키만(Node mcp.js와 같은 순서) */
+        boolean owner = "owner".equals(a.get("role")); if (!owner && !"sub".equals(a.get("role"))) throw processException("dd.403.role.keycreate");
         JsonNode b = DdWeb.readBody(body, props.getInt("body.keyMax"));
         String name = cut(trim(sOr(b.get("name"))), 40); String scope = strictEq(b.get("scope"), "write") ? "write" : "read";
+        if ("write".equals(scope) && !owner) throw processException("dd.403.role.keywrite");
         if (name.isEmpty()) throw processException("dd.400.name.key");
         String tid = (String) a.get("tid"); int max = props.getInt("mcp.maxKeys");
         if (mapper.countActiveKeys(tid) >= max) throw processException("dd.400.max", new String[]{ String.valueOf(max) });
@@ -65,10 +67,11 @@ public class McpServiceImpl extends EgovAbstractServiceImpl implements McpServic
         return o;
     }
     @Override public Map<String, Object> revokeKey(Map<String, Object> a, byte[] body) throws Exception {
-        if (!"owner".equals(a.get("role"))) throw processException("dd.403.role.keyrevoke");
+        boolean owner = "owner".equals(a.get("role")); if (!owner && !"sub".equals(a.get("role"))) throw processException("dd.403.role.keyrevoke");
         JsonNode b = DdWeb.readBody(body, props.getInt("body.keyRevokeMax")); String id = sOr(b.get("id"));
         String tid = (String) a.get("tid");
-        if (mapper.revokeKey(tid, id) == 0) throw processException("dd.404.key");
+        /* 보안 2차 SEC-0011: 부운영자는 읽기 키만 폐기 */
+        if (mapper.revokeKey(tid, id, !owner) == 0) { if (!owner && mapper.countActiveWrite(tid, id) > 0) throw processException("dd.403.role.keywriterevoke"); throw processException("dd.404.key"); }
         ObjectNode d = F.objectNode(); d.put("id", id);
         tx.audit(tid, (String) a.get("email"), "apikey.revoke", stringify(d));
         return new LinkedHashMap<>(Map.of("ok", true));
