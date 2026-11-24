@@ -11,7 +11,10 @@
 
   /* ── 메뉴 · 프리셋 · 기존 저장 사용자 ── */
   /* v47 통합 결정: 가디언은 산타 내부 운영 도구 — 실서버는 산타 관리자(LIVE.user.santa, 서버 SANTA_ADMIN_EMAILS)만, 시연판은 데모 정운영자(흐름 확인용). 고객 기관용 보안 센터는 Phase 2 */
-  { const M = { label: '보안', ws: 'ops', owner: true }; Object.defineProperty(MENU, 'security', { configurable: true, enumerable: true, get: () => (typeof LIVE !== 'undefined' && LIVE && LIVE.user && !LIVE.user.santa) ? undefined : M }); }
+  MENU.security = { label: '보안', ws: 'ops', owner: true };
+  /* 실서버 비(非)산타 계정: 메뉴 정의는 두고(presetNav 등이 MENU를 읽음) 탭만 끈다 — 화면 · 서버도 산타 관리자만 */
+  const santaHide = () => { try { if (typeof LIVE === 'undefined' || !LIVE || !LIVE.user || LIVE.user.santa || !S || !S.nav || !S.nav.tabs) return; Object.values(S.nav.tabs).forEach(L => (L || []).forEach(x => { if (x.id === 'security') x.on = false; })); } catch (e) { } };
+  { const base = render; render = (...a) => { santaHide(); return base(...a); }; }
   Object.keys(PRESET).forEach(k => { const P = PRESET[k]; if (P && Array.isArray(P.on) && !P.on.includes('security') && !(P.off || []).includes('security')) P.on.push('security'); });
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org && S.nav && typeof navAdd === 'function' && !Object.values(S.nav.tabs).some(L => (L || []).some(x => x.id === 'security'))) { navAdd('security', true); save(); } } catch (e) { console.error('security', e); } return r; }; } /* eslint-disable-line no-global-assign */
   /* 기본 메뉴(slimEss)에 포함 — 정운영자에게만 보인다(MENU.owner). 학사 LMS 시나리오가 DOMContentLoaded에 바꾸므로 그 뒤에도 한 번 더 감싼다 */
