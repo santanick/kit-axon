@@ -94,6 +94,11 @@
         { k: 'egress_block', n: '외부 전송(egress) 차단', trig: '미등록 도메인 전송 반복', safe: '독립 신호 2개 필요', today: 0 }],
       active: [{ id: 'K-7', action: 'feature_off', tenant: '시연 기관 B', reason: 'AI 토큰 1시간 사용량이 7일 평균의 5배', leftMin: 133, dry: true }],
       log: [['11-24 02:14', '기관 기능 끄기 → AI 한도 축소', '시연 기관 B', 'AI 토큰 1시간 7일 평균의 5배', '사람 확인'], ['11-21 23:40', 'egress 차단', '시연 기관 A', '신호 1개(조건 미충족)', '미발동']] },
+    /* 사고 대응(F8) — 서버 응답과 같은 형태(가상값) */
+    inc: [{ id: 'inc_demo000000000001', type: 'llmjacking', title: '긴급 차단 발동: 기관 기능 끄기', severity: 'high', status: 'open', phase: 'contain', killId: 'K-7', createdBy: '규칙 엔진',
+      scope: { tenants: ['시연 기관 B'], data: '', period: '11-24 02:00~02:14' }, notified: false, decisions: [],
+      timeline: [{ phase: 'detect', note: 'AI 토큰 1시간 사용량이 7일 평균의 5배', by: '규칙 엔진', at: new Date(Date.now() - 3 * 3600e3).toISOString() }, { phase: 'contain', note: '긴급 차단 dry-run 기록(실제 적용 없음)', by: '규칙 엔진', at: new Date(Date.now() - 3 * 3600e3 + 60e3).toISOString() }],
+      createdAt: new Date(Date.now() - 3 * 3600e3).toISOString(), notifyDueAt: new Date(Date.now() + 69 * 3600e3).toISOString() }],
     audit: [
       { at: '11-24 09:42', who: '개발 총괄', what: 'PR #412 코드 리뷰 승인', hash: '9f1c…a2', prev: '41be…07' },
       { at: '11-24 06:00', who: '가디언', what: '정기 스캔 완료 · Finding 2건 갱신', hash: '41be…07', prev: 'c03d…5e' },
@@ -104,8 +109,8 @@
   const kName = k => ({ key_disable: '키 비활성', feature_off: '기관 기능 끄기', egress_block: '외부 전송 차단' }[k] || k);
 
   /* ── 실서버 데이터 ── */
-  const URL = { sum: '/api/security/summary', fin: '/api/security/findings', prs: '/api/security/prs', thr: '/api/security/threats', cards: '/api/security/cards', kill: '/api/security/kill', audit: '/api/security/audit' };
-  const L = { sum: null, fin: null, prs: null, thr: null, cards: null, kill: null, audit: null, busy: {}, err: {} };
+  const URL = { inc: '/api/security/incidents', sum: '/api/security/summary', fin: '/api/security/findings', prs: '/api/security/prs', thr: '/api/security/threats', cards: '/api/security/cards', kill: '/api/security/kill', audit: '/api/security/audit' };
+  const L = { inc: null, sum: null, fin: null, prs: null, thr: null, cards: null, kill: null, audit: null, busy: {}, err: {} };
   async function load(k, again) {
     if (!live() || (L.busy[k] && !again)) return; L.busy[k] = true;
     try { const j = await api('GET', URL[k]); L[k] = j; L.err[k] = ''; }
@@ -118,7 +123,7 @@
 
   /* ── 공통 머리 ── */
   const MAIN = [['home', '보안 홈'], ['board', '취약점'], ['prs', '수정 PR'], ['feed', '위협 인텔']];
-  const MORE = [['cards', '대책 카드'], ['kill', '긴급 차단 · 설정'], ['audit', '감사 기록']];
+  const MORE = [['inc', '사고 대응'], ['cards', '대책 카드'], ['kill', '긴급 차단 · 설정'], ['audit', '감사 기록']];
   function nav(cur) {
     const inMore = MORE.some(x => x[0] === cur);
     return `<div class="sec-nav">${tabs('sec', MAIN, inMore ? '' : cur)}<details class="sec-more"${inMore ? ' open' : ''}><summary>더 보기${inMore ? ' · ' + esc(MORE.find(x => x[0] === cur)[1]) : ''} ▾</summary><div class="sec-more-l">${MORE.map(([k, l]) => `<button class="chip ${k === cur ? 'on' : ''}" data-act="tab" data-key="sec" data-v="${k}">${esc(l)}</button>`).join('')}</div></details></div>`;
@@ -305,6 +310,66 @@
     DS.kill.log.unshift([now(), `${kName(a.action)} 해제${a.dry ? '(모의)' : ''}`, a.tenant, why.slice(0, 60), `사람 해제 · ${S.me.name || '정운영자'}`]); audit(`긴급 차단 해제: ${kName(a.action)} · ${a.tenant}`); render(); toast('해제했습니다.', 'ok');
   }
 
+  /* ⑧ 사고 대응(F8) — 탐지 · 격리 · 신고 · 통지 · 복구 · 재발 방지, 신고 · 통지 72시간. 결정은 사람만(서버도 가디언 토큰 거부) */
+  const PH = [['detect', '탐지'], ['contain', '격리'], ['report', '신고'], ['notify', '통지'], ['recover', '복구'], ['prevent', '재발 방지']];
+  const phKo = p => (PH.find(x => x[0] === p) || [, p])[1];
+  const ITY = { key_leak: '키 · 비밀값 유출', cross_tenant: '기관 간 데이터 노출', pii_leak: '개인정보 유출', llmjacking: 'AI 키 무단 사용', other: '기타 보안 사고' };
+  const DEC = [['report', '개인정보위 · KISA 신고'], ['notify', '정보주체 통지'], ['public', '공개 공지'], ['shutdown', '서비스 중단']];
+  const ISV = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
+  const kst = iso => { const t = +new Date(iso); return t ? new Date(t + 9 * 3600e3).toISOString().slice(5, 16).replace('T', ' ') : '—'; };
+  const dueLeft = x => { const m = Math.round((+new Date(x.notifyDueAt) - Date.now()) / 60e3); if (!Number.isFinite(m)) return ['—', '']; return m <= 0 ? ['기한 초과', 'bad'] : [`${hm(Math.floor(m / 60))} ${m % 60}분 남음`, m <= 12 * 60 ? 'warn' : '']; };
+  const incOf = id => arr(get('inc')).find(x => x.id === id);
+  function vInc() {
+    const d = get('inc'); if (!d) return wait('inc');
+    const all = arr(d); const head2 = `<div class="sec-bh"><h3>사고 대응</h3><small>신고 · 통지 판단 기한 72시간 · 결정은 대표님 · 부대표(사람)만 기록합니다</small></div>`;
+    if (!all.length) return head2 + '<div class="empty">진행 중인 보안 사고가 없습니다. 긴급 차단이 발동하면 사고 기록이 자동으로 만들어집니다.</div>' + demoNote();
+    const x = all.find(y => y.id === UI.secInc) || all[0];
+    const list = `<ul class="sec-prl">${all.map(y => { const [t, c] = dueLeft(y); return `<li><button class="${y.id === x.id ? 'on' : ''}" data-act="sec-inc" data-v="${esc(y.id)}">${sv(ISV[y.severity])} <b>${esc(phKo(y.phase))}</b><span>${esc(y.title)}</span><small>${y.status === 'closed' ? '종결' : y.notified ? '통지 결정됨' : `<em class="sec-due ${c}">${esc(t)}</em>`} · ${esc(kst(y.createdAt))}</small></button></li>`; }).join('')}</ul>`;
+    const done = new Set(arr(x.timeline).map(t => t.phase)); const [lt, lc] = dueLeft(x); const sc = x.scope || {};
+    const det = `<article class="sec-prd" aria-label="사고 ${esc(x.id)} 상세"><div class="sec-tags">${sv(ISV[x.severity])}${src(ITY[x.type] || x.type)}${x.killId ? tag('긴급 차단 연결') : ''}${x.status === 'closed' ? tag('종결') : ''}</div><h3>${esc(x.title)}</h3>
+      <div class="sec-due-b ${x.notified || x.status === 'closed' ? '' : lc}" role="status">${ic('clock', 16)} <b>신고 · 통지 판단 기한</b><span>${esc(kst(x.notifyDueAt))} KST · ${x.notified ? '통지 결정 기록됨' : esc(lt)}</span></div>
+      <ol class="sec-steps">${PH.map(([k, l]) => `<li class="${done.has(k) ? 'ok' : ''}${x.phase === k ? ' cur' : ''}">${esc(l)}</li>`).join('')}</ol>
+      <p class="mini">영향 범위: 기관 ${nf(arr(sc.tenants).length)}곳${sc.data ? ' · 항목 ' + esc(sc.data) : ''}${sc.period ? ' · 시점 ' + esc(sc.period) : ''}</p>
+      <h4>타임라인</h4><ol class="sec-hist">${arr(x.timeline).map(t => `<li><time>${esc(kst(t.at))}</time><b>${esc(phKo(t.phase))}</b> ${esc(t.note || '')} <small>· ${esc(t.by || '')}</small></li>`).join('')}</ol>
+      <h4>결정 <small>사람만 · 서버 기록</small></h4><div class="sec-acts">${DEC.map(([k, l]) => `<button class="btn" data-act="sec-inc-dec" data-v="${esc(x.id)}" data-k="${k}">${esc(l)}</button>`).join('')}</div>
+      ${arr(x.decisions).length ? `<ol class="sec-hist">${arr(x.decisions).map(z => `<li><time>${esc(kst(z.at))}</time><b>${esc((DEC.find(q => q[0] === z.kind) || [, z.kind])[1])} · ${z.decided ? '하기로 함' : '하지 않기로 함'}</b> ${esc(z.note || '')} <small>· ${esc(z.by || '')}</small></li>`).join('')}</ol>` : '<p class="mini">아직 기록된 결정이 없습니다.</p>'}
+      <div class="sec-acts"><button class="btn" data-act="sec-inc-step" data-v="${esc(x.id)}">단계 기록</button><button class="btn" data-act="sec-inc-draft" data-v="${esc(x.id)}" data-k="report">신고서 초안</button><button class="btn pri" data-act="sec-inc-draft" data-v="${esc(x.id)}" data-k="notify">통지문 초안 복사</button></div>
+      <p class="mini">초안은 개인정보 보호법 제34조 통지 항목(유출 항목 · 시점 · 경위 · 피해 최소화 방법 · 대응 조치 · 피해 구제 · 연락처)으로 만들며 개인정보 · 비밀값을 넣지 않습니다. 대표님 · 부대표 검토 후 사용합니다.</p></article>`;
+    return head2 + `<div class="sec-prw">${list}${det}</div>` + demoNote();
+  }
+  ACT['sec-inc'] = el => { UI.secInc = el.dataset.v; render(); };
+  ACT['sec-inc-step'] = el => {
+    if (!own()) { toast('산타 관리자만 기록할 수 있습니다.', 'warn'); return; } const x = incOf(el.dataset.v); if (!x) return;
+    modal('단계 기록', `<label class="fl">단계<select id="secIp">${PH.map(([k, l]) => `<option value="${k}" ${k === x.phase ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label class="fl">내용<input id="secIn" maxlength="300"></label><p class="mini">개인정보 · 비밀값은 적지 않습니다.</p>`,
+      [{ id: 'c', label: '취소' }, { id: 'ok', label: '기록', kind: 'pri', run: w => { incStep(x, w.querySelector('#secIp').value, w.querySelector('#secIn').value.trim().slice(0, 300)); } }]);
+  };
+  async function incStep(x, phase, note) {
+    if (live()) { try { await api('POST', `/api/security/incidents/${encodeURIComponent(x.id)}/step`, { phase, note }); toast('단계를 서버에 기록했습니다.', 'ok'); load('inc', true); } catch (e) { toast(errMsg(e), 'warn'); } return; }
+    x.timeline.push({ phase, note, by: (S.me && S.me.name) || '정운영자', at: new Date().toISOString() }); x.phase = phase; x.status = phase === 'prevent' ? 'closed' : 'open'; audit(`사고 ${x.id} 단계 → ${phKo(phase)}`); render(); toast('단계를 기록했습니다.', 'ok');
+  }
+  ACT['sec-inc-dec'] = el => {
+    if (!own()) { toast('산타 관리자만 결정할 수 있습니다.', 'warn'); return; } const x = incOf(el.dataset.v); const k = el.dataset.k; if (!x) return; const l = (DEC.find(q => q[0] === k) || [, k])[1];
+    modal(`결정: ${l}`, `<p>${esc(l)} 여부를 기록합니다. 결정은 사람만 할 수 있으며 서버 감사 기록에 남습니다.</p><label class="fl">결정<select id="secId"><option value="1">하기로 함</option><option value="0">하지 않기로 함</option></select></label><label class="fl">근거 · 메모<input id="secIdn" maxlength="300"></label>`,
+      [{ id: 'c', label: '취소' }, { id: 'ok', label: '결정 기록', kind: 'pri', run: w => { incDec(x, k, w.querySelector('#secId').value === '1', w.querySelector('#secIdn').value.trim().slice(0, 300)); } }]);
+  };
+  async function incDec(x, kind, decided, note) {
+    if (live()) { try { await api('POST', `/api/security/incidents/${encodeURIComponent(x.id)}/decision`, { kind, decided, note }); toast('결정을 서버에 기록했습니다.', 'ok'); load('inc', true); } catch (e) { toast(errMsg(e), 'warn'); } return; }
+    x.decisions.push({ kind, decided, note, by: (S.me && S.me.name) || '정운영자', at: new Date().toISOString() }); if (kind === 'notify' && decided) x.notified = true; audit(`사고 ${x.id} 결정: ${kind} ${decided ? '함' : '안 함'}`); render(); toast('결정을 기록했습니다.', 'ok');
+  }
+  /* 시연판 초안: 서버 초안과 같은 항목 구성(가상값) */
+  const demoDraft = x => { const t = ITY[x.type] || '보안 사고'; const sc = x.scope || {}; const acts = PH.filter(([k]) => arr(x.timeline).some(y => y.phase === k)).map(p => p[1]).join(' · ');
+    const n = [`[정보주체 통지문(초안)] ${t} 안내`, '', '산타(주)는 디디쌤 서비스에서 발생한 보안 사고로 이용자님의 개인정보가 유출되었을 가능성을 확인하여 「개인정보 보호법」 제34조에 따라 다음과 같이 알려 드립니다.', '',
+      `1. 유출된 개인정보 항목: ${sc.data || '[확인 중 — 유출 항목을 기입합니다]'}`, `2. 유출된 시점과 그 경위: ${sc.period || '[확인 중]'} · ${t}`, '3. 피해를 최소화하기 위하여 이용자님이 할 수 있는 방법: 디디쌤 비밀번호를 변경해 주시고, 출처가 불분명한 문자 · 메일 · 링크와 본인을 사칭한 연락에 주의해 주십시오.',
+      `4. 산타(주)의 대응 조치: ${acts} 단계를 진행했습니다.`, '5. 피해 구제 절차: 피해가 발생했거나 의심되면 아래 연락처로 알려 주십시오. 개인정보침해 신고센터(국번 없이 118)에서도 상담하실 수 있습니다.', '6. 담당 부서 및 연락처: 산타(주) 개인정보 보호 담당 · [대표 연락처 기입]', '', '※ 이 문서는 초안입니다. 대표님 · 부대표 검토 후 발송합니다.'].join('\n');
+    return { notify: n, report: n.replace('[정보주체 통지문(초안)]', '[개인정보 유출 등 신고서(초안)]').replace('발송합니다', '제출합니다') }; };
+  ACT['sec-inc-draft'] = async el => {
+    if (!own()) { toast('산타 관리자만 볼 수 있습니다.', 'warn'); return; } const x = incOf(el.dataset.v); const k = el.dataset.k === 'report' ? 'report' : 'notify'; if (!x) return;
+    let D; if (live()) { try { D = await api('GET', `/api/security/incidents/${encodeURIComponent(x.id)}/draft`); } catch (e) { toast(errMsg(e), 'warn'); return; } } else D = demoDraft(x);
+    const text = String((D && D[k]) || '');
+    modal(k === 'report' ? '신고서 초안' : '정보주체 통지문 초안', `<label class="fl">초안(읽기 전용)<textarea id="secDr" rows="12" readonly>${esc(text)}</textarea></label><p class="mini">[확인 중] · [기입] 표시는 사람이 채웁니다. 발송 · 제출 전 대표님 · 부대표 검토가 필요합니다.</p>`,
+      [{ id: 'c', label: '닫기' }, { id: 'ok', label: '복사', kind: 'pri', run: w => { const ta = w.querySelector('#secDr'); const done = () => toast('초안을 복사했습니다.', 'ok'); try { navigator.clipboard.writeText(ta.value).then(done, () => { ta.select(); document.execCommand('copy'); done(); }); } catch (e) { ta.select(); try { document.execCommand('copy'); } catch (e2) { } done(); } } }]);
+  };
+
   /* 감사 기록 — 해시 체인(prev_hash → hash) */
   function vAudit() {
     const d = get('audit'); if (!d) return wait('audit');
@@ -317,7 +382,7 @@
   VIEWS.security = () => {
     if (!own()) return '<div class="empty">보안 화면은 산타 관리자만 볼 수 있습니다.</div>';
     let cur = UI.sec; if (![...MAIN, ...MORE].some(x => x[0] === cur)) cur = 'home';
-    const B = { home: vHome, board: vBoard, prs: vPrs, feed: vFeed, cards: vCards, kill: vKill, audit: vAudit }[cur];
+    const B = { inc: vInc, home: vHome, board: vBoard, prs: vPrs, feed: vFeed, cards: vCards, kill: vKill, audit: vAudit }[cur];
     return `<div class="sec">${head('', '디디쌤 가디언이 취약점 · 위협을 모아 판정하고, 수정은 PR로 만들어 사람 승인 뒤에만 병합합니다.', `<span class="sec-own">${ic('shield', 16)} 정운영자 전용</span>`)}${nav(cur)}${B()}</div>`;
   };
   ACT['sec-go'] = el => { const v = el.dataset.v; if (el.dataset.id) UI.secPr = el.dataset.id; UI.sec = v; render(); };

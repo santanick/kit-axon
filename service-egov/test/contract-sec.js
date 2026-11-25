@@ -35,6 +35,16 @@ async function run(U, tag) {
   R.ap2 = await call('Z2', 'POST', P, { token: R.link.j.token, secret: R.link.j.secret }); R.apReuse = await call('Z2', 'POST', P, { token: R.link.j.token, secret: R.link.j.secret });
   R.apForbid = await call('Z1', 'POST', `/api/security/prs/prw-${sx}/approve`, { reauth: 'Passw0rd-z1z' }); R.rejNo = await call('Z1', 'POST', `/api/security/prs/prw-${sx}/reject`, {}); R.rej = await call('Z1', 'POST', `/api/security/prs/prw-${sx}/reject`, { reason: 'r' }); R.rej2 = await call('Z1', 'POST', `/api/security/prs/prw-${sx}/reject`, { reason: 'r' });
   R.prs = await call('Z1', 'GET', '/api/security/prs');
+  /* 가디언 5차 F8 사고 대응 — 등록 · 단계 · 결정(사람만) · 초안 · 긴급 차단 연결 */
+  R.incSanta = await call('A', 'GET', '/api/security/incidents'); R.incBadType = await call('Z1', 'POST', '/api/security/incidents', { type: 'x', title: 't' }); R.incNoTitle = await call('Z1', 'POST', '/api/security/incidents', { type: 'other', title: ' ' });
+  R.incBadSev = await call('Z1', 'POST', '/api/security/incidents', { type: 'other', title: 't', severity: 'huge' });
+  R.inc = await call('Z1', 'POST', '/api/security/incidents', { type: 'pii_leak', title: '노출 의심', severity: 'critical', scope: { tenants: [T.tid, 'bad', T.tid], data: '이름 · hong@ex.com', period: '11-24 02시' } });
+  R.incG = await call('X', 'POST', '/api/security/incidents', { type: 'llmjacking', title: 'g' }, G); const iid = R.inc.j.incident.id;
+  R.incStepBad = await call('Z1', 'POST', `/api/security/incidents/${iid}/step`, { phase: 'zz' }); R.incStep404 = await call('Z1', 'POST', '/api/security/incidents/inc_0000000000000000/step', { phase: 'contain' });
+  R.incStep = await call('Z1', 'POST', `/api/security/incidents/${iid}/step`, { phase: 'contain', note: '격리' }); R.incStepG = await call('X', 'POST', `/api/security/incidents/${iid}/step`, { phase: 'recover' }, G);
+  R.incDecG = await call('X', 'POST', `/api/security/incidents/${iid}/decision`, { kind: 'notify', decided: true }, G); R.incDecBad = await call('Z1', 'POST', `/api/security/incidents/${iid}/decision`, { kind: 'x', decided: true });
+  R.incDecVal = await call('Z1', 'POST', `/api/security/incidents/${iid}/decision`, { kind: 'notify', decided: 'yes' }); R.incDec = await call('Z1', 'POST', `/api/security/incidents/${iid}/decision`, { kind: 'notify', decided: true, note: 'n' });
+  R.incDraft = await call('Z1', 'GET', `/api/security/incidents/${iid}/draft`); R.incDraft404 = await call('Z1', 'GET', '/api/security/incidents/inc_0000000000000000/draft'); R.incs = await call('Z1', 'GET', '/api/security/incidents');
   const ai = () => call('A', 'POST', '/api/ai/messages', { messages: [{ role: 'user', content: 'hi' }] });
   R.killBad = await call('Z1', 'POST', '/api/security/kill', { action: 'nuke', tenant: T.tid, reason: 'x' }); R.killSig = await call('Z1', 'POST', '/api/security/kill', { action: 'egress_block', tenant: T.tid, reason: 'x', signals: ['a'] });
   R.kill404 = await call('Z1', 'POST', '/api/security/kill', { action: 'key_disable', tenant: 'tn_zzzzzzzzzz', reason: 'x' });
@@ -44,6 +54,7 @@ async function run(U, tag) {
   R.k3 = await call('Z1', 'POST', '/api/security/kill', { action: 'egress_block', tenant: T.tid, reason: 'e', signals: ['dns', 'proxy'] }); R.aiEgress = await ai();
   R.kCap = await call('Z1', 'POST', '/api/security/kill', { action: 'key_disable', tenant: T.tid, reason: 'cap' }); R.kills = await call('Z1', 'GET', '/api/security/kill');
   await call('Z1', 'POST', `/api/security/kill/${R.k2.j.kill.id}/release`, {}); await call('Z1', 'POST', `/api/security/kill/${R.k3.j.kill.id}/release`, {});
+  R.incsKill = await call('Z1', 'GET', '/api/security/incidents');
   R.audit = await call('Z1', 'GET', '/api/security/audit'); R.route404 = await call('Z1', 'GET', '/api/security/nope');
   return R;
 }
@@ -52,8 +63,12 @@ async function run(U, tag) {
   for (const k of Object.keys(a)) { const x = a[k], y = b[k]; ok(x.st === y.st, `${k} status ${x.st} != ${y.st} ${JSON.stringify(y.j).slice(0, 200)}`); const d = same(x.j, y.j); ok(!d, `${k} shape ${d}`);
     if (x.j && x.j.error) ok(x.j.error === (y.j && y.j.error), `${k} error ${x.j.error} != ${y.j && y.j.error}`); }
   const chk = (R, t) => { ok(R.notSanta.j.error === 'santa', t + ' santa'); ok(R.ap1.j.status === 'pending' && R.ap2.j.status === 'approved', t + ' 2인 승인'); ok(R.aiKey.j.error === 'sec_key_off' && R.aiFeat.j.error === 'sec_feature_off' && R.aiEgress.j.error === 'sec_egress', t + ' 실행 지점');
-    ok(R.kCap.j.error === 'kill_cap' && R.kills.j.cap.used === 3, t + ' 하루 3회'); ok(Math.round((new Date(R.k2.j.kill.expiresAt) - new Date(R.k2.j.kill.activatedAt)) / 60e3) === 240, t + ' TTL 4시간'); ok(R.relAgent.j.error === 'human_only', t + ' 사람만 해제'); ok(R.audit.j.ok === true, t + ' 해시 체인(교차 검증)'); };
+    ok(R.kCap.j.error === 'kill_cap' && R.kills.j.cap.used === 3, t + ' 하루 3회'); ok(Math.round((new Date(R.k2.j.kill.expiresAt) - new Date(R.k2.j.kill.activatedAt)) / 60e3) === 240, t + ' TTL 4시간'); ok(R.relAgent.j.error === 'human_only', t + ' 사람만 해제'); ok(R.audit.j.ok === true, t + ' 해시 체인(교차 검증)');
+    const I = R.inc.j.incident; ok(I.phase === 'detect' && I.scope.tenants.length === 1 && I.leftMin > 4300 && I.leftMin <= 4320, t + ' 사고 등록 · 72시간'); ok(R.incG.j.incident.createdBy === 'agent:guardian', t + ' 가디언 등록');
+    ok(R.incDecG.j.error === 'human_only' && R.incDec.j.incident.notified === true, t + ' 결정은 사람만'); ok(R.incStepG.j.incident.timeline.length === 3, t + ' 단계 타임라인');
+    ok(!/hong@ex/.test(R.incDraft.j.notify) && /탐지 · 격리 · 복구/.test(R.incDraft.j.notify), t + ' 초안 가림 · 단계'); const ki = R.incsKill.j.rows.find(x => x.id === R.k1.j.incident); ok(ki && ki.killId === R.k1.j.kill.id && ki.type === 'key_leak' && ki.phase === 'contain', t + ' 긴급 차단 → 사고 자동 생성'); };
   chk(a, 'node'); chk(b, 'java');
+  const tx = x => String(x || '').replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/g, 'T'); ok(tx(a.incDraft.j.notify) === tx(b.incDraft.j.notify) && tx(a.incDraft.j.report) === tx(b.incDraft.j.report), '초안 문구 Node = Java');
   await pool.query("delete from security.kill_switch where kday = ((now() at time zone 'Asia/Seoul')::date)"); await pool.end();
   console.log(`pass ${pass} fail ${fail}`); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

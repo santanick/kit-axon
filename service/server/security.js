@@ -23,6 +23,38 @@ const maskIp = ip => { const s = String(ip || '').replace(/^::ffff:/, ''); if (/
 /* 해시 체인: Java SecServiceImpl.chainHash와 같은 식 */
 const chainHash = (prev, ts, actor, action, target, detail) => sha([prev, ts, actor, action, target, detail].join('|'));
 const GENESIS = '0'.repeat(64);
+/* ── 사고 대응(F8): 유형 · 단계 · 결정 · 72시간 ── */
+const INC_TYPES = ['key_leak', 'cross_tenant', 'pii_leak', 'llmjacking', 'other'];
+const PHASES = ['detect', 'contain', 'report', 'notify', 'recover', 'prevent'];
+const DEC_KINDS = ['report', 'notify', 'public', 'shutdown'];
+const NOTIFY_H = 72; const INC_RE = /^inc_[0-9a-f]{16}$/;
+const PHASE_KO = { detect: '탐지', contain: '격리', report: '신고', notify: '통지', recover: '복구', prevent: '재발 방지' };
+const TYPE_KO = { key_leak: '키 · 비밀값 유출', cross_tenant: '기관 간 데이터 노출', pii_leak: '개인정보 유출', llmjacking: 'AI 키 무단 사용(LLMjacking)', other: '기타 보안 사고' };
+const KILL_INC = { key_disable: 'key_leak', feature_off: 'llmjacking', egress_block: 'other' };
+const KILL_KO = { key_disable: '키 비활성', feature_off: '기관 기능 끄기', egress_block: '외부 전송 차단' };
+/* 초안에는 개인정보 · 비밀값을 넣지 않는다: 이메일 · 전화 · 주민번호형 숫자 · 키 모양 문자열은 [가림] (Java scrub과 같은 식) */
+const scrub = v => String(v == null ? '' : v).replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '[가림]').replace(/\d{2,6}[- ]?\d{3,7}[- ]?\d{4}/g, '[가림]').replace(/(sk-|ghp_|AKIA|AIza)[\w-]{8,}|[A-Za-z0-9_-]{32,}/g, '[가림]');
+/* 개인정보 보호법 제34조 통지 항목 — 신고(개인정보위 · KISA) · 정보주체 통지 초안. 입력: type, scope{tenants,data,period}, phases(기록된 단계), createdKst, dueKst */
+const DRAFT_ITEMS = ['유출 항목', '유출 시점', '유출 경위', '피해 최소화 방법', '대응 조치', '피해 구제 절차', '연락처'];
+function incidentDraft({ type, scope, phases, createdKst, dueKst }) {
+  const sc = scope && typeof scope === 'object' ? scope : {}; const tk = TYPE_KO[type] || TYPE_KO.other;
+  const data = scrub(sc.data).trim() || '[확인 중 — 유출 항목을 기입합니다]'; const period = scrub(sc.period).trim() || '[확인 중]';
+  const n = Array.isArray(sc.tenants) ? sc.tenants.length : 0; const done = PHASES.filter(p => (phases || []).includes(p)).map(p => PHASE_KO[p]);
+  const acts = (done.length ? done.join(' · ') + ' 단계를 진행했습니다.' : '탐지 단계를 진행하고 있습니다.') + ' 원인을 차단하고 재발 방지 조치를 이어 가고 있습니다.';
+  const minimize = '디디쌤 비밀번호를 변경해 주시고, 출처가 불분명한 문자 · 메일 · 링크와 본인을 사칭한 연락에 주의해 주십시오.';
+  const relief = '피해가 발생했거나 의심되면 아래 연락처로 알려 주십시오. 확인 후 안내해 드립니다. 개인정보침해 신고센터(국번 없이 118)와 개인정보 분쟁조정위원회(1833-6972)에서도 상담 · 신청하실 수 있습니다.';
+  const contact = '산타(주) 개인정보 보호 담당 · [대표 연락처 기입]';
+  const notify = [`[정보주체 통지문(초안)] ${tk} 안내`, '',
+    `산타(주)는 디디쌤 서비스에서 발생한 보안 사고로 이용자님의 개인정보가 유출되었을 가능성을 확인하여 「개인정보 보호법」 제34조에 따라 다음과 같이 알려 드립니다.`, '',
+    `1. 유출된 개인정보 항목: ${data}`, `2. 유출된 시점과 그 경위: ${period} · ${tk}(사고 인지 ${createdKst} KST)`, `3. 피해를 최소화하기 위하여 이용자님이 할 수 있는 방법: ${minimize}`,
+    `4. 산타(주)의 대응 조치: ${acts}`, `5. 피해 구제 절차: ${relief}`, `6. 담당 부서 및 연락처: ${contact}`, '',
+    '※ 이 문서는 초안입니다. 대표님 · 부대표 검토 후 발송합니다.'].join('\n');
+  const report = [`[개인정보 유출 등 신고서(초안)] 개인정보보호위원회 · 한국인터넷진흥원 제출용`, '',
+    `- 신고 기한: ${dueKst} KST(사고 인지 후 ${NOTIFY_H}시간)`, `- 사고 유형: ${tk}`, `- 유출 항목: ${data}`, `- 유출 시점: ${period}`, `- 유출 경위: ${tk} · 사고 인지 ${createdKst} KST`,
+    `- 영향 범위: 기관 ${n}곳 · 정보주체 수 [확인 중]`, `- 피해 최소화 방법: ${minimize}`, `- 대응 조치: ${acts}`, `- 피해 구제 절차: ${relief}`, `- 담당 부서 · 연락처: ${contact}`, '',
+    '※ 이 문서는 초안입니다. 대표님 · 부대표 검토 후 제출합니다.'].join('\n');
+  return { notify, report, items: DRAFT_ITEMS };
+}
 const MSG = {
   key: '보안 점검으로 이 기관의 AI · 외부 연결 키 사용이 일시 중단되었습니다. 운영자에게 문의해 주십시오.',
   egress: '보안 점검으로 이 기관의 외부 전송이 일시 차단되었습니다. 운영자에게 문의해 주십시오.',
@@ -242,11 +274,14 @@ function createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, ch
       await c.query(`insert into security.kill_switch (id, action, tenant_id, mode, trigger, rule_id, reason, signals, actor, expires_at, kday) values ($1,$2,$3,$4,$5,$6,$7,$8,$9, case when $10::int is null then null else now() + make_interval(mins => $10::int) end, $11::date)`,
         [id, action, tenant, mode, a.agent ? 'rule' : 'manual', ruleId, reason, JSON.stringify(signals), a.email, ttl, kday()]);
       await audit(c, a.email, 'kill.' + mode, id, { action, tenant, ttlMin: ttl, ruleId }, req);
-      return (await c.query(`select ${K_COLS} from security.kill_switch where id = $1`, [id])).rows[0];
+      /* F8: 긴급 차단 발동 = 사고 대응 시작(탐지 → 격리). 72시간 신고 · 통지 판단은 사람이 이어 간다 */
+      const incident = await incCreate(c, { type: KILL_INC[action], title: `긴급 차단 발동: ${KILL_KO[action]}`, severity: 'high', scope: { tenants: [tenant], data: '', period: '' }, killId: id, by: a.email,
+        timeline: [step('detect', reason, a.email), step('contain', mode === 'live' ? '긴급 차단 적용' : '긴급 차단 dry-run 기록(실제 적용 없음)', a.email)] }, req);
+      return { ...(await c.query(`select ${K_COLS} from security.kill_switch where id = $1`, [id])).rows[0], incident };
     });
     cache.delete(tenant);
     await inTenant(pool, tenant, c => c.query('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tenant, a.email, 'security.kill', JSON.stringify({ action, mode })])).catch(e => log.error && log.error('sec kill tenant audit', e.message));
-    return { ok: true, dryRun: mode === 'dry', kill: kOut(row) };
+    return { ok: true, dryRun: mode === 'dry', kill: kOut(row), incident: row.incident };
   };
   const releaseKill = async (req, id) => {
     if (bearer(req)) throw new HttpErr(403, '긴급 차단 해제는 사람만 할 수 있습니다.', 'human_only');
@@ -300,6 +335,61 @@ function createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, ch
     });
     return { ok: true, kind, n: items.length, created, updated };
   };
+  /* ── 사고 대응(F8) — 단계 기록은 사람 · 가디언, 결정(신고 · 통지 · 공개 · 중단)은 사람만 ── */
+  const I_JSON = `json_build_object('id', id, 'type', type, 'title', title, 'severity', severity, 'status', status, 'phase', phase, 'scope', scope, 'timeline', timeline, 'decisions', decision_log, 'killId', kill_id, 'createdBy', created_by,
+    'notifyDueAt', ${ISO('notify_due_at')}, 'leftMin', ceil(extract(epoch from notify_due_at - now()) / 60)::int, 'notified', exists (select 1 from jsonb_array_elements(decision_log) d where d->>'kind' = 'notify' and d->>'decided' = 'true'),
+    'createdAt', ${ISO('created_at')}, 'updatedAt', ${ISO('updated_at')})::text j`;
+  const incOne = async (c, id) => { const r = (await c.query(`select ${I_JSON} from security.incident where id = $1`, [id])).rows[0]; return r ? JSON.parse(r.j) : null; };
+  const step = (phase, note, by) => ({ phase, note: str(note, 500), by, at: new Date().toISOString() });
+  async function incCreate(c, { type, title, severity, scope, timeline, killId, by }, req) {
+    const id = 'inc_' + crypto.randomBytes(8).toString('hex'); const phase = timeline[timeline.length - 1].phase;
+    await c.query(`insert into security.incident (id, type, title, severity, scope, phase, status, timeline, notify_due_at, kill_id, created_by) values ($1,$2,$3,$4,$5::jsonb,$6,'open',$7::jsonb, now() + make_interval(hours => ${NOTIFY_H}), $8, $9)`,
+      [id, type, title, severity, JSON.stringify(scope), phase, JSON.stringify(timeline), killId || null, by]);
+    await audit(c, by, 'incident.create', id, { type, severity, kill: killId || '' }, req); return id;
+  }
+  R['GET /api/security/incidents'] = async req => {
+    await owner(req);
+    const rows = (await pool.query(`select ${I_JSON} from security.incident order by (status = 'open') desc, created_at desc, id limit 100`)).rows.map(r => JSON.parse(r.j));
+    return { rows, notifyHours: NOTIFY_H, phases: PHASES, types: INC_TYPES, decisionKinds: DEC_KINDS };
+  };
+  R['POST /api/security/incidents'] = async req => {
+    const a = await ownerOrGuard(req); const b = await readBody(req, 8192); const type = String(b.type || ''); const title = str(b.title, 200).trim();
+    if (!INC_TYPES.includes(type)) throw new HttpErr(400, '사고 유형이 올바르지 않습니다(key_leak · cross_tenant · pii_leak · llmjacking · other).', 'type');
+    if (!title) throw new HttpErr(400, '사고 제목을 입력해 주십시오.', 'title');
+    const severity = b.severity == null || b.severity === '' ? 'high' : String(b.severity); if (!SEV.includes(severity)) throw new HttpErr(400, '심각도 값이 올바르지 않습니다.', 'sev');
+    const sc = b.scope && typeof b.scope === 'object' && !Array.isArray(b.scope) ? b.scope : {};
+    const scope = { tenants: [...new Set(arr(sc.tenants, 50, 40).filter(x => TID_RE.test(x)))], data: str(sc.data, 300), period: str(sc.period, 100) };
+    const id = await tx(c => incCreate(c, { type, title, severity, scope, timeline: [step('detect', str(b.note, 500) || '사고 등록', a.email)], by: a.email }, req));
+    return { ok: true, incident: await incOne(pool, id) };
+  };
+  const incStep = async (req, id) => {
+    const a = await ownerOrGuard(req); const b = await readBody(req, 8192); const phase = String(b.phase || '');
+    if (!PHASES.includes(phase)) throw new HttpErr(400, '단계 값이 올바르지 않습니다(detect · contain · report · notify · recover · prevent).', 'phase');
+    return tx(async c => {
+      const u = await c.query(`update security.incident set timeline = timeline || $2::jsonb, phase = $3, status = case when $3 = 'prevent' then 'closed' else 'open' end, updated_at = now() where id = $1`, [id, JSON.stringify([step(phase, b.note, a.email)]), phase]);
+      if (!u.rowCount) throw new HttpErr(404, '사고 기록을 찾지 못했습니다.', 'not_found');
+      await audit(c, a.email, 'incident.step', id, { phase }, req); return { ok: true, incident: await incOne(c, id) };
+    });
+  };
+  const incDecision = async (req, id) => {
+    if (bearer(req)) throw new HttpErr(403, '신고 · 통지 · 공개 · 중단 결정은 사람만 할 수 있습니다.', 'human_only');
+    const a = await owner(req); const b = await readBody(req, 8192); const kind = String(b.kind || '');
+    if (!DEC_KINDS.includes(kind)) throw new HttpErr(400, '결정 종류가 올바르지 않습니다(report · notify · public · shutdown).', 'kind');
+    if (typeof b.decided !== 'boolean') throw new HttpErr(400, '결정 값(decided)은 true 또는 false여야 합니다.', 'decided');
+    const d = { kind, decided: b.decided, note: str(b.note, 500), by: a.email, at: new Date().toISOString() };
+    return tx(async c => {
+      const u = await c.query('update security.incident set decision_log = decision_log || $2::jsonb, updated_at = now() where id = $1', [id, JSON.stringify([d])]);
+      if (!u.rowCount) throw new HttpErr(404, '사고 기록을 찾지 못했습니다.', 'not_found');
+      await audit(c, a.email, 'incident.decision', id, { kind, decided: b.decided }, req); return { ok: true, incident: await incOne(c, id) };
+    });
+  };
+  const incDraft = async (req, id) => {
+    await owner(req);
+    const r = (await pool.query(`select type, scope, timeline, to_char(created_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') c, to_char(notify_due_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') d from security.incident where id = $1`, [id])).rows[0];
+    if (!r) throw new HttpErr(404, '사고 기록을 찾지 못했습니다.', 'not_found');
+    const D = incidentDraft({ type: r.type, scope: r.scope, phases: (r.timeline || []).map(x => x && x.phase), createdKst: r.c, dueKst: r.d || '' });
+    return { ok: true, id, ...D, law: '개인정보 보호법 제34조' };
+  };
   R['GET /api/security/audit'] = async req => {
     await owner(req); const v = await verifyChain();
     const rows = (await pool.query(`select id::int id, ${ISO('at')} at, actor, actor_kind, action, target, detail, ip_masked, prev_hash, hash from security.audit order by id desc limit 100`)).rows.map(r => ({ id: r.id, at: r.at, actor: r.actor, actorKind: r.actor_kind, action: r.action, target: r.target, detail: r.detail, ipMasked: r.ip_masked, prevHash: r.prev_hash, hash: r.hash }));
@@ -312,7 +402,10 @@ function createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, ch
     ['POST', /^\/api\/security\/prs\/([\w.:-]{1,80})\/approve$/, approvePr],
     ['POST', /^\/api\/security\/prs\/([\w.:-]{1,80})\/reject$/, rejectPr],
     ['GET', /^\/api\/security\/cards\/(CARD-\d{4,})$/, getCard],
-    ['POST', /^\/api\/security\/kill\/(ks_[0-9a-f]{16})\/release$/, releaseKill]
+    ['POST', /^\/api\/security\/kill\/(ks_[0-9a-f]{16})\/release$/, releaseKill],
+    ['POST', /^\/api\/security\/incidents\/(inc_[0-9a-f]{16})\/step$/, incStep],
+    ['POST', /^\/api\/security\/incidents\/(inc_[0-9a-f]{16})\/decision$/, incDecision],
+    ['GET', /^\/api\/security\/incidents\/(inc_[0-9a-f]{16})\/draft$/, incDraft]
   ];
   function match(method, p) {
     if (!p.startsWith('/api/security/')) return null;
@@ -325,4 +418,4 @@ function createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, ch
   return { match, gate, preAi, postAi, keyBlocked, egressBlocked, tick: expire, verifyChain, signal };
 }
 
-module.exports = { createSecurity, chainHash, maskIp, GENESIS, KILL_DAY_MAX, FEATURE_TTL_MAX };
+module.exports = { createSecurity, chainHash, maskIp, GENESIS, KILL_DAY_MAX, FEATURE_TTL_MAX, incidentDraft, scrub, INC_TYPES, PHASES, DEC_KINDS, NOTIFY_H };

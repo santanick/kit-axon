@@ -154,6 +154,14 @@ details.sec-col>summary{cursor:pointer;min-height:32px}
 .sec-m footer b{font-family:var(--num);color:var(--g900)}
 .sec-m footer b.bad{color:var(--t-bad)}
 .sec-m footer small{flex-basis:100%}
+/* 사고 대응(F8) */
+.sec-due{font-style:normal}
+.sec-due.warn{color:var(--t-warn,var(--g900))}.sec-due.bad{color:var(--t-bad)}
+.sec-due-b{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;background:var(--g50,var(--surface));border-radius:var(--r-in);padding:10px 12px;margin:0 0 10px}
+.sec-due-b.warn{box-shadow:inset 3px 0 0 var(--t-warn,var(--pr))}.sec-due-b.bad{box-shadow:inset 3px 0 0 var(--t-bad);color:var(--t-bad)}
+.sec-steps{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.sec-steps li{font-size:var(--fs-cap);padding:4px 10px;border-radius:999px;background:var(--g100,var(--surface));color:var(--muted)}
+.sec-steps li.ok{color:var(--g900);box-shadow:inset 0 0 0 1px var(--pr)}.sec-steps li.cur{background:var(--pr);color:var(--on-pr,#fff)}
 @media (max-width:760px){
   .sec-prw{grid-template-columns:1fr}
   .sec-fi{grid-template-columns:1fr}

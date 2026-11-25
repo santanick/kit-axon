@@ -96,4 +96,16 @@
   <select id="upCard" flushCache="true" useCache="false" resultType="java.lang.Boolean">insert into security.countermeasure (id, threat_id, title, threat_pattern, controls, regression_tests, skill_refs, playbook, body)
     values (#{id}, #{threat}, #{title}, #{pattern}, cast(#{controls} as jsonb), cast(#{tests} as jsonb), cast(#{skills} as jsonb), #{playbook}, #{body})
     on conflict (id) do update set title = excluded.title, controls = excluded.controls, regression_tests = excluded.regression_tests, body = excluded.body, version = security.countermeasure.version + 1, updated_at = now() returning (xmax = 0)</select>
+
+  <!-- 사고 대응(F8) — 행은 Node security.js I_JSON과 같은 JSON -->
+  <sql id="iJson">json_build_object('id', id, 'type', type, 'title', title, 'severity', severity, 'status', status, 'phase', phase, 'scope', scope, 'timeline', timeline, 'decisions', decision_log, 'killId', kill_id, 'createdBy', created_by,
+    'notifyDueAt', to_char(notify_due_at at time zone 'UTC', <include refid="iso"/>), 'leftMin', ceil(extract(epoch from notify_due_at - now()) / 60)::int, 'notified', exists (select 1 from jsonb_array_elements(decision_log) d where d->>'kind' = 'notify' and d->>'decided' = 'true'),
+    'createdAt', to_char(created_at at time zone 'UTC', <include refid="iso"/>), 'updatedAt', to_char(updated_at at time zone 'UTC', <include refid="iso"/>))::text</sql>
+  <insert id="insertIncident">insert into security.incident (id, type, title, severity, scope, phase, status, timeline, notify_due_at, kill_id, created_by)
+    values (#{id}, #{type}, #{title}, #{sev}, cast(#{scope} as jsonb), #{phase}, 'open', cast(#{timeline} as jsonb), now() + make_interval(hours => #{hours}), #{kill}, #{by})</insert>
+  <select id="incidentJson" resultType="string">select <include refid="iJson"/> from security.incident where id = #{id}</select>
+  <select id="incidentList" resultType="string">select <include refid="iJson"/> from security.incident order by (status = 'open') desc, created_at desc, id limit 100</select>
+  <update id="incidentStep">update security.incident set timeline = timeline || cast(#{entry} as jsonb), phase = #{phase}, status = case when #{phase} = 'prevent' then 'closed' else 'open' end, updated_at = now() where id = #{id}</update>
+  <update id="incidentDecision">update security.incident set decision_log = decision_log || cast(#{entry} as jsonb), updated_at = now() where id = #{id}</update>
+  <select id="incidentDraftRow" resultType="java.util.LinkedHashMap">select type, scope::text scope, timeline::text timeline, to_char(created_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') c, to_char(notify_due_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') d from security.incident where id = #{id}</select>
 </mapper>
