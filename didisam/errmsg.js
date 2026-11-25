@@ -86,3 +86,24 @@
   window.errMsg = errMsg;
   window.ERRMSG = { M, safe, TONE };
 })();
+
+/* qa7 d5 · 이미지 대체(운영 · 학습자 공통) — 운영 CSP(script-src 'self')는 인라인 이벤트 속성(onerror)을 막으므로 화면 코드에 onerror 속성을 쓰지 않는다.
+   문서 전체에 capture 단계 'error' 리스너 1개만 둔다. 화면별 처리는 window.IMG_FB.push(img => true면 처리 끝)로 등록하고,
+   등록된 처리가 없으면 깨진 그림 아이콘 대신 대체 그림(회색 상자 · 그림 아이콘, data: SVG)으로 바꾼다.
+   data-fb="hide"는 숨김, data-fb="remove"는 제거, data-fb="none"은 그대로 둔다. */
+(() => {
+  'use strict';
+  if (window.IMG_FB) return;
+  const FB = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90" viewBox="0 0 160 90"><rect width="160" height="90" fill="#E9ECF2"/><path d="M62 30h36v30H62z" fill="none" stroke="#9AA3B2" stroke-width="3"/><path d="M64 58l11-12 8 8 6-5 9 9" fill="none" stroke="#9AA3B2" stroke-width="3"/><circle cx="88" cy="38" r="3" fill="#9AA3B2"/></svg>');
+  const L = window.IMG_FB = []; window.IMG_FB_SRC = FB;
+  document.addEventListener('error', ev => {
+    const t = ev.target; if (!t || t.tagName !== 'IMG' || t.dataset.fbDone) return;
+    t.dataset.fbDone = '1';
+    try { for (const f of L) if (f(t)) return; } catch (e) { }
+    const m = t.getAttribute('data-fb');
+    if (m === 'none') return;
+    if (m === 'hide') { t.style.visibility = 'hidden'; return; }
+    if (m === 'remove') { t.remove(); return; }
+    t.classList.add('img-fb'); t.src = FB;
+  }, true);
+})();

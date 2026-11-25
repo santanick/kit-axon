@@ -28,7 +28,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         "GET /api/access-review", "POST /api/access-review", "GET /api/org/sec/geo", "POST /api/org/sec/geo", "POST /api/export/log", /* 가디언 4차 d3 기록 · 데이터 · d6 화면 CSV 기록 */
         "GET /api/session", "POST /api/session/touch", "POST /api/session/work", "GET /api/me/sessions", "POST /api/me/sessions/logout-others", "GET /api/org/security", "POST /api/org/security", /* 가디언 4차 세션 정책 */
         "GET /api/keys", "POST /api/keys", "POST /api/keys/revoke",
-        "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/ai/usage", "GET /api/lev", "POST /api/ai/topup", "POST /api/ai/topup/confirm", "GET /api/santa/orgs",
+        "POST /api/ai/messages", "POST /api/site/benchmark", "GET /api/oembed", "GET /api/ai/usage", "GET /api/lev", "POST /api/ai/topup", "POST /api/ai/topup/confirm", "GET /api/santa/orgs",
         "GET /api/learners/progress", "GET /api/learners/accounts", "POST /api/learners/pii", "GET /api/learners/pii-log", "POST /api/learners/sync", "POST /api/learners/decide",
         "GET /api/audit", "GET /api/audit/verify", "POST /api/tenant/delete", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion",
         "POST /api/password", "GET /api/staff", "POST /api/media", "GET /api/media", "POST /api/media/f", "POST /api/staff", "POST /api/staff/remove", "POST /api/staff/role",
