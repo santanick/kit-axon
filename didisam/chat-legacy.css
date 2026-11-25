@@ -376,8 +376,8 @@ body.fab-on .top{z-index:58}
 }
 /* ── ai-home.css ── */
 
-body.aih-on #fabBtn{display:none!important}
-body.aih-on.fab-on .bchat{display:none}
+/* qa7: 홈에서도 AI SAM 떠 있는 버튼을 보인다(fab.css 끝) */
+
 .composer.aih-comp{width:100%;padding:0;background:none;border:0}
 .aih-comp .cbox{padding:10px 10px 10px 22px;border-radius:24px;box-shadow:0 0 0 1.5px var(--line),0 18px 40px -24px rgba(26,24,20,.45)}
 .aih-comp .cbox:focus-within{box-shadow:0 0 0 2px #066B2A,0 18px 40px -24px rgba(26,24,20,.45)}

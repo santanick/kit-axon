@@ -53,25 +53,13 @@ body.fab-on .top{z-index:58} /* 계정 메뉴 등 머리 드롭다운이 위젯 
 .bchat .scxc,#drawer .scxc{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:10px}
 .bchat .scxc::-webkit-scrollbar,#drawer .scxc::-webkit-scrollbar{display:none}
 .bchat .scxc>*,#drawer .scxc>*{flex:none}
-/* v43 H2(131): 넓은 PC(1280px 이상)에서 연 AI SAM은 오른쪽에 고정(본문은 왼쪽으로 비켜남, 8 + 4) — 떠 있는 창이 머리 사진 · 「AI 과정 설계」를 덮지 않게. 크게 보기(.fab-l)는 떠 있는 창 그대로 */
-@media (min-width:1280px){
-  body.mode-bld.fab-open:not(.fab-l) #main{padding-right:432px!important}
-  body.mode-bld.fab-open:not(.fab-l) .bchat{top:62px;right:0;bottom:0;width:420px;height:auto;max-height:none;border-radius:0;border:0;border-left:1px solid var(--line);box-shadow:-24px 0 48px -36px rgba(20,30,24,.35);animation:none}
-  body.mode-bld.fab-open:not(.fab-l) #fabBtn{display:none}
-  body.mode-bld.fab-open:not(.fab-l) #toasts{right:444px}
-  body.mode-bld.fab-open:not(.fab-l) .gdbar{left:calc((100vw - 432px) / 2 + 38px)}
-}
+/* (qa7 대표님 2026-11-25: 「AX 튜터 · AI SAM은 우측 하단에 늘 따라다니고, 누르면 대화창」 — v43 H2(131)의 1280px 이상 오른쪽 고정 열은 없앴다. 대화창은 화면 크기와 관계없이 우측 하단 카드) */
 /* 대화 칸 윗가장자리는 살짝 흐리게 — 잘린 선 대신 스크롤로 읽히게 */
 .bchat .thread{-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 14px);mask-image:linear-gradient(180deg,transparent 0,#000 14px)}
 /* 추천 칩 아이콘: 별표 글자와 점이 겹쳐 핀처럼 보이던 것 → 가운데 맞춘 작은 점 하나 */
 .bchat .scxchip,#drawer .scxchip{display:inline-flex;align-items:center;gap:7px}
 .bchat .scxchip::before,#drawer .scxchip::before{content:''!important;flex:none;display:inline-block;width:6px;height:6px;margin:0;border-radius:50%;background:var(--pr,#00C53B);vertical-align:middle}
 .bchat .composer .chip,#drawer .composer .chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-@media (min-width:1280px){
-  body.mode-bld.fab-open:not(.fab-l) #main[data-da="class"].da43 .c2lbar{flex-wrap:wrap}
-  body.mode-bld.fab-open:not(.fab-l) #main[data-da="class"].da43 .c2lbar input[type=search]{flex:1 1 220px;max-width:none}
-  body.mode-bld.fab-open:not(.fab-l) #main[data-da="class"].da43 .c2lbar .c2cchips{flex:1 1 100%;order:3}
-}
 /* ── v43.4 GM 휴대폰(≤760px): AI SAM 버튼은 48px 원으로 줄여 오른쪽 아래에 두고, 본문 끝에 버튼 높이만큼 여백을 둔다.
    스크롤하는 동안에는 숨기고 멈추면 다시 보인다(fab.js body.fab-scr). 기능 · data-act(fab-toggle)는 그대로. 홈페이지 빌더(hps-dock)는 hpstudio.css 규칙을 따른다 ── */
 @media (max-width:760px){
@@ -97,3 +85,19 @@ body.fab-on .top{z-index:58} /* 계정 메뉴 등 머리 드롭다운이 위젯 
   .bchat .composer .rg-att,#drawer .composer .rg-att{flex:none;min-width:44px;min-height:44px;padding:0 10px;justify-content:center}
   .bchat .composer .rg-att>span,#drawer .composer .rg-att>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 }
+/* ═════ qa7(2026-11-25) 대표님: 「AI SAM은 상단이 아니라 사이트 하단 구석(모니터 보는 쪽 우측 하단)에 늘 따라다니고, 누르면 대화창」 ═════
+   - 모든 화면(홈 = AI 비서 화면 포함) · 모든 폭에서 우측 하단 고정 원형 버튼 1개(#fabBtn). 왼쪽 아이콘 줄 붙임(v43 G2) · 홈 숨김(v24)은 없앴다
+   - 누르면 우측 하단 대화창: PC 약 400×600 카드, 휴대폰(≤860px) 아래에서 올라오는 시트. 닫기 · Esc · 버튼 다시 누르기로 닫힘
+   - 클래식 화면의 옛 「AI SAM」 알약(.aifab)은 떠 있는 버튼과 같은 일이라 숨김(중복 진입 제거) */
+html body.fab-on #fabBtn{left:auto!important;right:calc(24px + env(safe-area-inset-right))!important;bottom:calc(24px + env(safe-area-inset-bottom))!important;top:auto!important;width:56px!important;min-width:56px!important;height:56px!important;padding:0!important;border-radius:50%!important;gap:0;justify-content:center;z-index:57}
+html body.fab-on #fabBtn>span:not(.fabn){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+html body.fab-on #fabBtn .scxbt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+html body.fab-on #fabBtn .fabn{top:-4px;right:-4px}
+html body.fab-on .aifab{display:none!important}
+html body.fab-on .bchat{right:calc(24px + env(safe-area-inset-right));bottom:calc(92px + env(safe-area-inset-bottom));width:min(400px,calc(100vw - 48px));height:min(600px,calc(100vh - 140px));height:min(600px,calc(100dvh - 140px))}
+@media (max-width:860px){
+  html body.fab-on #fabBtn{right:calc(12px + env(safe-area-inset-right))!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;width:48px!important;min-width:48px!important;height:48px!important}
+  html body.fab-m.fab-open.b-pv .bchat{inset:auto 0 0 0;height:88vh;height:88dvh;max-height:none;border-radius:16px 16px 0 0;box-shadow:0 -18px 48px -24px rgba(20,30,24,.45)}
+  body.fab-m.fab-open::before{content:'';position:fixed;inset:0;z-index:58;background:color-mix(in srgb,var(--ink,#1A1814) 32%,transparent)}
+}
+html body.fab-on.fab-l .bchat{width:min(780px,calc(100vw - 48px));height:calc(100vh - 140px);height:calc(100dvh - 140px)}
