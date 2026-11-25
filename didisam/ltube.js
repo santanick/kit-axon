@@ -467,7 +467,7 @@
     const lab = v ? `${nm}(AI 튜터) — 이 장면 질문하기` : `AI 튜터와 대화하기${nm !== 'AI 튜터' ? ` (${nm})` : ''}`; /* qa7 */ if (!b) { b = document.createElement('button'); b.type = 'button'; b.id = 'tbFab'; b.className = 'tb-fab'; b.dataset.tb = 'fab'; document.body.appendChild(b); }
     const h = `${I.spark(24)}<span>${v ? '이 장면 질문' : esc(short)}</span>`; if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; } b.setAttribute('aria-label', lab); b.setAttribute('aria-expanded', v ? String(!!TB.open) : String(!!(typeof LT === 'object' && LT.open))); }
   /* v43: 스크롤하는 동안 떠 있는 튜터 버튼이 카드 오른쪽 끝을 가리지 않게 — 내려가면 작은 원(48px, 아이콘만), 위로 올리거나 맨 위에 오면 원래 크기 */
-  { let y0 = 0; const B = () => document.body; addEventListener('scroll', () => { const y = window.scrollY || 0; if (y > y0 + 4 && y > 40) B().classList.add('tb-fsm'); else if (y < y0 - 4 || y <= 40) B().classList.remove('tb-fsm'); y0 = y; }, { passive: true });
+  { let y0 = 0; const B = () => document.body; addEventListener('scroll', () => { const y = window.scrollY || 0; B().classList.remove('tb-fsm'); /* qa8: 스크롤 방향에 따라 단추를 줄이거나 숨기던 동작(tb-fsm)을 끈다 — 단추는 한 자리 · 한 크기, 스크롤 중 숨김은 ltutor.js lt-scr가 맡는다 */ y0 = y; }, { passive: true });
     addEventListener('hashchange', () => B().classList.remove('tb-fsm', 'tb-fscr'));
     /* v43.4 MC: 휴대폰에서는 스크롤하는 동안 튜터 단추를 숨기고, 멈추고 0.5초 뒤 다시 보인다(lapp43.css tb-fscr) */
     /* v43.7 Q4: 공통 셸이 가장자리 손잡이(fab-edge)를 끈 뒤로 단추는 늘 같은 자리 48px 원 — 멈춘 자리에서 본문 버튼 · 링크(「연결」 · 강의 카드 · 공지 카드)를 덮으면 그 자리에서는 숨겨(tb-fcov) 아래 버튼을 누를 수 있게 한다. 조금 밀면 다시 보인다 */

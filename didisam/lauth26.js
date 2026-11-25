@@ -22,7 +22,8 @@
     const txt = kind === 'login' && isCls ? '로그인하면 수강 신청을 이어서 진행합니다.' : sub[kind];
     if (kind && txt && !head.nextElementSibling?.classList.contains('l26sub')) head.insertAdjacentHTML('afterend', `<p class="l26sub">${txt}</p>`);
     /* v26.9 처음 온 사람: 로그인 화면 위쪽에 간편가입 길을 바로 보여 준다(수강 신청 → 로그인에서 막히지 않게) */
-    if (kind === 'login' && sec.querySelector('a[href="#join"]') && !sec.querySelector('.l26new')) { const s2 = sec.querySelector('.l26sub'); (s2 || head).insertAdjacentHTML('afterend', `<p class="l26new">처음이신가요? <a href="#join">30초 간편가입</a> — 가입이 끝나면 ${isCls ? '보던 클래스로 이어집니다' : '바로 학습을 시작할 수 있습니다'}.</p>`); }
+    /* qa8(2026-11-25) 대표님 「회원가입 · 로그인 심플하게」: 위쪽 「30초 간편가입」 안내는 아래 「처음이신가요? 회원가입」과 겹쳐 뺀다 */
+    if (false && kind === 'login' && sec.querySelector('a[href="#join"]') && !sec.querySelector('.l26new')) { const s2 = sec.querySelector('.l26sub'); (s2 || head).insertAdjacentHTML('afterend', `<p class="l26new">처음이신가요? <a href="#join">30초 간편가입</a> — 가입이 끝나면 ${isCls ? '보던 클래스로 이어집니다' : '바로 학습을 시작할 수 있습니다'}.</p>`); }
   }
   const mo = new MutationObserver(() => { try { enhance(); } catch (e) { } });
   const start = () => { const app = document.getElementById('lapp') || document.body; mo.observe(app, { childList: true, subtree: true }); enhance(); };

@@ -155,3 +155,10 @@ html body.tube.tb-fsm:not(#q7) #tbFab.tb-fab{opacity:1;transform:none;pointer-ev
   html body.lt-on::after{content:'';position:fixed;inset:0;z-index:79;background:color-mix(in srgb,var(--ink,#1A1814) 32%,transparent)}
 }
 @media print{html body:not(#q7) #ltut .lt-fab,html body #tbFab{display:none!important}}
+/* qa8(2026-11-25) 대표님 「학습자 AI 버튼 고정 — 처음엔 보이고, 스크롤하는 동안 숨었다가 멈추면 다시」(관리자 #fabBtn fab-scr와 같은 동작).
+   단추 자리는 움직이지 않는다: 크기 · 위치 변화(tb-fsm 축소 · 방향별 숨김)를 쓰지 않고 투명도만 바꾼다. ltutor.js body.lt-scr */
+html body:not(#q7) #ltut .lt-fab:not(.hide),html body:not(#q7) #tbFab.tb-fab{transition:opacity .2s ease!important}
+html body.lt-scr:not(#q7) #ltut .lt-fab:not(.hide),html body.lt-scr:not(#q7) #tbFab.tb-fab,html body.lt-scr:not(#q7) #ltut .lt-hint{opacity:0!important;pointer-events:none!important}
+html body:not(#q7) #ltut .lt-fab:not(.hide):hover{transform:none!important}
+html body.tube.tb-fsm:not(.tb-watch):not(#q7) #tbFab.tb-fab{opacity:1;transform:none!important;pointer-events:auto}
+@media (prefers-reduced-motion:reduce){html body:not(#q7) #ltut .lt-fab,html body:not(#q7) #tbFab.tb-fab{transition:none!important}}
