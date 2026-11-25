@@ -76,7 +76,7 @@ public class SecServiceImpl implements SecService {
         "default", List.of("영향 판정 재확인", "패치 · 완화 적용", "회귀 시험 추가"));
 
     private final SecMapper mapper; private final TenantTx tx; private final DdRateLimiter rl; private final DdWeb web; private final AuthService auth;
-    @Value("${SANTA_ADMIN_EMAILS:nick@didisam.com}") private String santaEnv = "nick@didisam.com";
+    @Value("${SANTA_ADMIN_EMAILS:nick@didisam.com,nick@didicast.com}") private String santaEnv = "nick@didisam.com,nick@didicast.com";
     @Value("${GUARD_TOKEN:}") private String guardTok = "";
     @Value("${SECURITY_KILL_LIVE:}") private String killLive = "";
     @Value("${SECURITY_FEATURE_MIN:0}") private String featureMinS = "0";

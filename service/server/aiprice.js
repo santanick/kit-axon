@@ -70,7 +70,7 @@ function santaInput(b, today) {
   const tier = String(b && b.tier || '').trim().slice(0, 30); const memo = String(b && b.memo || '').trim().slice(0, 500);
   return { plan: { code, tier, contract, aiMonthTokens: t, since }, memo };
 }
-const santaSet = env => new Set(String(env.SANTA_ADMIN_EMAILS == null ? 'nick@didisam.com' : env.SANTA_ADMIN_EMAILS).split(',').map(x => x.trim().toLowerCase()).filter(Boolean)); /* 기본 산타 관리자: nick@didisam.com(대표님 2026-11-24 지정), 환경변수로 바꾸거나 추가 */
+const santaSet = env => new Set(String(env.SANTA_ADMIN_EMAILS == null ? 'nick@didisam.com,nick@didicast.com' : env.SANTA_ADMIN_EMAILS).split(',').map(x => x.trim().toLowerCase()).filter(Boolean)); /* 기본 산타 관리자: nick@didisam.com(대표님 2026-11-24 지정), 환경변수로 바꾸거나 추가 */
 
 /* 충전량: 충전일부터 365일(만료일까지 사용, 남은 양은 다음 달로 이어짐 — 대표님 2026-11-24 08:13).
    매달 월 포함량을 먼저 쓰고, 넘는 양은 충전량에서 오래된 것(만료일 빠른 것)부터 뺀다. 남은 양은 사용 기록(ai_usage, 일 단위)으로 다시 계산한다.

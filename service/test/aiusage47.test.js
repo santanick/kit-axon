@@ -58,7 +58,7 @@ test('aiprice 단위: 고정가 · 할인 경계값 · 10만 원 단위 · 요�
   assert.equal(AP.santaInput({ code: 'E2' }, 'd').plan.aiMonthTokens, 2500000); assert.equal(AP.santaInput({ code: 'U0', aiMonthTokens: '' }, 'd').plan.aiMonthTokens, 2500000);
   assert.equal(AP.santaInput({ code: 'TRIAL', aiMonthTokens: null }, 'd').plan.aiMonthTokens, 1000000); assert.equal(AP.santaInput({ code: 'E3', aiMonthTokens: 0 }, 'd').plan.aiMonthTokens, 0);
   { const old = AP.keepPlan({ aiplan: { monthTokens: 1, overage: 'pack' } }, { aiplan: { monthTokens: 2000000, overage: 'pack' }, plan: { code: 'TRIAL' } }, 'd'); assert.equal(old.aiplan.monthTokens, 2000000); } /* 저장된 옛 체험값 유지 */
-  assert.deepEqual([...AP.santaSet({ SANTA_ADMIN_EMAILS: ' A@x.kr, b@y.kr ,' })], ['a@x.kr', 'b@y.kr']); assert.deepEqual([...AP.santaSet({})], ['nick@didisam.com']); assert.equal(AP.santaSet({ SANTA_ADMIN_EMAILS: '' }).size, 0); /* 기본 산타 관리자(대표님 지정) · 빈 값이면 없음 */
+  assert.deepEqual([...AP.santaSet({ SANTA_ADMIN_EMAILS: ' A@x.kr, b@y.kr ,' })], ['a@x.kr', 'b@y.kr']); assert.deepEqual([...AP.santaSet({})], ['nick@didisam.com', 'nick@didicast.com']); assert.equal(AP.santaSet({ SANTA_ADMIN_EMAILS: '' }).size, 0); /* 기본 산타 관리자(대표님 지정) · 빈 값이면 없음 */
 });
 
 

@@ -152,7 +152,7 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
     private final java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder().proxy(java.net.http.HttpClient.Builder.NO_PROXY).connectTimeout(java.time.Duration.ofSeconds(10)).build();
     boolean payOn() { return tossKey != null && !tossKey.trim().isEmpty() && tossClient != null && !tossClient.trim().isEmpty(); }
     Map<String, Object> planOf(String tid) { String s = mapper.selectAiplan(tid), pl = mapper.selectPlan(tid); return DdAiPrice.planOf(s == null ? null : parse(s), pl == null ? null : parse(pl), kstToday()); } /* 체험 종료 판정 포함 */
-    @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:nick@didisam.com}") private String santaEnv = "nick@didisam.com"; /* 기본: 대표님 지정 2026-11-24 */
+    @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:nick@didisam.com,nick@didicast.com}") private String santaEnv = "nick@didisam.com,nick@didicast.com"; /* 기본: 대표님 지정 2026-11-24 · nick@didicast.com 추가 2026-11-25 */
     /** 충전 차감 계산(충전량 1년 이월) — 기관 범위 트랜잭션 안에서 부른다 */
     DdAiPrice.Sim simOf(String tid, Map<String, Object> plan, String today) {
         List<Map<String, Object>> cr = mapper.selectCreditRows(tid, DdAiPrice.creditFrom(today));
