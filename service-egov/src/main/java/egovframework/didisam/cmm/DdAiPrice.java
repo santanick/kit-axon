@@ -17,7 +17,9 @@ public final class DdAiPrice {
     public static final long STEP = 100000, MIN_WON = 100000, MAX_WON = 100000000;
     /** 할인 구간(공급가 이상 → %) — aiprice.js DISCOUNTS와 같은 값 */
     public static final long[][] DISCOUNTS = { { 100000, 0 }, { 500000, 5 }, { 1000000, 10 }, { 3000000, 15 }, { 5000000, 20 }, { 10000000, 25 }, { 20000000, 30 } };
-    public static final long TRIAL_TOKENS = 2000000;
+    /** 월 기본 포함량(대표님 2026-11-25) — 유료 250만 토큰(5만 원 상당), 체험 100만 토큰. aiprice.js와 같은 값 */
+    public static final long PAID_MONTH_TOKENS = 2500000;
+    public static final long TRIAL_TOKENS = 1000000;
     public static final long MONTH_MAX = 10000000000L;
     public static final int CREDIT_DAYS = 365;
     public static final List<String> CONTRACTS = List.of("sub", "multi", "build");
@@ -37,7 +39,7 @@ public final class DdAiPrice {
     }
     public static Map<String, Object> priceInfo() {
         Map<String, Object> m = new LinkedHashMap<>(); m.put("perM", PRICE_PER_M); m.put("perMVat", jsRound(PRICE_PER_M * (1 + VAT))); m.put("step", STEP); m.put("min", MIN_WON); m.put("max", MAX_WON);
-        List<List<Long>> ds = new ArrayList<>(); for (long[] x : DISCOUNTS) ds.add(List.of(x[0], x[1])); m.put("discounts", ds); return m;
+        List<List<Long>> ds = new ArrayList<>(); for (long[] x : DISCOUNTS) ds.add(List.of(x[0], x[1])); m.put("discounts", ds); m.put("paidMonthTokens", PAID_MONTH_TOKENS); m.put("trialTokens", TRIAL_TOKENS); return m;
     }
     public static String packId(long won) { return "w" + (won / STEP); }
 
@@ -69,7 +71,8 @@ public final class DdAiPrice {
     public static ObjectNode santaInput(JsonNode b, String today) {
         String code = DdAiGateway.s(b == null ? null : b.get("code")).trim().toUpperCase(Locale.ROOT);
         if (!code.matches("TRIAL|[A-Z][0-9]")) throw new DdException(400, "요금제 코드는 TRIAL 또는 영문 대문자 1자 + 숫자 1자(E1 · U0 · G4 등)입니다.", "plan_code");
-        double t = b == null || b.get("aiMonthTokens") == null ? Double.NaN : DdAiGateway.jsNum(b.get("aiMonthTokens"));
+        JsonNode rawT = b == null ? null : b.get("aiMonthTokens"); boolean empty = rawT == null || rawT.isNull() || (rawT.isTextual() && rawT.asText().isEmpty()); /* 비우면 기본 포함량 */
+        double t = empty ? (code.equals("TRIAL") ? TRIAL_TOKENS : PAID_MONTH_TOKENS) : DdAiGateway.jsNum(rawT);
         if (!(Double.isFinite(t) && t == Math.rint(t) && t >= 0 && t <= MONTH_MAX)) throw new DdException(400, "월 포함 토큰은 0 이상 정수(최대 100억)입니다. 0이면 한도 없음입니다.", "plan_tokens");
         String contract = DdAiGateway.s(b.get("contract")); if (!CONTRACTS.contains(contract)) contract = "sub";
         String since = DdAiGateway.s(b.get("since")); if (!since.matches("\\d{4}-\\d{2}-\\d{2}")) since = today;

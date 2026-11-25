@@ -31,6 +31,12 @@ test('aiprice 단위: 고정가 · 할인 경계값 · 10만 원 단위 · 요�
   /* 산타 입력 */
   assert.equal(AP.santaInput({ code: 'e1', aiMonthTokens: 1e6 }, '2026-11-24').plan.code, 'E1'); assert.equal(AP.santaInput({ code: 'U0', aiMonthTokens: 0 }, '2026-11-24').plan.since, '2026-11-24');
   assert.equal(AP.santaInput({ code: 'XX', aiMonthTokens: 1 }, 'd').code, 'plan_code'); assert.equal(AP.santaInput({ code: 'G4', aiMonthTokens: -5 }, 'd').code, 'plan_tokens'); assert.equal(AP.santaInput({ code: 'G4', aiMonthTokens: 1.5 }, 'd').code, 'plan_tokens');
+  /* 월 기본 포함량(대표님 2026-11-25): 유료 250만(5만 원 상당) · 체험 100만, 비우면 기본값, 0은 한도 없음 유지 */
+  assert.equal(AP.PAID_MONTH_TOKENS, 2500000); assert.equal(AP.TRIAL_TOKENS, 1000000); assert.equal(AP.PAID_MONTH_TOKENS * AP.PRICE_PER_M / 1e6, 50000);
+  assert.equal(AP.priceInfo().paidMonthTokens, 2500000); assert.equal(AP.priceInfo().trialTokens, 1000000);
+  assert.equal(AP.santaInput({ code: 'E2' }, 'd').plan.aiMonthTokens, 2500000); assert.equal(AP.santaInput({ code: 'U0', aiMonthTokens: '' }, 'd').plan.aiMonthTokens, 2500000);
+  assert.equal(AP.santaInput({ code: 'TRIAL', aiMonthTokens: null }, 'd').plan.aiMonthTokens, 1000000); assert.equal(AP.santaInput({ code: 'E3', aiMonthTokens: 0 }, 'd').plan.aiMonthTokens, 0);
+  { const old = AP.keepPlan({ aiplan: { monthTokens: 1, overage: 'pack' } }, { aiplan: { monthTokens: 2000000, overage: 'pack' }, plan: { code: 'TRIAL' } }, 'd'); assert.equal(old.aiplan.monthTokens, 2000000); } /* 저장된 옛 체험값 유지 */
   assert.deepEqual([...AP.santaSet({ SANTA_ADMIN_EMAILS: ' A@x.kr, b@y.kr ,' })], ['a@x.kr', 'b@y.kr']); assert.deepEqual([...AP.santaSet({})], ['nick@didisam.com']); assert.equal(AP.santaSet({ SANTA_ADMIN_EMAILS: '' }).size, 0); /* 기본 산타 관리자(대표님 지정) · 빈 값이면 없음 */
 });
 

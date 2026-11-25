@@ -20,6 +20,12 @@ public class AiPriceVectors {
     ok(DdAiPrice.sim(K, List.of(), 0, "2027-11-23").left() == 1000, "전날"); ok(DdAiPrice.sim(K, List.of(), 0, "2027-11-24").left() == 1000, "당일"); ok(DdAiPrice.sim(K, List.of(), 0, "2027-11-25").left() == 0, "다음 날");
     ok(DdAiPrice.sim(K, List.of(u("2027-11-24", 300)), 0, "2027-11-24").left() == 700, "당일 차감"); ok(DdAiPrice.sim(K, List.of(u("2027-11-25", 300)), 0, "2027-11-25").credit() == 0, "다음 날 차감 없음");
     r = DdAiPrice.sim(List.of(cr("n", 100, "2027-11-01"), cr("o", 100, "2026-12-01")), List.of(u("2027-11-10", 150)), 0, "2027-11-10"); ok(r.live().get(0).get("left").equals(0L) && r.live().get(1).get("left").equals(50L), "fifo " + r.live());
+    /* 월 기본 포함량(Node aiusage47.test.js와 같은 값): 유료 250만 · 체험 100만, 비우면 기본값, 0 유지 */
+    ok(DdAiPrice.PAID_MONTH_TOKENS == 2500000 && DdAiPrice.TRIAL_TOKENS == 1000000, "기본 포함량"); ok(DdAiPrice.priceInfo().get("paidMonthTokens").equals(2500000L) && DdAiPrice.priceInfo().get("trialTokens").equals(1000000L), "priceInfo");
+    { ObjectMapper om = new ObjectMapper();
+      try { ok(DdAiPrice.santaInput(om.readTree("{\"code\":\"E2\"}"), "d").get("aiMonthTokens").asLong() == 2500000, "빈값 유료"); ok(DdAiPrice.santaInput(om.readTree("{\"code\":\"U0\",\"aiMonthTokens\":\"\"}"), "d").get("aiMonthTokens").asLong() == 2500000, "빈 문자열");
+        ok(DdAiPrice.santaInput(om.readTree("{\"code\":\"TRIAL\",\"aiMonthTokens\":null}"), "d").get("aiMonthTokens").asLong() == 1000000, "빈값 체험"); ok(DdAiPrice.santaInput(om.readTree("{\"code\":\"E3\",\"aiMonthTokens\":0}"), "d").get("aiMonthTokens").asLong() == 0, "0 유지"); }
+      catch (Exception e) { ok(false, "santaInput " + e); } }
     System.out.println(bad == 0 ? "AiPriceVectors PASS" : "AiPriceVectors FAIL " + bad); System.exit(bad == 0 ? 0 : 1);
   }
 }

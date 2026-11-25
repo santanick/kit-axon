@@ -138,14 +138,15 @@ function d26PlanCard(L, msg, msgCap) {
   else if (X.err) ai = alert('info', `AI 사용량을 불러오지 못했습니다. ${esc(X.err)}`, btn('다시 시도', 'd26-aire'));
   else if (X.loading) ai = '<small class="d26-aiw">AI 사용량을 불러오는 중입니다.</small>';
   else if (X.none) ai = '';
-  else { const d = X.d; const used = +d.used || 0, inc = +d.included || 0, cl = +d.creditLeft || 0; const pr = (d.price && d.price.perM) || (window.PLAN_TABLE && PLAN_TABLE.ai.perM) || 20000;
+  else { const d = X.d; const tEnd = !!(I.trial && I.expired); /* 체험 종료 · 유료 전환 전 → 월 포함량 0(충전분만) */ const used = +d.used || 0, inc = tEnd ? 0 : +d.included || 0; const cl = tEnd ? Math.max(0, (+d.credit || 0) - used) : +d.creditLeft || 0; const pr = (d.price && d.price.perM) || (window.PLAN_TABLE && PLAN_TABLE.ai.perM) || 20000;
     const cr = (d.credits || []).filter(c => (+c.left || 0) > 0 && c.expires).map(c => c.expires).sort(); const exp = cr[0] || '';
-    const ip = inc ? used / inc * 100 : 0;
+    const ip = inc ? used / inc * 100 : tEnd ? 100 : 0;
     if (d.state === 'off') ai = `<small>AI 토큰(이번 달) <em>${tkn(used)} 사용 · 월 한도 없음</em></small>${meter(0)}<p class="mini d26-ain">${ent || I.legacy ? '월 포함량은 계약에 따라 산타가 넣습니다.' : '월 포함량이 아직 정해지지 않아 사용량만 기록합니다.'}</p>`;
     else {
       ai = `<small>AI 토큰 · 이번 달 포함량 <em>${tkn(Math.min(used, inc))}/${tkn(inc)}</em></small>${meter(ip, ip >= 100 ? 'bad' : ip >= 80 ? 'warn' : 'ok')}
         <small>충전 잔액 <em>${cl ? `${tkn(cl)} 토큰 · 약 ${n(Math.round(cl * pr / 1e6))}원` : '없음'}</em></small>${cl && exp ? `<small>가장 빠른 만료일 <em>${esc(exp)}</em></small>` : ''}`;
-      if (d.state === 'over' || (ip >= 100 && !cl)) ai += alert('bad', `이번 달 포함량${(d.credits || []).length ? '과 충전분' : ''}을 모두 써서 AI 기능이 멈췄습니다. ${own ? '충전하면 바로 다시 쓸 수 있습니다.' : '정운영자가 충전하면 바로 다시 쓸 수 있습니다.'}`, reqBtn);
+      if (tEnd) ai += alert(cl ? 'warn' : 'bad', `체험이 끝나 월 AI 포함량이 0입니다. ${cl ? '충전분만 차감합니다.' : 'AI 기능이 멈췄습니다.'} 충전하거나 유료 요금제로 전환하면 ${cl ? '계속' : '다시'} 쓸 수 있습니다.`, cl ? '' : reqBtn);
+      else if (d.state === 'over' || (ip >= 100 && !cl)) ai += alert('bad', `이번 달 포함량${(d.credits || []).length ? '과 충전분' : ''}을 모두 써서 AI 기능이 멈췄습니다. ${own ? '충전하면 바로 다시 쓸 수 있습니다.' : '정운영자가 충전하면 바로 다시 쓸 수 있습니다.'}`, reqBtn);
       else if (ip >= 100) ai += alert('info', `이번 달 포함량을 모두 써서 충전분에서 차감 중입니다(만료일이 빠른 충전분부터).`);
       else if (ip >= 80) ai += alert('warn', `이번 달 AI 포함량의 ${Math.floor(ip)}%를 썼습니다. ${cl ? '포함량을 넘으면 충전분에서 차감합니다.' : '충전분이 없어 포함량을 넘으면 AI 기능이 멈춥니다.'}`, !cl ? reqBtn : '');
       if (ent) ai += '<p class="mini d26-ain">월 포함량은 계약에 따라 산타가 넣습니다.</p>';

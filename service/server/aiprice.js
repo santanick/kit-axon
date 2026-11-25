@@ -11,8 +11,11 @@ const VAT = 0.1;
 const STEP = 100000, MIN_WON = 100000, MAX_WON = 100000000; /* 충전 금액(공급가): 10만 원 단위, 10만 ~ 1억 원 */
 /* 할인 구간(공급가 기준 이상 → 할인 %). 이 표 한 곳만 바꾸면 Node · 화면(사용량 API의 price.discounts)이 따라간다. Java DdAiPrice.DISCOUNTS도 같은 값 */
 const DISCOUNTS = [[100000, 0], [500000, 5], [1000000, 10], [3000000, 15], [5000000, 20], [10000000, 25], [20000000, 30]];
-/* 새로 가입한 기관(체험) 기본 월 포함량 — 정식 계약 후 산타가 바꾼다 */
-const TRIAL_TOKENS = 2000000;
+/* 월 기본 포함량(대표님 2026-11-25 12:45 「월 5만 원 정도를 기본으로(유료 고객 한정) · 유료 전환 전은 적정량」)
+   유료(Standard · Pro · Enterprise) = 공급가 5만 원 ÷ 100만 토큰당 2만 원 = 250만 토큰. Enterprise는 산타가 계약에 따라 더 넣는다(0 = 한도 없음).
+   체험(14일) = 250만 × 14/30 ≈ 117만 → 내림 100만 토큰(공급가 2만 원 상당). 이미 저장된 기관 값은 바꾸지 않는다(저장값 우선). */
+const PAID_MONTH_TOKENS = 2500000;
+const TRIAL_TOKENS = 1000000;
 const MONTH_MAX = 1e10; /* 산타가 넣을 수 있는 월 포함 토큰 상한 */
 const PLAN_CODE = /^(TRIAL|[A-Z][0-9])$/;
 const CONTRACTS = ['sub', 'multi', 'build'];
@@ -25,7 +28,7 @@ function quote(won) {
   return { won, supply: won, vat, total: won + vat, discount, unit: PRICE_PER_M * (100 - discount) / 100, base: won * 1e6 / PRICE_PER_M, tokens: Math.floor(won * 5000 / (100 - discount)) };
 }
 /* 화면용 요금 안내(사용량 API에 그대로 싣는다) */
-const priceInfo = () => ({ perM: PRICE_PER_M, perMVat: Math.round(PRICE_PER_M * (1 + VAT)), step: STEP, min: MIN_WON, max: MAX_WON, discounts: DISCOUNTS.map(x => x.slice()) });
+const priceInfo = () => ({ perM: PRICE_PER_M, perMVat: Math.round(PRICE_PER_M * (1 + VAT)), step: STEP, min: MIN_WON, max: MAX_WON, discounts: DISCOUNTS.map(x => x.slice()), paidMonthTokens: PAID_MONTH_TOKENS, trialTokens: TRIAL_TOKENS });
 const packId = won => 'w' + (won / STEP); /* ai_credit.pack: w1 = 10만 원 */
 
 /* 기관 설정 정규화. on은 aiplan이 있고 monthTokens가 양수일 때만 */
@@ -50,7 +53,7 @@ function keepPlan(doc, cur, today) {
 /* 산타 관리자 입력 검증 → { plan, memo } 또는 오류 문구 */
 function santaInput(b, today) {
   const code = String(b && b.code || '').trim().toUpperCase(); if (!PLAN_CODE.test(code)) return { err: '요금제 코드는 TRIAL 또는 영문 대문자 1자 + 숫자 1자(E1 · U0 · G4 등)입니다.', code: 'plan_code' };
-  const t = +(b && b.aiMonthTokens); if (!(Number.isInteger(t) && t >= 0 && t <= MONTH_MAX)) return { err: '월 포함 토큰은 0 이상 정수(최대 100억)입니다. 0이면 한도 없음입니다.', code: 'plan_tokens' };
+  const raw = b && b.aiMonthTokens; const t = raw == null || raw === '' ? (code === 'TRIAL' ? TRIAL_TOKENS : PAID_MONTH_TOKENS) : +raw; /* 비우면 기본 포함량 */ if (!(Number.isInteger(t) && t >= 0 && t <= MONTH_MAX)) return { err: '월 포함 토큰은 0 이상 정수(최대 100억)입니다. 0이면 한도 없음입니다.', code: 'plan_tokens' };
   const contract = CONTRACTS.includes(b && b.contract) ? b.contract : 'sub';
   const since = /^\d{4}-\d{2}-\d{2}$/.test(String(b && b.since || '')) ? String(b.since) : today;
   const tier = String(b && b.tier || '').trim().slice(0, 30); const memo = String(b && b.memo || '').trim().slice(0, 500);
@@ -97,4 +100,4 @@ function stateOf(plan, month, used, credit) {
 const MSG_LEARNER = '이번 달 AI 사용량을 다 썼어요. 선생님께 질문을 넘겨 주세요';
 const MSG_STAFF = '이번 달 AI 사용량(포함량 + 추가 충전량)을 모두 썼습니다. 설정 → AI 사용량에서 추가 충전하십시오.';
 
-module.exports = { PRICE_PER_M, VAT, STEP, MIN_WON, MAX_WON, DISCOUNTS, TRIAL_TOKENS, MONTH_MAX, CONTRACTS, CREDIT_DAYS, addDays, simCredits, discountOf, validWon, quote, priceInfo, packId, planOf, ovKey, validPlan, keepPlan, santaInput, santaSet, monthOf, monthState, stateOf, MSG_LEARNER, MSG_STAFF };
+module.exports = { PRICE_PER_M, VAT, STEP, MIN_WON, MAX_WON, DISCOUNTS, TRIAL_TOKENS, PAID_MONTH_TOKENS, MONTH_MAX, CONTRACTS, CREDIT_DAYS, addDays, simCredits, discountOf, validWon, quote, priceInfo, packId, planOf, ovKey, validPlan, keepPlan, santaInput, santaSet, monthOf, monthState, stateOf, MSG_LEARNER, MSG_STAFF };

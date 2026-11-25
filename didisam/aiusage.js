@@ -8,7 +8,8 @@
    요금표 원천: service/server/aiprice.js — 아래 PRICE는 시연판 · 서버 응답이 없을 때 쓰는 표시용 사본입니다. */
 (() => {
   const PRICE = { perM: 20000, perMVat: 22000, step: 100000, min: 100000, max: 100000000, discounts: [[100000, 0], [500000, 5], [1000000, 10], [3000000, 15], [5000000, 20], [10000000, 25], [20000000, 30]] };
-  const TRIAL = 2000000, CREDIT_DAYS = 365;
+  const PAID = 2500000, CREDIT_DAYS = 365; /* 유료 월 기본 포함량(250만 = 5만 원 상당) · 체험 100만 — 원천 aiprice.js PAID_MONTH_TOKENS · TRIAL_TOKENS */
+  const TRIAL = 1000000;
   const CHIPS = [100000, 500000, 1000000, 3000000, 5000000, 10000000, 20000000];
   const CONTRACT = { sub: '구독', multi: '다년 계약', build: '구축' };
   const CODES = ['TRIAL', 'E1', 'E2', 'E3', 'E4', 'U0', 'U1', 'U2', 'U3', 'U4', 'G1', 'G2', 'G3', 'G4'];
@@ -132,7 +133,7 @@
       <div class="aiu-form"><label>요금제 코드<input id="sCode" list="sCodes" value="${esc(p.code || '')}" placeholder="E1 · U0 · G4 · TRIAL" maxlength="5"></label><datalist id="sCodes">${CODES.map(c => `<option value="${c}">`).join('')}</datalist>
         <label>등급 이름<input id="sTier" value="${esc(p.tier || '')}" maxlength="30" placeholder="Enterprise"></label>
         <label>계약 형태<select id="sContract">${Object.entries(CONTRACT).map(([k, v]) => `<option value="${k}" ${p.contract === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
-        <label>월 포함 토큰(0 = 한도 없음)<input id="sTokens" type="number" min="0" step="1000000" value="${p.aiMonthTokens != null ? p.aiMonthTokens : (o.aiplan && o.aiplan.monthTokens) || 0}"></label>
+        <label>월 포함 토큰(유료 기본 250만 · 체험 100만 · 0 = 한도 없음)<input id="sTokens" type="number" min="0" step="1000000" value="${p.aiMonthTokens != null && p.code !== 'TRIAL' ? p.aiMonthTokens : (p.code !== 'TRIAL' && o.aiplan && o.aiplan.monthTokens) || PAID}" placeholder="비우면 ${nf(PAID)}(유료 기본)"></label>
         <label>적용일<input id="sSince" type="date" value="${esc(p.since || kst())}"></label></div>
       <label class="mini" for="sMemo">메모(산타 내부용, 기관에는 보이지 않음)</label><textarea id="sMemo" rows="2" maxlength="500" style="width:100%;box-sizing:border-box">${esc(o.memo || '')}</textarea>
       <div class="aiu-row"><button class="btn ink" data-act="aiu-ssave">저장</button><span class="mini">저장하면 기관 화면에 바로 반영되고, 기관 정운영자는 포함량을 바꿀 수 없습니다.</span></div>
@@ -182,7 +183,7 @@
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'sQ') { e.preventDefault(); ACT['aiu-sfind'](); } });
   ACT['aiu-sorg'] = el => { U.sel = el.dataset.v; render(); };
   ACT['aiu-ssave'] = async () => {
-    const g = id => (document.getElementById(id) || {}).value || ''; const b = { code: g('sCode').trim().toUpperCase(), tier: g('sTier').trim(), contract: g('sContract'), aiMonthTokens: Math.round(+g('sTokens')), since: g('sSince'), memo: g('sMemo').trim() };
+    const g = id => (document.getElementById(id) || {}).value || ''; const b = { code: g('sCode').trim().toUpperCase(), tier: g('sTier').trim(), contract: g('sContract'), aiMonthTokens: g('sTokens').trim() === '' ? (g('sCode').trim().toUpperCase() === 'TRIAL' ? TRIAL : PAID) : Math.round(+g('sTokens')), since: g('sSince'), memo: g('sMemo').trim() };
     if (!/^(TRIAL|[A-Z][0-9])$/.test(b.code)) { toast('요금제 코드는 TRIAL 또는 영문 대문자 1자 + 숫자 1자(E1 · U0 · G4 등)입니다.', 'warn'); return; }
     if (!(Number.isInteger(b.aiMonthTokens) && b.aiMonthTokens >= 0)) { toast('월 포함 토큰은 0 이상 정수입니다.', 'warn'); return; }
     if (live()) { try { await api('PUT', `/api/santa/orgs/${encodeURIComponent(U.sel)}/plan`, b); toast('저장했습니다. 기관 화면에 바로 반영됩니다.', 'ok'); if (LIVE.tenant && LIVE.tenant.tid === U.sel) { U.d = null; U.at = 0; } await santaLoad(); } catch (e) { toast(errMsg(e, '저장하지 못했습니다.'), 'bad'); } return; }

@@ -27,7 +27,7 @@ const SKILL = {
 
   /* 화면 상수 = 스킬 · 서버 */
   const T = await page.evaluate(() => JSON.parse(JSON.stringify(window.PLAN_TABLE)));
-  ok('AI 단가 = aiprice.js(100만 토큰당 · 단위 · 범위 · 할인 구간)', T.ai.perM === AP.PRICE_PER_M && T.ai.perMVat === Math.round(AP.PRICE_PER_M * 1.1) && T.ai.step === AP.STEP && T.ai.min === AP.MIN_WON && T.ai.max === AP.MAX_WON && JSON.stringify(T.ai.discounts) === JSON.stringify(AP.DISCOUNTS) && T.ai.trialTokens === AP.TRIAL_TOKENS && T.ai.creditDays === AP.CREDIT_DAYS, T.ai);
+  ok('AI 단가 = aiprice.js(100만 토큰당 · 단위 · 범위 · 할인 구간)', T.ai.perM === AP.PRICE_PER_M && T.ai.perMVat === Math.round(AP.PRICE_PER_M * 1.1) && T.ai.step === AP.STEP && T.ai.min === AP.MIN_WON && T.ai.max === AP.MAX_WON && JSON.stringify(T.ai.discounts) === JSON.stringify(AP.DISCOUNTS) && T.ai.trialTokens === AP.TRIAL_TOKENS && T.ai.paidMonthTokens === AP.PAID_MONTH_TOKENS && AP.PAID_MONTH_TOKENS * AP.PRICE_PER_M / 1e6 === 50000 && JSON.stringify(Object.keys(AP.priceInfo())) === JSON.stringify(['perM', 'perMVat', 'step', 'min', 'max', 'discounts', 'paidMonthTokens', 'trialTokens']) && T.ai.creditDays === AP.CREDIT_DAYS, T.ai);
   ok('AI 단가 = 스킬 3-1-1(2만 원 · 10만 원 단위 · 최대 30%)', T.ai.perM === 20000 && T.ai.step === 100000 && Math.max(...T.ai.discounts.map(x => x[1])) === 30);
   ok('구독 단가 = 스킬 2절', Object.entries(SKILL.price).every(([c, [cap, u]]) => T.price[c][1] === cap && T.price[c][2] === u) && Object.entries(SKILL.floor).every(([c, f]) => T.price[c][2] === null && T.price[c][4] === f));
   ok('다년 할인 · 유지보수 = 스킬', JSON.stringify(T.multi) === JSON.stringify(SKILL.multi) && T.buildUpkeep === SKILL.upkeep);
@@ -76,6 +76,7 @@ const SKILL = {
     setPlan('TRIAL', today()); t = card(); ok('④ 체험: 남은 일수', /Pro 체험을 이용 중입니다/.test(t) && /체험 기간이 14일 남았습니다/.test(t), t);
     const d = new Date(); d.setDate(d.getDate() - 12); S.plan.since = d.toISOString().slice(0, 10); t = card(); ok('④ 체험 종료 임박 주의', /체험 종료까지 [0-3]일/.test(t), t);
     S.plan.since = '2020-01-01'; t = card(); ok('④ 체험 종료 → Standard', /체험이 끝나 Standard/.test(t), t);
+    ok('④ 체험 종료 · 유료 전환 전 → 월 포함량 0 · AI 멈춤 + 충전/전환 안내', /체험이 끝나 월 AI 포함량이 0입니다/.test(t) && /AI 기능이 멈췄습니다/.test(t) && /유료 요금제로 전환/.test(t) && /\/0\b/.test(t) && document.querySelector('.d26-plan [data-act="aiu-open"]'), t);
     /* ⑤ 기존 계약 */
     setPlan(''); t = card(); ok('⑤ 기존 계약', /기존 계약\(전체 기능\)을 이용 중입니다/.test(t) && /산타에 문의/.test(t), t);
     /* ⑥ 회원 · 메시지 한도 근접 */
@@ -96,6 +97,7 @@ const SKILL = {
     ok('요금 안내: 섹션(구독료 · AI 포함 · 충전 · 차감 · 계약 · 부가 · FAQ · 문의)', ['guide', 'ai', 'topup', 'order', 'contract', 'addon', 'faq', 'contact'].every(sec), ['guide', 'ai', 'topup', 'order', 'contract', 'addon', 'faq', 'contact'].filter(k => !sec(k)));
     ok('요금 안내: 구독료(E2 3,060만원 · VAT 포함 3,366만원 · 협의 하한)', /3,060만원/.test(t) && /3,366만원/.test(t) && /계약 시 견적/.test(t) && /하한 1,200원·인·월/.test(t));
     ok('요금 안내: 충전 할인 7구간 · 최대 30% · 단가 14,000원', document.querySelectorAll('[data-pl-topup] tbody tr').length === 7 && /30%/.test(t) && /14,000원/.test(t) && /100만 토큰당 20,000원/.test(t) && /VAT 포함 22,000원/.test(t));
+    ok('요금 안내: 월 포함 유료 2,500,000(5만원 상당) · 체험 1,000,000(14일)', /2,500,000 토큰/.test(t) && /5만원 상당/.test(t) && /1,000,000 토큰/.test(t) && /2만원 상당/.test(t) && ((document.querySelector('[data-pl-ai] p') || {}).textContent || '').includes('유료 요금제 월 2,500,000 토큰(5만 원 상당) 기본 포함'), [/2,500,000 토큰/.test(t), /5만원 상당/.test(t), /1,000,000 토큰/.test(t), /2만원 상당/.test(t), ((document.querySelector('[data-pl-ai] p') || {}).innerText || '').slice(0, 120)]);
     ok('요금 안내: 이월 · 차감 순서 · 약정 할인 없음', /만료일이 빠른 충전분/.test(t) && /365일/.test(t) && /AI 사용료\(충전\)는 약정 할인이 없습니다/.test(t) && /2년 10% · 3년 15%/.test(t) && /세금계산서/.test(t));
     const fq = document.querySelectorAll('[data-pl-faq] details').length; ok('요금 안내: FAQ 5~8개', fq >= 5 && fq <= 8, fq);
     ok('요금 안내: 문의(채널톡 · 메일)', !!document.querySelector('[data-pl-contact] a[href="https://newdidisam.channel.io/home"]') && !!document.querySelector('[data-pl-contact] a[href^="mailto:support@didisam.com"]'));

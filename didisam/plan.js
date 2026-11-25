@@ -48,8 +48,8 @@
     /* ── 요금 안내 화면 · 홈 요금제 카드의 금액 상수(한 곳) — 원천: didisam-pricing 스킬 v1.5 · service/server/aiprice.js(AI 충전).
        운영에서는 AI 단가를 서버 응답(GET /api/ai/usage price)으로 덮어쓴다. 스킬에 금액이 없는 항목은 null → 「계약 시 견적」 */
     target: { standard: '기본 학습 운영 · 직업훈련 인가 대응이 필요한 기관', pro: '학습 루프 · AI 채점 초안 · 결제 연동 · 성과 리포트까지 쓰는 기관', enterprise: 'SSO · API · 멀티사이트 · 전담 매니저가 필요한 대규모 기관' },
-    ai: { perM: 20000, perMVat: 22000, step: 100000, min: 100000, max: 100000000, discounts: [[100000, 0], [500000, 5], [1000000, 10], [3000000, 15], [5000000, 20], [10000000, 25], [20000000, 30]], creditDays: 365, trialTokens: 2000000 },
-    aiBase: '학습자 1인 월 30회 + 운영자 AI SAM 월 3,000회 기준으로 계약 시 산정',
+    ai: { perM: 20000, perMVat: 22000, step: 100000, min: 100000, max: 100000000, discounts: [[100000, 0], [500000, 5], [1000000, 10], [3000000, 15], [5000000, 20], [10000000, 25], [20000000, 30]], creditDays: 365, trialTokens: 1000000, paidMonthTokens: 2500000 }, /* 월 기본 포함량: 대표님 2026-11-25 — 유료 250만(5만 원 상당) · 체험 100만 */
+    aiBase: '유료 요금제 월 2,500,000 토큰(5만 원 상당) 기본 포함 · Enterprise는 계약에 따라 추가',
     multi: [[2, 10], [3, 15]], /* 다년 약정 할인(구독료에만 · AI 사용료 제외) */
     buildUpkeep: 15, /* 구축형(설치형) 연 유지보수 % */
     addons: [
@@ -174,7 +174,8 @@
       const amt = f.nego ? `<td colspan="2">계약 시 견적${f.floor ? `<small>하한 ${nf(f.floor)}원·인·${per}</small>` : ''}</td>` : `<td>${man(f.supply)}<small>${nf(f.unit)}원·인·${per}</small></td><td>${man(f.total)}</td>`;
       return `<tr class="${t === cur ? 'cur' : ''}">${i === 0 ? `<td rowspan="${a.length}"><b>${E(nm(t))}</b><small>${E(T.target[t])}</small></td>` : ''}<td>${E(c)} · ${E(f.seg)}</td><td>${seats(f.cap)}</td>${amt}</tr>`; }).join('')).join('');
     const disc = P.discounts.map(([w, d], i) => { const q = aiTokens(w, P); const nx = P.discounts[i + 1]; return `<tr><td>${man(w)} 이상${nx ? `<small>${man(nx[0])} 미만</small>` : ''}</td><td>${d ? d + '%' : '—'}</td><td>${won(q.unit)}<small>VAT 포함 ${won(Math.round(q.unit * 1.1))}</small></td><td>${nf(q.tokens)}</td></tr>`; }).join('');
-    const aiInc = { standard: T.aiBase, pro: T.aiBase, enterprise: '계약에 따라 산타가 넣습니다' };
+    const paid = P.paidMonthTokens || T.ai.paidMonthTokens, trialT = P.trialTokens || T.ai.trialTokens;
+    const aiInc = { standard: `${nf(paid)} 토큰`, pro: `${nf(paid)} 토큰`, enterprise: `${nf(paid)} 토큰 + 계약에 따라 추가` };
     const multi = T.multi.map(([y, p]) => `${y}년 ${p}%`).join(' · ');
     const add = T.addons.map(([n, w, u]) => `<tr><td>${E(n)}</td><td>${w == null ? '계약 시 견적' : won(w)}${w == null ? '' : `<small>VAT 포함 ${won(Math.round(w * 1.1))}</small>`}</td><td>${E(u)}</td></tr>`).join('');
     const faq = [
@@ -189,8 +190,8 @@
     return `<section class="card" id="plGuide" data-pl-guide><h3>요금 안내 · 요금제별 연 구독료</h3><p class="mini">공개 정가 기준이며 VAT 별도 금액입니다(VAT 포함 금액을 함께 적습니다). 실제 계약 금액은 견적서를 따릅니다.</p>
         <div class="pl-tw"><table class="pl-sub"><thead><tr><th>요금제 · 대상</th><th>코드 · 고객군</th><th>학습자 구간</th><th>연 구독료(VAT 별도)</th><th>VAT 포함</th></tr></thead><tbody>${subRows}</tbody></table></div>
         <p class="mini">대학은 재학생 전체 기준 인·년 단가, 대학 사업단(RISE · ATC)은 참여 인원 기준입니다. 전담 매니저는 E3 · U2 · G2 이상에 포함합니다.</p></section>
-      <section class="card" data-pl-ai><h3>월 AI 포함 토큰</h3><div class="pl-k">${T.tiers.map(t => `<div><small>${E(nm(t))}</small><b>${E(aiInc[t])}</b></div>`).join('')}<div><small>무료 체험(${T.trialDays}일)</small><b>${nf(T.ai.trialTokens)} 토큰</b></div></div>
-        <p class="mini">요금제의 월 포함량을 먼저 쓰고, 넘으면 충전분에서 차감합니다.</p></section>
+      <section class="card" data-pl-ai><h3>월 AI 포함 토큰</h3><div class="pl-k">${T.tiers.map(t => `<div><small>${E(nm(t))}</small><b>${E(aiInc[t])}</b><em>${man(Math.round(paid * P.perM / 1e6))} 상당</em></div>`).join('')}<div><small>무료 체험(${T.trialDays}일 · 유료 전환 전)</small><b>${nf(trialT)} 토큰</b><em>${man(Math.round(trialT * P.perM / 1e6))} 상당</em></div></div>
+        <p class="mini">${E(T.aiBase)}. 요금제의 월 포함량을 먼저 쓰고, 넘으면 충전분에서 차감합니다. 체험이 끝나고 유료로 전환하지 않으면 월 포함량은 0이 되어 충전분만 씁니다.</p></section>
       <section class="card" data-pl-topup><h3>AI 충전 단가 · 할인 구간</h3><div class="pl-k"><div><small>기본 단가</small><b>100만 토큰당 ${won(P.perM)}</b><em>VAT 포함 ${won(P.perMVat || Math.round(P.perM * 1.1))}</em></div><div><small>충전 단위</small><b>${man(P.step)} 단위</b><em>${man(P.min)} ~ ${man(P.max)} · VAT 별도</em></div><div><small>사용 기간</small><b>충전일부터 ${nf(P.creditDays || T.ai.creditDays)}일</b><em>남은 양은 다음 달로 이어집니다</em></div></div>
         <div class="pl-tw"><table><thead><tr><th>충전 금액(VAT 별도)</th><th>할인</th><th>100만 토큰당 단가</th><th>받는 토큰(구간 시작 금액 기준)</th></tr></thead><tbody>${disc}</tbody></table></div></section>
       <section class="card" data-pl-order><h3>이월과 차감 순서</h3><ol class="pl-ol"><li>매달 요금제의 <b>월 포함량</b>을 먼저 씁니다. 월 포함량은 다음 달로 이어지지 않습니다.</li><li>포함량을 넘으면 <b>만료일이 빠른 충전분</b>부터 차감합니다.</li><li>충전분은 충전일부터 ${nf(P.creditDays || T.ai.creditDays)}일 동안 쓰며, 달이 바뀌어도 남습니다(연간 사용).</li><li>포함량과 충전분을 모두 쓰면 AI 기능이 멈춥니다. 80% · 100%에 이르면 미리 알려 드립니다.</li></ol></section>
