@@ -155,7 +155,7 @@ const laPrivV = () => laSec('개인정보 처리방침 요약', laPolicyHTML(laU
   if (!laAcctOn() || cfg.mode === 'code') return h.replace(/(<form id="li"[\s\S]*?)(<button[^>]*type="submit")/, (m, a, b) => a + lKeepHTML() + b).replace(/(<p class="mini">접근코드를 모르면[^<]*<\/p>)/, `$1${sso}<p class="mini la-links"><a href="#find/code">접근코드 받기 · 재발급 요청</a></p>`);
   const form = ((h.match(/<form id="li"[\s\S]*?<\/form>/) || [''])[0]).replace(/(<button[^>]*type="submit")/, m => lKeepHTML() + m); const pwMode = U || LA.lmode === 'pw';
   const lgr = `<div class="lgr"><h2>로그인</h2>
-    ${U ? `<p class="mini">학번과 비밀번호로 로그인하세요.</p>` : `${laSoc(cfg, 'soclogin')}${cfg.social.length ? '<p class="la-or"><span>또는 이메일로</span></p>' : ''}`}
+    ${U ? `${laSoc(cfg, 'soclogin')}${cfg.social.length ? '<p class="la-or"><span>또는 학번으로</span></p>' : ''}<p class="mini">학번과 비밀번호로 로그인하세요.</p>` /* QA7 대학 소셜 가입자는 같은 SNS로 로그인 */ : `${laSoc(cfg, 'soclogin')}${cfg.social.length ? '<p class="la-or"><span>또는 이메일로</span></p>' : ''}`}
     <form id="laLogin" data-back="${esc(back || 'home')}"><label class="fl">${U ? '학번' : '이메일'}<input name="lid" ${U ? 'inputmode="numeric"' : 'type="email"'} autocomplete="username" required maxlength="80" value="${esc((LA.lv && LA.lv.email) || '')}"></label>
       ${U ? '' : `<div class="la-seg sm">${[['otp', '인증번호로 로그인'], ['pw', '비밀번호로 로그인']].map(([k, l]) => `<button type="button" class="${(pwMode ? 'pw' : 'otp') === k ? 'on' : ''}" data-ac="lmode" data-v="${k}">${l}</button>`).join('')}</div>`}
       ${pwMode ? '<label class="fl">비밀번호<input name="pw" type="password" autocomplete="current-password" maxlength="20"></label>' : laOtpBox('lv')}

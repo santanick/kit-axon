@@ -30,7 +30,9 @@ const mbLURL = () => (typeof lsLearnerURL === 'function' ? lsLearnerURL() : loca
 function mbEnsure() {
   if (!S || !S.org || !S.settings) return; const st = S.settings; const ty = S.org.type;
   if (!st.acct) { const j = st.join || '자동 수락';
-    st.acct = { mode: ty === 'univ' || ty === 'voc' ? 'code' : j === '운영자 초대만' ? 'invite' : 'open', social: ty === 'univ' || ty === 'voc' ? [] : MB_SOC.map(x => x[0]), extraQ: [], approve: j === '운영자 수락' || ty === 'voc' ? 'manual' : 'auto', verify: ty !== 'univ' && ty !== 'voc', /* v43 P1-F01: 직업훈련원 기본 = 접근코드(HRD-Net 수강 등록 후 발급), 누구나 가입 · 자동 수락 막음 */ under14: !['corp', 'univ', 'public'].includes(ty), editAns: false, parent: ty === 'k12' }; /* v38 보호자 계정은 학원(초중고)만 */ }
+    /* QA7 신규 기관 기본 가입 정책(개인정보 · 관리 원칙): 대학 학사 LMS · 직업훈련 = 기관 승인 후 활동, 대학 사업단 · 학원 · 기업 · 공공 · 평생교육원 · 성인 = 누구나 가입. 이미 저장된 기관(acct 있음)은 바꾸지 않는다 */
+    const apr = ty === 'voc' || (ty === 'univ' && S.org.ed === 'lms'); if (ty === 'voc') st.voc43 = 1; /* 새 기관은 v43 접근코드 전환(mbVocFix)을 건너뛴다 */
+    st.acct = { mode: j === '운영자 초대만' && ty !== 'univ' ? 'invite' : 'open', social: ty === 'univ' || ty === 'voc' ? [] : MB_SOC.map(x => x[0]), extraQ: [], approve: j === '운영자 수락' || apr ? 'manual' : 'auto', verify: ty !== 'univ' && ty !== 'voc', /* v43 P1-F01: 직업훈련원 기본 = 접근코드(HRD-Net 수강 등록 후 발급), 누구나 가입 · 자동 수락 막음 */ under14: !['corp', 'univ', 'public'].includes(ty), editAns: false, parent: ty === 'k12' }; /* v38 보호자 계정은 학원(초중고)만 */ }
   const A = st.acct; if (!Array.isArray(A.extraQ)) A.extraQ = []; if (!Array.isArray(A.social)) A.social = [];
   (st.extraQ || []).forEach(q => { if (q && !A.extraQ.some(x => x.q === q) && A.extraQ.length < 6) A.extraQ.push({ q, type: 'text', req: false, opts: [] }); });
   A.extraQ = A.extraQ.slice(0, 6); st.extraQ = A.extraQ.map(x => x.q);
@@ -62,8 +64,9 @@ const mbAns = v => v && typeof v === 'object' ? (v.file ? `📎 ${esc(v.file.nam
 function mbAcctSummary() { const A = S.settings.acct; return `${esc(MB_MODE()[A.mode])}${A.mode === 'open' ? ` · ${A.approve === 'manual' ? '운영자 승인' : '자동 승인'}` : ''}${A.social.length ? ` · SNS ${A.social.length}종` : ''} · 추가 질문 ${A.extraQ.length}개`; }
 const MB_MODE = () => mbUniv() ? { open: '학번 가입(학번 · 학과 · 비밀번호)', code: '접근코드 로그인(기관이 학번 · 코드 발급)' } : { open: '누구나 가입', invite: '초대받은 회원만(초대 링크 · 이메일 · 연락처)', code: '접근코드 로그인(기관이 번호 · 코드 발급)' };
 /* v33 대학(univ · univ_lms)은 개인정보 최소 수집 원칙상 학번 · 학과 · 접근코드 방식만(QA #54) */
+const MB_UNIV_SNS = '대학 소셜 가입은 SNS 회원 번호(복원할 수 없는 값)와 학번 · 학과만 받습니다. 이메일 · 이름 · 연락처 · 비밀번호는 받지 않습니다.';
 const MB_UNIV_NOTE = '대학은 개인정보 최소 수집 원칙에 따라 학번 · 학과 · 접근코드 방식만 쓸 수 있습니다(이메일 · 연락처 초대는 제공하지 않습니다).';
-function mbUnivFix() { if (!mbUniv() || !S.settings) return false; let ch = false; const A = S.settings.acct; if (A) { if (A.mode === 'invite' || !['open', 'code'].includes(A.mode)) { A.mode = 'code'; ch = true; } if (A.social && A.social.length) { A.social = []; ch = true; } }
+function mbUnivFix() { if (!mbUniv() || !S.settings) return false; let ch = false; const A = S.settings.acct; if (A) { if (A.mode === 'invite' || !['open', 'code'].includes(A.mode)) { A.mode = 'code'; ch = true; } /* QA7: 대학도 SNS 가입 가능(학번 · 학과만 받음) — 저장된 SNS 설정은 그대로 */ }
   if (S.settings.join === '운영자 초대만') { S.settings.join = '운영자 수락'; ch = true; } return ch; }
 /* QA7 학습자 가입 정책 — 저장 형식(acct.mode · acct.approve)은 그대로, 화면에서는 하나로 고른다 */
 const mbPol = A => A.mode === 'open' ? (A.approve === 'manual' || mbVoc() ? 'approval' : 'open') : A.mode;
@@ -75,14 +78,15 @@ function mbDecideLive(ids, ok, reason) { if (typeof LIVE === 'undefined' || !LIV
 ACT['mb-acct'] = () => { mbEnsure(); const A = S.settings.acct; const U = mbUniv();
   modal('가입 · 계정 설정', `<p class="mini">학습자 사이트의 회원가입 · 로그인 방식입니다. 저장하면 바로 반영되고, 학습자 사이트를 다시 게시하면 게시본에도 들어갑니다.${U ? ' 대학 유형은 이름 · 연락처 · 이메일을 받지 않고 학번 · 학과만 저장합니다.' : ''}</p>
     <div class="fl"><span>학습자 가입 정책</span>${U ? `<small class="mini" id="mbUnivNote">${MB_UNIV_NOTE}</small>` : ''}${mbVoc() ? `<small class="mini" id="mbVocNote">${MB_VOC_NOTE}</small>` : ''}<div class="mb-radios mb-pol">${MB_POL().map(([k, l, d]) => `<label class="ckl"><input type="radio" name="pol" value="${k}" ${mbPol(A) === k ? 'checked' : ''} ${k === 'open' && mbVoc() ? 'disabled' : ''}> <b>${esc(l)}</b> <small class="mini">— ${esc(d)}</small></label>`).join('')}</div><small class="mini">${U ? '접근코드로 로그인한 학생은 승인 없이 바로 이용합니다.' : '초대 링크 · 이메일 초대로 가입하면 어느 정책이든 승인 없이 바로 가입됩니다.'} 기관 승인 정책의 신청은 <b>회원 › 승인 대기</b>에서 승인 · 거절(사유) · 일괄 승인합니다.</small></div>
-    ${U ? '' : `<div class="fl"><span>SNS 간편 가입 · 로그인</span><div class="mb-radios">${MB_SOC.map(([k, l]) => `<label class="ckl"><input type="checkbox" name="soc_${k}" ${A.social.includes(k) ? 'checked' : ''}> ${l}</label>`).join('')}</div><small class="mini">이메일 가입은 항상 제공합니다. SNS 가입자는 비밀번호를 만들지 않습니다(데모: 모의 로그인 · 운영: OAuth 연동).</small></div>
+    <div class="fl"><span>SNS 간편 가입 · 로그인</span><div class="mb-radios">${MB_SOC.map(([k, l]) => `<label class="ckl"><input type="checkbox" name="soc_${k}" ${A.social.includes(k) ? 'checked' : ''}> ${l}</label>`).join('')}</div><small class="mini"${U ? ' id="mbUnivSns"' : ''}>${U ? MB_UNIV_SNS : '이메일 가입은 항상 제공합니다. SNS 가입자는 비밀번호를 만들지 않습니다(데모: 모의 로그인 · 운영: OAuth 연동).'}</small></div>
+    ${U ? '' : `
     <label class="ckl"><input type="checkbox" name="verify" ${A.verify ? 'checked' : ''}> 휴대폰 본인인증을 마쳐야 정회원(미인증 · 일괄 가입은 준회원)</label>
     <label class="ckl"><input type="checkbox" name="under14" ${A.under14 ? 'checked' : ''}> 만 14세 미만 가입 허용(법정대리인 인증 · 동의)</label>
     ${mbGuardOn() ? `<label class="ckl"><input type="checkbox" name="parent" ${A.parent ? 'checked' : ''}> 보호자 계정 가입 · 가족 연결 사용</label>` : ''}`}
     <label class="ckl"><input type="checkbox" name="editAns" ${A.editAns ? 'checked' : ''}> 학습자가 마이페이지에서 추가 질문 답변을 확인 · 수정할 수 있음</label>
     <div class="bar2"><button type="button" class="btn sm" data-act="mem-q">추가 질문 설정 (${A.extraQ.length}/6)</button><button type="button" class="btn sm ghost" data-act="mem-invite">초대 링크</button></div>`,
   [{ id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { const g = n => (w.querySelector(`[name="${n}"]:checked`) || {}).value;
-    { const pol = g('pol') || mbPol(A); A.mode = pol === 'approval' ? 'open' : pol; A.approve = pol === 'approval' || mbVoc() ? 'manual' : 'auto'; } if (U && !MB_MODE()[A.mode]) A.mode = 'code'; if (!U) { A.social = MB_SOC.map(x => x[0]).filter(k => fv(w, 'soc_' + k)); A.verify = !!fv(w, 'verify'); A.under14 = !!fv(w, 'under14'); if (w.querySelector('[name=parent]')) A.parent = !!fv(w, 'parent'); } A.editAns = !!fv(w, 'editAns');
+    { const pol = g('pol') || mbPol(A); A.mode = pol === 'approval' ? 'open' : pol; A.approve = pol === 'approval' || mbVoc() ? 'manual' : 'auto'; } if (U && !MB_MODE()[A.mode]) A.mode = 'code'; A.social = MB_SOC.map(x => x[0]).filter(k => fv(w, 'soc_' + k)); if (!U) { A.verify = !!fv(w, 'verify'); A.under14 = !!fv(w, 'under14'); if (w.querySelector('[name=parent]')) A.parent = !!fv(w, 'parent'); } A.editAns = !!fv(w, 'editAns');
     mbJoinSync(); logAudit(`가입 · 계정 설정 — ${(MB_POL().find(x => x[0] === mbPol(A)) || [])[1] || MB_MODE()[A.mode]}`); save(); render(); toast('가입 · 계정 설정을 저장했습니다.', 'ok'); } }]); };
 { const base = ACT.st; ACT.st = el => { if (el.dataset.k === 'join' && el.value === '운영자 초대만' && mbUniv()) { toast(MB_UNIV_NOTE, 'warn'); render(); return; } if (el.dataset.k === 'join' && el.value === '자동 수락' && mbVoc()) { toast(MB_VOC_NOTE, 'warn'); render(); return; } base(el); if (el.dataset.k !== 'join' || !S.settings.acct) return; const v = el.value, A = S.settings.acct; if (v === '운영자 초대만') A.mode = 'invite'; else { if (A.mode === 'invite') A.mode = 'open'; A.approve = v === '운영자 수락' ? 'manual' : 'auto'; } save(); }; }
 { const base = VIEWS.settings; VIEWS.settings = () => { const h = base(); if ((UI.settings || 'menu') !== 'service') return h; mbEnsure();

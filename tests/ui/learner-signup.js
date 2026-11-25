@@ -101,6 +101,22 @@ const wait = ms => new Promise(k => setTimeout(k, ms));
     /* ③ 접근코드 기관: 가입 막힘 안내 */
     const C = await org('voc', 'QA7 훈련원', { mode: 'code' });
     { const L = await learner(C.tid, 390); const t = await L.lp.textContent('.la-new').catch(() => ''); ok(/처음이신가요/.test(t) && /초대받은 사람만 가입할 수 있어요/.test(t), '접근코드 기관 안내 ' + t); await L.c.close(); }
+    /* ④ 대학 소셜 가입: 스튜디오에서 켜기 · 안내 한 줄 · 학번 · 학과만 받고 가입 → 다른 기기 같은 SNS 로그인 */
+    const Un = await org('univ', 'QA7 대학 사업단', { mode: 'open', approve: 'auto', social: ['kakao'] });
+    { const kept = await Un.p.evaluate(() => S.settings.acct.social.join()); ok(kept === 'kakao', '대학 SNS 설정 유지(upgrade에서 지우지 않음) ' + kept);
+      await Un.p.evaluate(() => ACT['mb-acct']()); await Un.p.waitForSelector('#mbUnivSns', { timeout: 8000 }).catch(() => { }); const note = await Un.p.textContent('#mbUnivSns').catch(() => '');
+      ok(/학번 · 학과만 받습니다/.test(note) && await Un.p.locator('.modal [name=soc_kakao]').count() > 0, '대학 설정 화면 SNS 켜기 + 안내 ' + note); await Un.p.keyboard.press('Escape').catch(() => { });
+      /* 신규 기관 기본 가입 정책 — 대학 학사 LMS · 직업훈련 = 승인, 나머지 = 누구나 가입 */
+      const D = await Un.p.evaluate(() => { const o0 = { ...S.org }, a0 = S.settings.acct, v0 = S.settings.voc43, out = {};
+        for (const [ty, ed] of [['univ', 'lms'], ['univ', 'lite'], ['voc', ''], ['k12', ''], ['adult', ''], ['corp', ''], ['public', ''], ['lifelong', '']]) { S.org.type = ty; S.org.ed = ed; delete S.settings.acct; delete S.settings.voc43; S.settings.join = '자동 수락'; mbEnsure(); mbVocFix(); out[ty + (ed ? '_' + ed : '')] = mbPol(S.settings.acct); }
+        Object.assign(S.org, o0); S.settings.acct = a0; if (v0 === undefined) delete S.settings.voc43; else S.settings.voc43 = v0; mbJoinSync(); return out; });
+      ok(JSON.stringify(D) === JSON.stringify({ univ_lms: 'approval', univ_lite: 'open', voc: 'approval', k12: 'open', adult: 'open', corp: 'open', public: 'open', lifelong: 'open' }), '신규 기관 기본 가입 정책 ' + JSON.stringify(D));
+      const L = await learner(Un.tid, 390, '#join'); nextSub = `kakao-univ-${Date.now()}`; await L.lp.click('.la-sb.kakao'); await L.lp.waitForSelector('#laJoin [name=sid]', { timeout: 15000 }).catch(() => { });
+      ok(/학번 · 학과만 적으면/.test(await txt(L.lp)) && !(await L.lp.locator('#laJoin [name=email], #laJoin [name=pw]').count()), '대학 소셜 가입 화면: 학번 · 학과만');
+      await L.lp.fill('#laJoin [name=sid]', '20269011'); await L.lp.fill('#laJoin [name=dept]', '컴퓨터공학과'); await consentAndSubmit(L.lp); await wait(800);
+      const me = await L.lp.evaluate(t => fetch(`/api/pub/${t}/me`).then(r => r.json()), Un.tid); ok(me.me && me.me.login === 'kakao', '대학 소셜 가입 완료 ' + JSON.stringify(me).slice(0, 120)); await L.c.close();
+      const L2 = await learner(Un.tid, 1440); ok(await L2.lp.locator('.la-sb.kakao').count() > 0, '대학 로그인 화면에 카카오'); await L2.lp.click('.la-sb.kakao'); await wait(2500);
+      const me2 = await L2.lp.evaluate(t => fetch(`/api/pub/${t}/me`).then(r => r.status), Un.tid); ok(me2 === 200, '다른 기기 카카오 로그인(대학) ' + me2); await L2.c.close(); }
   } catch (e) { fail++; console.error('✗ 예외', e && e.stack || e); }
   ok(!errs.length, '스크립트 오류 없음 ' + errs.slice(0, 3).join(' | '));
   console.log(`learner-signup: 통과 ${pass} · 실패 ${fail}`); await br.close(); return end(fail ? 1 : 0);
