@@ -12,7 +12,7 @@
   const CHIPS = [100000, 500000, 1000000, 3000000, 5000000, 10000000, 20000000];
   const CONTRACT = { sub: '구독', multi: '다년 계약', build: '구축' };
   const CODES = ['TRIAL', 'E1', 'E2', 'E3', 'E4', 'U0', 'U1', 'U2', 'U3', 'U4', 'G1', 'G2', 'G3', 'G4'];
-  const priceOf = () => (U.d && U.d.price) || PRICE;
+  const priceOf = () => (U.d && U.d.price) || (window.PLAN_TABLE && PLAN_TABLE.ai) || PRICE; /* 표시용 사본의 원천은 plan.js PLAN_TABLE.ai */
   const quote = won => { const P = priceOf(); won = +won; if (!Number.isInteger(won) || won % P.step || won < P.min || won > P.max) return null; let d = 0; for (const [w, x] of P.discounts) if (won >= w) d = x;
     const vat = Math.round(won * 0.1); return { won, supply: won, vat, total: won + vat, discount: d, unit: P.perM * (100 - d) / 100, base: won * 1e6 / P.perM, tokens: Math.floor(won * 5000 / (100 - d)) }; };
   const addDays = (day, n) => new Date(Date.parse(day + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
@@ -44,7 +44,7 @@
     /* 충전(시연판): 충전일부터 1년. 오늘 충전한 것은 이달 사용 기록 전체에 대해 차감(서버와 같은 일 단위 규칙의 단순판 — 이달 사용을 오늘 하루로 모아 계산) */
     const cr = (S.aicredit || []).map(c => ({ ...c, day: c.day || String(c.at || today).slice(0, 10) })); const sim = simCredits(cr, cr.length ? [{ day: today, n: target }] : [], plan.monthTokens, today);
     const monthFeature = Object.fromEntries(Object.entries(W).map(([k, w]) => [k, { calls: Math.round(target * w / 1800), tin: Math.round(target * w * 0.7), tout: Math.round(target * w * 0.3) }]));
-    return { ...stateOf(plan, month, target, sim.credit), plan, days, monthFeature, credits: sim.live, contractPlan: S.plan || null, price: PRICE, payOnline: true, demo: true };
+    return { ...stateOf(plan, month, target, sim.credit), plan, days, monthFeature, credits: sim.live, contractPlan: S.plan || null, price: (window.PLAN_TABLE && PLAN_TABLE.ai) || PRICE, payOnline: true, demo: true };
   }
   const data = () => live() ? U.d : demo();
   function load(force) { if (!live() || U.busy || (!force && U.d && Date.now() - U.at < 300e3)) return; U.busy = true;
