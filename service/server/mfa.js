@@ -8,6 +8,7 @@
    - MFA_OFF=1: 시험 · 데모 전용(운영 기본 아님) — 2단계를 건너뛴다. MFA_DEV=1이고 메일 미설정이면 응답에 devCode.
    Java 동일: service-egov auth/service/impl/LoginMfa.java */
 const crypto = require('node:crypto');
+const { gcmDecipher } = require('./gcm');
 const { createMailer } = require('./mail');
 
 const MIGRATION = ['core/mfa_v1', `
@@ -59,7 +60,7 @@ function createMfa({ pool, env, inTenant, audit, HttpErr, readBody, limit, ip, s
   const KEY = crypto.createHash('sha256').update('dd-totp|' + String(env.PII_KEY || pepper || '')).digest();
   /* 저장 형식 v1:base64url(iv12 | 암호문 | tag16) — Java Cipher GCM 출력 순서와 같다 */
   const enc = s => { const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', KEY, iv); const ct = Buffer.concat([c.update(s, 'utf8'), c.final()]); return 'v1:' + Buffer.concat([iv, ct, c.getAuthTag()]).toString('base64url'); };
-  const dec = s => { if (!s || !s.startsWith('v1:')) return ''; const b = Buffer.from(s.slice(3), 'base64url'); const d = crypto.createDecipheriv('aes-256-gcm', KEY, b.subarray(0, 12)); d.setAuthTag(b.subarray(b.length - 16)); return Buffer.concat([d.update(b.subarray(12, b.length - 16)), d.final()]).toString('utf8'); };
+  const dec = s => { if (!s || !s.startsWith('v1:')) return ''; const b = Buffer.from(s.slice(3), 'base64url'); if (b.length < 28) throw new Error('gcm_tag'); const d = gcmDecipher(KEY, b.subarray(0, 12), b.subarray(b.length - 16)); return Buffer.concat([d.update(b.subarray(12, b.length - 16)), d.final()]).toString('utf8'); };
   const codeHash = (id, code) => sha('mfa|' + id + '|' + code);
   const addCookie = (res, c) => { const h = res.getHeader('set-cookie'); res.setHeader('set-cookie', [...(Array.isArray(h) ? h : h ? [String(h)] : []), c]); };
   const ticketCookie = (res, tok, sec) => addCookie(res, `${CK}=${tok}; Path=/api/login; HttpOnly; SameSite=Strict; Max-Age=${sec}${secure ? '; Secure' : ''}`);

@@ -81,6 +81,7 @@ public class DdPiiCrypto {
         String[] p = s.split("\\.", -1); if (!"v1".equals(p[0]) || p.length < 4) return "";
         try {
             byte[] iv = UD.decode(p[1]), tag = UD.decode(p[2]), ct = UD.decode(p[3]);
+            if (iv.length != 12 || tag.length != 16) throw new IllegalStateException("gcm_tag"); // v47.5 태그 128비트 고정(Node gcm.js와 같은 규칙)
             byte[] in = new byte[ct.length + tag.length]; System.arraycopy(ct, 0, in, 0, ct.length); System.arraycopy(tag, 0, in, ct.length, tag.length);
             Cipher c = Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.DECRYPT_MODE, new SecretKeySpec(enc, "AES"), new GCMParameterSpec(128, iv));
             c.updateAAD(aad.getBytes(StandardCharsets.UTF_8));

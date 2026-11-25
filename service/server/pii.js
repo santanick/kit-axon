@@ -9,6 +9,7 @@
    - 탈퇴: pii 행 즉시 완전 삭제(hard delete), 학습 기록은 가명으로 남긴다. pii 열람 · 수정 · 삭제는 pii.access_log에 남는다.
    운영: SNS OAuth 토큰 검증 · 이메일 발송 · 본인확인(PASS) 실제 연동은 아래 '운영:' 주석 지점에서 붙인다. */
 const crypto = require('node:crypto');
+const { gcmDecipher } = require('./gcm');
 
 const PROVIDERS = ['kakao', 'naver', 'google', 'apple'];
 const NICK_RE = /^[가-힣A-Za-z0-9_-]{2,20}$/;
@@ -48,7 +49,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
   const need = () => { if (!K) throw new HttpErr(503, '개인정보 암호화 키(PII_KEY)가 설정되지 않아 가입 · 로그인을 처리할 수 없습니다.', 'pii_key'); return K; };
   const bidx = (tid, kind, v) => crypto.createHmac('sha256', need().idx).update(`${tid}|${kind}|${String(v).trim().toLowerCase()}`).digest('base64url');
   const enc = (v, aad) => { if (v == null || v === '') return null; const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', need().enc, iv); c.setAAD(Buffer.from(aad)); const ct = Buffer.concat([c.update(String(v), 'utf8'), c.final()]); return `v1.${iv.toString('base64url')}.${c.getAuthTag().toString('base64url')}.${ct.toString('base64url')}`; };
-  const dec = (s, aad) => { if (!s) return ''; const [v, iv, tag, ct] = String(s).split('.'); if (v !== 'v1') return ''; const d = crypto.createDecipheriv('aes-256-gcm', need().enc, Buffer.from(iv, 'base64url')); d.setAAD(Buffer.from(aad)); d.setAuthTag(Buffer.from(tag, 'base64url')); return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); };
+  const dec = (s, aad) => { if (!s) return ''; const [v, iv, tag, ct] = String(s).split('.'); if (v !== 'v1') return ''; const d = gcmDecipher(need().enc, Buffer.from(iv || '', 'base64url'), Buffer.from(tag || '', 'base64url')); d.setAAD(Buffer.from(aad)); return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); };
   const aad = (tid, lid, f) => `${tid}|${lid}|${f}`;
   const codeHash = (tid, b, code) => crypto.createHmac('sha256', need().idx).update(`otp|${tid}|${b}|${code}`).digest('base64url');
 

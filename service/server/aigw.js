@@ -4,6 +4,7 @@
    ⑤ 기능별 사용량(ai_usage_f, 기관 합계 ai_usage는 기존 쿼리 그대로) · 기능별 한도 ⑥ 대화 기록(가림 뒤 암호화, retain 기한 뒤 삭제)
    정책이 꺼진 기관(aipol.on !== true)은 ②③⑤의 한도 · ⑥을 건너뛰어 기존 요청 · 응답과 같다. */
 const crypto = require('node:crypto');
+const { gcmDecipher } = require('./gcm');
 
 const LV = ['L0', 'L1', 'L2', 'L3'];
 const FEATURES = ['tutor', 'studio', 'grade', 'vision', 'lmsqa'];
@@ -84,7 +85,7 @@ const directive = (lvl, step) => [DIRECTIVE[lvl] || '', step ? HINT_DIR[step] ||
 function createGateway({ pool, inTenant, aiUrl, aiKey, today, keys, HttpErr }) {
   /* 대화 기록 암호화: AES-256-GCM(PII_KEY), AAD = {tid}|ai_turn|{sid}|{q|a}. Java DdAiGateway와 같은 형식(enc1:v1.iv.tag.ct) */
   const seal = (txt, aad) => { if (!keys || !keys.enc) return ''; const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', keys.enc, iv); c.setAAD(Buffer.from(aad)); const ct = Buffer.concat([c.update(String(txt), 'utf8'), c.final()]); return `enc1:v1.${iv.toString('base64url')}.${c.getAuthTag().toString('base64url')}.${ct.toString('base64url')}`; };
-  const unseal = (s, aad) => { const [, iv, tag, ct] = String(s).slice(5).split('.'); const d = crypto.createDecipheriv('aes-256-gcm', keys.enc, Buffer.from(iv, 'base64url')); d.setAAD(Buffer.from(aad)); d.setAuthTag(Buffer.from(tag, 'base64url')); return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); };
+  const unseal = (s, aad) => { const [, iv, tag, ct] = String(s).slice(5).split('.'); const d = gcmDecipher(keys.enc, Buffer.from(iv || '', 'base64url'), Buffer.from(tag || '', 'base64url')); d.setAAD(Buffer.from(aad)); return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); };
 
   /* 기능별 호출 수 +1(기관 합계 ai_usage는 호출부의 기존 쿼리가 그대로 센다). 정책 on이고 기능 한도가 있으면 429 ai_feature_quota */
   async function count(c, tid, feature, pol) {
