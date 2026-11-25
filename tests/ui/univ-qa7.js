@@ -101,7 +101,12 @@ async function live(br) {
   const DB = process.env.DATABASE_URL || 'postgres://didisam@127.0.0.1:5544/kit_qa7_d4';
   const NP = [path.join(SVC, 'server/node_modules'), process.env.NODE_PATH, '/home/claude/kit-axon/service/server/node_modules'].filter(p => p && fs.existsSync(path.join(p, 'pg'))).join(path.delimiter);
   const pub = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'uq7-pub-'));
-  cp.execFileSync(process.execPath, [path.join(SVC, 'build-public.js'), DID, pub], { cwd: SVC, stdio: 'ignore' });
+  if (process.env.UQ7_LINK === '1') { /* 디스크가 부족한 시험 환경: build-public.js와 같은 결과를 하드링크로 만든다(html만 실제 파일) */
+    fs.rmSync(pub, { recursive: true, force: true }); cp.execFileSync('cp', ['-al', DID, pub]); fs.rmSync(path.join(pub, 'native'), { recursive: true, force: true });
+    for (const f of ['index.html', 'learner.html']) { const t = fs.readFileSync(path.join(DID, f), 'utf8'); fs.unlinkSync(path.join(pub, f)); fs.writeFileSync(path.join(pub, f), t.replace(/ https:\/\/api\.anthropic\.com/g, '')); }
+    let h = fs.readFileSync(path.join(pub, 'index.html'), 'utf8'); h = h.replace(/<script src="boot\.js(\?v=[^"]*)?"><\/script>/, m => '<script src="live.js' + (m.match(/\?v=[^"]*/) || [''])[0] + '"></script>\n' + m).replace("form-action 'none'", "form-action 'self'");
+    fs.writeFileSync(path.join(pub, 'index.html'), h); fs.writeFileSync(path.join(pub, 'tutor.html'), h.replace('<meta name="viewport"', '<meta name="dd-module" content="tutor">\n<meta name="viewport"'));
+  } else cp.execFileSync(process.execPath, [path.join(SVC, 'build-public.js'), DID, pub], { cwd: SVC, stdio: 'ignore' });
   const port = +(process.env.UQ7_PORT || 0) || await new Promise(k => { const s = net.createServer().listen(0, '127.0.0.1', () => { const q = s.address().port; s.close(() => k(q)); }); });
   const env = { ...process.env, NODE_PATH: NP, NODE_ENV: 'test', COOKIE_SECURE: '0', TRUST_PROXY_HOPS: '0', SESSION_PEPPER: process.env.SESSION_PEPPER || 'ci-only', DATABASE_URL: DB, PII_KEY: process.env.PII_KEY || '0'.repeat(64), PORT: String(port), PUBLIC_DIR: pub, MFA_OFF: '0', MFA_DEV: '1', PII_DEV_OTP: '1' };
   delete env.SIGNUP_CODE; delete env.SANTA_ADMIN_EMAILS; delete env.MAIL_PROVIDER;
