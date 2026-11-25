@@ -146,7 +146,7 @@ jobs:
         run: docker build -f ${{ matrix.dockerfile }} -t didisam-scan-${{ matrix.name }}:${{ github.sha }} .
       - name: HIGH · CRITICAL 보고
         run: |
-          "$RUNNER_TEMP/trivy" image --scanners vuln --severity HIGH,CRITICAL --format json --output trivy-${{ matrix.name }}.json didisam-scan-${{ matrix.name }}:${{ github.sha }}
+          "$RUNNER_TEMP/trivy" image --scanners vuln --ignorefile security/trivyignore --severity HIGH,CRITICAL --format json --output trivy-${{ matrix.name }}.json didisam-scan-${{ matrix.name }}:${{ github.sha }}
           "$RUNNER_TEMP/trivy" convert --format table trivy-${{ matrix.name }}.json | tail -n 60
       - name: 가디언 ingest 형식 변환 · 실패 기준(CRITICAL · 수정 버전 있음)
         run: node security/ci/to-ingest.js trivy trivy-${{ matrix.name }}.json --target ${{ matrix.name }} --out trivy-${{ matrix.name }}.ingest.json --fail-on critical
@@ -193,7 +193,7 @@ jobs:
           chmod +x "$RUNNER_TEMP/osv-scanner"
       - name: package-lock · pom.xml(전이 의존성 해석) 스캔
         run: |
-          rc=0; "$RUNNER_TEMP/osv-scanner" scan source --format json --output-file osv.json \
+          rc=0; "$RUNNER_TEMP/osv-scanner" scan source --config security/osv-scanner.toml --format json --output-file osv.json \
             -L service/server/package-lock.json -L service-egov/pom.xml || rc=$?
           # 1 = 취약점 있음(정상 보고), 그 외는 도구 오류(Maven 저장소 429 등) — 실패로 다루지 않고 기록
           [ "$rc" -le 1 ] || echo "OSV-Scanner 종료 코드 $rc — 일부 해석 실패(보고서 확인)"
