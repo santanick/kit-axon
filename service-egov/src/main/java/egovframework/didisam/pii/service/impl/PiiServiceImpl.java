@@ -87,8 +87,12 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
     /** v33 운영자 승인: 스튜디오 회원(상태 문서 members)의 등급으로 판단(Node pii.approval과 같음) — L 역할 */
     private void approval(String tid, String lid) throws Exception {
         Map<String, Object> r = mapper.selectApproval(tid, lid); String ap = r == null ? null : (String) r.get("ap"); String g = r == null ? null : (String) r.get("g"); String rj = r == null ? null : (String) r.get("r"); boolean found = r != null && r.get("found") != null && (Boolean) r.get("found");
+        /* QA7: 서버 결정(learner_accounts.decision, Node POST /api/learners/decide)이 먼저 — 직업훈련원은 문서 설정과 관계없이 승인제(Node pii.approval과 같음) */
+        String d = r == null ? null : (String) r.get("d"); String ty = r == null ? null : (String) r.get("ty");
+        if ("ok".equals(d)) return;
+        if ("no".equals(d)) { String dr = r.get("dr") == null ? "" : (String) r.get("dr"); throw new DdException(403, "가입이 승인되지 않았습니다." + (!dr.isEmpty() ? " 사유: " + cut(dr, 200) : "") + " 운영자에게 문의하세요.", "rejected"); }
         if (found && "거절".equals(g)) throw new DdException(403, "가입이 승인되지 않았습니다." + (rj != null && !rj.isEmpty() ? " 사유: " + cut(rj, 200) : "") + " 운영자에게 문의하세요.", "rejected");
-        if ((found && "승인 대기".equals(g)) || (!found && "manual".equals(ap))) throw processException("dd.403.pending");
+        if ((found && "승인 대기".equals(g)) || (!found && ("manual".equals(ap) || "voc".equals(ty)))) throw processException("dd.403.pending");
     }
     @Override public boolean hasPw(String tid, String lid) throws Exception { return Boolean.TRUE.equals(ptx.run(tid, r -> r.P(() -> mapper.selectIdentityPw(tid, lid) != null))); }
     @Override public void changePw(String tid, String lid, String cur, String pw) throws Exception {

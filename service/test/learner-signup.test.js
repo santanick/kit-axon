@@ -31,7 +31,7 @@ test('QA7 학습자 가입 · 소셜 로그인 · 승인', { skip: !process.env.
     assert.equal(au.origin + au.pathname, `${MU}/${p}/auth`); assert.ok(!au.searchParams.get('scope') || au.searchParams.get('scope') === 'openid', '이메일 · 프로필 scope 요청 금지');
     assert.equal(au.searchParams.get('redirect_uri'), `${U}/api/pub/loauth/${p}/callback`);
     const cb = await call(who, 'GET', `/api/pub/loauth/${p}/callback?code=${code}&state=${encodeURIComponent(au.searchParams.get('state'))}`); assert.equal(cb.status, 302);
-    return decodeURIComponent(cb.loc.split('#oauth=')[1] || ''); };
+    return decodeURIComponent((/[?&]oa=([\w-]+)/.exec(cb.loc) || [])[1] || ''); };
   const sfx = Date.now().toString(36);
   const org = async (who, type, acct) => { const T = (await call(who, 'POST', '/api/signup', { email: `qa7${who}${sfx}@a.kr`, password: 'Passw0rd-aaa', orgName: who, type, code: 'C0DE' })).j.tenant;
     await call(who, 'PUT', '/api/state', { doc: { org: { name: who, type, room: { mode: 'saas' } }, settings: { acct: { mode: 'open', social: ['kakao', 'google', 'naver'], ...acct } }, members: [] }, rev: 0 }); return T; };
@@ -66,10 +66,10 @@ test('QA7 학습자 가입 · 소셜 로그인 · 승인', { skip: !process.env.
   });
   await t.test('소셜 보안: state 위조 · 다른 브라우저 콜백 · 꺼진 제공자 · 제공자 오류', async () => {
     const s = await call('Z', 'GET', `/api/pub/${OPEN.tid}/loauth/kakao/start`); const st = new URL(s.loc).searchParams.get('state');
-    assert.match((await call('Z2', 'GET', `/api/pub/loauth/kakao/callback?code=x&state=${encodeURIComponent(st)}`)).loc, /#oauth=err-state$/, '논스 쿠키 없는 브라우저');
-    assert.match((await call('Z', 'GET', `/api/pub/loauth/naver/callback?code=x&state=${encodeURIComponent(st)}`)).loc, /#oauth=err-state$/, '제공자 바꿔치기');
-    assert.match((await call('Z', 'GET', `/api/pub/loauth/kakao/callback?code=x&state=${encodeURIComponent(st.slice(0, -2) + 'AA')}`)).loc, /#oauth=err-state$/);
-    assert.match((await call('Z', 'GET', `/api/pub/${UNI.tid}/loauth/google/start`)).loc, /#oauth=err-provider_off$/, '기관이 켜지 않은 제공자');
+    assert.match((await call('Z2', 'GET', `/api/pub/loauth/kakao/callback?code=x&state=${encodeURIComponent(st)}`)).loc, /[?&]oa=err-state#/, '논스 쿠키 없는 브라우저');
+    assert.match((await call('Z', 'GET', `/api/pub/loauth/naver/callback?code=x&state=${encodeURIComponent(st)}`)).loc, /[?&]oa=err-state#/, '제공자 바꿔치기');
+    assert.match((await call('Z', 'GET', `/api/pub/loauth/kakao/callback?code=x&state=${encodeURIComponent(st.slice(0, -2) + 'AA')}`)).loc, /[?&]oa=err-state#/);
+    assert.match((await call('Z', 'GET', `/api/pub/${UNI.tid}/loauth/google/start`)).loc, /[?&]oa=err-provider_off#/, '기관이 켜지 않은 제공자');
     assert.equal(await social('Z3', OPEN.tid, 'kakao', 'bad'), 'err-provider');
     assert.equal((await call('Z4', 'POST', `/api/pub/${OPEN.tid}/signup`, { via: 'sns', oauth: true, nickname: '위조', consent, age14: true })).j.error, 'oauth_pending');
   });

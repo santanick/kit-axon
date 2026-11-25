@@ -4,7 +4,7 @@
    - 콜백: GET /api/pub/loauth/<제공자>/callback(제공자별 리디렉션 URI 하나) → 코드 교환 → 회원 번호(sub)만 받는다.
      이름 · 이메일 · 사진 · 전화번호는 요청하지 않는다(구글 scope=openid, 카카오 · 네이버 동의 항목 없음).
    - 저장: pii.identity(provider, provider_sub_hash = HMAC 블라인드 인덱스) — 제공자 식별자 원문은 저장하지 않는다.
-   - 결과는 학습자 사이트로 돌려보낸다: /learner.html?t=<tid>#oauth=ok | join-<p> | pending | err-<code>
+   - 결과는 학습자 사이트로 돌려보낸다: /learner.html?t=<tid>&oa=ok | join-<p> | pending | rejected | err-<code> (#화면은 결과에 맞춰 join · pending · home · login)
    - 키: LEARNER_OAUTH_<P>_ID · _SECRET, 없으면 운영자 키 OAUTH_<P>_ID · _SECRET를 그대로 쓴다(같은 앱에 리디렉션 URI만 추가).
      키가 없는 제공자는 /api/pub/<tid>/loauth 응답의 ready에 빠지고 화면은 「준비 중」.
    - 시험: OAUTH_MOCK_URL(운영 NODE_ENV=production에서는 무시). Java(LearnerOAuthServiceImpl)와 같은 규격. */
@@ -68,7 +68,7 @@ function createLearnerOAuth({ env, HttpErr, limit, ip, cookies, secure, pepper, 
   const ST = sealer(pepper, 'lstate'); const NC = secure ? '__Host-dd_lnonce' : 'dd_lnonce';
   const base = req => String(env.PUBLIC_URL || '').replace(/\/+$/, '') || `${secure ? 'https' : 'http'}://${req.headers.host}`;
   const cb = (req, p) => `${base(req)}/api/pub/loauth/${p}/callback`;
-  const go = (res, tid, hash, extra) => { const h = { location: `/learner.html${tid ? '?t=' + encodeURIComponent(tid) : ''}#oauth=${hash}`, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' }; if (extra) res.setHeader('set-cookie', [].concat(res.getHeader('set-cookie') || [], extra)); res.writeHead(302, h); res.end(); };
+  const go = (res, tid, hash, extra, app) => { const h = { location: `/learner.html?${tid ? 't=' + encodeURIComponent(tid) + '&' : ''}${app ? 'app=1&' : ''}oa=${hash}#${/^join-/.test(hash) ? 'join' : /^(pending|rejected)$/.test(hash) ? 'pending' : hash === 'ok' ? 'home' : 'login'}`, 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' }; if (extra) res.setHeader('set-cookie', [].concat(res.getHeader('set-cookie') || [], extra)); res.writeHead(302, h); res.end(); };
   const nonceCk = (v, age) => `${NC}=${v}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${age}${secure ? '; Secure' : ''}`;
 
   async function start(req, res, tid, p, url) {
@@ -77,7 +77,7 @@ function createLearnerOAuth({ env, HttpErr, limit, ip, cookies, secure, pepper, 
     limit('loa:' + ip(req), 30, 600e3);
     if (!(await pii.socialOn(tid, p))) return go(res, tid, 'err-provider_off');
     const n = crypto.randomBytes(18).toString('base64url'); const m = url.searchParams.get('m') === 'login' ? 'login' : 'join';
-    const state = ST.seal({ t: tid, p, n, m, x: Date.now() + 10 * 60e3 });
+    const state = ST.seal({ t: tid, p, n, m, ...(url.searchParams.get('app') === '1' ? { a: 1 } : {}), x: Date.now() + 10 * 60e3 }); /* 앱 화면(390)에서 시작했으면 앱 화면으로 돌아간다 */
     const q = new URLSearchParams({ response_type: 'code', client_id: c.id, redirect_uri: cb(req, p), state });
     if (c.scope) q.set('scope', c.scope); if (p === 'google') q.set('prompt', 'select_account');
     res.setHeader('set-cookie', nonceCk(n, 600));
@@ -87,11 +87,11 @@ function createLearnerOAuth({ env, HttpErr, limit, ip, cookies, secure, pepper, 
   async function callback(req, res, p, url) {
     const clear = nonceCk('', 0); const st = ST.open(url.searchParams.get('state'));
     if (!st || st.p !== p || !TID_RE.test(st.t || '')) return go(res, '', 'err-state', clear);
-    const tid = st.t; const n = cookies(req)[NC] || '';
-    if (!n || n !== st.n) return go(res, tid, 'err-state', clear);
-    const c = P[p]; if (!c) return go(res, tid, 'err-unset', clear);
+    const tid = st.t; const n = cookies(req)[NC] || ''; const A = !!st.a; const gb = (r0, t0, h0, x0) => go(r0, t0, h0, x0, A);
+    if (!n || n !== st.n) return gb(res, tid, 'err-state', clear);
+    const c = P[p]; if (!c) return gb(res, tid, 'err-unset', clear);
     limit('loa:' + ip(req), 30, 600e3);
-    const code = url.searchParams.get('code') || ''; if (url.searchParams.get('error') || !code) return go(res, tid, 'err-denied', clear);
+    const code = url.searchParams.get('code') || ''; if (url.searchParams.get('error') || !code) return gb(res, tid, 'err-denied', clear);
     let sub = '';
     try {
       const form = { grant_type: 'authorization_code', client_id: c.id, redirect_uri: cb(req, p), code }; if (c.secret) form.client_secret = c.secret; if (p === 'naver') form.state = url.searchParams.get('state');
@@ -99,10 +99,10 @@ function createLearnerOAuth({ env, HttpErr, limit, ip, cookies, secure, pepper, 
       const t = await r.json().catch(() => ({})); if (!r.ok || !t.access_token) throw new Error('token');
       const m = await fetch(c.me, { redirect: 'manual', headers: { authorization: `Bearer ${t.access_token}`, accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
       if (!m.ok) throw new Error('me'); sub = subOf(p, await m.json());
-    } catch (e) { return go(res, tid, 'err-provider', clear); }
-    if (!sub || sub.length > 200) return go(res, tid, 'err-provider', clear);
-    let r; try { r = await pii.oauthLogin(req, res, tid, p, sub); } catch (e) { return go(res, tid, 'err-' + (e && e.code ? String(e.code).replace(/[^\w]/g, '').slice(0, 30) : 'server'), clear); }
-    return go(res, tid, r === 'join' ? 'join-' + p : r, clear);
+    } catch (e) { return gb(res, tid, 'err-provider', clear); }
+    if (!sub || sub.length > 200) return gb(res, tid, 'err-provider', clear);
+    let r; try { r = await pii.oauthLogin(req, res, tid, p, sub); } catch (e) { return gb(res, tid, 'err-' + (e && e.code ? String(e.code).replace(/[^\w]/g, '').slice(0, 30) : 'server'), clear); }
+    return gb(res, tid, r === 'join' ? 'join-' + p : r, clear);
   }
 
   async function handle(req, res, url) {
