@@ -36,7 +36,19 @@ public class AiPriceVectors {
       ok(Boolean.FALSE.equals(DdAiPrice.planOf(null, null, "2026-11-15").get("on")), "기존 기관 불변"); ok(!DdAiPrice.trialEnded(om.readTree("{\"code\":\"TRIAL\",\"since\":\"x\"}"), "2026-11-15"), "since 오류");
       try { DdAiPrice.guard(end, 0, 500, true); } catch (Exception e) { ok(false, "충전 있으면 허용 " + e); }
       try { DdAiPrice.guard(end, 500, 500, true); ok(false, "충전 소진 차단"); } catch (egovframework.didisam.cmm.DdException e) { ok(e.getMessage().equals(DdAiPrice.MSG_TRIAL_LEARNER) && "trial_ended".equals(e.getCode()), "trial 문구 " + e.getMessage()); }
-      try { DdAiPrice.guard(in, 1000000, 0, false); ok(false, "체험 중 한도"); } catch (egovframework.didisam.cmm.DdException e) { ok(e.getMessage().equals(DdAiPrice.MSG_STAFF) && "ai_month_quota".equals(e.getCode()), "quota 문구"); } }
+      try { DdAiPrice.guard(in, 1000000, 0, false); ok(false, "체험 중 한도"); } catch (egovframework.didisam.cmm.DdException e) { ok(e.getMessage().equals(DdAiPrice.MSG_STAFF) && "ai_month_quota".equals(e.getCode()), "quota 문구"); }
+      /* 체험 중 since부터 누적(Node와 같은 값): since 11-25 → 12-02, 11월 60만 + 12월 60만 = 120만 → 20만은 충전에서, 11-20(체험 전)은 제외 */
+      ok("2026-11-01".equals(in.get("trialSince")) && !end.containsKey("trialSince") && !DdAiPrice.planOf(ap, tr, "2026-10-31").containsKey("trialSince") && !DdAiPrice.planOf(null, tr, "2026-11-05").containsKey("trialSince"), "trialSince " + in);
+      var td = DdAiPrice.planOf(ap, om.readTree("{\"code\":\"TRIAL\",\"since\":\"2026-11-25\"}"), "2026-12-02"); ok("2026-11-25".equals(td.get("trialSince")) && "2026-11-25".equals(DdAiPrice.usedFrom(td, "2026-12-02")), "달 넘김 since " + td);
+      ok("2026-12-01".equals(DdAiPrice.usedFrom(end, "2026-12-02")), "usedFrom 월");
+      var sm = DdAiPrice.sim(List.of(cr("c1", 5000000, "2026-11-25")), List.of(u("2026-11-20", 900000), u("2026-11-28", 600000), u("2026-12-02", 600000)), 1000000, "2026-12-02", "2026-11-25");
+      ok(sm.thisMonth() == 200000 && sm.left() == 4800000, "달 넘김 누적 " + sm.thisMonth() + " " + sm.left());
+      ok(DdAiPrice.sim(List.of(cr("c1", 5000000, "2026-11-25")), List.of(u("2026-11-20", 900000), u("2026-11-28", 600000), u("2026-12-02", 600000)), 1000000, "2026-12-02").thisMonth() == 0, "월 집계 대조");
+      try { DdAiPrice.guard(td, 1200000, 0, false); ok(false, "체험 120만 차단"); } catch (egovframework.didisam.cmm.DdException e) { ok("ai_month_quota".equals(e.getCode()), "체험 누적 quota"); }
+      try { DdAiPrice.guard(td, 1200000, sm.credit(), false); } catch (Exception e) { ok(false, "충전 있으면 허용 " + e); }
+      /* 충전 거절(409)은 유료 + 차단만 */
+      var apb = om.readTree("{\"monthTokens\":1000000,\"overage\":\"block\"}");
+      ok(!DdAiPrice.topupBlocked(DdAiPrice.planOf(apb, tr, "2026-11-15")) && DdAiPrice.topupBlocked(DdAiPrice.planOf(apb, om.readTree("{\"code\":\"E1\",\"since\":\"2026-11-01\"}"), "2026-11-15")) && DdAiPrice.topupBlocked(DdAiPrice.planOf(apb, tr, "2026-11-10")) && !DdAiPrice.topupBlocked(DdAiPrice.planOf(ap, tr, "2026-11-15")), "topupBlocked"); }
     System.out.println(bad == 0 ? "AiPriceVectors PASS" : "AiPriceVectors FAIL " + bad); System.exit(bad == 0 ? 0 : 1);
   }
 }

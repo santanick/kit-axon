@@ -55,12 +55,22 @@ public final class DdAiPrice {
         String since = DdAiGateway.s(contract.get("since")); if (today == null || !since.matches("\\d{4}-\\d{2}-\\d{2}") || !today.matches("\\d{4}-\\d{2}-\\d{2}")) return false;
         try { return today.compareTo(addDays(since, TRIAL_DAYS)) >= 0; } catch (RuntimeException e) { return false; }
     }
+    /** 체험 중(Node trialOn과 같음): since <= today < since + 14일 → 체험 시작일, 아니면 null. 체험량은 「14일 합계 100만」(달을 넘겨도 since부터 누적) */
+    public static String trialSinceOf(JsonNode contract, String today) {
+        if (contract == null || !contract.isObject() || !"TRIAL".equals(DdAiGateway.s(contract.get("code")))) return null;
+        String since = DdAiGateway.s(contract.get("since")); if (today == null || !since.matches("\\d{4}-\\d{2}-\\d{2}") || !today.matches("\\d{4}-\\d{2}-\\d{2}")) return null;
+        try { return since.compareTo(today) <= 0 && today.compareTo(addDays(since, TRIAL_DAYS)) < 0 ? since : null; } catch (RuntimeException e) { return null; }
+    }
+    /** 충전 거절(409 overage_block)은 유료 기관만 — 체험 종료 기관은 차단 설정이어도 충전 허용(Node topupBlocked와 같음) */
+    public static boolean topupBlocked(Map<String, Object> plan) { return Boolean.TRUE.equals(plan.get("on")) && "block".equals(plan.get("overage")) && !Boolean.TRUE.equals(plan.get("trialEnded")); }
+    /** 사용량 집계 시작일: 체험 중이면 체험 시작일, 아니면 이달 1일 */
+    public static String usedFrom(Map<String, Object> plan, String today) { Object s = plan.get("trialSince"); return s != null ? (String) s : monthOf(today) + "-01"; }
     public static Map<String, Object> planOf(JsonNode raw, JsonNode contract, String today) {
         JsonNode p = raw != null && raw.isObject() ? raw : null; boolean on = p != null && okTokens(p.get("monthTokens"));
         String ov = p != null && "block".equals(DdAiGateway.s(p.get("overage"))) ? "block" : "pack"; Map<String, Object> m = new LinkedHashMap<>();
         if (trialEnded(contract, today)) { m.put("on", true); m.put("monthTokens", 0L); m.put("overage", ov); m.put("trialEnded", true); return m; }
         m.put("on", on); m.put("monthTokens", on ? (long) DdAiGateway.jsNum(p.get("monthTokens")) : TRIAL_TOKENS);
-        m.put("overage", ov); return m;
+        m.put("overage", ov); String ts = on ? trialSinceOf(contract, today) : null; if (ts != null) m.put("trialSince", ts); return m;
     }
     public static String ovKey(JsonNode raw) { if (raw == null || !raw.isObject()) return ""; String ov = DdAiGateway.s(raw.get("overage")); return "block".equals(ov) || "pack".equals(ov) ? ov : ""; }
     public static boolean validPlan(JsonNode raw) {
@@ -98,14 +108,16 @@ public final class DdAiPrice {
     /** 충전 차감 계산 결과 — Node simCredits와 같은 규칙(포함량 먼저 · 만료일 빠른 것부터 · 만료일 당일까지 사용) */
     public record Sim(List<Map<String, Object>> live, long thisMonth, long left, long credit) { }
     /** credits 행: id · pack · tokens · amount · pday · at · expires, usage 행: day · n */
-    public static Sim sim(List<Map<String, Object>> credits, List<Map<String, Object>> usage, long included, String today) {
+    public static Sim sim(List<Map<String, Object>> credits, List<Map<String, Object>> usage, long included, String today) { return sim(credits, usage, included, today, null); }
+    /** since(체험 시작일)를 주면 since 이후 사용은 한 구간(체험 합계)으로 본다 */
+    public static Sim sim(List<Map<String, Object>> credits, List<Map<String, Object>> usage, long included, String today, String since) {
         List<Map<String, Object>> L = new ArrayList<>();
         for (Map<String, Object> r : credits) { Map<String, Object> x = new LinkedHashMap<>(r); String day = String.valueOf(r.get("pday")); x.put("day", day); Object ex = r.get("expires"); x.put("expires", ex == null ? addDays(day, CREDIT_DAYS) : String.valueOf(ex)); x.put("left", ((Number) r.get("tokens")).longValue()); L.add(x); }
         L.sort(Comparator.comparing((Map<String, Object> x) -> (String) x.get("day")).thenComparing(x -> (String) x.get("expires")).thenComparing(x -> String.valueOf(x.get("id"))));
-        String month = monthOf(today); Map<String, Long> cum = new HashMap<>(); long thisMonth = 0;
+        String month = since != null ? "T" : monthOf(today); Map<String, Long> cum = new HashMap<>(); long thisMonth = 0;
         List<Map<String, Object>> U = new ArrayList<>(usage); U.sort(Comparator.comparing(x -> String.valueOf(x.get("day"))));
         for (Map<String, Object> u : U) {
-            String d = String.valueOf(u.get("day")); if (d.compareTo(today) > 0) continue; String m = d.substring(0, 7);
+            String d = String.valueOf(u.get("day")); if (d.compareTo(today) > 0) continue; String m = since != null && d.compareTo(since) >= 0 ? "T" : d.substring(0, 7);
             long prev = cum.getOrDefault(m, 0L), cur = prev + (u.get("n") == null ? 0 : ((Number) u.get("n")).longValue()); cum.put(m, cur);
             long over = Math.max(0, cur - included) - Math.max(0, prev - included);
             for (Map<String, Object> c : L) { if (over <= 0) break; long left = (Long) c.get("left");
@@ -129,6 +141,9 @@ public final class DdAiPrice {
     /** 충전 행을 읽기 시작할 날(만료일이 1년 넘게 지난 충전은 읽지 않음) · 사용 기록을 읽기 시작할 날 */
     public static String creditFrom(String today) { return LocalDate.parse(today).minusDays(366).toString(); }
     public static String usageFrom(List<Map<String, Object>> credits, String today) { return credits.isEmpty() ? monthOf(today) + "-01" : String.valueOf(credits.get(0).get("pday")).substring(0, 7) + "-01"; }
+    public static String usageFrom(List<Map<String, Object>> credits, Map<String, Object> plan, String today) { String a = usedFrom(plan, today); if (credits.isEmpty()) return a; String b = usageFrom(credits, today); return b.compareTo(a) < 0 ? b : a; }
+    /** 한도 판정용 충전량(체험 중이면 since 기준) — 충전이 없으면 0 */
+    public static long creditOf(List<Map<String, Object>> cr, List<Map<String, Object>> usage, Map<String, Object> plan, String today) { return cr.isEmpty() ? 0 : sim(cr, usage, ((Number) plan.get("monthTokens")).longValue(), today, (String) plan.get("trialSince")).credit(); }
     /** 차단(429 ai_month_quota): 포함량 + 쓸 수 있는 충전량을 다 썼을 때 */
     public static void guard(Map<String, Object> plan, long used, long credit, boolean learner) {
         if (!Boolean.TRUE.equals(plan.get("on"))) return; long lim = ((Number) plan.get("monthTokens")).longValue() + credit;

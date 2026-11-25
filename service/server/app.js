@@ -127,9 +127,9 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   /* v47 이달 AI 한도: aiplan이 있는 기관만(없으면 동작 불변). 포함량 + 이달 충전량을 다 쓰면 429 ai_month_quota */
   const monthGuard = async (c, tid, planRaw, learner, contract) => { const td = today(); const plan = AP.planOf(planRaw, contract, td); if (!plan.on) return; const m = await AP.monthState(c, tid, plan, td); const blk = AP.blockOf(plan, m.used, m.credit, learner); if (blk) throw new HttpErr(429, blk.message, blk.code); }; /* 체험 종료 → 429 trial_ended */
   const aiMonth = async (c, tid) => { const row = (await c.query("select doc->'aiplan' p, doc->'plan' pl from tenant_state where tenant_id = $1", [tid])).rows[0] || {}; const plan = AP.planOf(row.p, row.pl, today()); const m = await AP.monthState(c, tid, plan, today());
-    const monthFeature = Object.fromEntries((await c.query('select feature, sum(calls)::int calls, sum(tin)::bigint tin, sum(tout)::bigint tout from ai_usage_f where day >= $1::date group by feature order by feature', [m.month + '-01'])).rows.map(r => [r.feature, { calls: r.calls, tin: +r.tin, tout: +r.tout }]));
+    const monthFeature = Object.fromEntries((await c.query('select feature, sum(calls)::int calls, sum(tin)::bigint tin, sum(tout)::bigint tout from ai_usage_f where day >= $1::date group by feature order by feature', [m.from])).rows.map(r => [r.feature, { calls: r.calls, tin: +r.tin, tout: +r.tout }]));
     const credits = m.credits; /* 지금 쓸 수 있는 충전(충전일 · 만료일 · 남은 양) */
-    return { month: m.month, used: m.used, included: m.included, credit: m.credit, creditLeft: m.creditLeft, remaining: m.remaining, pct: m.pct, state: m.state, plan, contractPlan: row.pl && typeof row.pl === 'object' ? row.pl : null, monthFeature, credits, price: AP.priceInfo(), payOnline: aiPayOn() }; };
+    return { month: m.month, used: m.used, included: m.included, credit: m.credit, creditLeft: m.creditLeft, remaining: m.remaining, pct: m.pct, state: m.state, from: m.from, ...(m.trialSince ? { trialSince: m.trialSince } : {}), plan, contractPlan: row.pl && typeof row.pl === 'object' ? row.pl : null, monthFeature, credits, price: AP.priceInfo(), payOnline: aiPayOn() }; };
   /* v47 산타 관리자: 환경변수 SANTA_ADMIN_EMAILS(쉼표 목록)에 든 계정만 — 기관 요금제 · 월 포함 토큰을 넣는다 */
   const santaEmails = AP.santaSet(env); const isSanta = a => !!a && santaEmails.has(String(a.email || '').toLowerCase());
   const needSanta = async req => { const a = await need(req); if (!isSanta(a)) throw new HttpErr(403, '산타 관리자만 쓸 수 있습니다.', 'santa'); return a; };
@@ -636,7 +636,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       const P = AP.quote(b.won); if (!P) throw new HttpErr(400, '충전 금액은 10만 원 단위(10만 ~ 1억 원)로 골라 주십시오.', 'won');
       if (!aiPayOn()) throw new HttpErr(503, '결제 연결 준비 중 — 산타에 문의하십시오.', 'pay_off');
       const plan = await inTenant(pool, a.tid, async c => { const r = (await c.query("select doc->'aiplan' p, doc->'plan' pl from tenant_state where tenant_id = $1", [a.tid])).rows[0] || {}; return AP.planOf(r.p, r.pl, today()); });
-      if (plan.on && plan.overage === 'block') throw new HttpErr(409, '초과 처리가 「차단」으로 설정되어 있습니다. 「추가 충전 허용」으로 바꾼 뒤 충전하십시오.', 'overage_block');
+      if (AP.topupBlocked(plan)) throw new HttpErr(409, '초과 처리가 「차단」으로 설정되어 있습니다. 「추가 충전 허용」으로 바꾼 뒤 충전하십시오.', 'overage_block');
       const id = 'ac_' + crypto.randomBytes(9).toString('hex'); const orderId = 'aitop-' + crypto.randomBytes(12).toString('hex');
       await inTenant(pool, a.tid, c => c.query('insert into ai_credit (id, tenant_id, month, pack, tokens, amount, order_id, by_email) values ($1,$2,$3,$4,$5,$6,$7,$8)', [id, a.tid, AP.monthOf(today()), AP.packId(P.won), P.tokens, P.total, orderId, a.email]));
       return { orderId, amount: P.total, supply: P.supply, vat: P.vat, tokens: P.tokens, discount: P.discount, orderName: `디디쌤 AI 충전 ${(P.won / 1e4).toLocaleString('ko-KR')}만 원(${P.tokens.toLocaleString('ko-KR')} 토큰)`, clientKey: aiClientKey };

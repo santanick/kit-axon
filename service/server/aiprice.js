@@ -38,10 +38,15 @@ const okTokens = v => Number.isInteger(+v) && +v > 0 && +v <= MONTH_MAX;
 const TRIAL_DAYS = 14;
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const trialEnded = (contract, today) => !!contract && typeof contract === 'object' && contract.code === 'TRIAL' && DAY_RE.test(String(contract.since || '')) && DAY_RE.test(String(today || '')) && today >= addDays(contract.since, TRIAL_DAYS);
+const trialOn = (contract, today) => !!contract && typeof contract === 'object' && contract.code === 'TRIAL' && DAY_RE.test(String(contract.since || '')) && DAY_RE.test(String(today || '')) && contract.since <= today && today < addDays(contract.since, TRIAL_DAYS);
+/* 충전 거절(409 overage_block)은 유료 기관만 — 체험 종료 기관은 차단 설정이어도 충전을 허용한다(통합 결정 2026-11-25) */
+const topupBlocked = plan => !!plan.on && plan.overage === 'block' && !plan.trialEnded;
 function planOf(raw, contract, today) {
   const p = raw && typeof raw === 'object' ? raw : null; const on = !!p && okTokens(p.monthTokens); const overage = p && p.overage === 'block' ? 'block' : 'pack';
   if (trialEnded(contract, today)) return { on: true, monthTokens: 0, overage, trialEnded: true };
-  return { on, monthTokens: on ? +p.monthTokens : TRIAL_TOKENS, overage };
+  /* 체험 중(대표님 2026-11-25 「14일 합계 100만」): 달을 넘겨도 since ~ 종료일 합계로 판정 → trialSince가 있으면 월 집계 대신 since부터 누적 */
+  const ts = on && trialOn(contract, today) ? { trialSince: contract.since } : {};
+  return { on, monthTokens: on ? +p.monthTokens : TRIAL_TOKENS, overage, ...ts };
 }
 const ovKey = raw => raw && typeof raw === 'object' ? (raw.overage === 'block' ? 'block' : raw.overage === 'pack' ? 'pack' : '') : '';
 const validPlan = raw => raw == null || (typeof raw === 'object' && !Array.isArray(raw) && (raw.monthTokens == null || okTokens(raw.monthTokens)) && (raw.overage == null || raw.overage === 'block' || raw.overage === 'pack'));
@@ -73,11 +78,12 @@ const santaSet = env => new Set(String(env.SANTA_ADMIN_EMAILS == null ? 'nick@di
 const CREDIT_DAYS = 365;
 const addDays = (day, n) => new Date(Date.parse(day + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
 /* credits: [{ id, tokens, day(충전일 KST), expires(만료일, 이 날까지 사용) }], usage: [{ day, n }](earliest 충전월 1일부터) → 충전별 남은 양 · 이달 충전 차감량 · 지금 남은 양 */
-function simCredits(credits, usage, included, today) {
+/* since(체험 시작일)를 주면 since 이후 사용은 한 구간(체험 합계)으로 본다 */
+function simCredits(credits, usage, included, today, since) {
   const L = credits.map(c => ({ ...c, expires: c.expires || addDays(c.day, CREDIT_DAYS), left: +c.tokens })).sort((a, b) => a.day < b.day ? -1 : a.day > b.day ? 1 : a.expires < b.expires ? -1 : a.expires > b.expires ? 1 : String(a.id) < String(b.id) ? -1 : 1);
-  const month = monthOf(today); const cum = {}; let thisMonth = 0;
+  const month = since ? 'T' : monthOf(today); const cum = {}; let thisMonth = 0;
   for (const u of usage.slice().sort((a, b) => a.day < b.day ? -1 : 1)) {
-    if (u.day > today) continue; const m = u.day.slice(0, 7); const prev = cum[m] || 0; const cur = prev + (+u.n || 0); cum[m] = cur;
+    if (u.day > today) continue; const m = since && u.day >= since ? 'T' : u.day.slice(0, 7); const prev = cum[m] || 0; const cur = prev + (+u.n || 0); cum[m] = cur;
     let over = Math.max(0, cur - included) - Math.max(0, prev - included);
     for (const c of L) { if (over <= 0) break; if (c.left <= 0 || c.day > u.day || c.expires < u.day) continue; const t = Math.min(c.left, over); c.left -= t; over -= t; if (m === month) thisMonth += t; }
   }
@@ -87,13 +93,13 @@ function simCredits(credits, usage, included, today) {
 /* 이달 상태(KST). today = 'YYYY-MM-DD'. 만료일이 1년 넘게 지난 충전은 지금 남은 충전과 겹친 적이 없으므로 읽지 않는다 */
 const monthOf = today => today.slice(0, 7);
 async function monthState(c, tid, plan, today) {
-  const month = monthOf(today);
-  const used = +(await c.query('select coalesce(sum(tin + tout), 0)::bigint n from ai_usage where tenant_id = $1 and day >= $2::date', [tid, month + '-01'])).rows[0].n;
+  const month = monthOf(today); const since = plan.trialSince || ''; const from0 = since || month + '-01'; /* 체험 중: 체험 시작일부터 누적 */
+  const used = +(await c.query('select coalesce(sum(tin + tout), 0)::bigint n from ai_usage where tenant_id = $1 and day >= $2::date', [tid, from0])).rows[0].n;
   const credits = (await c.query("select id, pack, tokens::bigint tokens, amount, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD') pday, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') at, expires_at::text expires from ai_credit where tenant_id = $1 and status = 'paid' and expires_at >= $2::date - 366 order by paid_at", [tid, today])).rows.map(r => ({ ...r, day: r.pday, tokens: +r.tokens }));
-  const from = credits.length ? credits[0].day.slice(0, 7) + '-01' : month + '-01';
+  const cf = credits.length ? credits[0].day.slice(0, 7) + '-01' : from0; const from = cf < from0 ? cf : from0;
   const usage = credits.length ? (await c.query('select day::text, (tin + tout)::bigint n from ai_usage where tenant_id = $1 and day >= $2::date order by day', [tid, from])).rows.map(r => ({ day: r.day, n: +r.n })) : [];
-  const sim = simCredits(credits, usage, plan.monthTokens, today);
-  return { ...stateOf(plan, month, used, sim.credit), credits: sim.live.map(x => ({ pack: x.pack, tokens: x.tokens, amount: x.amount, at: x.at, day: x.day, expires: x.expires, left: x.left })) };
+  const sim = simCredits(credits, usage, plan.monthTokens, today, since);
+  return { ...stateOf(plan, month, used, sim.credit), from: from0, ...(since ? { trialSince: since } : {}), credits: sim.live.map(x => ({ pack: x.pack, tokens: x.tokens, amount: x.amount, at: x.at, day: x.day, expires: x.expires, left: x.left })) };
 }
 /* 계산만(Java DdAiPrice.state와 같은 규칙): 80% 주의 · 100% 초과. 포함량을 넘으면 충전량에서 빠진다 */
 function stateOf(plan, month, used, credit) {
@@ -113,4 +119,4 @@ function blockOf(plan, used, credit, learner) {
   return plan.trialEnded ? { code: 'trial_ended', message: learner ? MSG_TRIAL_LEARNER : MSG_TRIAL_STAFF } : { code: 'ai_month_quota', message: learner ? MSG_LEARNER : MSG_STAFF };
 }
 
-module.exports = { TRIAL_DAYS, trialEnded, blockOf, MSG_TRIAL_LEARNER, MSG_TRIAL_STAFF, PRICE_PER_M, VAT, STEP, MIN_WON, MAX_WON, DISCOUNTS, TRIAL_TOKENS, PAID_MONTH_TOKENS, MONTH_MAX, CONTRACTS, CREDIT_DAYS, addDays, simCredits, discountOf, validWon, quote, priceInfo, packId, planOf, ovKey, validPlan, keepPlan, santaInput, santaSet, monthOf, monthState, stateOf, MSG_LEARNER, MSG_STAFF };
+module.exports = { TRIAL_DAYS, trialEnded, trialOn, topupBlocked, blockOf, MSG_TRIAL_LEARNER, MSG_TRIAL_STAFF, PRICE_PER_M, VAT, STEP, MIN_WON, MAX_WON, DISCOUNTS, TRIAL_TOKENS, PAID_MONTH_TOKENS, MONTH_MAX, CONTRACTS, CREDIT_DAYS, addDays, simCredits, discountOf, validWon, quote, priceInfo, packId, planOf, ovKey, validPlan, keepPlan, santaInput, santaSet, monthOf, monthState, stateOf, MSG_LEARNER, MSG_STAFF };
