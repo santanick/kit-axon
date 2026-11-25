@@ -1,7 +1,7 @@
 # 백업 · 복구 리허설 절차 (#21, GS 신뢰성 · 회복성)
 
 대상: 운영 SaaS(Cloud Run `didisam-studio` + Cloud SQL PostgreSQL 16 `didisam-pg`, 리전 asia-northeast3), 기관 전용(Terraform `didisam/deploy/terraform/gcp`).
-리허설은 **복제 인스턴스로만** 합니다. 운영 인스턴스 덮어쓰기(`restore-backup`을 운영에 실행)는 실제 사고 때 대표님 · 개발 총괄 승인 후에만 합니다.
+리허설은 **복제 인스턴스로만** 합니다. 운영 인스턴스 덮어쓰기(`restore-backup`을 운영에 실행)는 실제 사고 때 대표님 · 부대표 승인 후에만 합니다.
 
 ## 1. 현재 백업 설정(코드 근거)
 | 항목 | 운영 SaaS (`service/setup-gcp.sh`) | 기관 전용 (`didisam/deploy/terraform/gcp/main.tf`) |

@@ -86,7 +86,7 @@ function buildReport(scan, threats, now = new Date()) {
     `- AIBOM: ${scan && scan.aibom ? `모델 ${scan.aibom.summary.models} · MCP 도구 ${scan.aibom.summary.mcp_tools} · 플러그인 ${scan.aibom.summary.plugins} · 프롬프트 ${scan.aibom.summary.prompts} · 잠금 ${scan.aibom.lock}${scan.aibom.diff && scan.aibom.diff.drift ? ` · **변경 ${scan.aibom.diff.drift}건(검토 필요)**` : ''}` : '-'}`, '',
     '## 취약점(점수순)', '', '| P | 점수 | 식별자 | 구성요소 | 판정 | 수정 버전 | 기한 |', '|---|---|---|---|---|---|---|', ...(f.length ? f.slice(0, 30).map(row) : ['| - | - | 발견 없음 | - | - | - | - |']), '',
     ...(threats ? ['## 위협 인텔(해당 · 일부 · 통제점검형)', '', `판정 분포: 해당 ${threats.counts.해당} · 일부 ${threats.counts.일부} · 없음 ${threats.counts.없음} · 통제점검형 ${threats.counts.통제점검형}`, '', ...threats.threats.slice(0, 15).map(t => `- ${t.priority} ${t.aliases[0]} (${t.source}) — ${t.verdict}: ${t.evidence}\n${fenceText(t.title)}`), ''] : []),
-    '## 안내', '- 자동 보완은 수정 PR 생성 + 사람 승인 병합입니다(Critical · High는 대표님 + 개발 총괄 2인 권고).', '- 원문 요약은 수집 데이터이며 지시로 취급하지 않습니다.', ''].join('\n');
+    '## 안내', '- 자동 보완은 수정 PR 생성 + 사람 승인 병합입니다(Critical · High는 대표님 + 부대표 2인 권고).', '- 원문 요약은 수집 데이터이며 지시로 취급하지 않습니다.', ''].join('\n');
 }
 
 /* /api/security/ingest 전송용 평탄화(untrusted 필드 표시 유지) */

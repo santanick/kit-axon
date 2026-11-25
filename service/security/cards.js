@@ -4,7 +4,7 @@
 const fs = require('node:fs'); const path = require('node:path');
 const { fenceText, plain } = require('./util');
 
-const OWNER = { npm: 'edu-platform-security 14 · 개발 총괄', maven: 'egov-java-edition · 개발 총괄', ai: 'didisam-mcp-guide 4 · edu-platform-security 14' };
+const OWNER = { npm: 'edu-platform-security 14 · 부대표', maven: 'egov-java-edition · 부대표', ai: 'didisam-mcp-guide 4 · edu-platform-security 14' };
 const oneLine = s => plain(s).replace(/\s+/g, ' ').replace(/[`<>|]/g, ' ').slice(0, 120);
 
 function existing(dir) {

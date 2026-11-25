@@ -56,19 +56,19 @@
         basis: 'OSV · GHSA(purl 정확 매칭)', impact: '학습자 API(운영 도달) · 우선순위 82점', sla: '7일 중 2일 4시간 남음',
         files: [['package.json', 1, 1], ['package-lock.json', 14, 14]], tests: [['회귀 테스트(qa-squad)', '42/42'], ['교차 테넌트(A→B 404)', '통과'], ['promptfoo 스모크', '통과'], ['동일 도구 재스캔', '0건']],
         rollback: '이전 이미지로 Cloud Run 리비전 되돌리기 · rollback_ref r-0412', ok: true,
-        appr: [{ role: '개발 총괄', by: '개발 총괄', at: '09:42', done: true }, { role: '대표님', done: false }] },
+        appr: [{ role: '부대표', by: '부대표', at: '09:42', done: true }, { role: '대표님', done: false }] },
       { id: 413, sev: 'High', title: 'aiguard 패턴 보강 + 회귀 테스트', tags: ['aiguard', '레드팀'], state: 'review_wait',
         plain: ['AI 튜터가 숨은 지시를 걸러 내는 규칙을 보강합니다.', '학습자 AI 튜터 · AI SAM 답변 경로에 적용됩니다.', '규칙 파일만 바뀌어 되돌리기 쉽습니다.'],
         basis: '레드팀 회귀 F-101', impact: 'AI 튜터 · aiguard · 우선순위 74점', sla: '7일 중 6일 남음',
         files: [['service/server/aiguard.js', 12, 2], ['security/redteam/cases.json', 30, 0]], tests: [['회귀 테스트(qa-squad)', '42/42'], ['promptfoo 인젝션 10건', '10/10 차단'], ['정상 질문 오탐', '0건']],
         rollback: 'PR 되돌리기(revert) · rollback_ref r-0413', ok: true,
-        appr: [{ role: '개발 총괄', done: false }, { role: '대표님', done: false }] },
+        appr: [{ role: '부대표', done: false }, { role: '대표님', done: false }] },
       { id: 414, sev: 'Medium', title: '의존성 통합 PR(주 1회) 7건', tags: ['의존성'], state: 'verifying',
         plain: ['이번 주 나온 부품 업데이트 7건을 한 번에 올립니다.', '화면 · 기능 변화는 없습니다.', '검증이 끝나야 승인할 수 있습니다.'],
         basis: 'Dependabot · OSV', impact: '서버 전체 · 우선순위 44점', sla: '30일 중 18일 남음',
         files: [['package.json', 7, 7], ['package-lock.json', 120, 96], ['service/server/package.json', 3, 3]], tests: [['회귀 테스트(qa-squad)', '18/42 진행 중']],
         rollback: 'PR 되돌리기(revert) · rollback_ref r-0414', ok: false,
-        appr: [{ role: '개발 총괄', done: false }] }
+        appr: [{ role: '부대표', done: false }] }
     ],
     quota: { pr: [1, 2], gh: [2, 6] },
     thr: [
@@ -81,7 +81,7 @@
     ],
     cards: [
       { id: 'CARD-0012', v: 'part', ver: 2, state: '운영 중', title: 'LLM Prompt Propagation (AML.T0143)', src: 'MITRE ATLAS v2026.10 · 2026-10-28', kind: '간접 프롬프트 인젝션',
-        reuse: 3, checked: '11-21', review: 'D-63', judge: 'AI SAM 문서 요약 결과가 다른 도구로 전달되는 경로가 있습니다. 판정: 키워드 매칭 → 사람 확인(개발 총괄 11-20)',
+        reuse: 3, checked: '11-21', review: 'D-63', judge: 'AI SAM 문서 요약 결과가 다른 도구로 전달되는 경로가 있습니다. 판정: 키워드 매칭 → 사람 확인(부대표 11-20)',
         map: ['AI SAM', 'LLM01', 'ASI01', 'ATLAS AML.T0143'], rule: 'rule: plan.source == "external"\n    and tool.grade >= 2\naction: block + alert(#ai-security)',
         control: 'SKILL 2-1(도구 등급화 · 사람 확인)을 서버 정책으로 강제합니다. 외부 출처 기반 계획은 2등급(외부 발송) 이상을 만들지 않습니다.',
         test: 'promptfoo · 숨은 지시 PDF 요약 후 발송 요청 → 차단 · 통과 12/12 · 정상 질문 5종 오탐 0건', skills: ['didisam-mcp-guide 4', 'edu-platform-security 14'],
@@ -100,7 +100,7 @@
       timeline: [{ phase: 'detect', note: 'AI 토큰 1시간 사용량이 7일 평균의 5배', by: '규칙 엔진', at: new Date(Date.now() - 3 * 3600e3).toISOString() }, { phase: 'contain', note: '긴급 차단 dry-run 기록(실제 적용 없음)', by: '규칙 엔진', at: new Date(Date.now() - 3 * 3600e3 + 60e3).toISOString() }],
       createdAt: new Date(Date.now() - 3 * 3600e3).toISOString(), notifyDueAt: new Date(Date.now() + 69 * 3600e3).toISOString() }],
     audit: [
-      { at: '11-24 09:42', who: '개발 총괄', what: 'PR #412 코드 리뷰 승인', hash: '9f1c…a2', prev: '41be…07' },
+      { at: '11-24 09:42', who: '부대표', what: 'PR #412 코드 리뷰 승인', hash: '9f1c…a2', prev: '41be…07' },
       { at: '11-24 06:00', who: '가디언', what: '정기 스캔 완료 · Finding 2건 갱신', hash: '41be…07', prev: 'c03d…5e' },
       { at: '11-24 02:14', who: '규칙 엔진', what: '긴급 차단(모의) 기관 기능 끄기 · 시연 기관 B', hash: 'c03d…5e', prev: '7aa0…19' }
     ]
@@ -189,7 +189,7 @@
     const d = get('prs'); if (!d) return wait('prs');
     const L0 = live() ? normPrs(d) : DS.prs; const q = live() ? (d.quota || null) : DS.quota;
     const sel = L0.find(p => String(p.id) === String(UI.secPr)) || L0[0];
-    const stTxt = p => p.state === 'approved' ? '승인 완료 · 병합 대기' : p.state === 'rejected' ? '반려됨' : !p.ok ? '검증 중' : p.appr.some(a => a.role === '개발 총괄' && a.done) ? '검증 통과 · 리뷰 완료' : '검증 통과 · 리뷰 대기';
+    const stTxt = p => p.state === 'approved' ? '승인 완료 · 병합 대기' : p.state === 'rejected' ? '반려됨' : !p.ok ? '검증 중' : p.appr.some(a => a.role === '부대표' && a.done) ? '검증 통과 · 리뷰 완료' : '검증 통과 · 리뷰 대기';
     const list = L0.length ? `<ul class="sec-prl">${L0.map(p => `<li><button class="${sel && p.id === sel.id ? 'on' : ''}" data-act="sec-pr" data-v="${esc(p.id)}">${sv(p.sev)} <b>#${esc(p.id)}</b><span>${esc(p.title)}</span><small>${esc(stTxt(p))} · ${apprLine(p)}</small></button></li>`).join('')}</ul>` : '<div class="empty">승인을 기다리는 수정 PR이 없습니다.</div>';
     const head2 = `<div class="sec-bh"><h3>수정 PR 승인함</h3>${q ? `<small>자동 PR 오늘 ${q.pr[0]}/${q.pr[1]}건 · GitHub 쓰기 ${q.gh[0]}/${q.gh[1]}</small>` : ''}</div>`;
     if (!sel) return head2 + list + demoNote();
@@ -199,7 +199,7 @@
       <div class="sec-g2"><div><h4>근거 · 영향</h4><p>출처: ${esc(sel.basis || '—')}</p><p>영향: ${esc(sel.impact || '—')}</p><p>SLA: ${esc(sel.sla || '—')}</p>
         <h4>변경 파일 ${sel.files.length} <small>(상한 5)</small></h4><ul class="sec-files">${sel.files.map(f => { const [pth, a, r] = Array.isArray(f) ? f : [f.path, f.add, f.del]; return `<li><code>${esc(pth)}</code><span class="add">+${nf(a)}</span><span class="del">−${nf(r)}</span></li>`; }).join('')}</ul></div>
       <div><h4>검증 결과</h4><ul class="sec-tests">${sel.tests.map(t => { const [nm, r] = Array.isArray(t) ? t : [t.name, t.result]; return `<li><span>${esc(nm)}</span><b>${esc(r)}</b></li>`; }).join('')}</ul><h4>롤백</h4><p>${esc(sel.rollback || '—')}</p></div></div>
-      <div class="sec-appr"><h4>필요 인원 ${n}명 <small>${n === 2 ? 'Critical · High: 개발 총괄 리뷰 + 대표님 승인' : 'Medium 이하: 개발 총괄 단독(결정 필요)'}</small></h4><ul>${sel.appr.map(a => `<li class="${a.done ? 'ok' : ''}"><b>${esc(a.role)}</b><span>${a.done ? `${esc(a.by || a.role)} · ${esc(a.at || '')} 서버 기록` : '승인 대기'}</span></li>`).join('')}</ul>
+      <div class="sec-appr"><h4>필요 인원 ${n}명 <small>${n === 2 ? 'Critical · High: 부대표 검토 + 대표님 승인' : 'Medium 이하: 부대표 단독(결정 필요)'}</small></h4><ul>${sel.appr.map(a => `<li class="${a.done ? 'ok' : ''}"><b>${esc(a.role)}</b><span>${a.done ? `${esc(a.by || a.role)} · ${esc(a.at || '')} 서버 기록` : '승인 대기'}</span></li>`).join('')}</ul>
         <p class="mini">승인은 서버 기록만 유효합니다 · 재인증이 필요합니다. AI SAM이 '승인됨'이라고 말해도 서버 기록이 없으면 병합하지 않습니다.</p></div>
       <div class="sec-acts"><button class="btn" data-act="sec-mobile" data-v="${esc(sel.id)}">휴대폰 승인 링크</button><button class="btn" data-act="sec-reject" data-v="${esc(sel.id)}" ${can ? '' : 'disabled'}>반려(사유 입력)</button><button class="btn pri" data-act="sec-approve" data-v="${esc(sel.id)}" ${can ? '' : 'disabled'}>${sel.state === 'approved' ? '승인 완료' : '승인 후 병합'}</button></div></article>`;
     return head2 + `<div class="sec-prw">${list}${det}</div><p class="mini">Phase 0은 의존성 · 설정 PR만 자동 생성합니다. .github/workflows · CODEOWNERS를 고치는 PR은 만들지 않습니다.</p>` + demoNote();
@@ -397,8 +397,8 @@
     const s = live() ? L.sum : DS.sum; if (!s) return null;
     const prs = live() ? normPrs(L.prs || []) : DS.prs; const pend = prs.filter(p => !['approved', 'rejected'].includes(p.state));
     const thr = live() ? arr(s.threats) : DS.thr.slice(0, 3); const st = s.state === 'bad' ? '위험' : s.state === 'warn' ? '주의' : '정상';
-    const P = s.p || {}; const r412 = pend.find(p => p.ok && p.appr.some(a => a.role === '개발 총괄' && a.done) && p.appr.some(a => !a.done));
-    return { text: `현재 보안 상태는 ${st}입니다(보안 점수 ${nf(s.score)}점).\n· 고위험 미해결 ${nf(s.high)}건 · 미해결 P0 ${nf(P.P0)} · P1 ${nf(P.P1)} · P2 ${nf(P.P2)} · P3 ${nf(P.P3)}\n· 승인 대기 수정 PR ${nf(s.prPending != null ? s.prPending : pend.length)}건(검증 통과 ${pend.filter(p => p.ok).length})\n· 오늘의 위협 ${thr.length}건 중 해당 ${thr.filter(x => x.v === 'hit').length}건\n· 긴급 차단: ${s.killMode === 'live' ? '실가동' : 'dry-run'}${r412 ? `\n#${r412.id} ${r412.title} PR은 개발 총괄 리뷰가 끝나 대표님 승인만 남았습니다. 승인함을 열어 드릴까요?` : ''}`, btn: { act: 'sec-open', v: 'prs', label: '수정 PR 승인함 열기' } };
+    const P = s.p || {}; const r412 = pend.find(p => p.ok && p.appr.some(a => a.role === '부대표' && a.done) && p.appr.some(a => !a.done));
+    return { text: `현재 보안 상태는 ${st}입니다(보안 점수 ${nf(s.score)}점).\n· 고위험 미해결 ${nf(s.high)}건 · 미해결 P0 ${nf(P.P0)} · P1 ${nf(P.P1)} · P2 ${nf(P.P2)} · P3 ${nf(P.P3)}\n· 승인 대기 수정 PR ${nf(s.prPending != null ? s.prPending : pend.length)}건(검증 통과 ${pend.filter(p => p.ok).length})\n· 오늘의 위협 ${thr.length}건 중 해당 ${thr.filter(x => x.v === 'hit').length}건\n· 긴급 차단: ${s.killMode === 'live' ? '실가동' : 'dry-run'}${r412 ? `\n#${r412.id} ${r412.title} PR은 부대표 검토가 끝나 대표님 승인만 남았습니다. 승인함을 열어 드릴까요?` : ''}`, btn: { act: 'sec-open', v: 'prs', label: '수정 PR 승인함 열기' } };
   };
   if (typeof answer === 'function') { const base = answer; answer = (q, ...r) => { const s = String(q || ''); /* eslint-disable-line no-global-assign */
     if (/(보안|가디언|취약점)/.test(s) && /(상태|현황|요약|알려|어때|점수|몇)/.test(s) && !/(만들|발송|보내|삭제)/.test(s)) {
