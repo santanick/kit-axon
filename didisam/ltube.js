@@ -463,7 +463,7 @@
     return `<nav class="tbw-nx" aria-label="다음 ${unit()}">${f0 ? `<a class="tbw-dl" href="${esc(f0.url || f0.src)}" download aria-label="자료 내려받기">${I.down(22)}</a>` : ''}<a class="tbw-next" href="${esc(hrefOf(c, nx))}"><span>다음 ${unit()} · ${esc(nx.title)}</span>${I.next(20)}</a></nav>`; }
   /* ── 늘 떠 있는 AI 튜터 아이콘 ── */
   function fab() { let b = document.getElementById('tbFab'); if (!on() || !tOn()) { if (b) b.remove(); return; } const v = !!cur(); if (cur() && locked(cur().c, cur().it)) { if (b) b.remove(); return; } const nm = tNm(); const short = [...nm].length <= 6 ? nm : 'AI 튜터';
-    const lab = v ? `${nm}(AI 튜터) — 이 장면 질문하기` : `${nm}(AI 튜터) 열기`; if (!b) { b = document.createElement('button'); b.type = 'button'; b.id = 'tbFab'; b.className = 'tb-fab'; b.dataset.tb = 'fab'; document.body.appendChild(b); }
+    const lab = v ? `${nm}(AI 튜터) — 이 장면 질문하기` : `AI 튜터와 대화하기${nm !== 'AI 튜터' ? ` (${nm})` : ''}`; /* qa7 */ if (!b) { b = document.createElement('button'); b.type = 'button'; b.id = 'tbFab'; b.className = 'tb-fab'; b.dataset.tb = 'fab'; document.body.appendChild(b); }
     const h = `${I.spark(24)}<span>${v ? '이 장면 질문' : esc(short)}</span>`; if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; } b.setAttribute('aria-label', lab); b.setAttribute('aria-expanded', v ? String(!!TB.open) : String(!!(typeof LT === 'object' && LT.open))); }
   /* v43: 스크롤하는 동안 떠 있는 튜터 버튼이 카드 오른쪽 끝을 가리지 않게 — 내려가면 작은 원(48px, 아이콘만), 위로 올리거나 맨 위에 오면 원래 크기 */
   { let y0 = 0; const B = () => document.body; addEventListener('scroll', () => { const y = window.scrollY || 0; if (y > y0 + 4 && y > 40) B().classList.add('tb-fsm'); else if (y < y0 - 4 || y <= 40) B().classList.remove('tb-fsm'); y0 = y; }, { passive: true });
@@ -559,7 +559,7 @@
     return S; });
   /* v43 R9(J4 113 · 205): 홈 첫 화면에서 떠 있는 AX 튜터 단추가 튜터 카드 · 사진을 가림 → 홈에서는 본문 튜터 바를 지나 내려간 뒤에만 단추를 보인다 */
   /* v43.7 Q4: 휴대폰 「AI 튜터」 대화 화면(#ai)은 화면 자체가 튜터 — 떠 있는 단추가 입력 칸 오른쪽을 반쯤 가리던 것(가장자리 손잡이) → 이 화면에서는 단추를 숨긴다 */
-  const fhome = () => { const B = document.body; if (!B) return; if (route().a === 'ai' && B.classList.contains('lapp') && B.classList.contains('tube')) { B.classList.add('tb-fhome'); return; } const t = route().a === 'home' && B.classList.contains('tube') ? document.querySelector('#lm .tb-tut') : null; B.classList.toggle('tb-fhome', !!t && t.getBoundingClientRect().bottom > 0); };
+  const fhome = () => { const B = document.body; if (!B) return; /* qa7(2026-11-25) 대표님 「늘 따라다녀야」: 홈 · #ai에서도 떠 있는 튜터 단추를 접지 않는다(홈 입력창은 그대로, 단추를 누르면 같은 대화가 이어지는 창) */ B.classList.remove('tb-fhome'); if (B) return; if (route().a === 'ai' && B.classList.contains('lapp') && B.classList.contains('tube')) { B.classList.add('tb-fhome'); return; } const t = route().a === 'home' && B.classList.contains('tube') ? document.querySelector('#lm .tb-tut') : null; B.classList.toggle('tb-fhome', !!t && t.getBoundingClientRect().bottom > 0); };
   addEventListener('scroll', fhome, { passive: true }); addEventListener('resize', fhome);
   function demoSeed() { try { if (!on() || LR.mode !== 'demo' || LR.tid !== 'sample') return; const t = rec(); if (t.demoSeeded || Object.keys(t.sec).length) return; t.demoSeeded = 1;
     const o = SITE().org || {}; const key = (o.type || '') + (o.ed || '') + (LR.me.sid || ''); let h = 7; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;

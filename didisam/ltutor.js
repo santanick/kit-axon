@@ -214,10 +214,10 @@ function ltRender() {
   const chip = (c, i) => c.kind === 'go' ? `<a class="lt-chip go" href="${esc(c.href)}" data-tact="go">${esc(c.l)}</a>` : `<button type="button" class="lt-chip${c.kind === 'escq' ? ' esc' : ''}" data-tact="${c.kind === 'escq' ? 'escq' : 'q'}" data-v="${esc(c.q)}" data-i="${i}">${esc(c.l)}</button>`;
   /* v43 G2: 작은 안내 말풍선은 세션에서 처음 한 번만(첫 진입) — 화면을 옮길 때마다 카드 · 사진을 가리지 않게 */
   if (LT.hint || LT.nudge) { let seen = null; try { seen = sessionStorage.getItem('didisam.lt.hint1'); } catch (e) { } if (seen && seen !== String(LT.h1 || '')) { LT.hint = ''; LT.nudge = ''; } else if (!seen) { LT.h1 = Date.now(); try { sessionStorage.setItem('didisam.lt.hint1', String(LT.h1)); } catch (e) { } } }
-  R.innerHTML = `<button type="button" class="lt-fab ${LT.open ? 'hide' : ''} ${LR.me ? '' : 'guest'}" data-tact="open" aria-label="${nm} 열기 — 지금 화면: ${esc(sc.name)}, 도와드릴 일 ${sc.chips.length}가지" title="${nm} · 지금 화면에서 도와드릴 일 ${sc.chips.length}가지"><span class="lt-fi" aria-hidden="true">${ico('spark', 20)}</span><span class="lt-ft"><b>${nm}</b><span class="sr">${LR.me ? '무엇이든 물어보세요' : '로그인 없이 물어보세요'}</span></span>${badge ? `<em>${badge}</em>` : ''}</button>
+  R.innerHTML = `<button type="button" class="lt-fab ${LT.open ? 'hide' : ''} ${LR.me ? '' : 'guest'}" data-tact="open" aria-label="AI 튜터와 대화하기${C.name && C.name !== 'AI 튜터' ? ` (${nm})` : ''} — 지금 화면: ${esc(sc.name)}" aria-haspopup="dialog" aria-controls="ltPanel" aria-expanded="${LT.open ? 'true' : 'false'}" title="${nm} — 지금 화면에서 도와드릴 일 ${sc.chips.length}가지"><span class="lt-fi" aria-hidden="true">${ico('spark', 20)}</span><span class="lt-ft"><b>${nm}</b><span class="sr">${LR.me ? '무엇이든 물어보세요' : '로그인 없이 물어보세요'}</span></span>${badge ? `<em>${badge}</em>` : ''}</button>
   ${!LT.open && LT.hint ? `<div class="lt-hint" aria-hidden="true">${ico('spark', 12)} ${esc(LT.hint)} · 도와드릴 일 ${sc.chips.length}가지</div>` : ''}
   ${!LT.open && LT.nudge && !LT.hint ? `<div class="lt-hint lt-hn" role="status">${ico('spark', 12)} ${esc(LT.nudge)}</div>` : ''}
-  <section class="lt-panel ${LT.open ? 'on' : ''} ${LT.open && LT.anim ? 'anim' : ''} ${LT.big ? 'big' : ''}" role="dialog" aria-labelledby="ltT" ${LT.open ? '' : 'hidden'}>
+  <section id="ltPanel" class="lt-panel ${LT.open ? 'on' : ''} ${LT.open && LT.anim ? 'anim' : ''} ${LT.big ? 'big' : ''}" role="dialog" aria-labelledby="ltT" ${LT.open ? '' : 'hidden'}>
     <header class="lt-hd"><span class="lt-orb" aria-hidden="true"></span><div><b id="ltT">${nm}</b><small>내 AI 학습 비서 <span class="lt-pill ${st.on ? 'on' : ''}" title="${st.on ? 'Claude가 답합니다' : '정해진 안내로 답합니다'}"><i></i>${esc(st.t)}</span></small></div>
       <button type="button" class="lt-hb lt-bigb" data-tact="big" aria-label="${LT.big ? '작게 보기' : '크게 보기'}" title="${LT.big ? '작게 보기' : '크게 보기'}">${LT.big ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 14h6v6M3 21l7-7M20 10h-6V4M21 3l-7 7"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg>'}</button>
       <button type="button" class="lt-hb lt-x" data-tact="close" aria-label="닫기" title="닫기 (Esc)">${ico('x', 18)}</button></header>
@@ -231,12 +231,12 @@ function ltRender() {
   const th = R.querySelector('.lt-th'); if (th) { th.scrollTop = th.scrollHeight; /* v43 H2(110): 답이 끝나면 마지막 질문(내 말풍선)이 대화 맨 위에 오게 — 첫 항목이 칩 줄 밑에 잘려 시작하지 않게 */
     const me = [...th.querySelectorAll(':scope > .lt-m.u')].pop(); if (me && !LT.busy) { const y = me.getBoundingClientRect().top - th.getBoundingClientRect().top + th.scrollTop - 12; if (y < th.scrollTop) th.scrollTop = Math.max(0, y); } }
   /* v43 F3(110): 로그인한 PC 웹(앱 화면 아님)에서 연 튜터는 오른쪽에 고정(본문 8 + 튜터 4) — 홈 위에 뜬 작은 창이 사진 · 카드를 가리던 문제. 휴대폰 · 앱 · 로그인 전은 떠 있는 창 그대로 */
-  document.body.classList.toggle('lt-dock', !!(LT.open && LR.me && !document.body.classList.contains('lapp') && innerWidth >= 1100)); document.body.classList.toggle('lt-on', !!LT.open);
+  document.body.classList.remove('lt-dock'); /* qa7(2026-11-25) 대표님: 대화창은 우측 하단 카드(PC 약 400×600) · 휴대폰은 아래 시트 — v43 F3 오른쪽 고정 열은 쓰지 않음 */ document.body.classList.toggle('lt-on', !!LT.open);
   /* 작은 안내는 잠깐만(버튼 위, 누를 수 없음 · 창은 열지 않음) — v25: 로그인 후 '오늘 할 일' 말풍선도 같은 방식 */
   /* v43 G2: PC 웹은 말풍선을 머리 줄 안(계정 앞)에 작게 — 본문 위에 뜨지 않음 */
   /* v43 G2: PC 웹은 AX 튜터 단추도 머리 줄 안(계정 앞)으로 — 떠 있는 단추가 카드 · 사진 · 버튼을 가리지 않게(휴대폰 · 앱은 그대로) */
-  try { document.querySelectorAll('header.lh .lt-hint, header.lh .lt-fab').forEach(x => x.remove()); const hd = document.querySelector('header.lh > .in'); if (hd && !document.body.classList.contains('lapp') && matchMedia('(min-width:901px)').matches && !(window.lhsG44 && lhsG44())) { /* v44.1 CM: 새 템플릿(g44) 방문자 화면은 머리글에 넣지 않고 오른쪽 아래 떠 있는 버튼 */ const at = hd.querySelector(':scope > .acct') || null;
-      const f = R.querySelector('.lt-fab'); if (f) { f.classList.add('lt-hfab'); hd.insertBefore(f, at); } const h = R.querySelector('.lt-hint'); if (h) { h.classList.add('lt-hh'); hd.insertBefore(h, f && f.parentNode === hd ? f : at); } } } catch (e) { }
+  /* qa7(2026-11-25) 대표님 「AX 튜터는 상단 배치가 아니고 사이트 하단 구석(모니터 보는 쪽 우측 하단)에 늘 따라다녀야」 — v43 G2의 PC 머리 줄 안 단추는 없애고 모든 화면 · 폭에서 우측 하단 고정 원형 버튼 하나(lx47.css 끝) */
+  try { document.querySelectorAll('header.lh .lt-hint, header.lh .lt-fab').forEach(x => x.remove()); } catch (e) { }
   if (LT.hint || LT.nudge) { clearTimeout(LT.ht); LT.ht = setTimeout(() => { LT.hint = ''; LT.nudge = ''; document.querySelectorAll('.lt-hint').forEach(h => h.remove()); }, 4500); }
   ltPlace();
 }
@@ -280,7 +280,7 @@ document.addEventListener('click', e => { const el = e.target.closest('[data-tac
   e.preventDefault();
   if (k === 'open') ltOpen();
   if (k === 'login') { location.hash = '#login'; }
-  if (k === 'close') { try { sessionStorage.setItem(LTK(), '0'); } catch (e) { } LT.open = false; document.body.classList.remove('lt-on'); ltRender(); $('.lt-fab') && $('.lt-fab').focus(); }
+  if (k === 'close') { try { sessionStorage.setItem(LTK(), '0'); } catch (e) { } LT.open = false; document.body.classList.remove('lt-on'); ltRender(); { const fb = [document.getElementById('tbFab'), $('#ltut .lt-fab')].find(x => x && x.getClientRects().length); fb && fb.focus(); } }
   if (k === 'nudge-x') { LT.nudge = ''; ltRender(); }
   if (k === 'q') ltAsk(el.dataset.v);
   if (k === 'esc') ltAsk(el.dataset.v, { esc: true });
@@ -295,7 +295,7 @@ document.addEventListener('submit', e => { const f = e.target;
     const mm = LT.msgs.find(m => m.h && m.h.includes(`data-qid="${f.dataset.qid}"`)); if (mm) mm.h = zr; else f.outerHTML = zr;
     LT.msgs.push({ t: ok === Z.length ? '모두 맞혔습니다. 다음 레슨으로 넘어가도 좋습니다.' : `${Z.length - ok}문제를 다시 보면 좋겠습니다. 위에 표시한 레슨을 한 번 더 보고, 헷갈리는 부분을 물어보세요.`, h: ltBtns([['다른 문제 더', '복습 퀴즈 내줘'], ['오늘 할 일', '오늘 뭐 하면 돼?']]), src: '복습 퀴즈' }); ltRender(); }
 });
-document.addEventListener('keydown', e => { if (e.target.id === 'ltq' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#ltf').requestSubmit(); } if (e.key === 'Escape' && LT.open && !document.querySelector('#luxSheet, #shpModal, dialog[open]')) { try { sessionStorage.setItem(LTK(), '0'); } catch (x) { } LT.open = false; document.body.classList.remove('lt-on'); ltRender(); $('.lt-fab') && $('.lt-fab').focus(); } });
+document.addEventListener('keydown', e => { if (e.target.id === 'ltq' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#ltf').requestSubmit(); } if (e.key === 'Escape' && LT.open && !document.querySelector('#luxSheet, #shpModal, dialog[open]')) { try { sessionStorage.setItem(LTK(), '0'); } catch (x) { } LT.open = false; document.body.classList.remove('lt-on'); ltRender(); { const fb = [document.getElementById('tbFab'), $('#ltut .lt-fab')].find(x => x && x.getClientRects().length); fb && fb.focus(); } } });
 
 /* ── 렌더 연결: 화면이 바뀌면 맥락 줄 · 칩 갱신, 로그인 후 첫 화면에 한 번 알림 ── */
 { const base = lrender; lrender = () => { base(); try {
@@ -342,3 +342,5 @@ window.addEventListener('storage', e => { if (LR.mode === 'demo' && e.key && e.k
 window.addEventListener('hashchange', () => { if (innerWidth <= 600 && typeof LT !== 'undefined' && LT.open) { LT.open = false; document.body.classList.remove('lt-on'); try { sessionStorage.setItem(LTK(), '0'); } catch (e) { } setTimeout(ltRender, 0); } });
 /* v43 G2: 스크롤하면 안내 말풍선은 바로 숨김 */
 addEventListener('scroll', () => { if (typeof LT === 'object' && (LT.hint || LT.nudge)) { LT.hint = ''; LT.nudge = ''; document.querySelectorAll('.lt-hint').forEach(h => h.remove()); } }, { passive: true });
+/* qa7(2026-11-25): 휴대폰 시트 바깥(어두운 배경 body::after)을 누르면 닫는다 */
+document.addEventListener('click', e => { if (e.target === document.body && typeof LT === 'object' && LT.open && innerWidth <= 860) { const x = document.querySelector('#ltut [data-tact="close"]'); if (x) x.click(); } });

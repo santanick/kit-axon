@@ -339,9 +339,7 @@ input[type=file][hidden]{display:none!important} /* 라벨 단추(.btn) 안 숨�
 
 /* ═════════ v43 G2 — 떠 있는 「AI SAM · 이 화면 도움」 단추: 본문 오른쪽 아래(카드 · 표 단추)를 가리지 않게 왼쪽 아이콘 줄 아래칸에 붙임 ═════════ */
 @media (min-width:901px){
-  body:has(.brail):not(.fab-open) #fabBtn{left:calc((var(--g2-rail,76px) - 52px)/2);right:auto;bottom:96px;width:52px;min-width:52px;height:52px;padding:0!important;border-radius:16px;justify-content:center}
-  body:has(.brail):not(.fab-open) #fabBtn > span:not(.fabn){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-  body:has(.brail):not(.fab-open) #fabBtn .scxbt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  /* qa7(2026-11-25): 왼쪽 아이콘 줄 붙임은 없앰 — AI SAM은 우측 하단 고정(fab.css 끝) */
 }
 @media (min-width:901px) and (max-width:1180px){body:has(.brail){--g2-rail:68px}}
 /* v43 G2 2차: 임시 주소 · 시작 가이드 → 머리 줄 작은 칩 1개(누르면 아래로 펼침, 본문을 가리지 않는 짧은 팝오버) */
