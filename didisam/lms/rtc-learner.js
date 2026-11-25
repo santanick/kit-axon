@@ -9,10 +9,11 @@
   const ST = { my: null, busy: false, err: '', tr: {} };
   const call = (m, p) => { LV.setMode(LR.mode === 'live' ? 'live' : 'demo'); LV.demoMe = { kind: 'learner', sid: String(LR.me && LR.me.sid || '20261001') }; return LV.api(m, p); };
   const re = () => { if (typeof lrender === 'function') lrender(); };
-  function load() { if (ST.my || ST.busy) return; ST.busy = true; call('GET', '/api/lms/live/my').then(j => { ST.my = j; }).catch(e => { ST.err = errMsg(e); ST.my = { rooms: [], captions: [] }; }).finally(() => { ST.busy = false; re(); }); }
+  function load() { const me = String(LR.me && LR.me.sid || ''); if (ST.sid !== me) { ST.sid = me; ST.my = null; ST.err = ''; ST.noreg = false; ST.tr = {}; } /* 다른 학습자로 다시 로그인하면 새로 받기 */ if (ST.my || ST.busy) return; ST.busy = true; call('GET', '/api/lms/live/my').then(j => { ST.my = j; }).catch(e => { ST.err = errMsg(e); ST.noreg = typeof lmsNoReg === 'function' && lmsNoReg(e); ST.my = { rooms: [], captions: [] }; }).finally(() => { ST.busy = false; re(); }); }
   function card() {
     load(); const j = ST.my; const head = '<div class="myhead"><h2>실시간 수업</h2></div>';
     if (!j) return `<div class="mycard wide" id="lvMy">${head}<p class="mini">불러오는 중입니다.</p></div>`;
+    if (ST.noreg) return `<div class="mycard wide" id="lvMy">${head}${lmsNoRegCard()}</div>`;
     const rooms = j.rooms || [], caps = j.captions || [];
     return `<div class="mycard wide" id="lvMy">${head}${ST.err ? `<p class="mini">${E(ST.err)}</p>` : ''}
       ${rooms.map(r => `<div class="gij-rf"><b>${E(r.title)}</b> <small>${E(r.section_title || '')} · ${r.status === 'live' ? '지금 진행 중' : '시작 전'}</small><br>

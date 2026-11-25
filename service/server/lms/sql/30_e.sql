@@ -61,12 +61,21 @@ create or replace function lms_x_section(sec uuid) returns void language plpgsql
 begin
   if not exists (select 1 from lms_section where section_id = sec) then perform lms_x_err(404, 'section', '없는 분반입니다.'); end if;
 end $$;
--- 학습자 → 학사 구성원(학번 = 학습자 번호)
+-- QA7 #1: 학습자 세션 → 학사 학번 자동 연결(같은 기관 안에서만 — lms_x_tid 조건 + RLS)
+--   ① 접근코드 학습자: sid = 학번 그대로 ② 간편가입 학습자: sid = learner_id → learner_accounts.student_no
+--   같은 학번의 학사 구성원(학생)이 있을 때만 학번을 돌려주고, 없으면 null
+create or replace function lms_x_mno(ctx jsonb) returns text language sql stable as $$
+  select coalesce(
+    (select member_no from lms_person where tenant_id = lms_x_tid() and member_no = ctx->>'sid' and kind = 'student'),
+    (select p.member_no from learner_accounts la join lms_person p on p.tenant_id = la.tenant_id and p.member_no = la.student_no and p.kind = 'student'
+      where la.tenant_id = lms_x_tid() and coalesce(ctx->>'sid', '') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        and la.learner_id = (ctx->>'sid')::uuid and la.status <> 'withdrawn')) $$;
+-- 학습자 → 학사 구성원(학번 = 학습자 번호, 간편가입은 가입 학번)
 create or replace function lms_x_learner(ctx jsonb) returns uuid language plpgsql as $$
 declare p uuid;
 begin
   if coalesce(ctx->>'kind', '') <> 'learner' then perform lms_x_err(403, 'role', '학습자 로그인이 필요합니다.'); end if;
-  select person_id into p from lms_person where member_no = ctx->>'sid' and kind = 'student';
+  select person_id into p from lms_person where tenant_id = lms_x_tid() and member_no = lms_x_mno(ctx) and kind = 'student';
   if p is null then perform lms_x_err(403, 'person', '학사 구성원으로 등록되지 않은 학습자입니다.'); end if;
   return p;
 end $$;

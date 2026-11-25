@@ -126,6 +126,8 @@ const laCode = () => String(Math.floor(100000 + Math.random() * 900000));
 /* v43 D-C: 계정 화면 머리도 공통 사진 머리(lPageHead, 짧은 띠) — 앱 프레임(body.lapp)은 예전 제목 그대로 */
 const laSec = (title, body, lead = '', head) => typeof lPageHead === 'function' && !document.body.classList.contains('lapp') ? `${lPageHead(head ? { key: route().a || 'acct', title, desc: lead || '필요한 정보만 받고, 언제든 지울 수 있어요.', ...head } : { key: route().a || 'acct', title, desc: lead, descHtml: true, compact: true })}<section class="sec la la43"><div class="in narrow">${body}</div></section>` : `<section class="sec la"><div class="in narrow"><h1>${esc(title)}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}${body}</div></section>`;
 const laGate = (title, body) => `<section class="sec la"><div class="in narrow"><div class="gate">${ico('lock', 28)}<h2>${esc(title)}</h2><p class="lead">${body}</p><div class="cta">${btn('로그인', '#login', 'pri')}${btn('홈으로', '#home', 'ghost')}</div></div></div></section>`;
+/* QA7 #6: 학교 SSO는 기관 설정(org.sso.url 또는 org.sso.on)이 있을 때만 보인다 — 없으면 「준비 중」 대신 항목 자체를 숨긴다 */
+const laSsoOn = () => { try { const o = SITE().org || {}; return !!(o.sso && (o.sso.url || o.sso.on)); } catch (e) { return false; } };
 /* QA7: 운영 서버에 키가 없는 제공자는 「준비 중」(누르면 안내) — LA.ready = GET /api/pub/<tid>/loauth */
 const laSocOff = k => laLive() && !(LA.ready || []).includes(k);
 const laSoc = (cfg, act, verb) => cfg.social.length ? `<div class="la-soc">${LA_SOC.filter(([k]) => cfg.social.includes(k)).map(([k, l]) => `<button type="button" class="la-sb ${k}${laSocOff(k) ? ' off' : ''}" data-ac="${act}" data-v="${k}"${laSocOff(k) ? ' aria-disabled="true"' : ''}>${esc(l)}${verb || '로 계속하기'}${laSocOff(k) ? ' <small class="la-tag">준비 중</small>' : ''}</button>`).join('')}</div>` : '';
@@ -151,7 +153,7 @@ const laPrivV = () => laSec('개인정보 처리방침 요약', laPolicyHTML(laU
 
 /* ═════════ 로그인 화면 ═════════ */
 { const base = viewLogin; viewLogin = back => { const h = base(back); const cfg = laCfg(); const U = laUniv();
-  const sso = U ? `<button type="button" class="lbtn ghost blk la-sso" data-ac="sso">${ico('home', 16)} 학교 SSO로 로그인 <small class="la-tag">준비 중</small></button>` : '';
+  const sso = U && laSsoOn() ? `<button type="button" class="lbtn ghost blk la-sso" data-ac="sso">${ico('home', 16)} 학교 SSO로 로그인</button>` : ''; /* QA7 #6: SSO 설정이 없으면 숨김 */
   if (!laAcctOn() || cfg.mode === 'code') return h.replace(/(<form id="li"[\s\S]*?)(<button[^>]*type="submit")/, (m, a, b) => a + lKeepHTML() + b).replace(/(<p class="mini">접근코드를 모르면[^<]*<\/p>)/, `$1${sso}<p class="mini la-links"><a href="#find/code">접근코드 받기 · 재발급 요청</a></p>`);
   const form = ((h.match(/<form id="li"[\s\S]*?<\/form>/) || [''])[0]).replace(/(<button[^>]*type="submit")/, m => lKeepHTML() + m); const pwMode = U || LA.lmode === 'pw';
   const lgr = `<div class="lgr"><h2>로그인</h2>
@@ -213,7 +215,7 @@ function laJoin(r) { const cfg = laCfg(); const tok = (r.b || '').replace(/[^\w-
   if (!laAcctOn() && !laPvJoin()) return laGate('회원가입', LR.mode === 'preview' ? '미리보기에서는 가입할 수 없습니다. 게시한 학습자 사이트에서 가입해 보세요.' : '게시된 학습자 사이트에서 가입할 수 있습니다.');
   const inv = tok && !laPvJoin() ? (laLive() ? (/^fam-/.test(tok) ? null : /^(pfam|par)-/.test(tok) ? { token: '', target: 'parent', active: true, live: true, personal: /^par-/.test(tok), pfam: /^pfam-/.test(tok) } : { token: tok, target: 'student', active: true, live: true }) : laInv(tok)) : null; /* v38 운영: 토큰은 서버가 가입할 때 검사(/api/pub/<tid>/signup { token }) */
   if (tok && !inv) return laGate('사용할 수 없는 초대 링크입니다', '링크가 재생성되었거나 만료되었습니다. 운영자에게 새 초대 링크를 요청하세요.');
-  if (!inv && cfg.mode === 'code' && !laPvJoin()) return laGate('접근코드로 로그인하는 기관입니다', `이 기관은 회원가입 없이 기관에서 받은 ${esc(lIdLabel())}${laWa(lIdLabel())} 접근코드로 로그인합니다.${U ? ' 학교 SSO 연동은 준비 중입니다.' : ''}`).replace('<div class="cta">', `<p class="mini">코드를 받은 적이 없거나 명단에 없다면 ${esc(lIdLabel())}${laWa(lIdLabel())} ${U ? '학과' : '소속'}을 적어 <b>접근코드 받기</b>를 요청하세요.</p><div class="cta"><a class="lbtn pri" href="#find/code">접근코드 받기 요청</a>`);
+  if (!inv && cfg.mode === 'code' && !laPvJoin()) return laGate('접근코드로 로그인하는 기관입니다', `이 기관은 회원가입 없이 기관에서 받은 ${esc(lIdLabel())}${laWa(lIdLabel())} 접근코드로 로그인합니다.`).replace('<div class="cta">', `<p class="mini">코드를 받은 적이 없거나 명단에 없다면 ${esc(lIdLabel())}${laWa(lIdLabel())} ${U ? '학과' : '소속'}을 적어 <b>접근코드 받기</b>를 요청하세요.</p><div class="cta"><a class="lbtn pri" href="#find/code">접근코드 받기 요청</a>`);
   if (!inv && cfg.mode === 'invite' && !laPvJoin()) return laGate('초대받은 회원만 가입할 수 있습니다', '운영자에게 받은 초대 링크(알림톡 · 이메일 · 메신저)로 접속해 가입하세요.');
   const J = laJoinState(tok, inv);
   if (J.done) return laSec(J.kind === 'parent' ? '보호자 회원가입' : '회원가입', laJoinDone(J));
@@ -227,7 +229,7 @@ function laJoin(r) { const cfg = laCfg(); const tok = (r.b || '').replace(/[^\w-
     <label class="fl">닉네임 <small>(선택)</small><input name="nick" maxlength="20" placeholder="비워 두면 학번 뒤 4자리" value="${esc(k.nick || '')}"></label><span></span>
     ${J.sns ? '</div>' : `<label class="fl">비밀번호<input name="pw" type="password" maxlength="20" required autocomplete="new-password"></label><label class="fl">비밀번호 확인<input name="pw2" type="password" maxlength="20" required autocomplete="new-password"></label></div><small class="mini">영문 · 숫자 · 특수문자(~!@#$%^&*) 조합 8~20자</small>`}
     ${xq}<p class="err" id="laJErr" role="alert"></p><button class="lbtn pri blk" type="submit">${J.sns ? `동의하고 ${esc(LA_SN[J.sns.prov])}로 가입` : '학번으로 가입하기'} ${ico('arrow', 16)}</button></form>
-    <button type="button" class="lbtn ghost blk la-sso" data-ac="sso">${ico('home', 16)} 학교 SSO로 로그인 <small class="la-tag">준비 중</small></button>
+    ${laSsoOn() ? `<button type="button" class="lbtn ghost blk la-sso" data-ac="sso">${ico('home', 16)} 학교 SSO로 로그인</button>` : ''}
     <p class="mini">학번 · 학과 · 닉네임만 받습니다. 이름 · 연락처 · 이메일은 받지 않습니다.</p><p class="la-links">이미 계정이 있나요? <a href="#login">로그인</a></p>`);
   const age = `<div class="la-age"><label class="ckl"><input type="checkbox" name="age14" ${k.age14 !== false ? 'checked' : ''} data-ac="jage"> <b>만 14세 이상입니다</b></label>
     <div class="la-guard" ${k.age14 !== false ? 'hidden' : ''}>${cfg.under14 && J.kind !== 'parent' ? `<p class="mini">만 14세 미만은 <b>보호자(법정대리인) 동의</b>가 필요합니다. 보호자 이메일 또는 휴대폰 번호를 적으면 동의 링크를 보내 드립니다. 보호자가 동의하면 바로 이용할 수 있습니다.</p><label class="fl">보호자 이메일 또는 휴대폰 번호<input name="gcontact" maxlength="80" placeholder="parent@example.com 또는 010-0000-0000" value="${esc(k.gcontact || '')}"></label>` : '<p class="mini warn">이 기관은 만 14세 이상만 가입할 수 있습니다.</p>'}</div></div>`;
@@ -306,10 +308,11 @@ function laGuardV(r) { if (laLive()) return laGuardLive(r); const tok = String(r
     <p class="mini">동의하지 않으면 가입 정보는 즉시 삭제됩니다. 동의 후에도 자녀의 개인정보 열람 · 삭제를 언제든 요청할 수 있습니다.</p><div class="cta"><button class="lbtn pri" data-ac="gok" data-v="${esc(tok)}">동의합니다</button><button class="lbtn ghost" data-ac="gno" data-v="${esc(tok)}">동의하지 않습니다</button></div>`); }
 /* v38 운영: 보호자 동의(POST /api/pub/<tid>/guardian) — 동의하면 서버가 1회용 보호자 계정 연결 토큰(parent_token)을 돌려준다 */
 function laGuardLive(r) { const tok = String(r.b || ''); const R = (LA.gl || {})[tok];
+  if (!/^[A-Za-z0-9_-]{8,200}$/.test(tok)) return laSec('동의 링크를 확인해 주세요', `<p class="lead">링크가 올바르지 않거나 일부가 빠졌어요. 받은 문자나 메일의 동의 링크를 처음부터 다시 열어 주세요.</p><div class="cta">${btn('홈으로', '#home', 'pri')}</div>`); /* QA7 #4: 토큰이 없으면 서버에 묻지 않는다 */
   if (R && R.status === 'refused') return laSec('보호자 동의 거부', '<p class="lead">동의하지 않아 가입 정보를 삭제했습니다. 자녀가 다시 가입하려면 처음부터 다시 신청해야 합니다.</p>');
   if (R && R.status === 'active') return laSec('보호자 동의 완료', `<p class="lead">자녀의 가입에 동의하셨습니다. 이제 자녀가 로그인해 이용할 수 있습니다.</p>${R.parent_token ? '<p>보호자 계정을 만들면 자녀의 출결 · 수업 · 청구서 알림을 함께 받을 수 있어요. 따로 연결 코드를 넣지 않아도 바로 연결됩니다.</p>' : ''}<div class="cta">${R.parent_token ? `<a class="lbtn pri" href="#join/pfam-${esc(R.parent_token)}">보호자 계정 만들고 연결하기</a>` : ''}${btn('자녀 로그인', '#login', R.parent_token ? 'ghost' : 'pri')}</div>`);
   return laSec('보호자(법정대리인) 동의', `<p class="lead">만 14세 미만 자녀가 ${esc(SITE().org.name)} 학습 사이트에 가입하려고 합니다. 아래 내용을 확인하고 동의 여부를 선택해 주세요.</p>${laPolicyHTML(false, true)}<p class="mini">동의하지 않으면 가입 정보는 즉시 삭제됩니다.</p><div class="cta"><button class="lbtn pri" data-ac="gok" data-v="${esc(tok)}">동의합니다</button><button class="lbtn ghost" data-ac="gno" data-v="${esc(tok)}">동의하지 않습니다</button></div>`); }
-async function laGuardLiveRes(tok, ok) { try { const r = await api('POST', laP('guardian'), { token: tok, ok }); LA.gl = { ...(LA.gl || {}), [tok]: r }; toast(ok ? '동의를 완료했습니다.' : '동의하지 않아 가입 정보를 삭제했습니다.', 'ok'); lrender(); } catch (x) { toast(x.message, 'bad'); } }
+async function laGuardLiveRes(tok, ok) { if (!tok || LA.gBusy) return; LA.gBusy = true; try { const r = await api('POST', laP('guardian'), { token: tok, ok }); LA.gl = { ...(LA.gl || {}), [tok]: r }; toast(ok ? '동의를 완료했습니다.' : '동의하지 않아 가입 정보를 삭제했습니다.', 'ok'); lrender(); } catch (x) { toast(errMsg(x), 'bad'); } finally { LA.gBusy = false; } }
 function laGuardRes(tok, ok) { const V = laV(); const sid = Object.keys(V.ids).find(k => V.ids[k].guardian && V.ids[k].guardian.token === tok); if (!sid) return; const c = laCache()[sid] || {};
   if (ok) { V.ids[sid].guardian = { ...V.ids[sid].guardian, status: 'ok', at: new Date().toISOString(), token: '', used: tok }; laVLog(V, 'consent', sid, 'guardian_consent', []); laVSave(V); laCacheSet(sid, { status: 'active', pendPub: null });
     if (c.pendPub) lpxPush('acct-join', { ...c.pendPub, guardian: { ok: true, at: new Date().toISOString() } }); toast(laCfg().approve === 'manual' ? '동의를 완료했습니다. 운영자 승인 후 이용할 수 있습니다.' : '동의를 완료했습니다. 이제 로그인해 이용할 수 있습니다.', 'ok'); }

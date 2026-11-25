@@ -28,8 +28,8 @@
   /* 스튜디오 상단 아이콘: 누를 때마다 기기 설정 → 라이트 → 다크 순서로 바뀐다 */
   function topBtn() { var v = cur0(); return '<button type="button" class="thm-tg" data-thm="cycle" aria-label="화면 테마 바꾸기(현재: ' + NAME[v] + ')" title="화면 테마: ' + NAME[v] + '">' + ICO[v === 'system' ? 'system' : v] + '</button>'; }
   /* 학습자 「나」 3칸 세그먼트 */
-  function seg() { var v = cur0(); return '<div class="thm-box"><b class="thm-lb" id="thmLb">화면 테마</b><p class="thm-hint">기기 설정을 고르면 휴대폰이 어두워질 때 같이 바뀌어요.</p><div class="thm-seg" role="radiogroup" aria-labelledby="thmLb">' +
-    ['light', 'dark', 'system'].map(function (k) { return '<button type="button" role="radio" aria-checked="' + (v === k) + '" class="' + (v === k ? 'on' : '') + '" data-thm="' + k + '">' + ICO[k] + '<span>' + NAME[k] + '</span></button>'; }).join('') + '</div></div>'; }
+  function seg() { var v = cur0(); return '<div class="thm-box"><b class="thm-lb" id="thmLb">화면 테마</b><p class="thm-hint">기기 설정을 고르면 휴대폰이 어두워질 때 같이 바뀌어요.</p><div class="thm-seg" role="group" aria-labelledby="thmLb">' +
+    ['light', 'dark', 'system'].map(function (k) { return '<button type="button" aria-pressed="' + (v === k) + '" class="' + (v === k ? 'on' : '') + '" data-thm="' + k + '">' + ICO[k] + '<span>' + NAME[k] + '</span></button>'; }).join('') + '</div></div>'; }
   function sync() {
     if (!document.body) return;
     var t = document.querySelectorAll('.thm-tg'); for (var i = 0; i < t.length; i++) t[i].outerHTML = topBtn();
@@ -37,6 +37,8 @@
   }
   function mount() {
     var tr = document.querySelector('header.top .topr'); if (tr && !tr.querySelector('.thm-tg')) tr.insertAdjacentHTML('afterbegin', topBtn());
+    /* QA7 #5: 웹(클래식) 학습자 「회원정보」(#acct)에는 .ls-me가 없으므로 본문 첫 칸 끝에 붙인다 */
+    if (!document.querySelector('.ls-me') && document.getElementById('lapp') && /^#acct(\/|$)/.test(location.hash || '') && !document.querySelector('#lm .thm-box')) { var box = document.querySelector('#lm section .in') || document.querySelector('#lm'); if (box) box.insertAdjacentHTML('beforeend', seg()); }
     var me = document.querySelector('.ls-me'); if (me && !me.querySelector('.thm-box')) { var gh = me.querySelector('.ls-gh'); if (gh) gh.insertAdjacentHTML('beforebegin', seg()); else me.insertAdjacentHTML('beforeend', seg()); } /* v43: 「회원정보」 제목 위(메뉴 목록 바로 아래) */
   }
   function boot() {
