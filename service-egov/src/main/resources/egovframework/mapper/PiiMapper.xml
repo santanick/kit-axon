@@ -122,9 +122,14 @@
   <!-- v33 학습자 → 운영자 요청함 · 운영자 승인 판단 -->
   <insert id="insertEvent">insert into learner_events (tenant_id, sid, type, data) values (#{tid}, #{sid}, #{type}, #{data}::jsonb)</insert>
   <select id="selectApproval" resultType="java.util.LinkedHashMap">
-    select doc->'settings'->'acct'->>'approve' ap, doc->'org'->>'type' ty, m is not null found, m->>'grade' g, m->>'reject' r, (select decision from learner_accounts la where la.tenant_id = #{tid} and la.learner_id::text = #{lid}) d, (select reject_reason from learner_accounts la where la.tenant_id = #{tid} and la.learner_id::text = #{lid}) dr from tenant_state
+    select doc->'settings'->'acct'->>'approve' ap, doc->'org'->>'type' ty, m is not null found, m->>'grade' g, m->>'reject' r, la.decision d, la.reject_reason dr, la.nickname n, to_jsonb(la.created_at) #>> '{}' "at", la.login lg from tenant_state
+      left join lateral (select decision, reject_reason, nickname, created_at, login from learner_accounts la where la.tenant_id = #{tid} and la.learner_id::text = #{lid}) la on true
       left join lateral (select x m from jsonb_array_elements(case when jsonb_typeof(doc->'members') = 'array' then doc->'members' else '[]'::jsonb end) x where x->>'sid' = #{lid} limit 1) mm on true
      where tenant_id = #{tid}
+  </select>
+  <!-- QA7 가입 신청 승인 · 거절(POST /api/learners/decide, Node pii.decide와 같음) -->
+  <select id="updateDecision" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">
+    update learner_accounts set decision = #{d}, reject_reason = #{r}, decided_at = now() where tenant_id = #{tid} and status &lt;&gt; 'withdrawn' and learner_id::text in <foreach collection="ids" item="i" open="(" separator="," close=")">#{i}</foreach> returning learner_id::text learner_id, login
   </select>
   <select id="selectOrgName" resultType="string">select doc->'org'->>'name' from tenant_state where tenant_id = #{tid}</select>
   <select id="selectAcctBrief" resultType="java.util.LinkedHashMap">select login, nickname, dept, mkt from learner_accounts where tenant_id = #{tid} and learner_id = #{lid}::uuid</select>

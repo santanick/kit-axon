@@ -2,16 +2,17 @@
 /* v31 환급 에디션 모듈 분리: MODULE=learner|tutor|admin 이면 서비스마다 화면 · API · 역할을 나눈다.
    MODULE이 비어 있으면 기존처럼 한 서비스로 동작한다. Java: cmm/DdModule.java와 같은 규칙. */
 const PAGE = { learner: 'learner.html', tutor: 'tutor.html', admin: 'index.html' };
-const PUB = /^\/api\/pub\/[^/]+\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel)|ledger-(?:my|order|confirm|bill|bill-order|bill-confirm)|mile-(?:my|list|rewards|redeem|redeem-cancel|proof|guardian|streak-repair|notice-read))$/;
+const PUB = /^\/api\/pub\/[^/]+\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel)|ledger-(?:my|order|confirm|bill|bill-order|bill-confirm)|mile-(?:my|list|rewards|redeem|redeem-cancel|proof|guardian|streak-repair|notice-read))$/;
+const LOAUTH = /^\/api\/pub\/(?:[^/]+\/loauth\/(?:google|kakao|naver)\/start|loauth\/(?:google|kakao|naver)\/callback)$/; /* QA7 학습자 소셜 로그인(학습자 모듈) — Java DdApiFilter.LOAUTH */
 const MEDIA_PUB = /^\/api\/media\/(?:f\/)?[^/]+$/; /* v35: 강의 파일 /api/media/f/:id 도 공개 조회 */
 const TUTOR_API = new Set(['GET /api/health', 'GET /api/config', 'POST /api/login', 'POST /api/logout', 'POST /api/password', 'GET /api/me', 'GET /api/me/devices', /* 보안 4차 #1 */ 'POST /api/login/mfa', 'POST /api/login/mfa/resend', 'GET /api/me/mfa', 'POST /api/me/mfa', 'DELETE /api/me/mfa', 'GET /api/session', 'POST /api/session/touch', 'POST /api/session/work', 'GET /api/me/sessions', 'POST /api/me/sessions/logout-others', 'GET /api/state', 'PUT /api/state', 'POST /api/export/log', 'POST /api/ai/messages', 'GET /api/ai/usage', 'GET /api/learners/progress', 'GET /api/cpl/summary', 'GET /api/cpl/exams', 'GET /api/cpl/logs', 'GET /api/cpl/exam-copy', 'GET /api/cpl/completion', 'GET /api/fac/overview', 'GET /api/fac/bookings', 'POST /api/fac/checkin', /* v41 원장: 교강사는 조회만 */ 'GET /api/ledger/units', 'GET /api/ledger/summary', 'GET /api/ledger/entries', 'GET /api/ledger/today', /* v42 마일리지: 교강사는 조회만 */ 'GET /api/mileage/config', 'GET /api/mileage/summary', 'GET /api/mileage/entries', 'GET /api/mileage/wallet']);
 const moduleOf = env => { const m = String(env.MODULE || '').trim(); if (m && !PAGE[m]) throw new Error('MODULE은 learner, tutor, admin 중 하나여야 합니다.'); return m; };
 function apiAllowed(mod, method, path) {
   if (!mod) return true;
   if (method === 'GET' && MEDIA_PUB.test(path)) return true; /* v34.5 게시 홈페이지 이미지는 모든 모듈에서 공개 */
-  if (mod === 'learner') return (method === 'GET' && (path === '/api/health' || path === '/api/config')) || PUB.test(path);
+  if (mod === 'learner') return (method === 'GET' && (path === '/api/health' || path === '/api/config')) || PUB.test(path) || LOAUTH.test(path);
   if (mod === 'tutor') return TUTOR_API.has(`${method} ${path}`);
-  return !PUB.test(path);
+  return !PUB.test(path) && !LOAUTH.test(path);
 }
 const mcpAllowed = mod => !mod || mod === 'admin';
 const roleAllowed = (mod, role) => mod === 'tutor' ? role === 'teacher' : mod === 'admin' ? role !== 'teacher' : mod !== 'learner';

@@ -43,6 +43,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.fac.service.FacService fac;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.ledger.service.LedgerService ledger;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.mileage.service.MileService mile;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.pii.service.impl.LearnerOAuthServiceImpl loauth; /* QA7 */
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.lev.service.LevService lev; /* v46 학습 이벤트 */
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private DdPiiCrypto pc; /* v46 대화 기록 암호화(PII_KEY, Node piiKeys().enc와 같은 키) */
     public PubServiceImpl(PubMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, PiiService pii, DdAiClient ai, egovframework.didisam.cpl.service.CplService cpl, DdStateCrypto crypt, egovframework.didisam.auth.service.AuthService auth, TenantTxMapper txm) { this.crypt = crypt; this.auth = auth; this.txm = txm;
@@ -56,6 +57,8 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             case "POST otp": return pii.otp(req, body, tid);
             case "POST signup": return pii.signup(req, res, body, tid);
             case "POST guardian": return pii.guardian(req, body, tid);
+            case "GET pending": case "DELETE pending": return pii.pending(req, res, tid); /* QA7 승인 대기 표 */
+            case "GET loauth": return new LinkedHashMap<>(Map.of("ready", loauth.ready())); /* QA7 키가 설정된 학습자 소셜 제공자(나머지는 화면에서 「준비 중」) */
             case "GET events": case "POST events": return events(req, body, tid, key);
             case "GET site": {
                 Object[] sl = tx.inTenant(tid, () -> { Map<String, Object> r = mapper.selectSitePub(tid); if (r == null || r.get("pub") == null) return null; JsonNode pb = parse((String) r.get("pub"));
