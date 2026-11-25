@@ -554,9 +554,9 @@
   let tk = 0;
   const check = () => { clearTimeout(tk); const h0 = location.hash; tk = setTimeout(() => { try {
     if (location.hash !== h0 || typeof SITE !== 'function' || !SITE()) return; const a = route().a; if (a === 'home') return;
-    const lm = document.getElementById('lm'); if (lm && blank(lm)) location.replace('#home');
+    const lm = document.getElementById('lm'); if ((lm && blank(lm)) || (LR.unk && LR.unk === a)) location.replace('#home');
   } catch (e) { } }, 450); };
-  const wrap = () => { const base = lrender; lrender = (...x) => { const r = base(...x); try { if (route().a === 'lm') { location.replace('#home'); return r; } check(); } catch (e) { } return r; }; }; // eslint-disable-line no-global-assign
+  const wrap = () => { const base = lrender; lrender = (...x) => { LR.unk = ''; const r = base(...x); try { if (route().a === 'lm') { location.replace('#home'); return r; } check(); } catch (e) { } return r; }; }; // eslint-disable-line no-global-assign
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(wrap, 0)); else setTimeout(wrap, 0);
   document.addEventListener('click', e => { const s = e.target.closest && e.target.closest('a.skip[href="#lm"]'); if (!s) return; e.preventDefault();
     const lm = document.getElementById('lm'); if (!lm) return; if (!lm.hasAttribute('tabindex')) lm.setAttribute('tabindex', '-1'); lm.focus(); try { lm.scrollIntoView({ block: 'start' }); } catch (x) { } }, true);

@@ -34,6 +34,7 @@
 
   /* 내 학습 화면 카드 */
   if (typeof viewMy === 'function') { const base = viewMy; viewMy = function (...a) { const h = base.apply(this, a); if (!on()) return h; // eslint-disable-line no-global-assign
+    { const me = String(LR.me && LR.me.sid || ''); if (ST.sid !== me) { ST.sid = me; ST.secs = null; ST.err = ''; ST.noreg = false; ST.cache = {}; } }
     let c; if (!ST.secs) { c = `<div class="mycard" id="lmsxMy"><div class="myhead"><h2>내 강의실</h2></div><p class="mini">${ST.err ? esc(ST.err) : '불러오는 중입니다.'}</p></div>`; if (!ST.busy.secs) { ST.busy.secs = 1; secs().catch(e => { ST.err = errMsg(e); ST.noreg = typeof lmsNoReg === 'function' && lmsNoReg(e); ST.secs = []; }).finally(() => { ST.busy.secs = 0; lrender(); }); } }
     else if (ST.noreg) c = `<div class="mycard" id="lmsxMy"><div class="myhead"><h2>내 강의실</h2></div>${lmsNoRegCard()}</div>`;
     else c = `<div class="mycard" id="lmsxMy"><div class="myhead"><h2>내 강의실</h2></div><p class="mini">주차별 학습 · 토론 · 위키 · 팀 · 동료 평가 · 게시판</p><ul class="lmsx-ul">${ST.secs.map(s => `<li><a href="${link(s.id, 'room')}"><b>${esc(s.title)}</b></a> <small>${esc(s.term)} · ${esc(s.course || '')}</small></li>`).join('') || '<li class="mini">이번 학기 강의실이 없습니다.</li>'}</ul></div>`;

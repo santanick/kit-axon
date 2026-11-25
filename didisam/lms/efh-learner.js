@@ -40,6 +40,7 @@
     const out = f(JSON.parse(JSON.stringify(body || {}))); window.save(); return JSON.parse(JSON.stringify(out));
   }
   function get(key, fn) {
+    { const me = String(LR.me && LR.me.sid || ''); if (L.sid !== me) { L.sid = me; L.cache = {}; L.err = {}; L.noreg = false; } } /* 다른 학습자로 다시 로그인하면 새로 받기 */
     if (key in L.cache) return L.cache[key];
     if (!L.busy[key]) { L.busy[key] = true; Promise.resolve().then(fn).then(v => { L.cache[key] = v; delete L.err[key]; }).catch(e => { L.err[key] = errMsg(e); if (typeof lmsNoReg === 'function' && lmsNoReg(e)) L.noreg = true; L.cache[key] = null; }).finally(() => { delete L.busy[key]; rer(); }); }
     return undefined;
