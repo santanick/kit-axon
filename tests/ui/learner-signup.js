@@ -114,7 +114,7 @@ const wait = ms => new Promise(k => setTimeout(k, ms));
       const L = await learner(Un.tid, 390, '#join'); nextSub = `kakao-univ-${Date.now()}`; await L.lp.click('.la-sb.kakao'); await L.lp.waitForSelector('#laJoin [name=sid]', { timeout: 15000 }).catch(() => { });
       ok(/학번 · 학과만 적으면/.test(await txt(L.lp)) && !(await L.lp.locator('#laJoin [name=email], #laJoin [name=pw]').count()), '대학 소셜 가입 화면: 학번 · 학과만');
       await L.lp.fill('#laJoin [name=sid]', '20269011'); await L.lp.fill('#laJoin [name=dept]', '컴퓨터공학과'); await consentAndSubmit(L.lp); await wait(800);
-      const me = await L.lp.evaluate(t => fetch(`/api/pub/${t}/me`).then(r => r.json()), Un.tid); ok(me.me && me.me.login === 'kakao', '대학 소셜 가입 완료 ' + JSON.stringify(me).slice(0, 120)); await L.c.close();
+      const me = await L.lp.evaluate(t => fetch(`/api/pub/${t}/me`).then(r => r.json()), Un.tid); ok(me.me && me.me.acct && me.me.acct.login === 'kakao', '대학 소셜 가입 완료 ' + JSON.stringify(me).slice(0, 120)); await L.c.close();
       const L2 = await learner(Un.tid, 1440); ok(await L2.lp.locator('.la-sb.kakao').count() > 0, '대학 로그인 화면에 카카오'); await L2.lp.click('.la-sb.kakao'); await wait(2500);
       const me2 = await L2.lp.evaluate(t => fetch(`/api/pub/${t}/me`).then(r => r.status), Un.tid); ok(me2 === 200, '다른 기기 카카오 로그인(대학) ' + me2); await L2.c.close(); }
   } catch (e) { fail++; console.error('✗ 예외', e && e.stack || e); }
