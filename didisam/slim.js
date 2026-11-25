@@ -214,7 +214,7 @@
       const f = UI.memF || 'all'; const L = typeof mbFiltered === 'function' ? mbFiltered() : S.members; const cnt = g => S.members.filter(m => m.grade === g).length; const T = typeof mbTeacher === 'function' && mbTeacher();
       const wait = cnt('승인 대기'); const gn2 = id => (S.groups.find(g => g.id === id) || {}).name || '';
       const sub = m => [gn2(m.group), m.grade !== '정회원' ? m.grade : '', m.last && m.last <= addDays(today(), -14) ? `${daysAgo(m.last)}일 미접속` : ''].filter(Boolean).join(' · ') || '정회원';
-      return SL.page(t('learner') + ' ' + S.members.filter(m => !m.withdrawn).length + '명', (T ? '' : `<button class="btn ghost" data-act="sl-memtable" data-v="1">표로 보기</button><button class="btn pri" data-act="mem-invite">+ 추가</button>`),
+      return SL.page(t('learner') + ' ' + S.members.filter(m => !m.withdrawn).length + '명', (T ? '' : `<button class="btn ghost" data-act="sl-memtable" data-v="1">표로 보기</button>${S.me.role === 'teacher' ? '' : '<button class="btn ghost" data-act="mem-xls">내려받기</button>'}<button class="btn pri" data-act="mem-invite">+ 추가</button>`) /* QA7 q2#9: 정 · 부운영자 명단 내려받기(사유 입력 · 기록) */,
         SL.chips('memF', [['all', '전체'], ['정회원', '정회원'], ['승인 대기', `승인 대기${wait ? ' ' + wait : ''}`], ['준회원', '준회원'], ['거절', '거절']], f) +
         (wait && f !== '승인 대기' && !T ? SL.sum(`<span>가입 승인 대기</span><span class="sl-n sl-w">${wait}명</span>`, 'sl-chip2', '승인 대기') : '') +
         SL.list(L.slice(0, 200).map(m => SL.row({ act: 'mem-open', v: m.id, name: m.name || m.nick || m.sid, sub: sub(m),

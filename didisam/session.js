@@ -68,7 +68,8 @@
       <label>자동 로그아웃(사용하지 않을 때) <select id="os-idle"${dis}>${opt('', o.idleMin == null ? '' : 'x', `기본 ${o.idleDefault}분`)}${[10, 20, 30, 40, 50, 60].map(m => opt(m, o.idleMin, m + '분')).join('')}</select></label>
       <label>계정당 동시 접속 <select id="os-max"${dis}>${[0, 1, 2, 3, 5].map(n => opt(n, o.maxSessions, n ? n + '대(가장 오래된 접속 종료)' : '제한 없음')).join('')}</select></label>
       <label>운영자 추가 인증 <select id="os-mfa"${dis}>${opt('email', o.mfa, '이메일 인증번호(기본)')}${opt('totp', o.mfa, '인증 앱(기관 전원)')}</select></label>
-      ${own ? '<p><button class="btn pri" data-act="os-save">저장</button></p>' : ''}`;
+      ${own ? '<p><button class="btn pri" data-act="os-save">저장</button></p>' : ''}
+      ${own && typeof window.accessReviewHTML === 'function' ? window.accessReviewHTML() : ''}`; /* QA7 q2#3: 접근권한 정기 검토 · 해외 운영자 로그인 차단 카드(정운영자) */
   }
   SS.sessHTML = sessHTML; SS.osecHTML = osecHTML;
   if (typeof VIEWS !== 'undefined' && VIEWS.settings) { const base = VIEWS.settings; VIEWS.settings = (...a) => {

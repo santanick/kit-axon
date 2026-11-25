@@ -51,11 +51,11 @@ const SID = m => m?.extra?.['학번'] || m?.name || '';
 { const base = VIEWS.members; VIEWS.members = () => { if (!PRIV() || (UI.mem && M(UI.mem))) return base();
   const f = UI.memF || 'all', q = (UI.memQ || '').toLowerCase();
   const L = S.members.filter(m => (f === 'all' || m.grade === f) && (!q || (SID(m) + (m.extra?.['학과'] || '')).toLowerCase().includes(q)));
-  return head('', `학번 · 학과만 저장합니다(이름 · 연락처 · 이메일 미수집, 학교 SSO 연동 예정) ${guideRef('features/member/student.md')}`, `<button class="btn" data-act="mem-xls">엑셀 내려받기</button><button class="btn pri" data-act="go" data-v="enroll">+ 학번 등록</button>`) +
+  return head('', `학번 · 학과만 저장합니다(이름 · 연락처 · 이메일 미수집, 학교 SSO 연동 예정) ${guideRef('features/member/student.md')}`, `${S.me.role === 'teacher' ? '' : '<button class="btn" data-act="mem-xls">엑셀 내려받기</button>'}<button class="btn pri" data-act="go" data-v="enroll">+ 학번 등록</button>`) +
     tabs('memF', [['all', '전체 ' + S.members.length], ['정회원', '정회원'], ['준회원', '준회원'], ['승인 대기', '승인 대기 ' + S.members.filter(m => m.grade === '승인 대기').length]], f) +
     `<div class="bar2"><input type="search" placeholder="학번 · 학과 검색" value="${esc(UI.memQ || '')}" data-chg="memQ" aria-label="검색">${f === '승인 대기' ? '<button class="btn sm pri" data-act="mem-approve">일괄 승인</button>' : ''}</div>` +
     table(['학번', t('group'), 'AI 진단', '등급', '가입일', '최근 접속', ''], L.map(m => [`<a href="#" data-act="mem-open" data-v="${m.id}">${esc(SID(m))}</a>`, esc(m.extra?.['학과'] || gn(m.group)), m.diag ? tag(m.diag) : '<span class="mini">미응시</span>', tag(m.grade, m.grade === '정회원' ? 'g' : m.grade === '준회원' ? '' : 'y'), m.joined, m.last <= addDays(today(), -30) ? tag(m.last, 'r') : m.last, `<button class="btn sm ghost" data-act="mem-open" data-v="${m.id}">상세</button>`])); }; }
-{ const base = ACT['mem-xls']; ACT['mem-xls'] = el => { if (!PRIV()) return base(el); downloadCSV(`${S.org.name}_학생_${today()}.csv`, ['학번', '학과', '등급', '가입일', '최근 접속', 'AI 진단'], S.members.map(m => [SID(m), m.extra?.['학과'] || '', m.grade, m.joined, m.last, m.diag || ''])); }; }
+{ const base = ACT['mem-xls']; ACT['mem-xls'] = el => { if (S.me.role === 'teacher') return toast('교수자 권한으로는 명단을 내려받을 수 없습니다.', 'warn'); if (!PRIV()) return base(el); downloadCSV(`${S.org.name}_학생_${today()}.csv`, ['학번', '학과', '등급', '가입일', '최근 접속', 'AI 진단'], S.members.map(m => [SID(m), m.extra?.['학과'] || '', m.grade, m.joined, m.last, m.diag || ''])); }; }
 ['mem-invite', 'mem-bulk'].forEach(k => { const base = ACT[k]; ACT[k] = el => { if (!PRIV()) return base(el); toast('대학은 이름 · 연락처를 받지 않습니다. 학번 등록(접근코드 발급)으로 안내합니다.'); go('enroll'); }; });
 /* 학생 상세: 이름 · 닉네임 · 이메일 · 연락처 칸을 없애고 학과 중복 제거 */
 AFTER.push(() => { if (!PRIV() || !UI.mem || CUR.tab !== 'members') return; let dept = 0;
