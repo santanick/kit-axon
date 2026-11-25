@@ -17,6 +17,8 @@
  *
  * 사용: node security/score.js [--json] [--gate 95] [--seed 경로] [--checklist 경로]
  *   --gate N  종합이 N 미만이면 종료 코드 1(CI · 배포 전 게이트용)
+ *   --snapshot 파일  ② · ③ 점수 스냅숏 JSON을 쓰고 종료 코드 0(이미지 빌드용 — 서버 /api/security/summary가 ①(DB)과 합쳐 종합 점수를 냅니다.
+ *                    이미지 안에는 근거 파일이 없어 정직성 검사 결과는 errors 수로만 남깁니다 — 정직성 게이트는 저장소에서 실행)
  */
 'use strict';
 const fs = require('fs');
@@ -113,6 +115,8 @@ function main(argv) {
   const seedPath = path.resolve(arg('--seed') || path.join(ROOT, 'security/findings/seed.json'));
   const ckPath = path.resolve(arg('--checklist') || path.join(ROOT, 'security/checklist.json'));
   const r = report(seedPath, ckPath);
+  const snap = arg('--snapshot');
+  if (snap) { fs.writeFileSync(snap, JSON.stringify({ checklist: r.checklist.score, cert: r.cert ? r.cert.score : null, seedTotal: r.total, tally: { checklist: r.checklist.tally, cert: r.cert ? r.cert.tally : null }, errors: r.errors.length, at: new Date().toISOString() }) + '\n'); return 0; }
   if (argv.includes('--json')) process.stdout.write(JSON.stringify(r, null, 2) + '\n');
   else {
     const v = r.vuln, c = r.checklist, k = r.cert, L = [];

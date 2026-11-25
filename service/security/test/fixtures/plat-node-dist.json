@@ -1,0 +1,56 @@
+[
+{
+"version": "v26.13.1",
+"date": "2026-11-10",
+"lts": "Lithium",
+"security": true
+},
+{
+"version": "v26.12.1",
+"date": "2026-10-21",
+"lts": false,
+"security": true
+},
+{
+"version": "v26.5.1",
+"date": "2026-07-28",
+"lts": false,
+"security": true
+},
+{
+"version": "v26.3.1",
+"date": "2026-06-17",
+"lts": false,
+"security": true
+},
+{
+"version": "v24.22.3",
+"date": "2026-11-10",
+"lts": "Krypton",
+"security": true
+},
+{
+"version": "v24.22.1",
+"date": "2026-10-20",
+"lts": "Krypton",
+"security": true
+},
+{
+"version": "v24.18.1",
+"date": "2026-07-28",
+"lts": "Krypton",
+"security": true
+},
+{
+"version": "v24.17.0",
+"date": "2026-06-17",
+"lts": "Krypton",
+"security": true
+},
+{
+"version": "v24.14.1",
+"date": "2026-03-24",
+"lts": "Krypton",
+"security": true
+}
+]

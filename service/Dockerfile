@@ -8,6 +8,10 @@ RUN --mount=type=secret,id=ca,required=false cd server && if [ -f /run/secrets/c
 COPY didisam ./didisam
 COPY service/build-public.js ./
 RUN node build-public.js ./didisam ./public
+# 가디언 보안 홈 종합 점수(② 체크리스트 · ③ 인증 기준 통제) 스냅숏 — ①은 서버가 DB에서 계산
+COPY security/score.js security/checklist.json ./sec/security/
+COPY security/findings/seed.json ./sec/security/findings/
+RUN node sec/security/score.js --snapshot /w/security-score.json
 
 # v32 미디어: 자막용 음성 인식(whisper.cpp) — 정적 빌드 + base 모델(다국어). 빌드 인자 WHISPER_MODEL_NAME으로 small 등 교체
 FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS whisper
@@ -36,6 +40,9 @@ ENV PATH=/opt/whisper:$PATH MEDIA_STT_CMD=/app/server/lms/media/stt-whispercpp.s
 WORKDIR /app
 COPY --from=build /w/server/node_modules ./server/node_modules
 COPY service/server/*.js service/server/package.json ./server/
+COPY service/security/kpi.js ./security/kpi.js
+COPY --from=build /w/security-score.json ./security-score.json
+ENV SECURITY_SCORE_FILE=/app/security-score.json
 COPY service/server/lms ./server/lms
 COPY service/server/fac ./server/fac
 COPY service/server/ledger ./server/ledger

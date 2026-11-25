@@ -12,12 +12,17 @@ WORKDIR /w
 COPY didisam ./didisam
 COPY service/build-public.js ./service/
 RUN cd service && node build-public.js ../didisam public
+# 가디언 보안 홈 종합 점수 스냅숏(② · ③) — Node 이미지와 같은 파일
+COPY security/score.js security/checklist.json ./sec/security/
+COPY security/findings/seed.json ./sec/security/findings/
+RUN node sec/security/score.js --snapshot /w/security-score.json
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /src/target/didisam-egov.war app.war
 COPY --from=pub /w/service/public ./public
-ENV PUBLIC_DIR=/app/public PORT=8080
+COPY --from=pub /w/security-score.json ./security-score.json
+ENV PUBLIC_DIR=/app/public PORT=8080 SECURITY_SCORE_FILE=/app/security-score.json
 USER 1000
 EXPOSE 8080
 CMD ["java", "-jar", "app.war"]

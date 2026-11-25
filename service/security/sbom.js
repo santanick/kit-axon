@@ -1,5 +1,5 @@
 'use strict';
-/* SBOM — package-lock.json(v2/v3) · pom.xml → 구성요소 목록(purl) + CycloneDX 1.5 JSON
+/* SBOM — package-lock.json(v2/v3) · pom.xml · composer.lock → 구성요소 목록(purl) + CycloneDX 1.5 JSON
    exposure: 운영 런타임 'prod' · 개발 전용 'dev'(npm dev · maven test). 버전이 BOM 관리라 pom에 없으면 version=null(판정은 '일부'). */
 const fs = require('node:fs'); const path = require('node:path'); const crypto = require('node:crypto');
 
@@ -9,6 +9,7 @@ function npmPurl(name, version) {
   return `pkg:npm/${n}${version ? '@' + version : ''}`;
 }
 const mavenPurl = (g, a, v) => `pkg:maven/${g}/${a}${v ? '@' + v : ''}`;
+const composerPurl = (n, v) => `pkg:composer/${n.split('/').map(enc).join('/')}${v ? '@' + v : ''}`;
 const basePurl = p => p.replace(/@[^@/]*$/, '');
 
 function parseNpmLock(json, location) {
@@ -53,14 +54,21 @@ function parsePom(xml, location) {
   return out;
 }
 
+/* composer.lock(PHP · WordPress 플러그인 등) → Packagist purl. packages-dev는 dev. 버전 앞 'v'는 뗀다 */
+function parseComposerLock(json, location) {
+  const out = [];
+  for (const [key, exposure] of [['packages', 'prod'], ['packages-dev', 'dev']]) for (const p of json[key] || []) { if (!p.name || !p.version) continue; const v = String(p.version).replace(/^v(?=\d)/, ''); out.push({ ecosystem: 'composer', name: p.name, version: v, purl: composerPurl(p.name, v), exposure, location, direct: true }); }
+  return out;
+}
+
 /* 저장소 기본 대상: Node 서버 lock + 전자정부 Java pom. 다른 파일은 opts.files로 추가 */
-const DEFAULT_FILES = ['service/server/package-lock.json', 'service-egov/pom.xml'];
+const DEFAULT_FILES = ['service/server/package-lock.json', 'service-egov/pom.xml', 'composer.lock']; // 없는 파일은 건너뜀
 function collectComponents(root, files = DEFAULT_FILES) {
   const comps = [];
   for (const rel of files) {
     const f = path.join(root, rel); if (!fs.existsSync(f)) continue;
     const raw = fs.readFileSync(f, 'utf8');
-    if (rel.endsWith('.json')) comps.push(...parseNpmLock(JSON.parse(raw), rel)); else if (rel.endsWith('.xml')) comps.push(...parsePom(raw, rel));
+    if (rel.endsWith('composer.lock')) comps.push(...parseComposerLock(JSON.parse(raw), rel)); else if (rel.endsWith('.json')) comps.push(...parseNpmLock(JSON.parse(raw), rel)); else if (rel.endsWith('.xml')) comps.push(...parsePom(raw, rel));
   }
   const seen = new Set(); return comps.filter(c => { const k = c.purl + '|' + c.location; if (seen.has(k)) return false; seen.add(k); return true; });
 }
@@ -79,4 +87,4 @@ function toCycloneDX(components, { name = 'didisam-v2', version = '0', now = new
 
 function buildSbom(root, opts = {}) { const components = collectComponents(root, opts.files); return { components, purls: [...new Set(components.filter(c => c.version).map(c => c.purl))], cyclonedx: toCycloneDX(components, opts) }; }
 
-module.exports = { parseNpmLock, parsePom, collectComponents, toCycloneDX, buildSbom, npmPurl, mavenPurl, basePurl, DEFAULT_FILES };
+module.exports = { parseNpmLock, parsePom, parseComposerLock, composerPurl, collectComponents, toCycloneDX, buildSbom, npmPurl, mavenPurl, basePurl, DEFAULT_FILES };

@@ -69,6 +69,14 @@ async function run(U, tag) {
     ok(!/hong@ex/.test(R.incDraft.j.notify) && /탐지 · 격리 · 복구/.test(R.incDraft.j.notify), t + ' 초안 가림 · 단계'); const ki = R.incsKill.j.rows.find(x => x.id === R.k1.j.incident); ok(ki && ki.killId === R.k1.j.kill.id && ki.type === 'key_leak' && ki.phase === 'contain', t + ' 긴급 차단 → 사고 자동 생성'); };
   chk(a, 'node'); chk(b, 'java');
   const tx = x => String(x || '').replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/g, 'T'); ok(tx(a.incDraft.j.notify) === tx(b.incDraft.j.notify) && tx(a.incDraft.j.report) === tx(b.incDraft.j.report), '초안 문구 Node = Java');
+  /* 5차 g2: 운영 지표(kpi) · 종합 점수(score · scoreParts)는 같은 DB에서 값까지 같아야 한다 — 같은 산타 계정으로 두 서버에 로그인해 바로 비교 */
+  const sumOf = async U => { const e = `sz1_${RUN}@santa.kr`; const r = await fetch(U + '/api/login', { method: 'POST', headers: { 'x-didisam': '1', 'content-type': 'application/json' }, body: JSON.stringify({ email: e, password: 'Passw0rd-z1z' }) }); const c = (r.headers.get('set-cookie') || '').split(';')[0];
+    return (await fetch(U + '/api/security/summary', { headers: { 'x-didisam': '1', cookie: c } })).json(); };
+  const [sa, sb] = [await sumOf(A), await sumOf(B)];
+  const KK = ['mttdH', 'mttrH', 'slaOverHigh', 'prCreated', 'prMerged', 'prAdoption', 'findings', 'falsePositive', 'falsePositiveRate'];
+  ok(sa.kpi && KK.every(k => k in sa.kpi), 'node kpi 키'); ok(JSON.stringify(sa.kpi) === JSON.stringify(sb.kpi), `kpi 값 node ${JSON.stringify(sa.kpi)} != java ${JSON.stringify(sb.kpi)}`);
+  ok(sa.score === sb.score && JSON.stringify(sa.scoreParts) === JSON.stringify(sb.scoreParts), `score node ${sa.score} ${JSON.stringify(sa.scoreParts)} != java ${sb.score} ${JSON.stringify(sb.scoreParts)}`);
+  ok(sa.kpi && sa.kpi.prCreated >= 2 && sa.kpi.findings >= 1, 'kpi 누적값(시나리오의 PR · Finding 반영)');
   await pool.query("delete from security.kill_switch where kday = ((now() at time zone 'Asia/Seoul')::date)"); await pool.end();
   console.log(`pass ${pass} fail ${fail}`); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
