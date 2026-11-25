@@ -132,6 +132,11 @@ async function live(br) {
         await pg.fill('[name=mfacode]', dev); await Promise.all([pg.waitForNavigation({ timeout: 8000 }).catch(() => {}), pg.click('[data-mfa-b=ok]')]);
         for (let k = 0; k < 10; k++) { if (await pg.evaluate(() => typeof S !== 'undefined' && S && S.org && S.me && typeof LIVE === 'object' && LIVE && LIVE.user).catch(() => false)) break; if (await pg.$('#onbTpl [data-act=onb-later]')) await pg.click('#onbTpl [data-act=onb-later]').catch(() => {}); await pg.waitForTimeout(800); }
         if (await pg.$('#onbTpl [data-act=onb-later]')) { await pg.click('#onbTpl [data-act=onb-later]').catch(() => {}); await pg.waitForTimeout(300); }
+        if (await pg.evaluate(() => (typeof S === 'undefined' || !S) && typeof LIVE === 'object' && LIVE && LIVE.user && LIVE.user.role === 'owner').catch(() => false)) { /* API로 넣은 기관 문서에는 메뉴(nav)가 없어 첫 화면이 기관 준비로 돌아간다 → 화면의 createOrg로 실제 기관 상태를 만든다 */
+          const sv = pg.waitForResponse(r => r.url().endsWith('/api/state') && r.request().method() === 'PUT', { timeout: 10000 }).catch(() => null);
+          await pg.evaluate(() => { createOrg('univ', 'QA 대학', 'lms'); render(); }); await sv; await pg.reload(); for (let k = 0; k < 20; k++) { if (await pg.evaluate(() => typeof S !== 'undefined' && S && S.me && S.nav).catch(() => false)) break; await pg.waitForTimeout(400); } }
+        const st = await pg.evaluate(() => ({ ok: typeof S !== 'undefined' && !!S && !!S.me, h: location.href, le: typeof LIVE === 'object' && LIVE ? [LIVE.err, !!LIVE.doc, LIVE.user && LIVE.user.role] : null, t: document.body.innerText.replace(/\s+/g, ' ').slice(0, 300) })).catch(e => ({ ok: false, t: e.message }));
+        if (!st.ok) throw new Error('로그인 뒤 화면 준비 안 됨 ' + JSON.stringify(st) + ' ' + errs.join(' | '));
         const r = await fn(pg); r.errs = errs; r.dlg = dlg; return r; } finally { await ctx.close(); } };
     const OSEC = async pg => pg.evaluate(async () => { const sl = ms => new Promise(k => setTimeout(k, ms)); const T = () => (document.querySelector('#main') || {}).innerText || ''; const toastT = () => [...document.querySelectorAll('#toasts > *')].map(x => x.innerText).join(' | ');
       const o = { role: LIVE.user.role }; slSetOpen('osec', true); go('settings'); render(); for (let i = 0; i < 30 && !/검토 완료 기록|정운영자만|해외/.test(T()); i++) await sl(150); await sl(300);
@@ -146,9 +151,11 @@ async function live(br) {
           slSetOpen('osec', true); go('settings'); render(); for (let i = 0; i < 20 && !document.getElementById('os-mfa'); i++) await sl(150); o.mfaSel = (document.getElementById('os-mfa') || {}).value;
           document.getElementById('os-mfa').value = 'email'; document.querySelector('[data-act="os-save"]').click(); await sl(900); o.mfaBack = (await api('GET', '/api/org/security')).mfa; } }
       /* 4) 회원 화면 내려받기 */
+      if (o.role === 'owner' && !(S.members || []).some(m => !m.withdrawn)) { /* 새 기관은 학생이 0명이라 내려받을 행이 없다 → 시험용 1명(정운영자 화면에서 저장해 부운영자도 같은 명단) */
+        S.members = S.members || []; S.members.push({ id: 'uq7m1', sid: '20261001', name: 'QA 학생', grade: '정회원', joined: today(), last: today(), extra: { '학과': '컴퓨터공학과' } }); save(); await sl(1500); }
       go('members'); render(); await sl(500); const dl = document.querySelector('#main [data-act="mem-xls"]'); o.dl = !!dl;
-      if (dl) { dl.click(); await sl(100); const why = document.querySelector('[name=why]'); if (why) { why.value = 'QA 명단 확인'; const b = [...document.querySelectorAll('button')].find(x => /^내려받기$/.test(x.innerText.trim()) && x.closest('.modal, #modal, dialog, .md, [role=dialog]')); if (b) b.click(); }
-        let ex = null; for (let i = 0; i < 20 && !ex; i++) { await sl(200); ex = null; } o.dlModal = !!why; }
+      if (dl) { dl.click(); await sl(100); const why = document.querySelector('[name=why]'); if (why) { why.value = 'QA 명단 확인'; const b = [...document.querySelectorAll('button')].find(x => /^내려받기$/.test(x.innerText.trim()) && x.closest('#modal')); if (b) b.click(); }
+        await sl(1500); o.dlModal = !!why; o.memN = (S.members || []).filter(m => !m.withdrawn).length; }
       /* 교수자 · 부운영자 */
       o.tabs = Object.keys(S.nav.tabs).flatMap(w => WS[w] ? wsTabs(w) : []); o.rail = [...document.querySelectorAll('[data-act="go"].ri')].map(b => b.dataset.v);
       if (o.role === 'teacher') { go('lmsm'); render(); await sl(50); o.goLmsm = CUR.ws + '/' + CUR.tab + ' ' + toastT(); }
@@ -161,14 +168,14 @@ async function live(br) {
     ok(/기록했습니다/.test(ro.revMsg || '') && ro.revDue === false && ro.revBy === own, `권한 검토 완료 기록 → 이번 분기 검토 완료 (${ro.revMsg})`);
     ok(/저장했습니다/.test(ro.mfaToast || '') && ro.mfaApi === 'totp' && ro.mfaSel === 'totp', `2단계 방식 인증 앱 저장 → 재조회 totp (${ro.mfaToast})`);
     ok(ro.mfaBack === 'email', '2단계 방식 이메일로 되돌림');
-    ok(ro.dl && ro.dlModal, '정운영자 회원 화면 내려받기 → 사유 입력');
+    ok(ro.dl && (ro.dlModal || ro.dlg.some(x => /^prompt:/.test(x))), `정운영자 회원 화면 내려받기 → 사유 입력 (${ro.memN}명 · ${ro.dlg.join(' / ')})`);
     ok(!ro.errs.length, '정운영자 페이지 오류 0 ' + ro.errs.slice(0, 3).join(' | '));
     const m390 = await run(own, { width: 390, height: 844 }, pg => pg.evaluate(async () => { const sl = ms => new Promise(k => setTimeout(k, ms)); slSetOpen('osec', true); go('settings'); render(); for (let i = 0; i < 30 && !document.querySelector('.ar-ok'); i++) await sl(150); return { card: !!document.querySelector('.ar-ok'), over: document.documentElement.scrollWidth - innerWidth }; }));
     ok(m390.card && m390.over <= 2, `정운영자 390: 카드 표시 · 넘침 ${m390.over}`);
     const lg = await (await fetch(B + '/api/audit?limit=50', { headers: { ...H, cookie: ck } }).catch(() => null))?.json?.().catch(() => null);
     const sub = await run(staff.sub, { width: 1440, height: 900 }, OSEC);
     ok(!sub.card, '부운영자: 접근권한 검토 카드 없음(정운영자 전용)');
-    ok(sub.dl && sub.dlModal, '부운영자 회원 화면 내려받기 → 사유 입력');
+    ok(sub.dl && (sub.dlModal || sub.dlg.some(x => /^prompt:/.test(x))), `부운영자 회원 화면 내려받기 → 사유 입력 (${sub.memN}명 · ${sub.dlg.join(' / ')})`);
     ok(!sub.errs.length, '부운영자 페이지 오류 0 ' + sub.errs.slice(0, 3).join(' | '));
     const te = await run(staff.teacher, { width: 1440, height: 900 }, OSEC);
     ok(!te.card && !te.dl, '교수자: 보안 카드 · 내려받기 버튼 없음');
