@@ -384,3 +384,65 @@
 
   /* 모달이 시트 위에 뜨게(시트 안에서 기존 동작이 모달을 열 때) — CSS는 slim-a.css */
 })();
+
+/* qa7 d3 · 실서버 「운영자 · 기록」 — 로컬 S.admins · S.audit 대신 서버 계정(/api/staff)과 서버 감사 기록(/api/audit · /api/audit/verify)을 쓴다.
+   시연판(서버 없음)은 지금처럼 로컬 화면. 정운영자 전용(서버도 403). 초대 메일은 서버 규칙 그대로 보내지 않고, 임시 비밀번호를 이 창에서 한 번만 보여 준다. */
+(() => {
+  'use strict';
+  const ON = () => typeof LIVE !== 'undefined' && LIVE && LIVE.tenant && typeof api === 'function';
+  const own = () => S && S.me && S.me.role === 'owner';
+  const em = e => typeof window.errMsg === 'function' ? window.errMsg(e, '서버에 연결하지 못했습니다.') : (e && e.message) || '서버에 연결하지 못했습니다.';
+  const D = window.STAFF_LIVE = { staff: null, audit: null, verify: null, err: '', busy: false };
+  const RLN = { owner: '정운영자', sub: '부운영자', teacher: () => (typeof t === 'function' ? t('teacher') : '교수자') };
+  const rn = r => { const v = RLN[r]; return typeof v === 'function' ? v() : v || r; };
+  const ACTK = { 'staff.create': '운영자 초대', 'staff.remove': '운영자 삭제', 'staff.role': '역할 변경', 'password.change': '비밀번호 변경', 'login': '로그인', 'login.newdevice': '새 기기 로그인', 'export': '내려받기', 'state.save': '설정 저장' };
+  const kindOf = a => String(a || '').split('.')[0];
+  const KINDN = { staff: '운영자', login: '로그인', password: '비밀번호', export: '내려받기', state: '설정', mfa: '2단계 인증', key: 'API 키', keys: 'API 키', org: '기관 설정', tenant: '기관', ai: 'AI', cpl: '규정 준수', security: '보안' };
+  const kst = v => { const d = new Date(v); if (isNaN(d)) return String(v || ''); const k = new Date(d.getTime() + 9 * 3600e3).toISOString(); return k.slice(0, 10) + ' ' + k.slice(11, 16); };
+  const det = d => { if (d == null || d === '') return ''; let o = d; if (typeof d === 'string') { try { o = JSON.parse(d); } catch (e) { return d.slice(0, 120); } } if (typeof o !== 'object') return String(o).slice(0, 120); return Object.entries(o).filter(([, v]) => v != null && typeof v !== 'object').map(([k, v]) => `${k}: ${v}`).join(' · ').slice(0, 160); };
+  async function load(force) {
+    if (D.busy || (!force && D.staff && D.audit)) return; D.busy = true; D.err = '';
+    try { const [s, a, v] = await Promise.all([api('GET', '/api/staff'), api('GET', '/api/audit'), api('GET', '/api/audit/verify').catch(e => ({ err: em(e) }))]); D.staff = s.rows || []; D.audit = a.rows || []; D.verify = v; }
+    catch (e) { D.err = em(e); D.staff = D.staff || []; D.audit = D.audit || []; }
+    D.busy = false; if (CUR && CUR.tab === 'admins') render();
+  }
+  window.staffLiveReload = () => load(true);
+  const F = () => UI.audF = UI.audF || { days: '30', who: '', kind: '' };
+  const filtered = () => { const f = F(); const since = f.days === 'all' ? 0 : Date.now() - (+f.days) * 864e5;
+    return (D.audit || []).filter(r => (!since || new Date(r.at).getTime() >= since) && (!f.who || r.actor === f.who) && (!f.kind || kindOf(r.action) === f.kind)); };
+  function view() {
+    if (!own()) return SL.page('운영자 · 기록', '', SL.note('🔒', '운영자 · 기록은 정운영자만 볼 수 있습니다', '운영자 초대 · 역할 변경과 감사 기록은 정운영자 계정에서 관리합니다.'));
+    if (!D.staff || !D.audit) { load(); return SL.page('운영자 · 기록', '', '<div class="empty">서버에서 운영자 계정과 감사 기록을 불러오는 중입니다…</div>'); }
+    const me = (LIVE.user && LIVE.user.email || '').toLowerCase(); const f = F(); const L = filtered();
+    const staff = D.staff.map(r => { const self = r.email.toLowerCase() === me, ow = r.role === 'owner';
+      return `<tr data-email="${esc(r.email)}"><td><b>${esc(r.email)}</b>${self ? ' <small>(나)</small>' : ''}</td><td>${ow ? esc(rn('owner')) : `<select data-chg="stf-role" data-v="${esc(r.email)}" aria-label="${esc(r.email)} 권한">${['sub', 'teacher'].map(x => `<option value="${x}" ${r.role === x ? 'selected' : ''}>${esc(rn(x))}</option>`).join('')}</select>`}</td><td>${r.last_login ? esc(kst(r.last_login)) : '<small>아직 로그인하지 않음</small>'}</td><td>${ow ? '' : `<button type="button" class="btn sm ghost" data-act="stf-del" data-v="${esc(r.email)}">삭제</button>`}</td></tr>`; }).join('');
+    const v = D.verify || {}; const vtag = v.err ? `<span class="tag y">무결성 확인 실패 · ${esc(v.err)}</span>` : v.ok ? `<span class="tag g">무결성 확인됨 · ${esc(String(v.n ?? L.length))}건</span>` : `<span class="tag r">기록 변조 의심${v.brokenAt ? ' · ' + esc(String(v.brokenAt)) + '번째' : ''}${v.reason ? ' · ' + esc(String(v.reason)) : ''}</span>`;
+    const who = [...new Set(D.audit.map(r => r.actor).filter(Boolean))].sort(); const kinds = [...new Set(D.audit.map(r => kindOf(r.action)).filter(Boolean))].sort();
+    const sel = (k, opts, cur, label) => `<label class="fl" style="flex:1;min-width:140px">${esc(label)}<select data-chg="aud-f" data-k="${k}" aria-label="${esc(label)}">${opts.map(([val, l]) => `<option value="${esc(val)}" ${cur === val ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+    return SL.page('운영자 · 기록', `<button type="button" class="btn ghost" data-act="stf-reload">새로 고침</button><button type="button" class="btn pri" data-act="stf-new">+ 운영자</button>`,
+      (D.err ? `<div class="sl-offnote" role="alert"><span><b>서버 기록을 불러오지 못했습니다.</b> <small>${esc(D.err)}</small></span></div>` : '') +
+      `<div class="card" id="stfCard"><div class="ch"><b>운영자 계정</b><small>서버 로그인 계정 ${D.staff.length}개 · 초대하면 바로 로그인할 수 있는 계정이 만들어집니다</small></div><div class="tw"><table><thead><tr><th>이메일</th><th>권한</th><th>최근 로그인</th><th></th></tr></thead><tbody>${staff || '<tr><td colspan="4">계정이 없습니다.</td></tr>'}</tbody></table></div></div>` +
+      `<div class="card" id="audCard"><div class="ch"><b>감사 기록</b><small>서버 기록 · 최근 200건 중 ${L.length}건</small>${vtag}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">${sel('days', [['7', '최근 7일'], ['30', '최근 30일'], ['90', '최근 90일'], ['all', '전체']], f.days, '기간')}${sel('who', [['', '모든 사람'], ...who.map(x => [x, x])], f.who, '사람')}${sel('kind', [['', '모든 종류'], ...kinds.map(x => [x, KINDN[x] || x])], f.kind, '종류')}<button type="button" class="btn" data-act="aud-dl">내려받기</button></div>
+        <div class="tw"><table><thead><tr><th>시각</th><th>작업자</th><th>작업</th><th>내용</th></tr></thead><tbody>${L.map(r => `<tr><td>${esc(kst(r.at))}</td><td>${esc(r.actor || '')}</td><td>${esc(ACTK[r.action] || r.action || '')}</td><td><small>${esc(det(r.detail))}</small></td></tr>`).join('') || '<tr><td colspan="4">조건에 맞는 기록이 없습니다.</td></tr>'}</tbody></table></div></div>`);
+  }
+  const V0 = VIEWS.admins; if (typeof V0 === 'function') VIEWS.admins = (...a) => ON() && S && S.org ? view() : V0(...a);
+  /* 시연판 「+ 운영자」도 실서버에서 누르면 서버 초대로 */
+  const syncLocal = (email, role, del) => { try { S.admins = S.admins || []; const i = S.admins.findIndex(x => String(x.email || '').toLowerCase() === email); if (del) { if (i >= 0) S.admins.splice(i, 1); } else if (i >= 0) S.admins[i].role = role; else S.admins.push({ id: uid('a'), name: email.split('@')[0], email, role, classes: [] }); save(); } catch (e) { console.error(e); } };
+  const NEW = () => modal('운영자 초대', `<label class="fl">이메일<input name="e" type="email" maxlength="120" autocomplete="off"></label><label class="fl">권한<select name="r"><option value="sub">${esc(rn('sub'))}</option><option value="teacher">${esc(rn('teacher'))}</option></select></label><p class="mini">초대하면 서버에 로그인 계정이 만들어지고 임시 비밀번호가 한 번만 표시됩니다. 첫 로그인 때 비밀번호를 바꾸고 2단계 인증을 거칩니다.</p>`,
+    [{ id: 'c', label: '취소' }, { id: 'ok', label: '초대', kind: 'pri', run: w => { const e = fv(w, 'e').trim().toLowerCase(), r = fv(w, 'r'); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { toast('이메일 형식을 확인하십시오.', 'warn'); return false; }
+      api('POST', '/api/staff', { email: e, role: r }).then(x => { syncLocal(e, r); load(true);
+        modal('임시 비밀번호', `<p><b>${esc(e)}</b> 계정을 만들었습니다(${esc(rn(r))}).</p><p>초대 메일 발송은 설정되어 있지 않습니다. 아래 임시 비밀번호를 안전한 경로로 직접 전달하고, 첫 로그인 후 바꾸도록 안내하십시오. 이 비밀번호는 이 창에서 한 번만 표시합니다.</p><p><code id="stfPw">${esc(x.password)}</code></p>`, [{ id: 'c', label: '닫기' }]); })
+        .catch(x => toast(em(x), 'warn')); } }]);
+  ACT['stf-new'] = () => { if (!own()) { toast('운영자 초대는 정운영자만 할 수 있습니다.', 'warn'); return; } NEW(); };
+  { const b = ACT['adm-new']; ACT['adm-new'] = (...a) => ON() ? ACT['stf-new']() : b && b(...a); }
+  ACT['stf-reload'] = () => { D.staff = D.audit = null; render(); };
+  ACT['stf-role'] = el => { const e = el.dataset.v, r = el.value; api('POST', '/api/staff/role', { email: e, role: r }).then(() => { syncLocal(e, r); toast(`${e} 권한을 ${rn(r)}(으)로 바꿨습니다. 그 계정은 다시 로그인해야 합니다.`, 'ok'); load(true); }).catch(x => { toast(em(x), 'warn'); load(true); }); };
+  ACT['stf-del'] = el => { const e = el.dataset.v; modal('운영자 삭제', `<p><b>${esc(e)}</b> 계정을 삭제하면 바로 로그인할 수 없습니다. 기록은 감사 기록에 남습니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '삭제', kind: 'red', run: () => { api('POST', '/api/staff/remove', { email: e }).then(() => { syncLocal(e, '', true); toast(`${e} 계정을 삭제했습니다.`, 'ok'); load(true); }).catch(x => toast(em(x), 'warn')); } }]); };
+  ACT['aud-f'] = el => { F()[el.dataset.k] = el.value; render(); };
+  ACT['aud-dl'] = () => { const L = filtered(); if (!L.length) { toast('내려받을 기록이 없습니다.', 'warn'); return; } const cols = ['시각', '작업자', '작업', '내용']; const rows = L.map(r => [kst(r.at), r.actor || '', ACTK[r.action] || r.action || '', det(r.detail)]);
+    const go2 = g => { if (!g) return; downloadCSV(`감사기록_${today()}.csv`, cols, g.rows); toast(`감사 기록 ${g.rows.length}건을 내려받았습니다.`, 'ok'); };
+    (typeof window.exportGuard === 'function' ? window.exportGuard('audit_csv', rows, { cols }) : Promise.resolve({ rows })).then(go2).catch(x => toast(em(x), 'warn')); };
+  /* 다른 계정 · 기관으로 바뀌면 다시 불러온다 */
+  AFTER.push(cur => { if (cur.tab !== 'admins') return; const k = ON() ? (LIVE.tenant.tid || '') + '|' + ((LIVE.user || {}).email || '') : ''; if (D.key !== k) { D.key = k; D.staff = D.audit = null; } });
+})();

@@ -522,6 +522,15 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       try { await pool.query('insert into users (tenant_id, email, pw, role, pw_temp) values ($1, $2, $3, $4, true)', [a.tid, email, pw, role]); } catch (e) { if (e && e.code === '23505') throw new HttpErr(409, '이미 가입된 이메일입니다. 로그인하세요.', 'exists'); throw e; }
       await inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'staff.create', { email, role })); return { email, role, password };
     },
+    /* qa7 d3: 운영자 · 기록 화면에서 역할 변경(부운영자 ↔ 교수자). 정운영자 계정은 바꾸지 않고, 바뀐 계정의 다른 세션은 끊어 새 권한으로 다시 로그인하게 한다(Java 동일) */
+    'POST /api/staff/role': async req => {
+      const a = await needOwner(req); const b = await readBody(req, 4096); const email = String(b.email || '').trim().toLowerCase(); const role = String(b.role || '');
+      if (!['teacher', 'sub'].includes(role)) throw new HttpErr(400, '권한이 올바르지 않습니다.', 'staff_role');
+      const r = await pool.query("update users set role = $3 where tenant_id = $1 and lower(email) = $2 and role <> 'owner' returning id", [a.tid, email, role]);
+      if (!r.rowCount) throw new HttpErr(404, '대상 계정이 없습니다.', 'staff_missing');
+      await pool.query('delete from sessions where user_id = $1', [r.rows[0].id]);
+      await inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'staff.role', { email, role })); return { email, role };
+    },
     'POST /api/staff/remove': async req => {
       const a = await needOwner(req); const b = await readBody(req, 4096); const email = String(b.email || '').trim().toLowerCase();
       const r = await pool.query("delete from users where tenant_id = $1 and lower(email) = $2 and role <> 'owner' returning id", [a.tid, email]);

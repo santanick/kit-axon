@@ -45,8 +45,9 @@ function judge(tag, mode, role, r) {
   if (!secOk) ok(sec.every(x => x.msg.trim()), `${tag} ${role}: 보안 못 켤 때 이유 안내`, sec);
   if (mode === 'nonsanta') { ok(sec.every(x => /보안 메뉴는 산타 관리자 전용입니다/.test(x.msg) || role === 'teacher'), `${tag} ${role}: 비산타 보안 안내 문구`, sec); ok(!r.listed.security && !r.listed.findSec, `${tag} ${role}: 비산타 메뉴 목록 · 메뉴 찾기에 보안 없음`, r.listed); }
   if (mode !== 'nonsanta' && role === 'owner') ok(r.listed.security, `${tag} owner: 메뉴 목록에 보안 스위치`, r.listed);
-  const admOk = role !== 'teacher';
-  ok(adm.every(x => x.shown === admOk), `${tag} ${role}: 운영자 · 로그 ${admOk ? '켜짐' : '켜지지 않음(교수자)'}`, adm);
+  const admOk = role === 'owner'; /* qa7 d3: 메뉴 구성은 정운영자만(부운영자 · 교수자는 이유 안내) */
+  ok(adm.every(x => x.shown === admOk), `${tag} ${role}: 운영자 · 로그 ${admOk ? '켜짐' : '켜지지 않음(정운영자 전용)'}`, adm);
+  if (!admOk) ok(adm.every(x => x.msg.trim()), `${tag} ${role}: 운영자 · 로그 못 켤 때 이유 안내`, adm);
   if (role === 'owner') ok(r.listed.admins, `${tag} owner: 메뉴 목록에 운영자 · 로그 스위치`, r.listed);
   ok(!/켰습니다/.test(r.ai2) || r.ai2shown, `${tag} ${role}: AI 「운영자 기록 메뉴 켜줘」 응답 = 실제`, { ai2: r.ai2, shown: r.ai2shown });
   if (mode === 'santa') ok(r.santa === true, `${tag}: 서버 santa 플래그`, r.santa);
@@ -98,7 +99,7 @@ async function mobileFind(p, tag) {
 
   /* ───── ②③ 실서버 ───── */
   if (process.env.LIVE !== '0') {
-    const pub = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-pub-')); cp.execFileSync(process.execPath, [path.join(SVC, 'build-public.js'), DEMO, pub], { cwd: SVC, stdio: 'ignore' });
+    const pub = process.env.PUB_DIR || fs.mkdtempSync(path.join(os.tmpdir(), 'mt-pub-')); if (!process.env.PUB_DIR) cp.execFileSync(process.execPath, [path.join(SVC, 'build-public.js'), DEMO, pub], { cwd: SVC, stdio: 'ignore' }); /* PUB_DIR: 이미 만든 운영용 public(디스크 절약) */
     const stamp = Date.now().toString(36);
     for (const [mode, port] of [['nonsanta', 9981], ['santa', 9982]]) {
       const em = TYPES.map(([t, e]) => `mt-${mode[0]}-${t}${e || ''}-${stamp}@qa.kr`); const PW = 'MenuTest2026ok';
@@ -127,7 +128,7 @@ async function mobileFind(p, tag) {
           ok(!p.errs.length, `${tag} 페이지 오류 없음`, p.errs.slice(0, 4)); await ctx.close(); }
       } finally { ch.kill('SIGKILL'); await wait(300); try { cp.execSync(`fuser -k -n tcp ${port}`, { stdio: 'ignore' }); } catch (e) { } }
     }
-    fs.rmSync(pub, { recursive: true, force: true });
+    if (!process.env.PUB_DIR) fs.rmSync(pub, { recursive: true, force: true });
   }
   await BR.close();
   console.log(`menu-toggle: ${pass} 통과 · ${fail} 실패 (${Math.round((Date.now() - T0) / 1000)}초)`); process.exit(fail ? 1 : 0);

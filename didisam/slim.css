@@ -282,3 +282,9 @@ body:has(#slSheet) .mwrap{z-index:96}
 #main .v47-dqn input{width:72px;border:0;outline:0;background:none;font-size:15px;font-weight:800;text-align:right;color:inherit}
 #main .v47-dqn:focus-within{border-color:var(--ink,#2A2B2B)}
 #main .v47-dqn em{font-style:normal;font-size:14px;font-weight:700}
+/* qa7 d3: 메뉴 카드 전체가 스위치 · 꺼진 메뉴 안내 */
+.sl-mrow{cursor:pointer}
+.sl-mrow:focus-visible{outline:2px solid var(--ink,#1A1A1A);outline-offset:2px}
+.sl-mrow .sl-sw{display:inline-block;pointer-events:none}
+.sl-offnote{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--g100);border-radius:14px;padding:12px 16px;margin:0 0 14px;flex-wrap:wrap}
+.sl-offnote small{display:block;color:var(--g700);margin-top:2px}

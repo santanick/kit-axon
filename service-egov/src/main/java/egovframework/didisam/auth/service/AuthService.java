@@ -32,4 +32,5 @@ public interface AuthService {
     Map<String, Object> staffList(Map<String, Object> a) throws Exception;
     Map<String, Object> staffCreate(Map<String, Object> a, JsonNode b) throws Exception;
     Map<String, Object> staffRemove(Map<String, Object> a, JsonNode b) throws Exception;
+    Map<String, Object> staffRole(Map<String, Object> a, JsonNode b) throws Exception;
 }

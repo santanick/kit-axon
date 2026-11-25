@@ -43,7 +43,7 @@
     facility: ['class', 'attend', 'members', 'enroll', 'fac', 'ledger', 'sales', 'board', 'message', 'docs', 'site']
   };
   window.PUB_ESS = ESS;
-  if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { try { if (isPub()) return ESS[pubEd()].filter(id => MENU[id]); } catch (e) { } return base(...a); }; }
+  if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { try { if (isPub()) { const E = ESS[pubEd()].filter(id => MENU[id]); return MENU.admins && !E.includes('admins') ? [...E, 'admins'] : E; } /* qa7 d3: 운영자 · 기록 기본 켬(slim.js와 같게) */ } catch (e) { } return base(...a); }; }
   /* 법정의무교육 메뉴: 기업 + 공공 직원 교육형(P1-F02). only 값은 지금 기관이 쓸 수 있으면 그 유형을 돌려준다 */
   if (MENU.compliance) try { Object.defineProperty(MENU.compliance, 'only', { configurable: true, enumerable: true, get() { return isPub() && pubEd() === 'staff' ? 'public' : 'corp'; } }); } catch (e) { }
 

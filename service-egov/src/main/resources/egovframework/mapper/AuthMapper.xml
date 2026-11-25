@@ -29,6 +29,8 @@
   <update id="updatePw">update users set pw = #{pw}, pw_temp = false where id = cast(#{uid} as uuid)</update>
   <delete id="deleteOtherSessions">delete from sessions where user_id = cast(#{uid} as uuid) and id &lt;&gt; #{sid}</delete>
   <select id="selectStaff" resultType="map">select email, role, to_char(last_login at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') last_login from users where tenant_id = #{tid} order by email</select>
+  <select id="updateStaffRole" resultType="string" flushCache="true" useCache="false">update users set role = #{role} where tenant_id = #{tid} and lower(email) = #{email} and role &lt;&gt; 'owner' returning cast(id as text)</select>
+  <delete id="deleteUserSessions">delete from sessions where user_id = cast(#{uid} as uuid)</delete>
   <delete id="deleteStaff">delete from users where tenant_id = #{tid} and lower(email) = #{email} and role &lt;&gt; 'owner'</delete>
   <select id="selectMe" resultType="map">
     select t.id tid, t.name, t.type, t.mode, #{email}::text email, u.role, u.pw_temp from tenants t join users u on u.tenant_id = t.id where u.id = cast(#{uid} as uuid)
