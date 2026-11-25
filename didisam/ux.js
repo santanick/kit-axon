@@ -156,7 +156,7 @@ function uxTop() {
     ap.insertAdjacentHTML('afterbegin', `<div class="uxacs"><small>보기 설정</small></div><hr>`); const box = ap.querySelector('.uxacs');
     ['#langSel', '#roleSel'].forEach(sel => { const el = top.querySelector('.topr > ' + sel); if (el) { const l = document.createElement('label'); l.textContent = sel === '#langSel' ? '화면 언어' : '권한별 화면'; l.appendChild(el); box.appendChild(l); } });
   }
-  const r = top.querySelector('.topr'); if (r && !r.querySelector('[data-act=ux-find]')) r.insertAdjacentHTML('afterbegin', `<button type="button" class="uxfind" data-act="ux-find" title="메뉴 찾기 (Ctrl+/)" aria-label="메뉴 찾기">${ic('search', 18)}<span>메뉴 찾기</span></button>`);
+  const r = top.querySelector('.topr'); if (r && !r.querySelector('[data-act=ux-find]')) r.insertAdjacentHTML('afterbegin', `<button type="button" class="uxfind" data-act="ux-find" title="메뉴 찾기 (Ctrl+/)" aria-label="메뉴 찾기(검색 창)" aria-haspopup="dialog">${ic('search', 18)}<span>메뉴 찾기</span></button>`);
   /* v43 G2: 새 기관의 임시 홈페이지 주소 — 머리 줄 안 작은 안내(본문을 가리지 않음, 닫거나 주소를 바꾸면 사라짐) */
   { const old = top.querySelector('.g2-dom'); const on = UI.tmpDom && S && S.org && S.org.domain === UI.tmpDom && !(typeof scn === 'function' && scn() === 'teacher');
     if (!on && old) old.remove();

@@ -112,7 +112,7 @@
     const sec = W3.section(); if (sec === undefined) return W3.loading; if (sec.__err) return `<div class="empty">${esc(sec.__err)}</div>`;
     const C = W3.get('contents:' + sec.section_id, 'GET', '/api/lms/i/contents', { section_id: sec.section_id }); if (C === undefined) return W3.loading; if (C.__err) return `<div class="empty">${esc(C.__err)}</div>`;
     if (!C.length && (S && S.org && S.org.empty)) return `<div class="empty">이 분반에 올린 강의 영상이 없습니다.<small class="efh-note">강의 영상 관리에서 영상을 올리고 차시에 배치하면 진도 · 학습시간이 기록됩니다.</small><button class="btn sm" data-act="go" data-v="lmsv">강의 영상 관리로 가기</button></div>`;
-    if (!C.length && !W3.busy.iseed) { W3.busy.iseed = 1; W3.call('POST', '/api/lms/i/seed', { section_id: sec.section_id }).finally(() => { delete W3.busy.iseed; W3.drop('contents:'); render(); }); return W3.loading; }
+    if (!C.length && !W3.busy.iseed && !(W3.tried = W3.tried || {})['i:' + sec.section_id]) { W3.busy.iseed = 1; W3.tried['i:' + sec.section_id] = 1; /* qa7 d1: 분반당 한 번만(빈 결과면 다시 준비하지 않음 — render 반복 방지) */ W3.call('POST', '/api/lms/i/seed', { section_id: sec.section_id }).finally(() => { delete W3.busy.iseed; W3.drop('contents:'); setTimeout(render, 0); }); return W3.loading; }
     const t = UI.w3iT || 'player'; if (t !== 'player' && P.st) endPlay(true);
     UI.w3iC = UI.w3iC && C.find(c => c.content_id === UI.w3iC) ? UI.w3iC : C[0]?.content_id;
     const csel = `<select data-chg="w3i-c" aria-label="콘텐츠">${C.map(c => `<option value="${esc(c.content_id)}" ${c.content_id === UI.w3iC ? 'selected' : ''}>${c.week_no}주 ${c.seq}차 · ${esc(c.title)} (${mmss(c.duration_sec)})</option>`).join('')}</select>`;

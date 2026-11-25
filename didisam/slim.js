@@ -86,7 +86,7 @@
       L.insertAdjacentHTML('beforeend', off.map(x => `<button type="button" role="listitem" class="uxoff" data-act="ux-on" data-v="${esc(x.id)}" data-k="${esc((mlabel(x.id) + ' ' + lab(WS[x.w] || { label: '' }) + ' ' + (D[x.id] || '') + ' ' + (SYN2[x.id] || '')).toLowerCase())}"><b>${esc(mlabel(x.id))} <em class="uxoff-t">꺼져 있음</em></b><small>${esc(lab(WS[x.w] || { label: '' }))}${D[x.id] || mdOf(x.id)[0] ? ' · ' + esc(D[x.id] || mdOf(x.id)[0]) : ''}</small><span class="uxon">켜기</span></button>`).join(''));
       const p = document.querySelector('#modal .mini'); if (p && /꺼 둔 메뉴/.test(p.textContent)) p.textContent = '꺼져 있는 메뉴도 찾을 수 있습니다. [켜기]를 누르면 왼쪽 메뉴에 생기고 바로 열립니다.';
       const q = document.querySelector('#modal .uxq'); if (q && q.value) q.dispatchEvent(new Event('input')); } catch (e) { console.error(e); } return r; }; }
-  ACT['ux-on'] = el => { const id = el.dataset.v; closeModal(); if (typeof slMenuSet === 'function') slMenuSet(id, true); try { logAudit(`메뉴 켜기 — ${mlabel(id)}`); } catch (e) { } go(id); render(); toast(`'${mlabel(id)}' 메뉴를 켰습니다. 왼쪽 메뉴에 생겼습니다.`, 'ok'); };
+  ACT['ux-on'] = el => { const id = el.dataset.v; closeModal(); const r = slMenuTry(id, true); if (!r.ok) { toast(r.why, 'warn'); render(); return; } try { logAudit(`메뉴 켜기 — ${mlabel(id)}`); } catch (e) { } go(id); render(); toast(`'${mlabel(id)}' 메뉴를 켰습니다. 왼쪽 메뉴에 생겼습니다.`, 'ok'); };
   /* 메뉴 한 줄 설명(메뉴 추가 목록 · 화면 가이드에 쓴다) — 15자 안팎 */
   const MD = {
     class: ['과정을 만들고 운영합니다', '수업 만들어줘'], journey: ['학습 경로를 묶습니다', '러닝 저니 만들어줘'], diag: ['AI 진단 검사를 엽니다', '진단 결과 요약해줘'],
@@ -136,7 +136,7 @@
 
   /* ───────── 3. 메뉴 추가(카탈로그) ───────── */
   WS.more = { label: '메뉴 추가', icon: 'grid', desc: '' };
-  const allTabs = () => Object.entries(S.nav.tabs).flatMap(([w, A]) => (A || []).filter(x => MENU[x.id] && !(/^(lms|sis|rfpmap|grade)/.test(x.id) && S.org.type !== 'univ') && !(MENU[x.id].only && MENU[x.id].only !== S.org.type && !(S.org.type === 'univ' && MENU[x.id].only === 'univ'))).map(x => ({ ...x, w })));
+  const allTabs = () => Object.entries(S.nav.tabs).flatMap(([w, A]) => (A || []).filter(x => MENU[x.id] && !((typeof menuGate === 'function' && menuGate(x.id) || {}).hide && !x.on) && !(/^(lms|sis|rfpmap|grade)/.test(x.id) && S.org.type !== 'univ') && !(MENU[x.id].only && MENU[x.id].only !== S.org.type && !(S.org.type === 'univ' && MENU[x.id].only === 'univ'))).map(x => ({ ...x, w })));
   VIEWS.menus = () => { const f = UI.slMenuF || 'all', q = (UI.slMenuQ || '').trim(); const A = allTabs(); const E = slimEss();
     const wsL = [...new Set(A.map(x => x.w))].filter(w => WS[w]); const L = A.filter(x => (f === 'all' || (f === 'on' ? x.on : x.w === f)) && (!q || (mlabel(x.id) + mdOf(x.id)[0]).includes(q)));
     const on = A.filter(x => x.on);
@@ -148,7 +148,20 @@
       SL.search('slMenuQ', '메뉴 검색'));
   };
   window.slMenuSet = (id, on) => { const t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (!t) return false; t.on = on; save(); return true; };
-  ACT['sl-menu'] = el => { const id = el.dataset.v; const t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (!t) return; slMenuSet(id, !t.on); toast(`'${mlabel(id)}' 메뉴를 ${t.on ? '켰습니다 — 왼쪽 메뉴에 생겼습니다' : '껐습니다'}.`, 'ok'); render(); };
+  /* qa7 d1: 메뉴 켜기 공통 검사(한 곳) — ① 막는 조건(MENU_GATE: 권한 · 산타 전용 등)을 먼저 보고 ② 켠 뒤 다시 그려서 실제로 왼쪽 메뉴에 나타났는지 확인한다.
+     나타나지 않으면 되돌리고 이유를 돌려준다 → 「켰습니다」 안내는 실제로 켜진 경우에만 띄운다(설정 › 메뉴 · 메뉴 찾기 · AI SAM · 꺼진 메뉴 링크 공통) */
+  window.MENU_GATE = window.MENU_GATE || [];
+  MENU_GATE.push(id => { const r = S && S.me && S.me.role; if (r === 'teacher') return { why: `${t('teacher')} 권한으로는 메뉴를 바꿀 수 없습니다.`, hide: true }; if (MENU[id] && MENU[id].owner && r !== 'owner') return { why: `'${mlabel(id)}' 메뉴는 정운영자만 켤 수 있습니다.`, hide: true }; return null; });
+  window.menuGate = id => { for (const f of MENU_GATE) { try { const g = f(id); if (g) return g; } catch (e) { console.error('menuGate', e); } } return null; };
+  const tabOf = id => Object.entries(S.nav.tabs).map(([w, L]) => [w, (L || []).find(x => x.id === id)]).find(([, x]) => x) || [];
+  window.menuShown = id => { const [w] = tabOf(id); return !!w && S.nav.ws.includes(w) && wsTabs(w).includes(id); };
+  window.slMenuTry = (id, on) => { const [, t0] = tabOf(id); if (!t0) return { ok: false, why: `'${mlabel(id)}' 메뉴는 이 기관 유형에 없습니다.` };
+    if (on) { const g = menuGate(id); if (g) return { ok: false, why: g.why }; }
+    const prev = !!t0.on; slMenuSet(id, on); try { render(); } catch (e) { console.error('slMenuTry', e); }
+    const [, t1] = tabOf(id); const real = !!t1 && !!t1.on === !!on && (!on || menuShown(id));
+    if (!real) { if (t1) t1.on = prev; save(); try { render(); } catch (e) { } return { ok: false, why: `'${mlabel(id)}' 메뉴를 ${on ? '켜지' : '끄지'} 못했습니다. 이 계정 권한에서는 바꿀 수 없는 메뉴입니다.` }; }
+    return { ok: true }; };
+  ACT['sl-menu'] = el => { const id = el.dataset.v; const [, t0] = tabOf(id); if (!t0) return; const on = !t0.on; const r = slMenuTry(id, on); if (!r.ok) { toast(r.why, 'warn'); render(); return; } toast(`'${mlabel(id)}' 메뉴를 ${on ? '켰습니다 — 왼쪽 메뉴에 생겼습니다' : '껐습니다'}.`, 'ok'); render(); };
   ACT['sl-reset-menu'] = () => { slimApply(); save(); render(); toast('기본 메뉴로 되돌렸습니다.', 'ok'); };
 
   /* 사이드바: 켜진 메뉴가 없는 공간은 숨긴다(v37: 아래 [+ 메뉴 추가]는 설정 › 메뉴로) */
@@ -404,7 +417,7 @@
   ACT['sl-goconn'] = () => { if (typeof slMenuSet === 'function') slMenuSet('conn', true); UI.slConnOld = false; go('conn'); };
   ACT['sl-goauto'] = () => { slMenuSet('auto', true); go('auto'); };
   /* 꺼진 메뉴로 가는 링크(홈 · 가이드 · 안내의 [이동] 버튼)를 사람이 누르면 막지 않고 그 메뉴를 켜서 연다 — 필요할 때 켜진다. 코드에서 부르는 go()는 그대로 */
-  { const base = ACT.go; ACT.go = (el, ...r) => { const id = el && el.dataset && el.dataset.v; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(id)) && (!MENU[id].only || MENU[id].only === S.org.type) && Object.values(S.nav.tabs).flat().some(x => x.id === id)) { slMenuSet(id, true); toast(`'${mlabel(id)}' 메뉴를 켰습니다. 끄려면 [메뉴 추가]에서 끄세요.`, 'ok'); } } catch (e) { } return base(el, ...r); }; }
+  { const base = ACT.go; ACT.go = (el, ...r) => { const id = el && el.dataset && el.dataset.v; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(id)) && (!MENU[id].only || MENU[id].only === S.org.type) && Object.values(S.nav.tabs).flat().some(x => x.id === id)) { const g = menuGate(id); if (g) { toast(g.why, 'warn'); return; } slMenuSet(id, true); toast(`'${mlabel(id)}' 메뉴를 켰습니다. 끄려면 [메뉴 추가]에서 끄세요.`, 'ok'); } } catch (e) { } return base(el, ...r); }; }
 
   /* v37 기관 유형을 바꾼 뒤 이름 · 호칭 · 메뉴가 서로 어긋나던 문제(대표님 첨부 '닉 Univ' — 레일 '교육생', 홈 '센터 담당자님', 사이트 '교육신청')
      설정 › 기관 유형 변경(type-chg)은 유형 · 프리셋 메뉴만 바꿨다. 이제 유형이 바뀌면 같은 자리에서: 대학 에디션 정리(대학이면 기본 lite, 아니면 삭제) ·
