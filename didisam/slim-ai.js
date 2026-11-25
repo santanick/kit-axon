@@ -212,8 +212,9 @@
     if (mm) { if (teacher()) return { text: `${t('teacher')} 권한으로는 메뉴를 바꿀 수 없습니다.` }; const on = /(켜|보이|추가|열어|살려)/.test(mm[5]); const k = norm(mm[1]); const T = tabsAll();
       const hit = T.find(x => norm(mlabel(x.id)) === k) || T.find(x => norm(mlabel(x.id)).includes(k) || k.includes(norm(mlabel(x.id)))) || T.find(x => norm((typeof slimMD === 'function' ? slimMD(x.id)[0] : '')).includes(k));
       if (!hit) return { text: `「${mm[1]}」 메뉴를 찾지 못했습니다. 설정 › 메뉴에서 이름을 확인해 주세요.`, go: 'more' };
+      if (on && typeof menuGate === 'function') { const g = menuGate(hit.id); if (g) return { text: g.why }; }
       if (hit.on === on) return { text: `'${mlabel(hit.id)}' 메뉴는 이미 ${on ? '켜져' : '꺼져'} 있습니다.` };
-      slMenuSet(hit.id, on); setTimeout(render, 0); return { title: `'${mlabel(hit.id)}' 메뉴를 ${on ? '켰습니다' : '껐습니다'}`, text: on ? '왼쪽 메뉴에 생겼습니다. 끈 메뉴의 데이터는 지워지지 않습니다.' : '데이터는 그대로 남아 있고, 다시 켜면 바로 보입니다.', btn: undoBtn(() => slMenuSet(hit.id, !on)), via: 'AI SAM 설정' }; }
+      if (typeof slMenuTry === 'function') { const r = slMenuTry(hit.id, on); if (!r.ok) return { text: r.why }; } else slMenuSet(hit.id, on); setTimeout(render, 0); return { title: `'${mlabel(hit.id)}' 메뉴를 ${on ? '켰습니다' : '껐습니다'}`, text: on ? '왼쪽 메뉴에 생겼습니다. 끈 메뉴의 데이터는 지워지지 않습니다.' : '데이터는 그대로 남아 있고, 다시 켜면 바로 보입니다.', btn: undoBtn(() => slMenuSet(hit.id, !on)), via: 'AI SAM 설정' }; }
     /* 연결 — 키 · 토큰은 대화창에서 받지 않는다(연결 시트에서만 입력) */
     if (/(연결|연동)/.test(s) && /(도와|해\s*줘|해줘|하고\s*싶|방법|어떻게|하기|시작|열어)/.test(s) && !/(자동화|끊|해제)/.test(s)) { const c = CN_MAP.find(([re]) => re.test(s)); if (c && typeof CN === 'object' && CN[c[1]]) { const id = c[1];
         if (!owner()) return { text: '외부 연결은 정운영자만 관리할 수 있습니다.' };

@@ -331,7 +331,8 @@
     if (!W3ok()) return head('앱 출석') + '<div class="warn">출결(묶음 G) 화면 모듈이 없습니다.</div>';
     const secs = G('p:g:secs', 'GET', '/api/lms/g/sections', {}); const L = Array.isArray(secs) ? secs : [];
     /* 데모: 분반이 없으면 출결 데모 분반을 바로 만든다(막다른 안내 없음) */
-    if (Array.isArray(secs) && !L.length && !LMP.live() && LMP.isAdm() && W3.call) { if (!UI.lmspSeeding) { UI.lmspSeeding = 1; W3.call('POST', '/api/lms/g/seed', {}).catch(e => toast(errMsg(e), 'warn')).finally(() => { UI.lmspSeeding = 0; W3.drop('p:g:'); render(); }); } return head('앱 출석') + '<div class="card"><p class="mini">샘플 분반 · 차시 · 수강생을 준비하고 있습니다…</p></div>'; }
+    /* qa7 d1: 준비는 기관당 한 번만 — 준비 뒤에도 분반이 비면(빈 스튜디오 · 담당 분반 없음) 아래 빈 안내로 간다. 예전에는 render → 준비 → render가 마이크로태스크로 끝없이 돌아 탭이 멈추고 닫혔다 */
+    if (Array.isArray(secs) && !L.length && !LMP.live() && LMP.isAdm() && W3.call && UI.lmspSeeded !== S.org && !(S.org && S.org.empty)) { if (!UI.lmspSeeding) { UI.lmspSeeding = 1; W3.call('POST', '/api/lms/g/seed', {}).catch(e => toast(errMsg(e), 'warn')).finally(() => { UI.lmspSeeding = 0; UI.lmspSeeded = S.org; W3.drop('p:g:'); setTimeout(render, 0); }); } return head('앱 출석') + '<div class="card"><p class="mini">샘플 분반 · 차시 · 수강생을 준비하고 있습니다…</p></div>'; }
     const sec = UI.lmspSec && L.find(x => x.section_id === UI.lmspSec) ? UI.lmspSec : (L[0] || {}).section_id;
     const ses = sec ? G('p:g:ses:' + sec, 'GET', '/api/lms/g/sessions', { section_id: sec }) : null; const SL = Array.isArray(ses) ? ses : [];
     const nowT = Date.now(); const near = SL.slice().sort((a, b) => Math.abs(Date.parse(a.starts_at) - nowT) - Math.abs(Date.parse(b.starts_at) - nowT))[0];
@@ -343,7 +344,7 @@
     const rsC = (() => { const R = ros && !ros.__err ? ros : null; if (!R) return null; const i = R.sessions.findIndex(x => x.session_id === sid); if (i < 0) return null; let p = 0, a = 0; R.students.forEach(st => { const v = st.cells[i]; if (v === 'present' || v === 'late' || v === 'excused') p++; else if (v === 'absent') a++; }); return { p, a }; })();
     const U = LMP.ux; const td = U && L.length ? U.todo([[near ? `${near.week_no}주 ${near.seq}차시` : '—', '가까운 차시'], [rsC ? rsC.p : '—', '출석'], [rsC ? rsC.a : '—', '결석', rsC && rsC.a ? 'r' : ''], [Q.length, '오프라인 대기', Q.length ? 'y' : '']], staff ? `<button class="btn pri sm" data-act="lmsp-open">출석 코드 · QR 열기(3분)</button>` : '') : '';
     return head('앱 출석', '교수자가 출석 코드 · QR을 열면 학생이 휴대폰 앱에서 QR을 찍거나 인증번호로 출석합니다. 출석 규칙 · 기록은 「출결」 화면과 같습니다.') + td +
-      (!L.length ? `<div class="card"><div class="empty">출석할 분반이 없습니다.${LMP.isAdm() && !LMP.live() ? ' <button class="btn sm" data-act="lmsp-gseed">출결 데모 분반 만들기</button>' : ''}</div></div>` :
+      (!L.length ? `<div class="card"><div class="empty">출석할 분반이 없습니다.${S.org && S.org.empty ? ' 학기 · 강좌에서 교과목과 분반을 먼저 개설하세요. <button class="btn sm" data-act="go" data-v="lmsa">학기 · 강좌 열기</button>' : LMP.isAdm() && !LMP.live() ? ' <button class="btn sm" data-act="lmsp-gseed">출결 데모 분반 만들기</button>' : ''}</div></div>` :
       (() => { /* v43 R3(065): 분반 · 차시 칩 + 교수자 패널 + 최근 차시 출석 기록(roster 칸에서 계산 — 예전 rs.present는 API에 없는 값이라 늘 0명) + 학생 앱 휴대폰 미리보기 */
         const R = ros && !ros.__err ? ros : null; const SS = R ? R.sessions : []; const cnt = i => { const c = { present: 0, late: 0, absent: 0, excused: 0, none: 0 }; (R ? R.students : []).forEach(st => { c[st.cells[i] || 'none']++; }); return c; };
         const si = SS.findIndex(x => x.session_id === sid); const cs = si >= 0 ? cnt(si) : null; const tot = R ? R.students.length : 0;
@@ -373,7 +374,7 @@
           <div class="row"><span>푸시 알림</span><span class="mini">${'Notification' in window ? `알림 권한: ${Notification.permission}` : '미지원'} — 알림함으로 받습니다</span></div>
           <div class="row"><span>앱 스토어 등록</span><span class="mini">설치형 웹앱(PWA)으로 동작 — 스토어 등록은 연동 제외</span></div>`) : ''}</section></div>`; })());
   });
-  ACT['lmsp-gseed'] = async () => { await W3.act(() => W3.call('POST', '/api/lms/g/seed', {}), '출결 데모 분반을 만들었습니다.'); W3.drop('p:g:'); render(); };
+  ACT['lmsp-gseed'] = async () => { UI.lmspSeeded = S.org; await W3.act(() => W3.call('POST', '/api/lms/g/seed', {}), '출결 데모 분반을 만들었습니다.'); W3.drop('p:g:'); render(); };
   ACT['lmsp-sec'] = el => { UI.lmspSec = el.value; UI.lmspSes = null; UI.lmspOpen = null; stopQR(); render(); };
   ACT['lmsp-ses'] = el => { UI.lmspSes = el.value; UI.lmspOpen = null; stopQR(); render(); };
   const curSes = () => { const sel = $('[data-chg=lmsp-ses]'); return sel ? sel.value : UI.lmspSes; };

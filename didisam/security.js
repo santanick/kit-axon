@@ -15,6 +15,9 @@
   /* 실서버 비(非)산타 계정: 메뉴 정의는 두고(presetNav 등이 MENU를 읽음) 탭만 끈다 — 화면 · 서버도 산타 관리자만 */
   const santaHide = () => { try { if (typeof LIVE === 'undefined' || !LIVE || !LIVE.user || LIVE.user.santa || !S || !S.nav || !S.nav.tabs) return; Object.values(S.nav.tabs).forEach(L => (L || []).forEach(x => { if (x.id === 'security') x.on = false; })); } catch (e) { } };
   { const base = render; render = (...a) => { santaHide(); return base(...a); }; }
+  /* qa7 d1: 실서버 비산타 계정은 메뉴 설정 · 메뉴 찾기 · AI SAM 후보에서 보안을 숨기고, 요청되면 이유만 안내한다(「켰습니다」 안내 없음) */
+  window.MENU_GATE = window.MENU_GATE || [];
+  MENU_GATE.unshift(id => (id === 'security' && typeof LIVE !== 'undefined' && LIVE && LIVE.user && !LIVE.user.santa) ? { why: '보안 메뉴는 산타 관리자 전용입니다.', hide: true } : null);
   Object.keys(PRESET).forEach(k => { const P = PRESET[k]; if (P && Array.isArray(P.on) && !P.on.includes('security') && !(P.off || []).includes('security')) P.on.push('security'); });
   { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org && S.nav && typeof navAdd === 'function' && !Object.values(S.nav.tabs).some(L => (L || []).some(x => x.id === 'security'))) { navAdd('security', true); save(); } } catch (e) { console.error('security', e); } return r; }; } /* eslint-disable-line no-global-assign */
   /* 기본 메뉴(slimEss)에 포함 — 정운영자에게만 보인다(MENU.owner). 학사 LMS 시나리오가 DOMContentLoaded에 바꾸므로 그 뒤에도 한 번 더 감싼다 */

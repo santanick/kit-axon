@@ -199,7 +199,7 @@ function render() {
   const T = w !== 'home' && w !== 'dash' && w !== 'settings' ? wsTabs(w) : [];
   $('#app').innerHTML = `
   <header class="top">
-    <button class="hamb" data-act="nav" aria-label="메뉴 열기">${ic('menu')}</button>
+    <button class="hamb" data-act="nav" aria-label="왼쪽 메뉴 열기">${ic('menu')}</button>
     <div class="brand"><span class="logo">D</span><b>${esc(S.org.name)}</b><span class="sub">스튜디오</span></div>
     <span class="tline">${esc(S.me.name)} · ${esc(roleName(S.me.role))}</span>
     <div class="topr">
