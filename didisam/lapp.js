@@ -545,3 +545,20 @@
       : [['dn1', 1, '5-3 실습 과제 마감이 3일 남았어요', '엑셀 실무 마스터 · 11월 19일 23:59까지'], ['dn2', 5, '새 차시가 열렸어요', '피벗 테이블 2차시 · 값 요약 방식'], ['dn3', 22, '퀴즈 결과가 나왔어요', '개념 확인 퀴즈 40점 · 틀린 문제 다시 풀기'], ['dn4', 30, '마일리지 150P가 쌓였어요', '7일 연속 학습 보너스'], ['dn5', 50, '수료까지 진도 32% 남았어요', '이번 주 2차시만 더 들으면 돼요'], ['dn6', 75, '겨울 특강 얼리버드 안내', '12월 20일까지 신청하면 10% 할인']];
     const L = A.filter(([id]) => !st.del.includes(id)).map(([id, h, title, body], i) => ({ id, at: d(h), title, body, read: i > 1 || st.read.includes(id), demo: true }));
     return { k, L }; } catch (e) { return r; } }; }
+
+/* QA7 #3 · #4: 알 수 없는 주소 → 홈, 「본문 바로가기」는 라우팅이 아니라 본문 포커스, 화면을 옮기면 떠 있는 토스트 정리 */
+(function () {
+  'use strict';
+  if (typeof lrender !== 'function' || typeof route !== 'function') return;
+  const blank = lm => !lm.textContent.trim() && !lm.querySelector('img, svg, iframe, video, canvas, input, button, select, textarea, a[href]');
+  let tk = 0;
+  const check = () => { clearTimeout(tk); const h0 = location.hash; tk = setTimeout(() => { try {
+    if (location.hash !== h0 || typeof SITE !== 'function' || !SITE()) return; const a = route().a; if (a === 'home') return;
+    const lm = document.getElementById('lm'); if (lm && blank(lm)) location.replace('#home');
+  } catch (e) { } }, 450); };
+  const wrap = () => { const base = lrender; lrender = (...x) => { const r = base(...x); try { if (route().a === 'lm') { location.replace('#home'); return r; } check(); } catch (e) { } return r; }; }; // eslint-disable-line no-global-assign
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(wrap, 0)); else setTimeout(wrap, 0);
+  document.addEventListener('click', e => { const s = e.target.closest && e.target.closest('a.skip[href="#lm"]'); if (!s) return; e.preventDefault();
+    const lm = document.getElementById('lm'); if (!lm) return; if (!lm.hasAttribute('tabindex')) lm.setAttribute('tabindex', '-1'); lm.focus(); try { lm.scrollIntoView({ block: 'start' }); } catch (x) { } }, true);
+  window.addEventListener('hashchange', () => { const n = Date.now(); document.querySelectorAll('.ltoast').forEach(t => { if (n - (+t.dataset.at || 0) > 400) t.remove(); }); }); /* 방금 띄운 안내(저장 후 이동 등)는 남긴다 */
+})();

@@ -176,7 +176,8 @@ begin
   -- 학습자 포털 세션: 학번(또는 간편가입 계정의 학번)으로 고정 — as로 다른 사람이 될 수 없다
   if x->>'kind' = 'learner' then
     no := coalesce((select member_no from lms_person where tenant_id = lmsb_tid() and member_no = x->>'sid'),
-      (select la.student_no from learner_accounts la where la.tenant_id = lmsb_tid() and lmsb_uuid(x->>'sid') is not null and la.learner_id = lmsb_uuid(x->>'sid')));
+      (select p.member_no from learner_accounts la join lms_person p on p.tenant_id = la.tenant_id and p.member_no = la.student_no
+        where la.tenant_id = lmsb_tid() and lmsb_uuid(x->>'sid') is not null and la.learner_id = lmsb_uuid(x->>'sid') and la.status <> 'withdrawn'));
     if no is null then perform lmsb_err(403, 'person', '학사 정보에 등록된 학번이 아닙니다. 학교 학사 담당 부서에 문의하세요.'); end if;
   end if;
   if no is null then

@@ -14,8 +14,11 @@ window.lLocal = lLocal;
 const Q = new URLSearchParams(location.search);
 const LR = { mode: 'demo', tid: Q.get('t') || '', site: null, me: null, lp: { tut: {}, cls: {}, diag: {}, book: {} }, mine: { badges: [], cls: {}, bk: {} }, timer: 0, err: '' };
 
-function toast(msg, kind = '') { document.querySelectorAll('.ltoast').forEach(x => x.remove()); /* v38 F5: 안내는 한 번에 하나만(겹쳐 버튼을 가리지 않게) */ const t = document.createElement('div'); t.className = 'ltoast ' + kind; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100); }
+function toast(msg, kind = '') { document.querySelectorAll('.ltoast').forEach(x => x.remove()); /* v38 F5: 안내는 한 번에 하나만(겹쳐 버튼을 가리지 않게) */ const t = document.createElement('div'); t.dataset.at = Date.now(); t.className = 'ltoast ' + kind; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100); }
 const api = async (method, url, body) => { const r = await fetch(url, { method, credentials: 'same-origin', headers: { 'x-didisam': '1', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined }); const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.message || `오류 ${r.status}`); e.status = r.status; e.code = j.error; throw e; } return j; };
+/* QA7 #1 학사 LMS: 학번이 학사 명단(lms_person)에 없는 학습자 — 403 대신 안내 카드 */
+const lmsNoReg = e => !!e && (e.status === 403 || e.status === 404) && e.code === 'person';
+const lmsNoRegCard = () => `<div class="lnoreg" role="status" data-noreg="1" style="padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--g50);color:var(--ink)"><b>아직 학사 명단에 등록되지 않았어요.</b><br><span class="mini">학과 사무실이나 담당 교수에게 문의해 주세요.</span></div>`;
 
 /* ── 데이터 포트 ── */
 const demoRoom = () => { try { const reg = JSON.parse(localStorage.getItem('didisam.rooms') || 'null'); const tid = LR.tid || (reg && reg.cur) || ''; LR.tid = tid; return tid ? JSON.parse(localStorage.getItem('didisam.room.' + tid) || 'null') : null; } catch (e) { return null; } };
