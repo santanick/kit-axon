@@ -198,7 +198,7 @@ async function lvMailGo() {
     if (!email || !pw) return say(LVMSG.need, email ? fp : fe);
     btn.disabled = true; say('');
     try { const r = await api('POST', '/api/login', { email, password: pw }); const go = () => { lvSeen(); location.replace(location.pathname); }; if (r && r.mfa && window.mfaPrompt) { btn.disabled = false; return window.mfaPrompt(r, go); } go(); } /* 보안 4차 #1 2단계 */
-    catch (x) { btn.disabled = false; say(window.errMsg ? errMsg(x, lvMsg(x)) : lvMsg(x)); if (x.status === 401) { fp.value = ''; fp.focus(); } }
+    catch (x) { btn.disabled = false; say(window.errMsg && !(x && x.status && LVMSG[x.code]) ? errMsg(x, lvMsg(x)) : lvMsg(x)); if (x.status === 401) { fp.value = ''; fp.focus(); } }
     return;
   }
   if (!emailOk(email)) return say(LVMSG.email, fe);
@@ -248,7 +248,7 @@ function renderLogin() {
   <button class="btn pri lg" type="submit">로그인</button></form></div>`;
   const f = $('#liForm');
   f.addEventListener('submit', async e => { e.preventDefault(); const b = f.querySelector('button[type=submit]'); b.disabled = true; $('#liErr').textContent = '';
-    try { const r = await api('POST', '/api/login', { email: f.email.value.trim(), password: f.password.value }); const go = () => location.replace(location.pathname); if (r && r.mfa && window.mfaPrompt) { b.disabled = false; return window.mfaPrompt(r, go); } go(); } catch (x) { $('#liErr').textContent = window.errMsg ? errMsg(x, lvMsg(x)) : lvMsg(x); b.disabled = false; } }); /* 보안 4차 #1 2단계 */
+    try { const r = await api('POST', '/api/login', { email: f.email.value.trim(), password: f.password.value }); const go = () => location.replace(location.pathname); if (r && r.mfa && window.mfaPrompt) { b.disabled = false; return window.mfaPrompt(r, go); } go(); } catch (x) { $('#liErr').textContent = window.errMsg && !(x && x.status && LVMSG[x.code]) ? errMsg(x, lvMsg(x)) : lvMsg(x); b.disabled = false; } }); /* 보안 4차 #1 2단계 */
 }
 const lvTo = (view, o) => { Object.assign(LV, { view, step: 'entry', mail: null }, o || {}); lvPw = ''; const fx = !!LV.focus; render(); const h = $('#entry h1, #entry h2'); if (h && !fx) { h.setAttribute('tabindex', '-1'); h.focus(); } };
 ACT['lv-login'] = () => lvTo('login');
