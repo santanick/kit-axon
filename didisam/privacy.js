@@ -22,7 +22,7 @@ const pvVaultSave = v => { try { localStorage.setItem('didisam.room.' + DREG.cur
 { const base = ACT['mb-acct']; ACT['mb-acct'] = el => { base(el); try { const w = $('#modal'); if (!w) return; const A = S.settings.acct; const U = mbUniv();
   w.querySelectorAll('[name=verify],[name=soc_facebook]').forEach(x => { const l = x.closest('label'); if (l) l.remove(); });
   const u14 = w.querySelector('[name=under14]'); if (u14 && u14.closest('label')) u14.closest('label').lastChild.textContent = ' 만 14세 미만 가입 허용(보호자 이메일 · 휴대폰으로 동의 링크 — 본인인증 없음)';
-  const soc = w.querySelector('[name=soc_kakao]'); const note = soc && soc.closest('.fl') && soc.closest('.fl').querySelector('small'); if (note) note.textContent = '이메일(인증번호) 가입은 항상 제공합니다. SNS는 회원 식별자 · 닉네임만 받습니다(이메일 · 이름 · 전화 미요청). 운영: 각 SNS 개발자 콘솔에 앱 등록 후 OAuth 연동.';
+  const soc = w.querySelector('[name=soc_kakao]'); const note = soc && soc.closest('.fl') && soc.closest('.fl').querySelector('small'); if (note && !U /* QA7 대학은 학번 · 학과만 안내(mem2 MB_UNIV_SNS) 유지 */) note.textContent = '이메일(인증번호) 가입은 항상 제공합니다. SNS는 회원 식별자 · 닉네임만 받습니다(이메일 · 이름 · 전화 미요청). 운영: 각 SNS 개발자 콘솔에 앱 등록 후 OAuth 연동.';
   const anchor = (u14 && u14.closest('label')) || w.querySelector('[name=editAns]')?.closest('label');
   if (anchor && !U) anchor.insertAdjacentHTML('afterend', pvIdvBlock(A.idv));
   const okb = w.querySelector('[data-mact=ok]'); if (okb) okb.addEventListener('click', () => { if (!U) pvIdvRead(w, A); }); } catch (e) { console.error(e); } }; }

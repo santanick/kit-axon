@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 public final class DdModule {
     private DdModule() { }
     public static final Map<String, String> PAGE = Map.of("learner", "learner.html", "tutor", "tutor.html", "admin", "index.html");
-    static final Set<String> TUTOR_API = Set.of("GET /api/health", "GET /api/config", "POST /api/login", "POST /api/logout", "POST /api/password", "GET /api/me", "GET /api/me/devices", "POST /api/login/mfa", "POST /api/login/mfa/resend", "GET /api/me/mfa", "POST /api/me/mfa", "DELETE /api/me/mfa", "GET /api/session", "POST /api/session/touch", "POST /api/session/work", "GET /api/me/sessions", "POST /api/me/sessions/logout-others", "GET /api/state", "PUT /api/state", "POST /api/export/log", "POST /api/ai/messages", "GET /api/ai/usage", "GET /api/learners/progress", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion", "GET /api/fac/overview", "GET /api/fac/bookings", "POST /api/fac/checkin", "GET /api/ledger/units", "GET /api/ledger/summary", "GET /api/ledger/entries", "GET /api/ledger/today", "GET /api/mileage/config", "GET /api/mileage/summary", "GET /api/mileage/entries", "GET /api/mileage/wallet");
+    static final Set<String> TUTOR_API = Set.of("GET /api/health", "GET /api/config", "POST /api/login", "POST /api/logout", "POST /api/password", "GET /api/me", "GET /api/me/devices", "GET /api/oembed", "POST /api/login/mfa", "POST /api/login/mfa/resend", "GET /api/me/mfa", "POST /api/me/mfa", "DELETE /api/me/mfa", "GET /api/session", "POST /api/session/touch", "POST /api/session/work", "GET /api/me/sessions", "POST /api/me/sessions/logout-others", "GET /api/state", "PUT /api/state", "POST /api/export/log", "POST /api/ai/messages", "GET /api/ai/usage", "GET /api/learners/progress", "GET /api/cpl/summary", "GET /api/cpl/exams", "GET /api/cpl/logs", "GET /api/cpl/exam-copy", "GET /api/cpl/completion", "GET /api/fac/overview", "GET /api/fac/bookings", "POST /api/fac/checkin", "GET /api/ledger/units", "GET /api/ledger/summary", "GET /api/ledger/entries", "GET /api/ledger/today", "GET /api/mileage/config", "GET /api/mileage/summary", "GET /api/mileage/entries", "GET /api/mileage/wallet");
     static final Set<String> VIEW_KEEP = Set.of("org", "classes", "members", "admins", "me", "nav", "settings", "site", "lsite", "guides", "bld", "rubrics", "tuts", "weeks");
     static final List<String> SCRUB = List.of("settings", "site", "lsite");
     /** 화면이 읽는 구조만 남기고 값은 지운다 */
@@ -25,7 +25,7 @@ public final class DdModule {
     public static boolean apiAllowed(String mod, String method, String path) {
         if (mod.isEmpty()) return true;
         if ("GET".equals(method) && DdApiFilter.MEDIA.matcher(path).matches()) return true; /* v34.5 게시 홈페이지 이미지는 모든 모듈에서 공개 */
-        boolean pub = DdApiFilter.PUB.matcher(path).matches();
+        boolean pub = DdApiFilter.PUB.matcher(path).matches() || DdApiFilter.LOAUTH.matcher(path).matches(); /* QA7 학습자 소셜 로그인은 학습자 모듈 */
         if ("learner".equals(mod)) return ("GET".equals(method) && ("/api/health".equals(path) || "/api/config".equals(path))) || pub;
         if ("tutor".equals(mod)) return TUTOR_API.contains(method + " " + path);
         return !pub;

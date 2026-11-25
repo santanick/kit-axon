@@ -107,4 +107,4 @@ async function benchmark(raw, opts = {}) {
     throw bad(502, 'redirects', '이동(리다이렉트)이 너무 많습니다.');
   } finally { clearTimeout(timer); }
 }
-module.exports = { benchmark, extract, isPrivate, checkUrl };
+module.exports = { benchmark, extract, isPrivate, checkUrl, resolveSafe, httpsGet, readCapped };

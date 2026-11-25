@@ -54,7 +54,7 @@ test('운영 학습자 계정 · 요청함', async t => {
     rev = (await call('A', 'PUT', '/api/state', { doc: docA({ approve: 'manual' }), rev })).j.rev;
     const email = `p${sfx}@ex.com`; const o = await call('X', 'POST', P('otp'), { email, purpose: 'signup' });
     const s = await call('Q', 'POST', P('signup'), { via: 'email', email, code: o.j.dev_code, nickname: '대기생', consent: { tos: true, privacy: true }, age14: true });
-    assert.equal(s.j.me.status, 'pending'); assert.equal(jar.Q, undefined); const sid = s.j.me.sid;
+    assert.equal(s.j.me.status, 'pending'); assert.ok(!jar.Q || /^dd_lpend=/.test(jar.Q), '세션 없음(QA7 승인 대기 표 쿠키만)'); const sid = s.j.me.sid;
     const lo = async () => { const c = await call('X', 'POST', P('otp'), { email, purpose: 'login' }); return call('Q', 'POST', P('login'), { via: 'email', email, code: c.j.dev_code }); };
     assert.equal((await lo()).j.error, 'pending');
     const d = docA({ approve: 'manual' }); d.members = [{ id: 'm9', sid, grade: '승인 대기', name: '대기생' }]; rev = (await call('A', 'PUT', '/api/state', { doc: d, rev })).j.rev; assert.equal((await lo()).j.error, 'pending');

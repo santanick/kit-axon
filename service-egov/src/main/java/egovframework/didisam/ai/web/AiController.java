@@ -23,6 +23,7 @@ public class AiController {
     @PostMapping("/ai/topup/confirm") public Map<String, Object> topupConfirm(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return aiService.topupConfirm(authService.needOwner(req), body); }
     @GetMapping("/santa/orgs") public Map<String, Object> santaOrgs(@RequestParam(value = "q", required = false) String q, HttpServletRequest req) throws Exception { return aiService.santaOrgs(authService.need(req), q); }
     @PutMapping("/santa/orgs/{tid:tn_[a-z0-9]{8,16}}/plan") public Map<String, Object> santaPlan(@PathVariable("tid") String tid, @RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception { return aiService.santaPlan(authService.need(req), tid, body); }
+    @GetMapping("/oembed") public Map<String, Object> oembed(@RequestParam(value = "url", required = false) String url, HttpServletRequest req) throws Exception { return benchService.oembed(authService.need(req), url); } /* qa7 d5 */
     @PostMapping("/site/benchmark") public Map<String, Object> benchmark(@RequestBody(required = false) byte[] body, HttpServletRequest req) throws Exception {
         return benchService.benchmark(authService.needStaff(req), body);
     }

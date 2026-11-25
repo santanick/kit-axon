@@ -151,21 +151,21 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
     @org.springframework.beans.factory.annotation.Value("${TOSS_URL:https://api.tosspayments.com}") private String tossUrl = "https://api.tosspayments.com";
     private final java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder().proxy(java.net.http.HttpClient.Builder.NO_PROXY).connectTimeout(java.time.Duration.ofSeconds(10)).build();
     boolean payOn() { return tossKey != null && !tossKey.trim().isEmpty() && tossClient != null && !tossClient.trim().isEmpty(); }
-    Map<String, Object> planOf(String tid) { String s = mapper.selectAiplan(tid); return DdAiPrice.planOf(s == null ? null : parse(s)); }
-    @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:nick@didisam.com}") private String santaEnv = "nick@didisam.com"; /* 기본: 대표님 지정 2026-11-24 */
+    Map<String, Object> planOf(String tid) { String s = mapper.selectAiplan(tid), pl = mapper.selectPlan(tid); return DdAiPrice.planOf(s == null ? null : parse(s), pl == null ? null : parse(pl), kstToday()); } /* 체험 종료 판정 포함 */
+    @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:nick@didisam.com,nick@didicast.com}") private String santaEnv = "nick@didisam.com,nick@didicast.com"; /* 기본: 대표님 지정 2026-11-24 · nick@didicast.com 추가 2026-11-25 */
     /** 충전 차감 계산(충전량 1년 이월) — 기관 범위 트랜잭션 안에서 부른다 */
     DdAiPrice.Sim simOf(String tid, Map<String, Object> plan, String today) {
         List<Map<String, Object>> cr = mapper.selectCreditRows(tid, DdAiPrice.creditFrom(today));
-        return DdAiPrice.sim(cr, cr.isEmpty() ? List.of() : mapper.selectUsageFrom(tid, DdAiPrice.usageFrom(cr, today)), ((Number) plan.get("monthTokens")).longValue(), today);
+        return DdAiPrice.sim(cr, cr.isEmpty() ? List.of() : mapper.selectUsageFrom(tid, DdAiPrice.usageFrom(cr, plan, today)), ((Number) plan.get("monthTokens")).longValue(), today, (String) plan.get("trialSince"));
     }
     /** 이달 한도: 기관 범위 트랜잭션 안에서 부른다 */
     void monthGuard(String tid, boolean learner) { Map<String, Object> plan = planOf(tid); if (!Boolean.TRUE.equals(plan.get("on"))) return; String td = kstToday(); String m = DdAiPrice.monthOf(td);
-        DdAiPrice.guard(plan, mapper.monthUsed(tid, m + "-01"), simOf(tid, plan, td).credit(), learner); }
+        DdAiPrice.guard(plan, mapper.monthUsed(tid, DdAiPrice.usedFrom(plan, td)), simOf(tid, plan, td).credit(), learner); }
     Map<String, Object> aiMonth(String tid) {
         Map<String, Object> plan = planOf(tid); String td = kstToday(); String m = DdAiPrice.monthOf(td); DdAiPrice.Sim sm = simOf(tid, plan, td);
-        Map<String, Object> o = new LinkedHashMap<>(DdAiPrice.stateOf(plan, m, mapper.monthUsed(tid, m + "-01"), sm.credit()));
+        Map<String, Object> o = new LinkedHashMap<>(DdAiPrice.stateOf(plan, m, mapper.monthUsed(tid, DdAiPrice.usedFrom(plan, td)), sm.credit())); o.put("from", DdAiPrice.usedFrom(plan, td)); if (plan.get("trialSince") != null) o.put("trialSince", plan.get("trialSince"));
         String pl = mapper.selectPlan(tid); JsonNode pn = pl == null ? null : parse(pl);
-        o.put("plan", plan); o.put("contractPlan", pn != null && pn.isObject() ? pn : null); o.put("monthFeature", feat(mapper.selectMonthFeature(m + "-01")));
+        o.put("plan", plan); o.put("contractPlan", pn != null && pn.isObject() ? pn : null); o.put("monthFeature", feat(mapper.selectMonthFeature(DdAiPrice.usedFrom(plan, td))));
         o.put("credits", sm.live()); o.put("price", DdAiPrice.priceInfo()); o.put("payOnline", payOn()); return o;
     }
     static DdException err(int st, String code, String msg) { return new DdException(st, msg, code); }
@@ -176,7 +176,7 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
         Map<String, Object> P = DdAiPrice.quote(get(b, "won")); if (P == null) throw err(400, "won", "충전 금액은 10만 원 단위(10만 ~ 1억 원)로 골라 주십시오.");
         if (!payOn()) throw err(503, "pay_off", "결제 연결 준비 중 — 산타에 문의하십시오.");
         Map<String, Object> plan = tx.inTenant(tid, () -> planOf(tid));
-        if (Boolean.TRUE.equals(plan.get("on")) && "block".equals(plan.get("overage"))) throw err(409, "overage_block", "초과 처리가 「차단」으로 설정되어 있습니다. 「추가 충전 허용」으로 바꾼 뒤 충전하십시오.");
+        if (DdAiPrice.topupBlocked(plan)) throw err(409, "overage_block", "초과 처리가 「차단」으로 설정되어 있습니다. 「추가 충전 허용」으로 바꾼 뒤 충전하십시오.");
         String id = "ac_" + hex(9), orderId = "aitop-" + hex(12); long won = (Long) P.get("won"), tokens = (Long) P.get("tokens"), total = (Long) P.get("total");
         tx.inTenant(tid, () -> mapper.insertCredit(id, tid, DdAiPrice.monthOf(kstToday()), DdAiPrice.packId(won), tokens, total, orderId, String.valueOf(a.get("email"))));
         Map<String, Object> o = new LinkedHashMap<>(); o.put("orderId", orderId); o.put("amount", total); o.put("supply", P.get("supply")); o.put("vat", P.get("vat")); o.put("tokens", tokens); o.put("discount", P.get("discount"));
@@ -219,8 +219,8 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
         for (Map<String, Object> t : rows) {
             String tid = (String) t.get("tid");
             Map<String, Object> st = tx.inTenant(tid, () -> { Map<String, Object> r = mapper.selectPlanRow(tid); Map<String, Object> o = new HashMap<>(); if (r == null) return o;
-                JsonNode ap = js(r.get("aiplan")); Map<String, Object> plan = DdAiPrice.planOf(ap); String m = DdAiPrice.monthOf(td);
-                o.put("r", true); o.put("plan", js(r.get("plan"))); o.put("aiplan", ap); o.put("used", mapper.monthUsed(tid, m + "-01")); return o; });
+                JsonNode ap = js(r.get("aiplan")); Map<String, Object> plan = DdAiPrice.planOf(ap, js(r.get("plan")), td); String m = DdAiPrice.monthOf(td);
+                o.put("r", true); o.put("plan", js(r.get("plan"))); o.put("aiplan", ap); o.put("used", mapper.monthUsed(tid, DdAiPrice.usedFrom(plan, td))); return o; });
             List<Map<String, Object>> log = new ArrayList<>();
             for (Map<String, Object> l : tx.plain(() -> mapper.selectSantaLog(tid))) { Map<String, Object> x = new LinkedHashMap<>(); x.put("at", l.get("at")); x.put("actor", l.get("actor")); x.put("before", js(l.get("before"))); x.put("after", js(l.get("after"))); x.put("memo", l.get("memo")); log.add(x); }
             Map<String, Object> o = new LinkedHashMap<>(t); boolean ready = st.containsKey("r"); o.put("ready", ready);

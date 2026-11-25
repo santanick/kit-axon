@@ -44,7 +44,20 @@
       U0: ['대학 사업단', 1000, 15000, 'year'], U1: ['대학', 5000, 5000, 'year'], U2: ['대학', 12000, 4000, 'year'], U3: ['대학', 25000, 3200, 'year'], U4: ['대학', 0, null, 'year', 2500],
       G1: ['공공', 1000, 1500, 'month'], G2: ['공공', 5000, 800, 'month'], G3: ['공공', 20000, 400, 'month'], G4: ['공공', 0, null, 'month']
     },
-    mgrCodes: ['E3', 'E4', 'U2', 'U3', 'U4', 'G2', 'G3', 'G4']
+    mgrCodes: ['E3', 'E4', 'U2', 'U3', 'U4', 'G2', 'G3', 'G4'],
+    /* ── 요금 안내 화면 · 홈 요금제 카드의 금액 상수(한 곳) — 원천: didisam-pricing 스킬 v1.5 · service/server/aiprice.js(AI 충전).
+       운영에서는 AI 단가를 서버 응답(GET /api/ai/usage price)으로 덮어쓴다. 스킬에 금액이 없는 항목은 null → 「계약 시 견적」 */
+    target: { standard: '기본 학습 운영 · 직업훈련 인가 대응이 필요한 기관', pro: '학습 루프 · AI 채점 초안 · 결제 연동 · 성과 리포트까지 쓰는 기관', enterprise: 'SSO · API · 멀티사이트 · 전담 매니저가 필요한 대규모 기관' },
+    ai: { perM: 20000, perMVat: 22000, step: 100000, min: 100000, max: 100000000, discounts: [[100000, 0], [500000, 5], [1000000, 10], [3000000, 15], [5000000, 20], [10000000, 25], [20000000, 30]], creditDays: 365, trialTokens: 1000000, paidMonthTokens: 2500000 }, /* 월 기본 포함량: 대표님 2026-11-25 — 유료 250만(5만 원 상당) · 체험 100만 */
+    aiBase: '유료 요금제 월 2,500,000 토큰(5만 원 상당) 기본 포함 · Enterprise는 계약에 따라 추가',
+    multi: [[2, 10], [3, 15]], /* 다년 약정 할인(구독료에만 · AI 사용료 제외) */
+    buildUpkeep: 15, /* 구축형(설치형) 연 유지보수 % */
+    addons: [
+      ['온보딩', 1500000, '1회'], ['데이터 마이그레이션', 1000000, '1회 · 규모에 따라 추가'], ['POC', 3000000, '1회 · 본계약 시 차감'],
+      ['쌤페이지 맞춤 구성 · 디자인 패키지', 1500000, '1회'], ['홈페이지 리디자인', 2500000, '1회'], ['SSO 연동', 6000000, '1회'], ['API 연동', 4000000, '건당'],
+      ['기관 전용 서버', 1000000, '월'], ['도메인 · SSL', 300000, '연'], ['본인인증', 500000, '연'], ['성과 리포트 맞춤', 2000000, '1회'], ['Open Badge 발급', 1000, '개당'],
+      ['VOD 저장', 50000, '100GB · 월'], ['VOD 전송', 300000, 'TB · 월'], ['디지털북 제작', 3000000, '권당'], ['전담 매니저(포함 요금제 외)', 1500000, '월'], ['콘텐츠 · 영상 · 강사 · PM · ATC', null, '']
+    ]
   };
   window.PLAN_TABLE = PLAN_TABLE;
   const TB = () => window.PLAN_TABLE || PLAN_TABLE;
@@ -85,6 +98,7 @@
   const nf = n => Math.round(+n || 0).toLocaleString('ko-KR');
   const man = n => n % 10000 === 0 ? `${nf(n / 10000)}만원` : `${nf(n)}원`;
   const role = () => (S && S.me && S.me.role) || '';
+  const staff = () => ['owner', 'sub'].includes(role());
   const live = () => typeof LIVE !== 'undefined' && !!(LIVE && LIVE.user);
   const E = s => (typeof esc === 'function' ? esc(s) : String(s == null ? '' : s));
   const LOCK = (n = 14) => `<svg class="pl-lk" viewBox="0 0 24 24" width="${n}" height="${n}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
@@ -101,17 +115,17 @@
 .pl-tw{overflow-x:auto}.pl table{width:100%;border-collapse:collapse;font-size:14px;min-width:460px}.pl th,.pl td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:center}.pl th:first-child,.pl td:first-child{text-align:left}
 .pl td small{display:block;color:var(--muted);font-size:12px}.pl .cur{background:var(--soft)}.pl .y{color:var(--ok);font-weight:700}.pl .n{color:var(--muted)}
 .pl-lvtag{display:inline-flex;align-items:center;gap:2px;margin-left:4px;font-size:11px;font-weight:600;color:var(--muted)}
-.pl-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.pl-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.pl-ol{margin:0;padding-left:20px;display:grid;gap:6px;line-height:1.6}.pl-faq details{border-bottom:1px solid var(--line);padding:10px 0}.pl-faq summary{cursor:pointer;font-weight:600}.pl-faq p{margin:8px 0 0;color:var(--muted);line-height:1.6}.pl table.pl-sub td:first-child{min-width:150px}.pl td,.pl th{word-break:keep-all}
 @media (max-width:640px){.pl-chip{margin-left:4px}.pl-lockc{margin:12px 0}}`;
   const style = () => { if (!document.getElementById('plCss')) { const s = document.createElement('style'); s.id = 'plCss'; s.textContent = CSS; document.head.appendChild(s); } };
 
   /* ── 화면 잠금 카드(운영자 합니다체) ── */
   function lockCard(min, what) {
-    style(); const I = info(); const own = role() === 'owner';
+    style(); const I = info(); const own = staff();
     return `<section class="card pl-lockc" data-pl-lockcard="${E(min)}"><span class="pl-ic">${LOCK(24)}</span><h3>${what ? `「${E(what)}」 — ` : ''}이 기능은 ${E(nm(min))} 요금제부터 이용할 수 있습니다</h3>
       <p>지금 요금제는 ${E(chipTxt())}입니다. 요금제는 산타가 계약에 맞춰 바꿉니다.</p>
       <div class="pl-acts">${own ? '<button type="button" class="btn pri" data-act="pl-open">요금제 안내</button>' : ''}<button type="button" class="btn" data-act="pl-ask" data-v="${E(what || '')}" data-min="${E(min)}">산타에 문의</button></div>
-      ${own ? '' : '<p class="mini">요금제 안내는 정운영자가 볼 수 있습니다.</p>'}</section>`;
+      ${own ? '' : '<p class="mini">요금제 안내는 정운영자 · 부운영자가 볼 수 있습니다.</p>'}</section>`;
   }
   const lockToast = (k, what) => { if (typeof toast === 'function') toast(`「${what || (featOf(k) || {}).n || '이 기능'}」 기능은 ${nm(need(k))} 요금제부터 이용할 수 있습니다. 설정 › 요금제에서 확인하십시오.`, 'warn'); };
   window.PLAN.lockCard = lockCard; window.PLAN.lockToast = lockToast;
@@ -145,13 +159,52 @@
         <p class="mini">${I.legacy ? '요금제 도입 전에 계약한 기관이라 지금 쓰는 기능을 모두 그대로 씁니다.' : I.trial ? `체험 기간에는 ${nm('pro')} 기능을 모두 씁니다. 체험이 끝나면 ${nm('standard')} 기능만 남습니다.` : '요금제 변경 · 인원 구간 조정은 산타가 계약에 맞춰 반영합니다.'} 단가는 VAT 별도이며, 인원은 계약 기간 중 활성 학습자 최대치로 산정합니다.</p>
         <div class="pl-acts"><button type="button" class="btn" data-act="pl-ask" data-v="요금제 변경" data-min="${E(cur === 'enterprise' ? 'enterprise' : T.tiers[rank(cur) + 1])}">산타에 문의</button></div></section>
       <section class="card"><h3>단계별 기능 비교</h3><div class="pl-tw"><table><thead><tr><th>기능</th>${T.tiers.map(t => `<th class="${t === cur ? 'cur' : ''}">${E(nm(t))}${t === cur ? ' <small class="mini">(지금)</small>' : ''}</th>`).join('')}</tr></thead><tbody>${rows}${lvRow}</tbody></table></div>
-        <p class="mini">요금제에 없는 메뉴는 자물쇠로 표시하고, 열면 업그레이드 안내가 나옵니다. 직업훈련 기관의 규정 준수 기능은 인가 필수라 모든 단계에 포함합니다.</p></section>${demo}
+        <p class="mini">요금제에 없는 메뉴는 자물쇠로 표시하고, 열면 업그레이드 안내가 나옵니다. 직업훈련 기관의 규정 준수 기능은 인가 필수라 모든 단계에 포함합니다.</p></section>${guide()}${demo}
     </div>`;
   }
+  /* ── 요금 안내(정운영자 · 부운영자 열람 · 공개 정가 기준) — 대표님 지시 2026-11-25 「요금제 부분에는 요금 안내에 대한 부분도 자세히」 ── */
+  const won = n => `${nf(n)}원`;
+  const aiPrice = () => { let d = null; try { d = window.AIUSE && AIUSE.data && AIUSE.data(); } catch (e) { } const P = d && d.price && d.price.perM ? d.price : null; const B = TB().ai; return P ? { ...B, ...P } : B; };
+  const aiTokens = (w, P) => { let d = 0; for (const [x, p] of P.discounts) if (w >= x) d = p; return { d, unit: P.perM * (100 - d) / 100, tokens: Math.floor(w * 1e6 / (P.perM * (100 - d) / 100)) }; };
+  const seats = (cap, per) => cap ? `${nf(cap)}명 이하` : '초과 구간';
+  function guide() {
+    const T = TB(); const P = aiPrice(); const cur = info().tier;
+    const byTier = t => Object.keys(T.price).filter(c => T.codes[c] === t);
+    const subRows = T.tiers.map(t => byTier(t).map((c, i, a) => { const f = fee(c); const per = f.per === 'month' ? '월' : '년';
+      const amt = f.nego ? `<td colspan="2">계약 시 견적${f.floor ? `<small>하한 ${nf(f.floor)}원·인·${per}</small>` : ''}</td>` : `<td>${man(f.supply)}<small>${nf(f.unit)}원·인·${per}</small></td><td>${man(f.total)}</td>`;
+      return `<tr class="${t === cur ? 'cur' : ''}">${i === 0 ? `<td rowspan="${a.length}"><b>${E(nm(t))}</b><small>${E(T.target[t])}</small></td>` : ''}<td>${E(c)} · ${E(f.seg)}</td><td>${seats(f.cap)}</td>${amt}</tr>`; }).join('')).join('');
+    const disc = P.discounts.map(([w, d], i) => { const q = aiTokens(w, P); const nx = P.discounts[i + 1]; return `<tr><td>${man(w)} 이상${nx ? `<small>${man(nx[0])} 미만</small>` : ''}</td><td>${d ? d + '%' : '—'}</td><td>${won(q.unit)}<small>VAT 포함 ${won(Math.round(q.unit * 1.1))}</small></td><td>${nf(q.tokens)}</td></tr>`; }).join('');
+    const paid = P.paidMonthTokens || T.ai.paidMonthTokens, trialT = P.trialTokens || T.ai.trialTokens;
+    const aiInc = { standard: `${nf(paid)} 토큰`, pro: `${nf(paid)} 토큰`, enterprise: `${nf(paid)} 토큰 + 계약에 따라 추가` };
+    const multi = T.multi.map(([y, p]) => `${y}년 ${p}%`).join(' · ');
+    const add = T.addons.map(([n, w, u]) => `<tr><td>${E(n)}</td><td>${w == null ? '계약 시 견적' : won(w)}${w == null ? '' : `<small>VAT 포함 ${won(Math.round(w * 1.1))}</small>`}</td><td>${E(u)}</td></tr>`).join('');
+    const faq = [
+      ['AI 포함량을 다 쓰면 어떻게 됩니까?', `충전분이 있으면 만료일이 빠른 충전분부터 자동으로 차감하고 AI 기능은 그대로 씁니다. 충전분도 모두 쓰면 그달 남은 기간 동안 AI 기능이 멈춥니다. 사용량이 80% · 100%에 이르면 홈과 설정 › AI 사용량에서 알려 드립니다.`],
+      ['남은 충전분은 다음 달로 이어집니까?', `네. 충전분은 충전일부터 ${nf(P.creditDays || T.ai.creditDays)}일 동안 쓰고, 달이 바뀌어도 남습니다. 요금제의 월 포함량은 다음 달로 이어지지 않습니다.`],
+      ['충전 금액은 어떻게 정합니까?', `${man(P.step)} 단위로 ${man(P.min)}부터 충전합니다. 많이 충전할수록 단가가 내려가며, 할인은 최대 ${Math.max(...P.discounts.map(x => x[1]))}%입니다. 충전은 정운영자가 설정 › AI 사용량에서 결제합니다.`],
+      ['다년 약정 할인은 AI 사용료에도 적용됩니까?', `아닙니다. 다년 약정 할인(${multi})은 구독료에만 적용합니다. AI 사용료(충전)는 원가와 연동되어 약정 할인이 없습니다.`],
+      ['학습자 수는 어떻게 셉니까?', '계약 기간 중 활성 학습자(한 번 이상 로그인)의 최대치로 셉니다. 구간을 넘으면 100명 단위로 더하거나 상위 구간으로 바꿉니다.'],
+      ['요금제를 바꾸려면 어떻게 합니까?', '요금제 변경 · 인원 구간 조정은 산타 어카운트 매니저가 계약에 맞춰 반영합니다. 아래 채널톡 상담이나 메일로 문의해 주십시오.'],
+      ['Enterprise의 월 AI 포함량은 누가 정합니까?', '계약 내용에 따라 산타가 넣습니다. 기관 운영자는 바꿀 수 없고, 변경 이력은 감사 기록으로 남습니다.']
+    ].map(([q, a]) => `<details><summary>${E(q)}</summary><p>${E(a)}</p></details>`).join('');
+    return `<section class="card" id="plGuide" data-pl-guide><h3>요금 안내 · 요금제별 연 구독료</h3><p class="mini">공개 정가 기준이며 VAT 별도 금액입니다(VAT 포함 금액을 함께 적습니다). 실제 계약 금액은 견적서를 따릅니다.</p>
+        <div class="pl-tw"><table class="pl-sub"><thead><tr><th>요금제 · 대상</th><th>코드 · 고객군</th><th>학습자 구간</th><th>연 구독료(VAT 별도)</th><th>VAT 포함</th></tr></thead><tbody>${subRows}</tbody></table></div>
+        <p class="mini">대학은 재학생 전체 기준 인·년 단가, 대학 사업단(RISE · ATC)은 참여 인원 기준입니다. 전담 매니저는 E3 · U2 · G2 이상에 포함합니다.</p></section>
+      <section class="card" data-pl-ai><h3>월 AI 포함 토큰</h3><div class="pl-k">${T.tiers.map(t => `<div><small>${E(nm(t))}</small><b>${E(aiInc[t])}</b><em>${man(Math.round(paid * P.perM / 1e6))} 상당</em></div>`).join('')}<div><small>무료 체험(${T.trialDays}일 · 유료 전환 전)</small><b>${nf(trialT)} 토큰</b><em>${man(Math.round(trialT * P.perM / 1e6))} 상당</em></div></div>
+        <p class="mini">${E(T.aiBase)}. 요금제의 월 포함량을 먼저 쓰고, 넘으면 충전분에서 차감합니다. 체험이 끝나고 유료로 전환하지 않으면 월 포함량은 0이 되어 충전분만 씁니다.</p></section>
+      <section class="card" data-pl-topup><h3>AI 충전 단가 · 할인 구간</h3><div class="pl-k"><div><small>기본 단가</small><b>100만 토큰당 ${won(P.perM)}</b><em>VAT 포함 ${won(P.perMVat || Math.round(P.perM * 1.1))}</em></div><div><small>충전 단위</small><b>${man(P.step)} 단위</b><em>${man(P.min)} ~ ${man(P.max)} · VAT 별도</em></div><div><small>사용 기간</small><b>충전일부터 ${nf(P.creditDays || T.ai.creditDays)}일</b><em>남은 양은 다음 달로 이어집니다</em></div></div>
+        <div class="pl-tw"><table><thead><tr><th>충전 금액(VAT 별도)</th><th>할인</th><th>100만 토큰당 단가</th><th>받는 토큰(구간 시작 금액 기준)</th></tr></thead><tbody>${disc}</tbody></table></div></section>
+      <section class="card" data-pl-order><h3>이월과 차감 순서</h3><ol class="pl-ol"><li>매달 요금제의 <b>월 포함량</b>을 먼저 씁니다. 월 포함량은 다음 달로 이어지지 않습니다.</li><li>포함량을 넘으면 <b>만료일이 빠른 충전분</b>부터 차감합니다.</li><li>충전분은 충전일부터 ${nf(P.creditDays || T.ai.creditDays)}일 동안 쓰며, 달이 바뀌어도 남습니다(연간 사용).</li><li>포함량과 충전분을 모두 쓰면 AI 기능이 멈춥니다. 80% · 100%에 이르면 미리 알려 드립니다.</li></ol></section>
+      <section class="card" data-pl-contract><h3>계약 · 결제 방식</h3><ul class="pl-ol"><li><b>연 단위 계약</b>이며, 구독료는 세금계산서로 청구합니다. 금액은 VAT 별도로 적고 VAT 포함 금액을 함께 적습니다.</li><li><b>다년 약정 할인</b>: ${multi}(구독료에만 적용). <b>AI 사용료(충전)는 약정 할인이 없습니다.</b></li><li>계약 유형: 구독형 · 다년 약정형 · 구축형. 구축형(설치형)은 계약 시 견적이며 연 유지보수 ${T.buildUpkeep}%가 붙습니다.</li><li>AI 충전은 정운영자가 설정 › AI 사용량에서 온라인으로 결제합니다.</li></ul></section>
+      <section class="card" data-pl-addon><h3>부가서비스 주요 단가</h3><div class="pl-tw"><table><thead><tr><th>항목</th><th>단가(VAT 별도)</th><th>기준</th></tr></thead><tbody>${add}</tbody></table></div><p class="mini">일부 단가는 최초 계약 2~3건 적용 후 조정될 수 있습니다. 표에 없는 항목은 계약 시 견적으로 안내합니다.</p></section>
+      <section class="card pl-faq" data-pl-faq><h3>자주 묻는 질문</h3>${faq}</section>
+      <section class="card" data-pl-contact><h3>문의</h3><p>요금제 · 충전 · 견적은 산타 어카운트 매니저가 안내합니다.</p><div class="pl-acts"><a class="btn pri" href="${E(T.channel)}" target="_blank" rel="noopener">채널톡 상담</a><a class="btn" href="mailto:${E(T.contact)}?subject=${encodeURIComponent('디디쌤 요금 문의')}">${E(T.contact)}</a></div></section>`;
+  }
+  window.PLAN.guide = guide; window.PLAN.aiPrice = aiPrice;
   /* 기존 「플랜 · 결제」(dds26 탭: 요금제 안내 · 결제 내역) — 요금제 안내 탭을 이 화면으로 */
   if (typeof VIEWS.plan === 'function') { const base = VIEWS.plan; VIEWS.plan = (...a) => { if ((UI.plT || 'info') !== 'info') return base(...a);
-    return (typeof head === 'function' ? head('요금제', '현재 요금제와 단계별 기능을 봅니다. 요금제는 산타가 계약에 맞춰 바꿉니다.') : '') + (typeof tabs === 'function' ? tabs('plT', [['info', '요금제 안내'], ['bill', '결제 내역']], 'info') : '') + view(); }; }
-  ACT['pl-open'] = () => { if (role() !== 'owner') { if (typeof toast === 'function') toast('요금제 안내는 정운영자가 볼 수 있습니다.', 'warn'); return; } UI.plT = 'info'; if (typeof slSetOpen === 'function') slSetOpen('plan'); UI.settings = 'plan'; go('settings'); };
+    return (typeof head === 'function' ? head('요금제', '현재 요금제 · 단계별 기능 · 요금 안내를 봅니다. 요금제는 산타가 계약에 맞춰 바꿉니다.') : '') + (typeof tabs === 'function' ? tabs('plT', [['info', '요금제 안내'], ['bill', '결제 내역']], 'info') : '') + view(); }; }
+  ACT['pl-open'] = el => { if (!staff()) { if (typeof toast === 'function') toast('요금제 안내는 정운영자 · 부운영자가 볼 수 있습니다.', 'warn'); return; } UI.plGuide = !!(el && el.dataset && el.dataset.v === 'guide'); UI.plT = 'info'; if (typeof slSetOpen === 'function') slSetOpen('plan'); UI.settings = 'plan'; go('settings'); };
   ACT['pl-ask'] = el => { const I = info(); const what = (el && el.dataset && el.dataset.v) || ''; const min = (el && el.dataset && el.dataset.min) || 'pro'; const c = TB().contact;
     const txt = `[디디쌤 요금제 문의] 기관: ${(S.org && S.org.name) || ''} · 지금 요금제: ${chipTxt()} · 필요한 기능: ${what || '요금제 변경'}(${nm(min)} 요금제부터)`;
     if (typeof modal !== 'function') return;
@@ -188,6 +241,7 @@
       else if (!L && has) { has.remove(); b.removeAttribute('data-pl-lock'); } });
     document.querySelectorAll('[data-act="sl-cn"][data-v],[data-act="cn-open"][data-v]').forEach(b => { if (!connLocked(b.dataset.v) || b.querySelector('.pl-tabl')) return; b.setAttribute('data-pl-lock', connMin(b.dataset.v)); const em = b.querySelector('em'); if (em) em.textContent = `${nm(connMin(b.dataset.v))} 요금제부터`; b.insertAdjacentHTML('beforeend', `<span class="pl-tabl">${LOCK(12)}</span>`); });
     lockLv(document);
+    if (UI.plGuide) { const g = document.getElementById('plGuide'); if (g) { UI.plGuide = false; try { g.scrollIntoView({ block: 'start' }); } catch (e) { } } }
     if (role() !== 'teacher' && !document.querySelector('.pl-chip')) { const host = document.querySelector('.top .brand') || document.querySelector('.orgcard div'); const I = info();
       if (host) host.insertAdjacentHTML('beforeend', `<button type="button" class="pl-chip ${I.trial ? (I.expired ? 'exp' : 'trial') : ''}" data-act="pl-open" aria-label="요금제: ${E(chipTxt())}">${E(chipTxt())}</button>`); }
   });

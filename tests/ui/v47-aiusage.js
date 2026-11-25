@@ -17,7 +17,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     const main = () => document.querySelector('#main'); const open = () => { slSetOpen('aiuse'); UI.settings = 'aiuse'; go('settings'); render(); };
     /* ① 새 기관 체험 기본값 · 기존 기관 불변 */
     createOrg('univ', '사용량 대학'); await wait(900);
-    ok('새 기관 aiplan · plan 체험 기본값', S.aiplan && S.aiplan.monthTokens === 2000000 && S.aiplan.overage === 'pack' && S.plan && S.plan.code === 'TRIAL', { a: S.aiplan, p: S.plan });
+    ok('새 기관 aiplan · plan 체험 기본값', S.aiplan && S.aiplan.monthTokens === 1000000 && S.aiplan.overage === 'pack' && S.plan && S.plan.code === 'TRIAL', { a: S.aiplan, p: S.plan });
     delete S.aiplan; delete S.plan; S.aidemoUsed = 5e7; S.me.role = 'owner'; go('home'); render(); await wait(30);
     ok('기존 기관(aiplan 없음): 알림 없음 · 한도 없음', !document.querySelector('.aiu-alert') && AIUSE.data().state === 'off');
     open(); await wait(30); ok('기존 기관 화면: 「미설정(한도 없음)」 · 포함량 읽기 전용 · 산타 문의', /월 포함량 미설정/.test(main().innerText) && /한도 없음/.test(main().innerText) && !document.querySelector('#aiuTier') && /포함량 변경은 산타에 문의/.test(main().innerText));
@@ -28,7 +28,8 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     document.querySelector('#sQ').value = '사용량'; document.querySelector('[data-act="aiu-sfind"]').click(); await wait(30);
     ok('기관 검색', main().querySelectorAll('.aiu-org').length === 1 && /사용량 대학/.test(main().innerText));
     main().querySelector('[data-act="aiu-sorg"]').click(); await wait(30);
-    const f = id => document.querySelector('#' + id); f('sCode').value = 'e1'; f('sTier').value = 'Enterprise'; f('sContract').value = 'sub'; f('sTokens').value = '2000000'; f('sMemo').value = '1차 계약';
+    const f = id => document.querySelector('#' + id); ok('산타 관리: 체험 기관 입력칸 유료 기본 2,500,000 미리 채움', f('sTokens').value === '2500000', f('sTokens').value);
+    f('sCode').value = 'e1'; f('sTier').value = 'Enterprise'; f('sContract').value = 'sub'; f('sTokens').value = '2000000'; f('sMemo').value = '1차 계약';
     main().querySelector('[data-act="aiu-ssave"]').click(); await wait(40);
     ok('저장 → S.plan E1 · aiplan 200만 · 이력 · 감사', S.plan && S.plan.code === 'E1' && S.aiplan.monthTokens === 2000000 && /1차 계약/.test(main().innerText) && /E1 2,000,000/.test(main().innerText) && /산타 관리 — /.test(S.audit[0].what), { p: S.plan, a: S.aiplan });
     S.aidemoUsed = 1000000; open(); await wait(30);

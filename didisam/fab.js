@@ -26,7 +26,7 @@ function fabSync() { const f = FAB.get(), on = fabOn(), open = on && fabIsOpen()
   let b = $('#fabBtn');
   if (!on) b && b.remove();
   else { if (!b) { document.body.insertAdjacentHTML('beforeend', '<button type="button" id="fabBtn" data-act="fab-toggle"></button>'); b = $('#fabBtn'); }
-    b.setAttribute('aria-expanded', String(open)); b.setAttribute('aria-label', open ? 'AI SAM 닫기' : 'AI SAM 열기'); b.title = open ? '닫기 (Esc)' : 'AI SAM 열기 (Ctrl+K)';
+    b.setAttribute('aria-expanded', String(open)); b.setAttribute('aria-haspopup', 'dialog'); b.setAttribute('aria-label', open ? 'AI SAM 대화창 닫기' : 'AI SAM과 대화하기'); b.title = open ? '대화창 닫기 (Esc)' : 'AI SAM과 대화하기 (Ctrl+K)'; /* qa7: 우측 하단 고정 원형 버튼(운영자 합니다체 안내는 대화창 안) */
     const busy = typeof S !== 'undefined' && S.chat && S.chat.some(m => m.typing);
     if (open) UI.fabNew = 0;
     b.innerHTML = open ? ic('x', 22) : `${ic('spark', 22)}<span>AI SAM</span>${UI.fabNew ? `<em class="fabn">${UI.fabNew}</em>` : busy ? '<i class="fabdot"></i>' : ''}`; }
@@ -66,3 +66,6 @@ ACT['bld-pane'] && (() => { const base = ACT['bld-pane']; ACT['bld-pane'] = el =
 { let t = 0; addEventListener('scroll', e => { const B = document.body && document.body.classList; if (!B || innerWidth > 900 || !B.contains('fab-on') || B.contains('fab-open')) return;
     const tg = e.target; if (tg && tg.nodeType === 1 && tg.closest && tg.closest('.bchat,#drawer,.modal,.mwrap')) return;
     B.add('fab-scr'); clearTimeout(t); t = setTimeout(() => B.remove('fab-scr'), 450); }, { capture: true, passive: true }); }
+/* qa7(2026-11-25): 휴대폰 시트 바깥(어두운 배경)을 누르면 닫는다 — 배경은 body::before라 target이 body */
+document.addEventListener('click', e => { const B = document.body.classList; if (e.target === document.body && B.contains('fab-m') && B.contains('fab-open') && fabOn()) fabClose(); });
+{ const base = fabSync; fabSync = (...a) => { const r = base(...a); try { const c = $('.bchat'); if (c && fabOn()) { c.id = c.id || 'samChat'; c.setAttribute('role', 'dialog'); c.setAttribute('aria-label', 'AI SAM 대화창'); const b = $('#fabBtn'); if (b) b.setAttribute('aria-controls', c.id); } } catch (e) { } return r; }; }

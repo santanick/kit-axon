@@ -34,7 +34,9 @@
 
   /* 내 학습 화면 카드 */
   if (typeof viewMy === 'function') { const base = viewMy; viewMy = function (...a) { const h = base.apply(this, a); if (!on()) return h; // eslint-disable-line no-global-assign
-    let c; if (!ST.secs) { c = `<div class="mycard" id="lmsxMy"><div class="myhead"><h2>내 강의실</h2></div><p class="mini">${ST.err ? esc(ST.err) : '불러오는 중입니다.'}</p></div>`; if (!ST.busy.secs) { ST.busy.secs = 1; secs().catch(e => { ST.err = errMsg(e); ST.secs = []; }).finally(() => { ST.busy.secs = 0; lrender(); }); } }
+    { const me = String(LR.me && LR.me.sid || ''); if (ST.sid !== me) { ST.sid = me; ST.secs = null; ST.err = ''; ST.noreg = false; ST.cache = {}; } }
+    let c; if (!ST.secs) { c = `<div class="mycard" id="lmsxMy"><div class="myhead"><h2>내 강의실</h2></div><p class="mini">${ST.err ? esc(ST.err) : '불러오는 중입니다.'}</p></div>`; if (!ST.busy.secs) { ST.busy.secs = 1; secs().catch(e => { ST.err = errMsg(e); ST.noreg = typeof lmsNoReg === 'function' && lmsNoReg(e); ST.secs = []; }).finally(() => { ST.busy.secs = 0; lrender(); }); } }
+    else if (ST.noreg) c = `<div class="mycard" id="lmsxMy"><div class="myhead"><h2>내 강의실</h2></div>${lmsNoRegCard()}</div>`;
     else c = `<div class="mycard" id="lmsxMy"><div class="myhead"><h2>내 강의실</h2></div><p class="mini">주차별 학습 · 토론 · 위키 · 팀 · 동료 평가 · 게시판</p><ul class="lmsx-ul">${ST.secs.map(s => `<li><a href="${link(s.id, 'room')}"><b>${esc(s.title)}</b></a> <small>${esc(s.term)} · ${esc(s.course || '')}</small></li>`).join('') || '<li class="mini">이번 학기 강의실이 없습니다.</li>'}</ul></div>`;
     return h.includes('<div class="mygrid">') ? h.replace('<div class="mygrid">', '<div class="mygrid">' + c) : c + h; }; }
 
@@ -43,7 +45,7 @@
     if (route().a !== 'lmsx' || !SITE()) return base.apply(this, a);
     if (!LR.me) { location.hash = '#login'; return base.apply(this, a); }
     const app = $('#lapp'); app.innerHTML = shell(`<section class="lmsxl"><div id="lmsxL"><p class="mini">불러오는 중입니다…</p></div></section>`, 'my'); document.title = `${SITE().org.name} · 내 강의실`;
-    fill().catch(e => { const el = $('#lmsxL'); if (el) el.innerHTML = `<p class="lerr2">${esc(errMsg(e, '불러오지 못했습니다.'))}</p>`; }); }; }
+    fill().catch(e => { const el = $('#lmsxL'); if (el) el.innerHTML = typeof lmsNoReg === 'function' && lmsNoReg(e) ? lmsNoRegCard() : `<p class="lerr2">${esc(errMsg(e, '불러오지 못했습니다.'))}</p>`; }); }; }
   async function fill() {
     const { sec, tab, sub } = rt(); const el = () => $('#lmsxL'); let body = '';
     const ss = await secs(); const s = ss.find(x => x.id === sec); if (!s) { el().innerHTML = '<p class="mini">이 강의실의 수강생이 아닙니다.</p><a class="lbtn sm ghost" href="#my">내 학습으로</a>'; return; }

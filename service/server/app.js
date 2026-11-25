@@ -22,6 +22,7 @@ const { createPii, piiKeys } = require('./pii');
 const { createCompliance } = require('./compliance');
 const coupon = require('./coupon'); /* v38 A-17 쿠폰 · 할인 코드 */
 const { benchmark } = require('./bench');
+const { createOembed } = require('./oembed');
 const { createMedia } = require('./media');
 const { cleanCal } = require('./lpcal');
 const { cleanNotes, cleanConn } = require('./lpnotes');
@@ -51,6 +52,7 @@ const AP = require('./aiprice'); /* v47 AI 월 포함량 · 추가 충전 요금
 const { createPay } = require('./fac/pay');
 const LEV = require('./lev'); /* v46 Ver2 학습 이벤트 */
 const { createOAuth } = require('./oauth');
+const { createLearnerOAuth, createTickets } = require('./loauth'); /* QA7 학습자 소셜 가입 · 로그인(구글 · 카카오 · 네이버) */
 const REC = require('./records'); /* 가디언 4차 기록 · 데이터(접근권한 검토 · 내려받기 통제 · 국외 차단 · 보관 파기) */
 const { createMfa } = require('./mfa'); /* 보안 4차 #1 관리자 추가 인증 */
 const { createDevices } = require('./devices'); const { createSessions } = require('./session'); /* 가디언 4차 세션 정책 */ /* 보안 2차: 새 환경 로그인 알림(2단계 인증 대신) */
@@ -112,6 +114,7 @@ const LP_MAX = 512 * 1024; /* v43.6 셀프러닝 노트(lp.notes)로 256KB → 5
 const TID_RE = /^tn_[a-z0-9]{8,16}$/; const SID_RE = /^[A-Za-z0-9_-]{4,20}$/;
 
 function createApp({ pool, env = process.env, publicDir, log = console, benchOpts = {} }) {
+  const oembed = createOembed({ env, lookup: benchOpts.lookup, get: benchOpts.get }); /* qa7 d5 */
   const secure = env.COOKIE_SECURE !== '0';
   /* v25 운영 필수 비밀값 — 약한 기본값으로 뜨지 않게 운영(NODE_ENV=production)에서는 시작을 막는다 */
   if (env.NODE_ENV === 'production') { const miss = ['SESSION_PEPPER', 'PII_KEY'].filter(k => !String(env[k] || '').trim() || String(env[k]).trim().length < 32); if (miss.length) throw new Error(`운영 필수 비밀값이 없거나 짧습니다(32자 이상): ${miss.join(', ')}`); if (!secure) throw new Error('운영에서는 COOKIE_SECURE=0을 쓸 수 없습니다.'); }
@@ -125,11 +128,11 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   const aiPay = createPay(env); const aiClientKey = String(env.TOSS_CLIENT_KEY || '').trim(); /* v47 AI 추가 충전: 두 키가 모두 있을 때만 결제 창 */
   const aiPayOn = () => aiPay.online() && !!aiClientKey;
   /* v47 이달 AI 한도: aiplan이 있는 기관만(없으면 동작 불변). 포함량 + 이달 충전량을 다 쓰면 429 ai_month_quota */
-  const monthGuard = async (c, tid, planRaw, learner) => { const plan = AP.planOf(planRaw); if (!plan.on) return; const m = await AP.monthState(c, tid, plan, today()); if (m.used >= m.included + m.credit) throw new HttpErr(429, learner ? AP.MSG_LEARNER : AP.MSG_STAFF, 'ai_month_quota'); };
-  const aiMonth = async (c, tid) => { const row = (await c.query("select doc->'aiplan' p, doc->'plan' pl from tenant_state where tenant_id = $1", [tid])).rows[0] || {}; const plan = AP.planOf(row.p); const m = await AP.monthState(c, tid, plan, today());
-    const monthFeature = Object.fromEntries((await c.query('select feature, sum(calls)::int calls, sum(tin)::bigint tin, sum(tout)::bigint tout from ai_usage_f where day >= $1::date group by feature order by feature', [m.month + '-01'])).rows.map(r => [r.feature, { calls: r.calls, tin: +r.tin, tout: +r.tout }]));
+  const monthGuard = async (c, tid, planRaw, learner, contract) => { const td = today(); const plan = AP.planOf(planRaw, contract, td); if (!plan.on) return; const m = await AP.monthState(c, tid, plan, td); const blk = AP.blockOf(plan, m.used, m.credit, learner); if (blk) throw new HttpErr(429, blk.message, blk.code); }; /* 체험 종료 → 429 trial_ended */
+  const aiMonth = async (c, tid) => { const row = (await c.query("select doc->'aiplan' p, doc->'plan' pl from tenant_state where tenant_id = $1", [tid])).rows[0] || {}; const plan = AP.planOf(row.p, row.pl, today()); const m = await AP.monthState(c, tid, plan, today());
+    const monthFeature = Object.fromEntries((await c.query('select feature, sum(calls)::int calls, sum(tin)::bigint tin, sum(tout)::bigint tout from ai_usage_f where day >= $1::date group by feature order by feature', [m.from])).rows.map(r => [r.feature, { calls: r.calls, tin: +r.tin, tout: +r.tout }]));
     const credits = m.credits; /* 지금 쓸 수 있는 충전(충전일 · 만료일 · 남은 양) */
-    return { month: m.month, used: m.used, included: m.included, credit: m.credit, creditLeft: m.creditLeft, remaining: m.remaining, pct: m.pct, state: m.state, plan, contractPlan: row.pl && typeof row.pl === 'object' ? row.pl : null, monthFeature, credits, price: AP.priceInfo(), payOnline: aiPayOn() }; };
+    return { month: m.month, used: m.used, included: m.included, credit: m.credit, creditLeft: m.creditLeft, remaining: m.remaining, pct: m.pct, state: m.state, from: m.from, ...(m.trialSince ? { trialSince: m.trialSince } : {}), plan, contractPlan: row.pl && typeof row.pl === 'object' ? row.pl : null, monthFeature, credits, price: AP.priceInfo(), payOnline: aiPayOn() }; };
   /* v47 산타 관리자: 환경변수 SANTA_ADMIN_EMAILS(쉼표 목록)에 든 계정만 — 기관 요금제 · 월 포함 토큰을 넣는다 */
   const santaEmails = AP.santaSet(env); const isSanta = a => !!a && santaEmails.has(String(a.email || '').toLowerCase());
   const needSanta = async req => { const a = await need(req); if (!isSanta(a)) throw new HttpErr(403, '산타 관리자만 쓸 수 있습니다.', 'santa'); return a; };
@@ -255,7 +258,9 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   /* 가디언: owner + 산타 관리자 전용 /api/security/*, 긴급 차단(기본 dry-run · SECURITY_KILL_LIVE=1일 때만 적용) */
   const sec = createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, checkPw, isSanta, env, log });
   const mileage = require('./mileage').createMileage({ exportGateOf: (...x) => rec.exportGateOf(...x), pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, env, log });
-  const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook: mileage.hook });
+  const ltk = createTickets({ pepper, cookies, secure });
+  const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook: mileage.hook, tickets: ltk });;
+  const loauth = createLearnerOAuth({ env, HttpErr, limit, ip, cookies, secure, pepper, pii, tickets: ltk, TID_RE });
   { const base = pii.mailTo; pii.mailTo = async (tid, ...r) => (await sec.egressBlocked(tid)) ? false : base(tid, ...r); } /* 가디언 egress 차단: 기관 알림 메일 발송 중단 */
   const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env, mileHook: mileage.hook });
   /* 단체가입 최초 로그인 · 중도탈락 표시 */
@@ -301,6 +306,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (act.startsWith('ledger-')) return ledger.pub(req, res, tid, act); /* v41 통합 수납 원장 */
     if (act.startsWith('mile-')) return mileage.pub(req, res, tid, act); /* v42 학습 마일리지 */
     if (pii.pubOpen[key]) return pii.pubOpen[key](req, res, tid);
+    if (key === 'GET loauth') return { ready: loauth.ready }; /* QA7 키가 설정된 학습자 소셜 제공자(나머지는 화면에서 「준비 중」) */
     if (key === 'GET events' || key === 'POST events') return eventsRoute(req, res, tid, key);
     if (key === 'GET site') {
       const site = await inTenant(pool, tid, async c => { const r = (await c.query(`select doc->'lsite'->'pub' pub, doc->'aipol' aipol, coalesce(doc->'ledger'->>'on', doc->'org'->>'ledger_on') = 'true' led, ${SEQ_SQL} seq from tenant_state where tenant_id = $1`, [tid])).rows[0]; if (r && r.pub && r.pub.comm) r.live = (await c.query(COMM_LIVE_Q, [tid, r.seq])).rows.map(x => x.cm); return r; });
@@ -369,7 +375,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
       const u = await c.query('insert into ai_usage (tenant_id, day, calls) values ($1, $2, 1) on conflict (tenant_id, day) do update set calls = ai_usage.calls + 1 returning calls', [tid, today()]);
       if (u.rows[0].calls > aiDaily) throw new HttpErr(429, `오늘 기관 AI 사용 한도(${aiDaily}회)를 넘었습니다.`, 'quota');
       sec.postAi(SK, u.rows[0].calls);
-      await monthGuard(c, tid, d.aiplan, true);
+      await monthGuard(c, tid, d.aiplan, true, d.plan);
       /* v46 Ver2(정책 on 기관만): 과제 레벨은 서버가 기관 문서에서 직접 찾음(클라이언트 lvl 불신) · L0 차단 · 힌트 단계 검증 · 기능별 집계 */
       const pol = AG.polOf(d.aipol); const ik = b.item && typeof b.item === 'object' ? b.item.key : b.cls && b.item ? `${b.cls}/${b.item}` : ''; const F = pol.on && ik ? AG.findItem(d.classes, ik) : null;
       const lvl = F ? AG.levelOf(pol, F.it) : pol.on ? pol.lvl : ''; const v2 = { pol, F, lvl, key: F ? `${F.cls}/${F.item}` : '', feature: b.mode === 'vision' && pol.on ? 'vision' : 'tutor' };
@@ -518,6 +524,15 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       try { await pool.query('insert into users (tenant_id, email, pw, role, pw_temp) values ($1, $2, $3, $4, true)', [a.tid, email, pw, role]); } catch (e) { if (e && e.code === '23505') throw new HttpErr(409, '이미 가입된 이메일입니다. 로그인하세요.', 'exists'); throw e; }
       await inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'staff.create', { email, role })); return { email, role, password };
     },
+    /* qa7 d3: 운영자 · 기록 화면에서 역할 변경(부운영자 ↔ 교수자). 정운영자 계정은 바꾸지 않고, 바뀐 계정의 다른 세션은 끊어 새 권한으로 다시 로그인하게 한다(Java 동일) */
+    'POST /api/staff/role': async req => {
+      const a = await needOwner(req); const b = await readBody(req, 4096); const email = String(b.email || '').trim().toLowerCase(); const role = String(b.role || '');
+      if (!['teacher', 'sub'].includes(role)) throw new HttpErr(400, '권한이 올바르지 않습니다.', 'staff_role');
+      const r = await pool.query("update users set role = $3 where tenant_id = $1 and lower(email) = $2 and role <> 'owner' returning id", [a.tid, email, role]);
+      if (!r.rowCount) throw new HttpErr(404, '대상 계정이 없습니다.', 'staff_missing');
+      await pool.query('delete from sessions where user_id = $1', [r.rows[0].id]);
+      await inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'staff.role', { email, role })); return { email, role };
+    },
     'POST /api/staff/remove': async req => {
       const a = await needOwner(req); const b = await readBody(req, 4096); const email = String(b.email || '').trim().toLowerCase();
       const r = await pool.query("delete from users where tenant_id = $1 and lower(email) = $2 and role <> 'owner' returning id", [a.tid, email]);
@@ -589,7 +604,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
         if (u.rows[0].calls > aiDaily) throw new HttpErr(429, `오늘 AI 사용 한도(${aiDaily}회)를 넘었습니다.`, 'quota');
         sec.postAi(SK, u.rows[0].calls);
         PF.guard(HttpErr, st.rows[0] && st.rows[0].plan, AG.polOf(st.rows[0] && st.rows[0].aipol), { feature }, today(), false); /* v47 요금제 밖 기능(grade 채점 초안) → 403 plan_feature */
-        await monthGuard(c, a.tid, st.rows[0] && st.rows[0].aiplan, false);
+        await monthGuard(c, a.tid, st.rows[0] && st.rows[0].aiplan, false, st.rows[0] && st.rows[0].plan);
         await gw.count(c, a.tid, feature, AG.polOf(st.rows[0] && st.rows[0].aipol)); /* v46 기능별 집계(studio · grade) */
         return room;
       });
@@ -625,6 +640,12 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       try { const out = await benchmark(b.url, benchOpts); log.info && log.info('bench', a.tid, new URL(out.url).host); return out; }
       catch (e) { if (e && e.status) throw new HttpErr(e.status, e.message, e.code); throw new HttpErr(502, '사이트를 읽지 못했습니다.', 'fetch'); }
     },
+    /* qa7 d5 YouTube 제목 프록시: 로그인(운영자 · 교수자) · youtube.com/youtu.be만 · SSRF 가드 · title · thumbnail_url만 · 10분 캐시(oembed.js) */
+    'GET /api/oembed': async req => {
+      const a = await need(req); limit(`oembed:${a.uid}`, 60, 60e3);
+      try { return await oembed.lookupTitle(new URL(req.url, 'http://x').searchParams.get('url')); }
+      catch (e) { if (e && e.status) throw new HttpErr(e.status, e.message, e.code); throw new HttpErr(502, 'YouTube에 연결하지 못했습니다. 제목을 직접 입력해 주십시오.', 'fetch'); }
+    },
     'GET /api/ai/usage': async req => {
       const a = await need(req);
       return inTenant(pool, a.tid, async c => { const { rows } = await c.query("select day::text, calls, tin::int, tout::int from ai_usage where tenant_id = $1 and day > current_date - 31 order by day desc", [a.tid]);
@@ -635,8 +656,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       const a = await needOwner(req); limit(`aitop:${a.tid}`, 20, 600e3); const b = await readBody(req, 1024);
       const P = AP.quote(b.won); if (!P) throw new HttpErr(400, '충전 금액은 10만 원 단위(10만 ~ 1억 원)로 골라 주십시오.', 'won');
       if (!aiPayOn()) throw new HttpErr(503, '결제 연결 준비 중 — 산타에 문의하십시오.', 'pay_off');
-      const plan = await inTenant(pool, a.tid, async c => AP.planOf(((await c.query("select doc->'aiplan' p from tenant_state where tenant_id = $1", [a.tid])).rows[0] || {}).p));
-      if (plan.on && plan.overage === 'block') throw new HttpErr(409, '초과 처리가 「차단」으로 설정되어 있습니다. 「추가 충전 허용」으로 바꾼 뒤 충전하십시오.', 'overage_block');
+      const plan = await inTenant(pool, a.tid, async c => { const r = (await c.query("select doc->'aiplan' p, doc->'plan' pl from tenant_state where tenant_id = $1", [a.tid])).rows[0] || {}; return AP.planOf(r.p, r.pl, today()); });
+      if (AP.topupBlocked(plan)) throw new HttpErr(409, '초과 처리가 「차단」으로 설정되어 있습니다. 「추가 충전 허용」으로 바꾼 뒤 충전하십시오.', 'overage_block');
       const id = 'ac_' + crypto.randomBytes(9).toString('hex'); const orderId = 'aitop-' + crypto.randomBytes(12).toString('hex');
       await inTenant(pool, a.tid, c => c.query('insert into ai_credit (id, tenant_id, month, pack, tokens, amount, order_id, by_email) values ($1,$2,$3,$4,$5,$6,$7,$8)', [id, a.tid, AP.monthOf(today()), AP.packId(P.won), P.tokens, P.total, orderId, a.email]));
       return { orderId, amount: P.total, supply: P.supply, vat: P.vat, tokens: P.tokens, discount: P.discount, orderName: `디디쌤 AI 충전 ${(P.won / 1e4).toLocaleString('ko-KR')}만 원(${P.tokens.toLocaleString('ko-KR')} 토큰)`, clientKey: aiClientKey };
@@ -664,7 +685,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       const { rows } = await pool.query("select id tid, name, type, mode, to_char(created_at at time zone 'Asia/Seoul', 'YYYY-MM-DD') created from tenants where ($1 = '' or id = $1 or name ilike '%' || replace(replace($1, '%', ''), '_', '') || '%') order by created_at desc limit 20", [q]);
       const orgs = [];
       for (const t of rows) {
-        const st = await inTenant(pool, t.tid, async c => { const r = (await c.query("select doc->'plan' plan, doc->'aiplan' aiplan from tenant_state where tenant_id = $1", [t.tid])).rows[0]; const m = r ? await AP.monthState(c, t.tid, AP.planOf(r.aiplan), today()) : null; return { r, m }; });
+        const st = await inTenant(pool, t.tid, async c => { const r = (await c.query("select doc->'plan' plan, doc->'aiplan' aiplan from tenant_state where tenant_id = $1", [t.tid])).rows[0]; const m = r ? await AP.monthState(c, t.tid, AP.planOf(r.aiplan, r.plan, today()), today()) : null; return { r, m }; });
         const log = (await pool.query("select to_char(at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') at, actor, before, after, memo from santa_plan_log where tenant_id = $1 order by id desc limit 10", [t.tid])).rows;
         orgs.push({ ...t, ready: !!st.r, plan: st.r && st.r.plan || null, aiplan: st.r && st.r.aiplan || null, used: st.m ? st.m.used : 0, memo: log.length ? log[0].memo : '', log });
       }
@@ -682,6 +703,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     },
     /* v23: 학습자 계정 목록(닉네임 + 가린 이메일만) · 목적이 있는 개인정보 열람(정운영자 · 기록) · 열람 기록 */
     'GET /api/learners/accounts': async req => pii.adminList(await needStaff(req)),
+    'POST /api/learners/decide': async req => pii.decide(await needStaff(req), req), /* QA7 가입 신청 승인 · 거절 */
     'POST /api/learners/pii': async req => pii.adminPii(await needStaff(req), req),
     'GET /api/learners/pii-log': async req => pii.adminLog(await needStaff(req)),
     /* v36 일괄 등록 뒤 남은 학습자 로그인 계정(접근코드 해시)을 500건씩 마저 만든다 — 응답 { pending } 이 0이 될 때까지 화면이 반복 호출 */
@@ -772,7 +794,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname.startsWith('/api/') && !M.apiAllowed(mod, req.method, url.pathname)) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
       if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?)$/);
+        if (url.pathname.includes('/loauth/') && url.pathname.startsWith('/api/pub/') && await loauth.handle(req, res, url)) return;
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?)$/);
         const sp = req.method === 'PUT' && url.pathname.match(/^\/api\/santa\/orgs\/(tn_[a-z0-9]{8,16})\/plan$/);
         const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname) || sec.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {

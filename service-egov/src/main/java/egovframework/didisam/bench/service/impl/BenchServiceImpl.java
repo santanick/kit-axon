@@ -14,7 +14,9 @@ import org.springframework.stereotype.Service;
 public class BenchServiceImpl extends EgovAbstractServiceImpl implements BenchService {
     @Resource(name = "propertiesService") private EgovPropertyService props;
     private final DdRateLimiter rl;
-    public BenchServiceImpl(DdRateLimiter rl) { this.rl = rl; }
+    private final DdOembed oembed;
+    public BenchServiceImpl(DdRateLimiter rl, egovframework.didisam.cmm.DdProps dp) { this.rl = rl; this.oembed = new DdOembed(dp.prod); }
+    @Override public Map<String, Object> oembed(Map<String, Object> a, String url) throws Exception { rl.limit("oembed:" + a.get("uid"), 60, 60_000L); return oembed.lookup(url); }
 
     @Override public Map<String, Object> benchmark(Map<String, Object> a, byte[] body) throws Exception {
         rl.limit("bench:" + a.get("tid"), props.getInt("rate.bench.max"), props.getLong("rate.bench.winMs"));

@@ -70,7 +70,8 @@
       const L = W3.get('sections', 'GET', '/api/lms/g/sections'); if (L === undefined) return undefined;
       if (L.__err) return L;
       if (!L.length && S.org && S.org.empty) return { __err: '이번 학기에 개설된 분반이 없습니다. 학기 · 강좌에서 교과목과 분반을 먼저 개설하세요.' };
-      if (!L.length) { if (!W3.busy.seed) { W3.busy.seed = 1; W3.call('POST', '/api/lms/g/seed', {}).catch(e => toast(errMsg(e), 'warn')).finally(() => { delete W3.busy.seed; W3.drop(); render(); }); } return undefined; }
+      if (!L.length && W3.seedTried === S.org) return { __err: '담당 분반이 없습니다. 학기 · 강좌에서 분반과 담당 교수를 확인하세요.' }; /* qa7 d1: 준비는 기관당 한 번 — 준비 뒤에도 비면(교수 담당 분반 없음 등) 안내로 끝낸다(render 반복 방지) */
+      if (!L.length) { if (!W3.busy.seed) { W3.busy.seed = 1; W3.seedTried = S.org; W3.call('POST', '/api/lms/g/seed', {}).catch(e => toast(errMsg(e), 'warn')).finally(() => { delete W3.busy.seed; W3.drop(); setTimeout(render, 0); }); } return undefined; }
       UI.w3sec = UI.w3sec && L.find(s => s.section_id === UI.w3sec) ? UI.w3sec : L[0].section_id; return L.find(s => s.section_id === UI.w3sec);
     },
     secPick() { const L = W3.cache.sections || []; return L.length > 1 ? `<select data-chg="w3-sec" aria-label="분반 선택">${L.map(s => `<option value="${esc(s.section_id)}" ${s.section_id === UI.w3sec ? 'selected' : ''}>${esc(s.title)}</option>`).join('')}</select>` : ''; },

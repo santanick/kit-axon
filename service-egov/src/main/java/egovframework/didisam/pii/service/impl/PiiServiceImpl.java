@@ -40,6 +40,10 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.mileage.service.MileService mile; /* v42 수집 훅 */
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.sec.service.SecService sec; /* 가디언 긴급 차단 실행 지점 */
     private final egovframework.didisam.cpl.service.CplService cpl; private final DdMail mail;
+    @org.springframework.beans.factory.annotation.Autowired private DdLTickets tickets; /* QA7 소셜 가입 보류 · 승인 대기 표(Node loauth.createTickets) */
+    /** QA7 승인 대기 · 거절: 응답에 신청 정보 { pending: { nick, at, login, status[, reason] } }, lid는 대기 표 쿠키용(Node approval stop) */
+    static final class Stop extends DdException { final String lid; final Map<String, Object> info;
+        Stop(String code, String msg, String lid, Map<String, Object> info) { super(403, msg, code); this.lid = lid; this.info = info; extra(new LinkedHashMap<>(Map.of("pending", info))); } }
     public PiiServiceImpl(PiiMapper mapper, PiiTx ptx, TenantTxMapper txm, DdPiiCrypto K, DdProps p, DdWeb web, DdRateLimiter rl, egovframework.didisam.cpl.service.CplService cpl, DdMail mail) { this.cpl = cpl; this.mail = mail;
         this.mapper = mapper; this.ptx = ptx; this.txm = txm; this.K = K; this.p = p; this.web = web; this.rl = rl;
     }
@@ -84,11 +88,17 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             if (v.isTextual()) o.put(k, DdAiGuard.redact(cut(v.textValue(), 200)).text()); /* v36 여러 개 고르기 답(쉼표로 이음) — Node cleanExtra와 같은 200자 */
             else if (v.isObject()) { ObjectNode f = F.objectNode(); f.put("name", cut(sOr(get(v, "name")), 120)); JsonNode sz = get(v, "size"); if (sz != null && sz.isNumber() && sz.doubleValue() != 0) f.set("size", sz); else f.put("size", 0); f.put("type", cut(sOr(get(v, "type")), 60)); o.set(k, f); } }
         return o; }
-    /** v33 운영자 승인: 스튜디오 회원(상태 문서 members)의 등급으로 판단(Node pii.approval과 같음) — L 역할 */
+    /** v33 운영자 승인: 스튜디오 회원(상태 문서 members)의 등급으로 판단(Node pii.approval과 같음) — L 역할
+     *  QA7: 서버 결정(learner_accounts.decision, POST /api/learners/decide)이 먼저 — 직업훈련원은 문서 설정과 관계없이 승인제. 대기 · 거절은 신청 정보를 함께 돌려준다 */
     private void approval(String tid, String lid) throws Exception {
         Map<String, Object> r = mapper.selectApproval(tid, lid); String ap = r == null ? null : (String) r.get("ap"); String g = r == null ? null : (String) r.get("g"); String rj = r == null ? null : (String) r.get("r"); boolean found = r != null && r.get("found") != null && (Boolean) r.get("found");
-        if (found && "거절".equals(g)) throw new DdException(403, "가입이 승인되지 않았습니다." + (rj != null && !rj.isEmpty() ? " 사유: " + cut(rj, 200) : "") + " 운영자에게 문의하세요.", "rejected");
-        if ((found && "승인 대기".equals(g)) || (!found && "manual".equals(ap))) throw processException("dd.403.pending");
+        String d = r == null ? null : (String) r.get("d"); String ty = r == null ? null : (String) r.get("ty");
+        Map<String, Object> info = new LinkedHashMap<>(); info.put("nick", r == null || r.get("n") == null ? "" : r.get("n")); info.put("at", r == null || r.get("at") == null ? "" : r.get("at")); info.put("login", r == null || r.get("lg") == null ? "" : r.get("lg"));
+        if ("ok".equals(d)) return;
+        if ("no".equals(d) || (d == null && found && "거절".equals(g))) { String rs = cut(String.valueOf("no".equals(d) ? (r.get("dr") == null ? "" : r.get("dr")) : (rj == null ? "" : rj)), 200);
+            info.put("status", "rejected"); if (!rs.isEmpty()) info.put("reason", rs);
+            throw new Stop("rejected", "가입이 승인되지 않았습니다." + (!rs.isEmpty() ? " 사유: " + rs : "") + " 운영자에게 문의하세요.", lid, info); }
+        if ((found && "승인 대기".equals(g)) || (!found && ("manual".equals(ap) || "voc".equals(ty)))) { info.put("status", "pending"); throw new Stop("pending", "운영자 승인을 기다리고 있습니다. 승인되면 로그인할 수 있어요.", lid, info); }
     }
     @Override public boolean hasPw(String tid, String lid) throws Exception { return Boolean.TRUE.equals(ptx.run(tid, r -> r.P(() -> mapper.selectIdentityPw(tid, lid) != null))); }
     @Override public void changePw(String tid, String lid, String cur, String pw) throws Exception {
@@ -104,13 +114,16 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         return new Org(type, or(get(a, "mode"), t("open")), truthy(get(a, "under14")), soc != null && soc.isArray() ? soc : arrNode(PROVIDERS.stream().map(Js::t).toList()), on, on ? sOr(get(idv, "reason")) : null, strictEq(get(a, "approve"), "manual") || "voc".equals(type) /* v43 P1-F01: 직업훈련원 자동 수락 불가(Node pii.js와 같음) */, "k12".equals(type) && truthy(get(a, "parent")));
     }
 
-    /** SNS 식별자 → 해시. 운영: 공급자 토큰을 서버에서 검증해 sub를 받는다(카카오 · 네이버 · 구글 · 애플). */
-    record Sns(String prov, String sub) {}
-    private Sns snsSub(JsonNode b) throws Exception {
+    /** SNS 식별자 → 해시. 운영: 공급자 토큰을 서버에서 검증해 sub를 받는다(카카오 · 네이버 · 구글 · 애플).
+     *  QA7 학습자 OAuth: 콜백이 남긴 서명 쿠키(15분, 제공자 + sub 해시)로 가입 — 원문 sub는 다시 보지 않는다(Node snsSub와 같음) */
+    record Sns(String prov, String h) {}
+    private Sns snsSub(JsonNode b, HttpServletRequest req, String tid) throws Exception {
+        JsonNode oa = get(b, "oauth");
+        if (oa != null && oa.isBoolean() && oa.booleanValue()) { JsonNode o = req == null ? null : tickets.snsGet(req, tid); if (o == null || !PROVIDERS.contains(o.path("p").asText())) throw new DdException(400, "소셜 로그인 정보가 만료되었어요. 다시 시도해 주세요.", "oauth_pending"); return new Sns(o.path("p").asText(), o.path("h").asText()); }
         String prov = sOr(get(b, "provider")); if (!PROVIDERS.contains(prov)) throw processException("dd.400.provider");
         /* 운영: const sub = await verifyOAuth(prov, b.token) */
         String ds = sOr(get(b, "dev_sub"));
-        if (p.devOauth && DEVSUB.matcher(ds).matches()) return new Sns(prov, ds);
+        if (p.devOauth && DEVSUB.matcher(ds).matches()) return new Sns(prov, bidx(tid, "sub:" + prov, ds));
         throw processException("dd.501.oauth_unset");
     }
     private void useOtp(String tid, String b, String purpose, JsonNode code) throws Exception {
@@ -159,6 +172,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         JsonNode b = DdWeb.readBody(body, props.getInt("body.lsignupMax")); String via = sOr(get(b, "via"));
         JsonNode consent = or(get(b, "consent"), F.objectNode());
         if (!truthy(get(consent, "tos")) || !truthy(get(consent, "privacy"))) throw processException("dd.400.consent");
+        boolean[] noPw = { false };
         String[] out = ptx.run(tid, r -> {
             Org org = r.L(() -> orgOf(tid)); boolean univ = "univ".equals(org.type());
             if (r.L(() -> strictPw(tid)) && !truthy(get(consent, "third"))) throw processException("dd.400.consent_third");
@@ -174,18 +188,20 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             if (strictEq(org.mode(), "invite") && !tokOk) throw processException("dd.403.mode.invite");
             String nick = trim(sOr(get(b, "nickname"))); String login = via, sub = null, email = "", stu = null, dept = "";
             if (univ) {
-                if (!"univ".equals(via)) throw processException("dd.400.via.univ");
+                if (!"univ".equals(via) && !"sns".equals(via)) throw processException("dd.400.via.univ");
                 stu = trim(sOr(get(b, "student_no"))); dept = cut(trim(sOr(get(b, "dept"))), 40);
                 if (!STU_RE.matcher(stu).matches()) throw processException("dd.400.student_no");
                 if (dept.isEmpty()) throw processException("dd.400.dept");
-                if (sOr(get(b, "pw")).length() < 8) throw processException("dd.400.pw"); if (r.L(() -> strictPw(tid)) && !egovframework.didisam.cmm.DdModule.pwRule(sOr(get(b, "pw")))) throw processException("dd.400.pw_rule");
-                sub = bidx(tid, "univ", stu); if (nick.isEmpty()) nick = slice(stu, -4, stu.length()) + "학번";
+                if ("sns".equals(via)) { /* QA7 대학 소셜 가입: 제공자 해시 + 학번 · 학과만(이메일 · 비밀번호 없음) */ Sns s = snsSub(b, req, tid); if (!includes(org.social(), t(s.prov()))) throw processException("dd.403.provider"); login = s.prov(); sub = s.h(); noPw[0] = true; }
+                else { if (sOr(get(b, "pw")).length() < 8) throw processException("dd.400.pw"); if (r.L(() -> strictPw(tid)) && !egovframework.didisam.cmm.DdModule.pwRule(sOr(get(b, "pw")))) throw processException("dd.400.pw_rule");
+                    sub = bidx(tid, "univ", stu); login = "univ"; }
+                if (nick.isEmpty()) nick = slice(stu, -4, stu.length()) + "학번";
             } else if ("email".equals(via)) {
                 email = trim(sOr(get(b, "email"))).toLowerCase(Locale.ROOT); if (!MAIL_RE.matcher(email).matches()) throw processException("dd.400.email");
                 String eb = bidx(tid, "email", email); r.P(() -> { useOtp(tid, eb, "signup", get(b, "code")); return null; });
             } else if ("sns".equals(via)) {
-                Sns s = snsSub(b); if (!includes(org.social(), t(s.prov()))) throw processException("dd.403.provider");
-                login = s.prov(); sub = bidx(tid, "sub:" + s.prov(), s.sub());
+                Sns s = snsSub(b, req, tid); if (!includes(org.social(), t(s.prov()))) throw processException("dd.403.provider");
+                login = s.prov(); sub = s.h();
             } else throw processException("dd.400.via");
             if (!NICK_RE.matcher(nick).matches()) throw processException("dd.400.nickname");
             boolean minor = !univ && !"parent".equals(kind) && !(get(b, "age14") != null && get(b, "age14").isBoolean() && get(b, "age14").booleanValue()); String gContact = "";
@@ -197,9 +213,9 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
                 if (!ph.isEmpty()) gContact = ph;
             }
             String pw = null; JsonNode pwN = get(b, "pw");
-            if (truthy(pwN)) { String ps = str(pwN); if (r.L(() -> strictPw(tid)) && !egovframework.didisam.cmm.DdModule.pwRule(ps)) throw processException("dd.400.pw_rule"); if (ps.length() >= 8 && ps.length() <= 64) pw = DdCrypto.hashPw(ps); else throw processException("dd.400.pw.range"); }
+            if (truthy(pwN) && !noPw[0]) { String ps = str(pwN); if (r.L(() -> strictPw(tid)) && !egovframework.didisam.cmm.DdModule.pwRule(ps)) throw processException("dd.400.pw_rule"); if (ps.length() >= 8 && ps.length() <= 64) pw = DdCrypto.hashPw(ps); else throw processException("dd.400.pw.range"); }
             String st = minor ? "guardian_pending" : "active"; boolean pend = !minor && org.manual() && !tokOk;
-            String acctLogin = univ ? "univ" : login; String fstu = stu, fdept = dept, fnick = nick; boolean fminor = minor;
+            String acctLogin = login; String fstu = stu, fdept = dept, fnick = nick; boolean fminor = minor;
             String lid;
             try { String fkind = kind; lid = r.L(() -> mapper.insertAccount(tid, fkind, acctLogin, fnick, fstu, fdept, st, fminor, truthy(get(consent, "mkt")))); }
             catch (DuplicateKeyException e) { throw processException("dd.409.exists.stuno"); }
@@ -230,9 +246,12 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             return new String[]{ lid, st, nick, acctLogin, gtok, pend ? "1" : "" };
         });
         boolean pend = "1".equals(out[5]);
-        if ("active".equals(out[1]) && !pend) newLearnerSession(res, tid, out[0]);
+        if ("active".equals(out[1]) && !pend) newLearnerSession(res, tid, out[0]); /* 세션 쿠키가 set-cookie를 새로 쓰므로 보조 쿠키는 그 뒤에 덧붙인다 */
+        { JsonNode oa = get(b, "oauth"); if (oa != null && oa.isBoolean() && oa.booleanValue()) tickets.snsClear(res); }
+        if (pend) tickets.pendSet(res, tid, out[0]); /* QA7 승인 대기 표(30일) */
         Map<String, Object> me = new LinkedHashMap<>(); me.put("sid", out[0]); me.put("nickname", out[2]); me.put("login", out[3]); me.put("status", pend ? "pending" : out[1]);
         Map<String, Object> o = new LinkedHashMap<>(); o.put("me", me);
+        if (pend) { Map<String, Object> pd = new LinkedHashMap<>(); pd.put("status", "pending"); pd.put("nick", out[2]); pd.put("login", out[3]); pd.put("at", isoNow()); o.put("pending", pd); }
         if ("guardian_pending".equals(out[1])) { o.put("guardian", "sent"); if (devCode()) o.put("dev_token", out[4]); }
         return o;
     }
@@ -288,7 +307,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
                 }
                 id = (String) row.get("learner_id");
             } else if ("sns".equals(via)) {
-                Sns s = snsSub(b); String sh = bidx(tid, "sub:" + s.prov(), s.sub());
+                Sns s = snsSub(b, req, tid); String sh = s.h();
                 id = r.P(() -> mapper.selectBySub(tid, s.prov(), sh)); if (id == null) throw processException("dd.404.no_account");
             } else if ("univ".equals(via)) {
                 String stu = trim(sOr(get(b, "student_no"))); limit("llu:" + tid + ":" + stu, "rate.llu.max", "rate.ll.winMs");
@@ -302,7 +321,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             if ("guardian_pending".equals(st)) throw processException("dd.403.guardian_pending");
             r.L(() -> { approval(tid, fid); return null; });
             return id;
-        }); } catch (Exception e) { if (LK != null && lockable(e)) lockLog(tid, LK, "llogin.fail"); throw e; }
+        }); } catch (Exception e) { if (LK != null && lockable(e)) lockLog(tid, LK, "llogin.fail"); if (e instanceof Stop st) tickets.pendSet(res, tid, st.lid); throw e; }
         if (LK != null) lockLog(tid, LK, "llogin");
         newLearnerSession(res, tid, lid);
         return lid;
@@ -314,6 +333,53 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         String to = ptx.run(tid, r -> r.P(() -> { Map<String, Object> x = mapper.selectMine(tid, lid); return x == null || x.get("email_enc") == null ? null : dec(x.get("email_enc"), DdPiiCrypto.aad(tid, lid, "email")); }));
         if (to == null || to.isEmpty()) return false; mail.send(to, subject, text); return true;
     }
+    /** QA7 승인 대기 표(쿠키) → 지금 상태. 승인되었으면 바로 로그인(세션)하고 표를 지운다 — GET · DELETE /api/pub/{tid}/pending (Node pendingV) */
+    @Override public Map<String, Object> pending(HttpServletRequest req, HttpServletResponse res, String tid) throws Exception {
+        JsonNode t = tickets.pendGet(req, tid); if (t == null) throw new DdException(404, "확인할 가입 신청이 없어요. 로그인해 주세요.", "no_pending");
+        if ("DELETE".equals(req.getMethod())) { tickets.pendClear(res); return new LinkedHashMap<>(Map.of("ok", true)); }
+        rl.limit("lpd:" + web.ip(req), 60, 600_000L); String lid = t.path("l").asText();
+        try { ptx.run(tid, r -> r.L(() -> { String st = UUIDISH.matcher(lid).matches() ? mapper.selectStatus(tid, lid) : null;
+            if (st == null || "withdrawn".equals(st)) throw new DdException(404, "가입 신청을 찾을 수 없어요. 다시 가입해 주세요.", "no_pending"); approval(tid, lid); return null; })); }
+        catch (Stop e) { return e.info; }
+        catch (DdException e) { if ("no_pending".equals(e.getCode())) tickets.pendClear(res); throw e; }
+        newLearnerSession(res, tid, lid); tickets.pendClear(res);
+        Map<String, Object> o = new LinkedHashMap<>(); o.put("status", "active"); o.put("sid", lid); return o;
+    }
+    /** QA7 학습자 OAuth 콜백 → ok(로그인) | join(가입 보류 쿠키) | pending | rejected (Node oauthLogin) */
+    @Override public String oauthLogin(HttpServletRequest req, HttpServletResponse res, String tid, String prov, String rawSub) throws Exception {
+        String h = bidx(tid, "sub:" + prov, rawSub); String lid;
+        try { lid = ptx.run(tid, r -> { String id = r.P(() -> mapper.selectBySub(tid, prov, h)); if (id == null) return null;
+            String st = r.L(() -> mapper.selectStatus(tid, id)); if (st == null || "withdrawn".equals(st)) return null;
+            if ("guardian_pending".equals(st)) throw new DdException(403, "보호자 동의를 기다리고 있습니다.", "guardian_pending");
+            r.L(() -> { approval(tid, id); return null; }); return id; }); }
+        catch (Stop e) { tickets.pendSet(res, tid, e.lid); return "rejected".equals(e.getCode()) ? "rejected" : "pending"; }
+        if (lid == null) { tickets.snsSet(res, tid, prov, h); return "join"; }
+        newLearnerSession(res, tid, lid);
+        try { String fl = lid; ptx.run(tid, r -> r.L(() -> { txm.insertAudit(tid, "learner:" + fl, "llogin", stringify(F.objectNode().put("via", prov))); return null; })); } catch (Exception ignore) { }
+        return "ok";
+    }
+    @Override public boolean socialOn(String tid, String prov) throws Exception { return Boolean.TRUE.equals(ptx.run(tid, r -> r.L(() -> includes(orgOf(tid).social(), t(prov))))); }
+
+    /** QA7 운영자 가입 신청 처리: 승인 · 거절(사유) · 일괄 — 서버 결정 저장 · 감사 learner.approve/reject · 이메일 가입자에게 메일(미설정이면 건너뜀) — POST /api/learners/decide (Node decide) */
+    static final Pattern ACCOUNT = Pattern.compile("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    @Override public Map<String, Object> decide(Map<String, Object> a, byte[] body) throws Exception {
+        if ("teacher".equals(a.get("role"))) throw new DdException(403, "운영자만 가입 신청을 처리할 수 있습니다.", "role");
+        JsonNode b = DdWeb.readBody(body, 16384); JsonNode okN = get(b, "ok"); boolean ok = okN != null && okN.isBoolean() && okN.booleanValue();
+        String reason = DdAiGuard.redact(cut(trim(sOr(get(b, "reason"))), 200)).text();
+        LinkedHashSet<String> set = new LinkedHashSet<>(); JsonNode sl = get(b, "sids"); if (sl != null && sl.isArray()) for (JsonNode x : sl) set.add(x.isTextual() ? x.textValue() : x.isNull() ? "null" : x.toString());
+        List<String> ids = set.stream().filter(x -> ACCOUNT.matcher(x).matches()).limit(200).toList();
+        if (ids.isEmpty()) throw new DdException(400, "처리할 가입 신청을 고르세요.", "sids"); if (!ok && reason.isEmpty()) throw new DdException(400, "거절 사유를 입력하세요.", "reason");
+        String tid = (String) a.get("tid"); String actor = (String) a.get("email");
+        Object[] R = ptx.run(tid, r -> r.L(() -> {
+            List<Map<String, Object>> rows = mapper.updateDecision(tid, ids, ok ? "ok" : "no", ok ? null : reason);
+            for (Map<String, Object> x : rows) { ObjectNode d = F.objectNode(); d.put("sid", String.valueOf(x.get("learner_id"))); if (!ok) d.put("reason", reason); txm.insertAudit(tid, actor, ok ? "learner.approve" : "learner.reject", stringify(d)); }
+            String n = mapper.selectOrgName(tid); return new Object[]{ rows, cut(n == null || n.isEmpty() ? "디디쌤" : n, 40) }; }));
+        @SuppressWarnings("unchecked") List<Map<String, Object>> rows = (List<Map<String, Object>>) R[0]; String org = (String) R[1]; int mailed = 0;
+        for (Map<String, Object> x : rows) if ("email".equals(x.get("login"))) { try { if (mailTo(tid, String.valueOf(x.get("learner_id")), ok ? "[" + org + "] 가입이 승인되었어요" : "[" + org + "] 가입 신청 결과 안내",
+            ok ? org + " 학습 사이트 가입이 승인되었어요. 지금 로그인해 학습을 시작해 보세요." : org + " 학습 사이트 가입이 승인되지 않았어요.\n사유: " + reason + "\n궁금한 점은 기관에 문의해 주세요.")) mailed++; } catch (Exception ignore) { } }
+        Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); o.put("n", rows.size()); o.put("mailed", mailed); o.put("mail", mail.on); return o;
+    }
+
     /* ── 본인 세션 필요 ── */
     @Override public Map<String, Object> myPii(HttpServletRequest req, byte[] body, String tid, String sid) throws Exception {
         if ("GET".equals(req.getMethod())) return ptx.run(tid, r -> r.P(() -> {

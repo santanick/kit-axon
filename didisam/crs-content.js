@@ -525,7 +525,9 @@
   /* 입력 → 상태(다시 그리지 않음) */
   document.addEventListener('input', e => { const el = e.target; if (!X || !el.closest || !el.closest('#ctSheet')) return;
     if (el.id === 'ctTopic') { X.topic = el.value; el.removeAttribute('aria-invalid'); const nd = $1('[data-ctneed]'); if (nd) nd.hidden = !!el.value.trim(); if (MK.has(X.kind) && !claudeOn() && !X.dirty && el.value.trim().length >= 2) { clearTimeout(X.tt); const keep = X; X.tt = setTimeout(() => { if (X === keep && !X.busy && document.activeElement && document.activeElement.id === 'ctTopic') A['ct-make'](); }, 900); } } if (el.id === 'ctUpT') X.upTitle = el.value;
-    if (el.id === 'ctUrl') { X.url = el.value.trim(); X.yt = null; clearTimeout(X.ut); X.ut = setTimeout(() => { if (!X) return; const pos = el.selectionStart; draw(); const n = $1('#ctUrl'); if (n && !ytId(X.url)) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) { } } }, 350); }
+    if (el.id === 'ctUrl') { X.url = el.value.trim(); X.yt = null; clearTimeout(X.ut); X.ut = setTimeout(() => { if (!X) return; const pos = el.selectionStart; draw(); const n = $1('#ctUrl'); if (n && !ytId(X.url)) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (er) { } }
+        /* qa7 d5: 영상 제목 — 운영 서버 프록시(GET /api/oembed, clib.js ytTitleOf)로 받아 채운다. 시연판 · 실패는 그대로(제목은 넣은 뒤 바로 고치기에서 입력) */
+        const yid = ytId(X.url), want = X.url; if (yid && typeof window.ytTitleOf === 'function') window.ytTitleOf(want).then(j => { const tt = j && String(j.title || '').trim(); if (!X || X.url !== want || !tt || (X.yt && X.yt.title)) return; X.yt = { id: yid, title: tt.slice(0, 80) }; draw(); }); }, 350); }
     if (el.id === 'ctLq') { X.lq = el.value; clearTimeout(X.lt); X.lt = setTimeout(() => { if (!X) return; draw(); const n = $1('#ctLq'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 250); }
   });
   document.addEventListener('change', e => { const el = e.target; if (el && el.id === 'ctFile' && el.files && el.files[0] && X) takeFile(el.files[0]);

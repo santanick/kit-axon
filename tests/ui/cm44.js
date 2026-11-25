@@ -14,7 +14,7 @@ const CUT = {
   'hpsec-trust.js': s => { const i = s.indexOf('/* v44.1 CM — 새 템플릿(g44) 공통 부품'); return i > 0 ? s.slice(0, i) : s; },
   'lhpshell.js': s => { const i = s.indexOf('/* v44.1 CM — 새 템플릿(g44) 게시본에서만'); return i > 0 ? s.slice(0, i) : s; },
   'lhpshell.css': s => { const i = s.indexOf('/* v44.1 CM'); return i > 0 ? s.slice(0, i) : s; },
-  'ltutor.js': s => s.replace(" && !(window.lhsG44 && lhsG44())) { /* v44.1 CM: 새 템플릿(g44) 방문자 화면은 머리글에 넣지 않고 오른쪽 아래 떠 있는 버튼 */", ') {')
+  /* ltutor.js: qa7(2026-11-25) 대표님 지시로 모든 템플릿 · 화면의 AI 튜터 버튼이 우측 하단 고정으로 통일되어 g44 전용 분기(CM 블록)가 없어졌다 — 떼어 낼 블록 없음 */
 };
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.webmanifest': 'application/json' };
 function serve(port, old) { const srv = http.createServer((q, r) => { const u = decodeURIComponent(q.url.split('?')[0]); const f = path.join(ROOT, u === '/' ? 'index.html' : u);

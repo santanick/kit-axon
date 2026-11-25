@@ -109,7 +109,9 @@ window.lBadgeShare = lBadgeShare;
 
 function needLogin(back) { return `<section class="sec"><div class="in narrow"><div class="gate">${ico('lock', 28)}<h2>로그인이 필요합니다</h2><p class="lead">이 화면은 로그인한 ${esc(SITE().terms.learner || '학습자')}만 볼 수 있습니다. 기록 · 진도 · 배지가 저장됩니다.</p>${btn('로그인하기', '#login/' + encodeURIComponent(back || ''), 'pri', 'arrow')}</div></div></section>`; }
 
-function viewPage(id) {
+function viewPage(id) { const unk = !pageOf(id) && id !== 'home'; const h = viewPage0(id); return unk ? '<i data-unk hidden></i>' + h : h; } /* QA7: 없는 주소 표식 — lapp.js가 표식이 남아 있을 때만 홈으로 옮긴다 */
+function viewPage0(id) {
+  if (!pageOf(id) && id !== 'home') LR.unk = id; /* QA7 #3: 어느 화면도 맡지 않은 주소 — lapp.js 끝에서 홈으로 옮긴다 */
   const p = pageOf(id) || pageOf('home') || SITE().pages[0]; if (!p) return '<p class="empty">페이지가 없습니다.</p>';
   if (p.access === '로그인' && !LR.me) return needLogin(p.id);
   const inner = p.sections.map(s => { try { return (SECR[s.type] || (() => ''))(s.data || {}); } catch (e) { console.error(e); return ''; } }).join('');

@@ -24,6 +24,8 @@ public interface AuthMapper {
     void deleteOtherSessions(@Param("uid") String uid, @Param("sid") String sid);
     java.util.List<Map<String, Object>> selectStaff(@Param("tid") String tid);
     int deleteStaff(@Param("tid") String tid, @Param("email") String email);
+    String updateStaffRole(@Param("tid") String tid, @Param("email") String email, @Param("role") String role);
+    int deleteUserSessions(@Param("uid") String uid);
     /* v32.4 소셜 로그인 */
     Map<String, Object> selectOAuthUser(@Param("provider") String provider, @Param("sub") String sub);
     Map<String, Object> selectUserByEmailFull(@Param("email") String email);

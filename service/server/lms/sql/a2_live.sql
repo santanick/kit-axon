@@ -347,7 +347,7 @@ begin
   if ctx->>'kind' = 'staff' then
     perform lms_x_staff(ctx); perform lms_x_scope(r.section_id); rl := 'host';
   else
-    pid := lms_x_learner(ctx); mno := ctx->>'sid'; ek := lms_x_enr(r.section_id, pid);
+    pid := lms_x_learner(ctx); mno := lms_x_mno(ctx); ek := lms_x_enr(r.section_id, pid);
     if ek is null then perform lms_x_err(403, 'not_enrolled', '이 분반 수강생이 아닙니다.'); end if;
     rl := 'student';
     if r.rec_allowed and not lms_x_bool(a, 'consent_rec', false) then perform lms_x_err(428, 'rec_consent', '이 수업은 녹화될 수 있습니다. 녹화 안내에 동의한 뒤 입장하세요.'); end if;
@@ -496,7 +496,7 @@ end $$;
 create or replace function lms_live_my(ctx jsonb, a jsonb) returns jsonb language plpgsql as $$
 declare pid uuid := lms_x_learner(ctx);
 begin
-  return jsonb_build_object('member_no', ctx->>'sid', 'rooms', coalesce((select jsonb_agg(lms_lv_room_j(r) - 'code' - 'att' || jsonb_build_object('code', r.code) order by r.status desc, r.created_at desc, r.room_id)
+  return jsonb_build_object('member_no', lms_x_mno(ctx), 'rooms', coalesce((select jsonb_agg(lms_lv_room_j(r) - 'code' - 'att' || jsonb_build_object('code', r.code) order by r.status desc, r.created_at desc, r.room_id)
     from lms_live_room r where r.status in ('ready','live') and lms_x_enr(r.section_id, pid) is not null), '[]'),
     'captions', coalesce((select jsonb_agg(jsonb_build_object('room_id', c.room_id, 'title', c.title, 'src_lang', c.src_lang, 'finished_at', lms_x_ts(c.finished_at), 'has_summary', c.summary is not null) order by c.created_at desc, c.room_id)
     from lms_o_caption_room c where c.visibility = 'public' and c.section_id is not null and lms_x_enr(c.section_id, pid) is not null), '[]'));

@@ -21,6 +21,13 @@ public interface PiiService {
     Map<String, Object> guardian(HttpServletRequest req, byte[] body, String tid) throws Exception;
     /** 간편 로그인(via = email · sns · univ) → learner_id, 세션 쿠키 발급 */
     String login(HttpServletRequest req, HttpServletResponse res, String tid, JsonNode b) throws Exception;
+    /** QA7 승인 대기 표로 지금 상태(GET · DELETE /api/pub/{tid}/pending) */
+    Map<String, Object> pending(HttpServletRequest req, HttpServletResponse res, String tid) throws Exception;
+    /** QA7 학습자 OAuth 콜백 → ok | join | pending | rejected */
+    String oauthLogin(HttpServletRequest req, HttpServletResponse res, String tid, String prov, String rawSub) throws Exception;
+    boolean socialOn(String tid, String prov) throws Exception;
+    /** QA7 운영자 가입 신청 승인 · 거절(POST /api/learners/decide) */
+    Map<String, Object> decide(Map<String, Object> a, byte[] body) throws Exception;
     /* 본인 세션 */
     Map<String, Object> myPii(HttpServletRequest req, byte[] body, String tid, String sid) throws Exception;
     Map<String, Object> withdraw(byte[] body, String tid, String sid) throws Exception;

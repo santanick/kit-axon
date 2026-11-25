@@ -32,6 +32,7 @@ public interface PiiMapper {
     void insertEvent(@Param("tid") String tid, @Param("sid") String sid, @Param("type") String type, @Param("data") String data);
     Map<String, Object> selectApproval(@Param("tid") String tid, @Param("lid") String lid);
     String selectOrgName(@Param("tid") String tid);
+    List<Map<String, Object>> updateDecision(@Param("tid") String tid, @Param("ids") List<String> ids, @Param("d") String d, @Param("r") String r);
     Map<String, Object> selectAcctBrief(@Param("tid") String tid, @Param("lid") String lid);
     String selectEmailMask(@Param("tid") String tid, @Param("lid") String lid);
     /* P */

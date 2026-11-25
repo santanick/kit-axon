@@ -32,7 +32,7 @@ function d26Cal() { const now = new Date(UI.d26m || today()); const y = now.getF
     <div class="d26-evl"><b>${esc(sel)}</b>${list.length ? list.map(e => `<a href="#" data-act="cls-open" data-v="${esc(e.c.id)}"><span class="tag ${e.t === '종료' ? 'r' : e.t === 'LIVE' ? '' : 'b'}">${esc(e.t)}</span><span>${esc(e.c.name)}</span></a>`).join('') : '<p class="mini">이 날 일정이 없습니다.</p>'}</div>`; }
 function d26Left() { const b = (() => { try { return BRIEF().filter(x => x.n > 0).slice(0, 3); } catch (e) { return []; } })();
   const st = S.bld && S.bld.steps ? (typeof bList === 'function' ? bList() : BLD_STEPS.filter(s => S.bld.steps[s.id] && (S.bld.steps[s.id].on || s.req))) : []; /* v38: 머리 시작 가이드와 같은 단계 목록 */
-  const pk = [...(D26.plan[S.org.plan] || ['체험(전체 기능)', 0, 0])]; const L = (S.members || []).length, msg = typeof cmMonthUsed === 'function' ? cmMonthUsed() : (S.msgs || []).reduce((a, x) => a + (+x.n || 0), 0); if (typeof cmLimit === 'function') pk[2] = cmLimit(); /* v26.8: 메시지 페이지와 같은 기준(이번 달 · 같은 한도), 플랜 인원은 회원 수 */
+  const pk = [...(D26.plan[S.org.plan] || ['', 0, 0])]; const L = (S.members || []).length, msg = typeof cmMonthUsed === 'function' ? cmMonthUsed() : (S.msgs || []).reduce((a, x) => a + (+x.n || 0), 0); if (typeof cmLimit === 'function') pk[2] = cmLimit(); /* v26.8: 메시지 페이지와 같은 기준(이번 달 · 같은 한도), 플랜 인원은 회원 수 */
   const pays = (S.pays || []).filter(p => /완료/.test(p.status || '')); const mo = today().slice(0, 7); const sum = pays.filter(p => String(p.at || '').startsWith(mo)).reduce((a, p) => a + (+p.amount || 0), 0);
   const wk = [4, 3, 2, 1, 0].map(k => { const e = new Date(Date.now() - k * 7 * 864e5), s = new Date(e.getTime() - 7 * 864e5); return { l: `${s.getMonth() + 1}/${s.getDate()}`, v: pays.filter(p => { const t = new Date(p.at || 0); return t > s && t <= e; }).reduce((a, p) => a + (+p.amount || 0), 0) }; });
   const d26Ob = id => { try { if (typeof bDone === 'function') return !!bDone(id); } catch (e) { } return !!(S.bld.steps[id] || {}).done; }; /* v38 P-16: 머리의 '시작 가이드 n/4'와 같은 판정(bDone) */
@@ -41,8 +41,7 @@ function d26Left() { const b = (() => { try { return BRIEF().filter(x => x.n > 0
     <div class="card d26-org">${S.org.logo ? `<img src="${esc(S.org.logo)}" alt="">` : (() => { /* v43 R6: 로고가 없으면 회색 글자 상자 대신 기관 유형 사진 카드 + 이니셜 배지 */ let u = ''; try { u = window.V4 && V4.photo ? V4.photo(({ k12: '교실 수업', adult: '강의실 성인 학습', univ: '대학 캠퍼스', corp: '회의 업무', voc: '실습 작업장', lifelong: '평생교육 강좌', public: '도서관' })[S.org.type] || '교실', 'd26org') : ''; } catch (e) { } return u ? `<span class="d26-ophoto" style="background-image:url('${esc(u)}')"><span class="d26-oini">${esc((S.org.name || '').slice(0, 2))}</span></span>` : `<span class="d26-logo">${esc((S.org.name || '').slice(0, 2))}</span>`; })()}<b>${esc(S.org.name)}</b>${tag(S.lsite && S.lsite.pub ? "운영중" : "게시 전", S.lsite && S.lsite.pub ? 'g' : 'y')}
       <div class="d26-todo"><h3>오늘의 할 일</h3>${b.length ? b.map(x => `<button type="button" data-act="chat-q" data-v="${esc(x.q)}"><span>${esc(x.label)}</span><u>${x.n}${esc(x.unit || '건')}</u></button>`).join('') : '<p class="mini">처리할 일이 없습니다.</p>'}</div></div>
     ${st.length ? `<div class="card d26-ob"><div class="ch"><b>온보딩 현황</b><small>${st.filter(s => d26Ob(s.id)).length}/${st.length} 완료</small></div>${bar(st.filter(s => d26Ob(s.id)).length, st.length)}<ul>${st.map(s => `<li class="${d26Ob(s.id) ? 'ok' : ''}"><button type="button" data-act="go" data-v="${esc(s.view)}"><span>${esc(bName(s))}</span>${d26Ob(s.id) ? ic('check', 15) : '<em>↗</em>'}</button></li>`).join('')}</ul></div>` : ''}
-    <div class="card d26-plan"><small class="d26-cap">요금제</small><div class="ch"><b>${esc(pk[0])} 플랜을<br>이용 중이에요.</b><span class="sp"></span><button class="btn sm pri" data-act="go" data-v="plan">업그레이드</button></div>
-      <div class="d26-use"><small>회원 수 <em>${d26n(L)}${pk[1] ? '/' + d26n(pk[1]) : ''}명</em></small>${bar(L, pk[1] || L * 1.5 || 1)}<small>이번 달 메시지 <em>${d26n(msg)}${pk[2] ? '/' + d26n(pk[2]) : ''}건</em></small>${bar(msg, pk[2] || msg * 1.5 || 1)}<small>콘텐츠 <em>${d26n((S.lib || []).length)}개</em></small>${bar((S.lib || []).length, Math.max(50, (S.lib || []).length * 1.5))}</div></div>
+    ${d26PlanCard(L, msg, pk[2])}
     ${typeof mbPayOn === 'function' && !mbPayOn() ? '' : `<div class="card d26-rev"><div class="ch"><b>나의 수익 현황</b><span class="sp"></span><button class="btn sm" data-act="go" data-v="sales">자세히 보기</button></div><small>이번 달 결제 금액</small><strong>${d26n(sum)}원</strong>${d26Bars(wk.map(x => x.v), wk.map(x => x.l))}</div>`}
   </aside>`; }
 function d26Main(base) { const k = d26Kpi(); const tab = UI.d26t || 'cls';
@@ -102,3 +101,69 @@ ACT['d26-day'] = el => { UI.d26d = el.dataset.v; render(); };
 ACT['d26-mon'] = el => { const v = +el.dataset.v; if (!v) { UI.d26m = today(); UI.d26d = today(); } else { const d = new Date(UI.d26m || today()); d.setDate(1); d.setMonth(d.getMonth() + v); UI.d26m = ymdL(d); } render(); };
 ACT['d26-xls'] = () => { const k = d26Kpi(); const rows = [['구분', '값'], [t('cls') + ' 수', k.cls], ['수강 가능 ' + t('cls'), k.open], ['전체 평균 수료율(%)', k.rate], ['콘텐츠', k.lib], ['회원', k.mem], [t('learner'), k.lrn], [], [t('cls') + '명', '수강 인원', '평균 진도(%)', '수료']].concat((S.classes || []).map(c => [c.name, (c.learners || []).length, d26Avg(c), d26Done(c)]));
   const csv = '﻿' + rows.map(r => r.map(v => csvSafe(v)).join(',') /* v25 수식 주입(=, +, -, @) 방지 */).join('\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `${S.org.name}_운영현황_${today()}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('운영 현황을 내려받았습니다(엑셀에서 열 수 있는 CSV).', 'ok'); };
+
+/* v47 홈 요금제 카드(대표님 지시 2026-11-25 「AI 토큰 부분 보여야 되고, 필요 시나리오도」) — 요금제 이름은 plan.js(PLAN.info)와 같은 출처, 운영자 화면이라 합니다체.
+   행: 회원 수(요금제 인원 구간) · 이번 달 메시지 · AI 토큰(월 포함량 막대 · 충전 잔액 토큰/원 · 가장 빠른 만료일) · 콘텐츠
+   AI 값: 운영 = GET /api/ai/usage(설정 › AI 사용량과 같은 응답), 시연판 = AIUSE 예시 값. 서버 오류 · AI 미연결은 명확한 문구로. */
+D26.ai = { d: null, err: null, at: 0, busy: false };
+function d26AiLoad(force) { const A = D26.ai; if (A.busy || (!force && A.at && Date.now() - A.at < 120e3)) return; A.busy = true;
+  api('GET', '/api/ai/usage').then(r => { A.d = r; A.err = null; }).catch(e => { A.err = window.errMsg ? window.errMsg(e) : (e && e.message) || '불러오지 못했습니다.'; })
+    .finally(() => { A.busy = false; A.at = Date.now(); try { if (CUR.tab === 'home' || document.querySelector('.d26-plan')) render(); } catch (e) { } }); }
+function d26Ai() { const lv = typeof LIVE !== 'undefined' && LIVE && LIVE.user;
+  if (!lv) { try { const d = window.AIUSE && AIUSE.data(); if (d) return { d, demo: true }; } catch (e) { } return { none: true }; }
+  if (LIVE.cfg && !LIVE.cfg.ai) return { off: true };
+  d26AiLoad(); const A = D26.ai; if (A.d) return { d: A.d, stale: !!A.err }; if (A.err) return { err: A.err }; return { loading: true }; }
+function d26PlanCard(L, msg, msgCap) {
+  const P = window.PLAN; const I = P ? P.info() : { legacy: true, tier: 'enterprise', name: 'Enterprise' }; const role = (S.me && S.me.role) || ''; const own = role === 'owner', staff = own || role === 'sub';
+  const n = d26n; const tkn = v => { v = +v || 0; return v >= 1e8 ? `${Math.round(v / 1e6) / 100}억` : v >= 1e4 ? `${n(Math.round(v / 1e4))}만` : n(v); };
+  const meter = (p, k) => `<span class="d26-meter d26m-${k || 'ok'}"><i style="width:${Math.max(0, Math.min(100, Math.round(p)))}%"></i></span>`;
+  const alert = (k, t, btn) => `<div class="d26-al d26-al-${k}" role="${k === 'bad' ? 'alert' : 'status'}"><span>${t}</span>${btn || ''}</div>`;
+  const btn = (label, act, v, pri) => `<button type="button" class="btn sm ${pri ? 'pri' : ''}" data-act="${act}"${v != null ? ` data-v="${esc(v)}"` : ''}>${esc(label)}</button>`;
+  const ent = !I.legacy && I.tier === 'enterprise';
+  /* 머리: 요금제 이름(합니다체) */
+  const title = I.legacy ? '기존 계약(전체 기능)을 이용 중입니다.' : I.trial ? (I.expired ? `체험이 끝나 ${P.name('standard')} 기능만 이용 중입니다.` : `${P.name('pro')} 체험을 이용 중입니다.`) : `${esc(I.name)} 요금제를 이용 중입니다.`;
+  const sub = I.legacy ? '요금제 도입 전 계약 기관입니다. 지금 쓰는 기능을 그대로 씁니다.' : I.trial ? (I.expired ? `체험 기간이 ${esc(I.end)}에 끝났습니다. 계속 쓰려면 요금제를 계약해 주십시오.` : `체험 기간이 <b>${n(I.daysLeft)}일</b> 남았습니다(${esc(I.end)} 종료).`) : `${esc(I.code)}${P.fee(I.code) ? ' · ' + esc(P.fee(I.code).seg) : ''}${I.renew ? ` · 다음 갱신 ${esc(I.renew)}` : ''}`;
+  const al = [];
+  if (I.trial && !I.expired && I.daysLeft <= 3) al.push(alert('warn', `체험 종료까지 ${n(I.daysLeft)}일 남았습니다. 종료 후에는 ${P.name('standard')} 기능만 남습니다.`));
+  if (I.trial && I.expired) al.push(alert('warn', `Pro 기능(학습 루프 · 채점 초안 · 결제 연동 등)이 잠겼습니다.`));
+  /* 회원 수(요금제 인원 구간) · 메시지 한도 */
+  const f = P && !I.legacy && !I.trial ? P.fee(I.code) : null; const cap = f && !f.nego ? f.cap : 0;
+  const lp = cap ? L / cap * 100 : 0, mp = msgCap ? msg / msgCap * 100 : 0;
+  if (cap && lp >= 90) al.push(alert(lp >= 100 ? 'bad' : 'warn', lp >= 100 ? `회원 수가 요금제 인원(${n(cap)}명)을 넘었습니다. 인원 구간 조정이 필요합니다.` : `회원 수가 요금제 인원의 ${Math.floor(lp)}%입니다. 인원 구간을 넘으면 100명 단위로 더하거나 상위 구간으로 바꿉니다.`));
+  if (msgCap && mp >= 90) al.push(alert(mp >= 100 ? 'bad' : 'warn', mp >= 100 ? `이번 달 메시지 한도(${n(msgCap)}건)를 모두 썼습니다.` : `이번 달 메시지 한도의 ${Math.floor(mp)}%를 썼습니다.`));
+  /* AI 토큰 */
+  const X = d26Ai(); let ai = '';
+  const reqBtn = own ? btn('충전하기', 'aiu-open', null, 1) : staff || role === 'teacher' ? btn('정운영자에게 요청', 'd26-aireq') : '';
+  if (X.off) ai = alert('info', 'AI가 아직 연결되지 않아 AI 기능을 쓸 수 없습니다. 산타에 연결을 요청해 주십시오.', staff ? btn('산타에 문의', 'pl-ask', 'AI 연결') : '');
+  else if (X.err) ai = alert('info', `AI 사용량을 불러오지 못했습니다. ${esc(X.err)}`, btn('다시 시도', 'd26-aire'));
+  else if (X.loading) ai = '<small class="d26-aiw">AI 사용량을 불러오는 중입니다.</small>';
+  else if (X.none) ai = '';
+  else { const d = X.d; const tEnd = !!(I.trial && I.expired); /* 체험 종료 · 유료 전환 전 → 월 포함량 0(충전분만) */ const used = +d.used || 0, inc = tEnd ? 0 : +d.included || 0; const cl = tEnd ? Math.max(0, (+d.credit || 0) - used) : +d.creditLeft || 0; const pr = (d.price && d.price.perM) || (window.PLAN_TABLE && PLAN_TABLE.ai.perM) || 20000;
+    const cr = (d.credits || []).filter(c => (+c.left || 0) > 0 && c.expires).map(c => c.expires).sort(); const exp = cr[0] || '';
+    const ip = inc ? used / inc * 100 : tEnd ? 100 : 0;
+    if (d.state === 'off') ai = `<small>AI 토큰(이번 달) <em>${tkn(used)} 사용 · 월 한도 없음</em></small>${meter(0)}<p class="mini d26-ain">${ent || I.legacy ? '월 포함량은 계약에 따라 산타가 넣습니다.' : '월 포함량이 아직 정해지지 않아 사용량만 기록합니다.'}</p>`;
+    else {
+      ai = `<small>AI 토큰 · 이번 달 포함량 <em>${tkn(Math.min(used, inc))}/${tkn(inc)}</em></small>${meter(ip, ip >= 100 ? 'bad' : ip >= 80 ? 'warn' : 'ok')}
+        <small>충전 잔액 <em>${cl ? `${tkn(cl)} 토큰 · 약 ${n(Math.round(cl * pr / 1e6))}원` : '없음'}</em></small>${cl && exp ? `<small>가장 빠른 만료일 <em>${esc(exp)}</em></small>` : ''}`;
+      if (tEnd) ai += alert(cl ? 'warn' : 'bad', `체험이 끝나 월 AI 포함량이 0입니다. ${cl ? '충전분만 차감합니다.' : 'AI 기능이 멈췄습니다.'} 충전하거나 유료 요금제로 전환하면 ${cl ? '계속' : '다시'} 쓸 수 있습니다.`, cl ? '' : reqBtn);
+      else if (d.state === 'over' || (ip >= 100 && !cl)) ai += alert('bad', `이번 달 포함량${(d.credits || []).length ? '과 충전분' : ''}을 모두 써서 AI 기능이 멈췄습니다. ${own ? '충전하면 바로 다시 쓸 수 있습니다.' : '정운영자가 충전하면 바로 다시 쓸 수 있습니다.'}`, reqBtn);
+      else if (ip >= 100) ai += alert('info', `이번 달 포함량을 모두 써서 충전분에서 차감 중입니다(만료일이 빠른 충전분부터).`);
+      else if (ip >= 80) ai += alert('warn', `이번 달 AI 포함량의 ${Math.floor(ip)}%를 썼습니다. ${cl ? '포함량을 넘으면 충전분에서 차감합니다.' : '충전분이 없어 포함량을 넘으면 AI 기능이 멈춥니다.'}`, !cl ? reqBtn : '');
+      if (ent) ai += '<p class="mini d26-ain">월 포함량은 계약에 따라 산타가 넣습니다.</p>';
+    }
+    if (X.stale) ai += '<p class="mini d26-ain">최신 값을 불러오지 못해 마지막으로 받은 값을 보여 줍니다.</p>';
+    if (own && (S.aiReq || []).length) ai += alert('info', `AI 충전 요청 ${n(S.aiReq.length)}건 — ${esc(S.aiReq[S.aiReq.length - 1].name || '')}(${esc(S.aiReq[S.aiReq.length - 1].at || '')})`, btn('요청 확인', 'd26-aireqok'));
+  }
+  const acts = staff ? `<div class="d26-pacts">${btn('요금 안내', 'pl-open', 'guide')}${own ? btn('충전', 'aiu-open') : btn('AI 사용량', 'aiu-open')}${btn(ent || I.legacy ? '산타에 문의' : '업그레이드 문의', 'pl-ask', ent || I.legacy ? '요금제 · 포함량 문의' : '요금제 업그레이드')}</div>` : '';
+  return `<div class="card d26-plan" data-d26-plan="${esc(I.legacy ? 'legacy' : I.trial ? 'trial' : I.tier)}"><small class="d26-cap">요금제${X.demo ? ' <span class="d26-demo">시연판 예시 값</span>' : ''}</small><div class="ch"><b>${title}</b></div><p class="mini d26-psub">${sub}</p>${al.join('')}
+      <div class="d26-use"><small>회원 수 <em>${n(L)}${cap ? '/' + n(cap) : ''}명</em></small>${meter(cap ? lp : 0, lp >= 100 ? 'bad' : lp >= 90 ? 'warn' : 'ok')}<small>이번 달 메시지 <em>${n(msg)}${msgCap ? '/' + n(msgCap) : ''}건</em></small>${meter(mp, mp >= 100 ? 'bad' : mp >= 90 ? 'warn' : 'ok')}${ai}<small>콘텐츠 <em>${n((S.lib || []).length)}개</em></small></div>${acts}</div>`;
+}
+ACT['d26-aire'] = () => d26AiLoad(true);
+ACT['d26-aireq'] = () => { const nm = (S.me && (S.me.name || S.me.email)) || '운영자'; S.aiReq = [...(S.aiReq || []), { at: today(), name: nm }].slice(-20);
+  if (typeof logAudit === 'function') logAudit('AI 충전 요청(정운영자에게)'); save(); toast('정운영자에게 AI 충전 요청을 남겼습니다. 정운영자 홈 요금제 카드에 표시됩니다.', 'ok'); render(); };
+ACT['d26-aireqok'] = () => { if (S.me.role !== 'owner') return; S.aiReq = []; save(); render(); };
+(() => { if (typeof document === 'undefined' || document.getElementById('d26plCss')) return; const st = document.createElement('style'); st.id = 'd26plCss';
+  st.textContent = `.d26-plan .ch b{word-break:keep-all}.d26-psub{margin:4px 0 8px;color:var(--g700)}.d26-psub b{color:var(--g900)}.d26-demo{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;background:var(--g100,#f1f3f5);color:var(--g700);font-size:11px;font-weight:600}
+.d26-al{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between;margin:0 0 10px;padding:8px 10px;border-radius:8px;font-size:12.5px;line-height:1.5;background:var(--g100,#f1f3f5);color:var(--g800)}.d26-al span{flex:1 1 160px;min-width:0}
+.d26-al-warn{background:#FFF6E0;color:#6B4A00}.d26-al-bad{background:#FDECEC;color:#8A1C1C}.d26-m-warn i,.d26m-warn i{background:#E8A200 !important}.d26m-bad i{background:#D93636 !important}
+.d26-ain{margin:-6px 0 10px}.d26-aiw{display:block;color:var(--g700);font-size:12.5px;margin-bottom:10px}.d26-pacts{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.d26-pacts .btn{flex:1 1 auto}`; document.head.appendChild(st); })();

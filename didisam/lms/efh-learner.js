@@ -34,18 +34,19 @@
     await demoBoot(); window.S = typeof demoRoom === 'function' ? demoRoom() : null; if (!window.S) throw new Error('데모 기관 데이터가 없습니다.');
     const pid = demoMe(); window.UI.lmseAs = window.UI.lmsfAs = window.UI.lmshAs = pid;
     if (path === '/api/lms/a/my') { if (!pid) { const A = window.S && window.S.lms && window.S.lms.a; return { me: null, sections: [], sync: { state: A && (A.enr || []).length ? 'done' : 'before' } }; } /* v43 K2(P2-C4) */ return { me: { member_no: LR.me.sid }, sections: EFH.demoSections().map(s => ({ ...s, kind: (EFH.demoStudents(s.section_id).find(p => p.person_id === pid) || {}).kind })).filter(s => s.kind) }; }
-    if (!pid) { const e = new Error('학사 구성원으로 등록되지 않은 학습자입니다.'); e.status = 403; throw e; }
+    if (!pid) { const e = new Error('학사 구성원으로 등록되지 않은 학습자입니다.'); e.status = 403; e.code = 'person'; throw e; }
     { const sx = body && (body.section || body.section_id); if (sx && typeof EFH.seedSec === 'function') try { EFH.seedSec(sx); } catch (e) { } } /* v43 R4(109): 스튜디오와 같은 분반 시연 과제 · 시험을 학습자 데모에서도 처음 열 때 채운다(빈 「공개된 과제가 없습니다」 방지) */
     const f = EFH.D[method + ' ' + path]; if (!f) throw new Error('데모에서 지원하지 않는 기능입니다.');
     const out = f(JSON.parse(JSON.stringify(body || {}))); window.save(); return JSON.parse(JSON.stringify(out));
   }
   function get(key, fn) {
+    { const me = String(LR.me && LR.me.sid || ''); if (L.sid !== me) { L.sid = me; L.cache = {}; L.err = {}; L.noreg = false; } } /* 다른 학습자로 다시 로그인하면 새로 받기 */
     if (key in L.cache) return L.cache[key];
-    if (!L.busy[key]) { L.busy[key] = true; Promise.resolve().then(fn).then(v => { L.cache[key] = v; delete L.err[key]; }).catch(e => { L.err[key] = errMsg(e); L.cache[key] = null; }).finally(() => { delete L.busy[key]; rer(); }); }
+    if (!L.busy[key]) { L.busy[key] = true; Promise.resolve().then(fn).then(v => { L.cache[key] = v; delete L.err[key]; }).catch(e => { L.err[key] = errMsg(e); if (typeof lmsNoReg === 'function' && lmsNoReg(e)) L.noreg = true; L.cache[key] = null; }).finally(() => { delete L.busy[key]; rer(); }); }
     return undefined;
   }
-  const drop = p => Object.keys(L.cache).forEach(k => { if (!p || k.startsWith(p)) delete L.cache[k]; }); window.LMSEFH_DROP = () => { drop(); L.err = {}; };
-  const box = (k, html) => L.err[k] ? `<p class="mini">${esc(L.err[k])}</p>` : html;
+  const drop = p => Object.keys(L.cache).forEach(k => { if (!p || k.startsWith(p)) delete L.cache[k]; }); window.LMSEFH_DROP = () => { drop(); L.err = {}; L.noreg = false; };
+  const box = (k, html) => L.err[k] ? (L.noreg && typeof lmsNoRegCard === 'function' ? lmsNoRegCard() : `<p class="mini">${esc(L.err[k])}</p>`) : html;
   const wait = '<p class="mini">불러오는 중입니다.</p>';
   async function act(fn, ok, dropKey) { try { const r = await fn(); if (ok) toast(ok, 'ok'); if (dropKey !== undefined) { drop(dropKey); rer(); } return r; } catch (e) { toast(errMsg(e), 'bad'); return null; } }
 

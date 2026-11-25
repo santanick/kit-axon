@@ -32,7 +32,7 @@
         auth: '로그인이 필요합니다. 다시 로그인하십시오.', csrf: '허용되지 않은 요청입니다. 화면을 새로 고친 뒤 다시 시도하십시오.', origin: '허용되지 않은 요청입니다. 화면을 새로 고친 뒤 다시 시도하십시오.',
         server: '서버 오류가 발생했습니다. 잠시 후 다시 시도하십시오.', not_found: '찾는 항목이 없습니다.', conflict: '다른 창이나 운영자가 먼저 저장했습니다. 최신 내용을 불러옵니다.',
         rate: '요청이 많습니다. 잠시 후 다시 시도하십시오.', locked: '로그인에 여러 번 실패해 잠시 잠겼습니다. 잠시 후 다시 시도하십시오.', ai_off: 'AI 연결이 아직 설정되지 않았습니다.',
-        plan_feature: '현재 요금제에서 쓸 수 없는 기능입니다. 설정 › 요금제에서 확인하십시오.', ai_month_quota: '이번 달 AI 사용량을 모두 썼습니다. 설정 › AI에서 확인하십시오.',
+        plan_feature: '현재 요금제에서 쓸 수 없는 기능입니다. 설정 › 요금제에서 확인하십시오.', ai_month_quota: '이번 달 AI 사용량을 모두 썼습니다. 설정 › AI에서 확인하십시오.', trial_ended: '무료 체험 기간(14일)이 끝나 AI 월 포함량이 0입니다. 설정 → AI 사용량에서 추가 충전하거나 유료 요금제로 전환하십시오.',
         geo_blocked: '허용되지 않은 접속 위치입니다.', ip: '허용되지 않은 접속 위치입니다.', media_demo: '시연 화면에서는 파일을 올릴 수 없습니다.', sdk: '결제 창을 열 수 없습니다. 잠시 후 다시 시도하십시오.'
       }
     },
@@ -57,7 +57,7 @@
         auth: '로그인이 필요해요. 다시 로그인해 주세요.', csrf: '새로 고친 뒤 다시 시도해 주세요.', origin: '새로 고친 뒤 다시 시도해 주세요.',
         server: '서버에 문제가 생겼어요. 잠시 후 다시 시도해 주세요.', not_found: '찾는 내용이 없어요.', conflict: '다른 곳에서 먼저 바뀌었어요. 새로 고친 뒤 다시 시도해 주세요.',
         rate: '요청이 많아요. 잠시 후 다시 시도해 주세요.', locked: '로그인에 여러 번 실패해 15분 동안 잠겼어요. 잠시 후 다시 시도해 주세요.', ai_off: 'AI 튜터가 아직 준비되지 않았어요.',
-        ai_month_quota: '이번 달 AI 사용량을 모두 썼어요. 선생님께 질문 넘기기를 이용해 주세요.', geo_blocked: '허용되지 않은 접속 위치예요.', ip: '허용되지 않은 접속 위치예요.',
+        ai_month_quota: '이번 달 AI 사용량을 모두 썼어요. 선생님께 질문 넘기기를 이용해 주세요.', trial_ended: '무료 체험 기간이 끝나 지금은 AI를 쓸 수 없어요. 선생님께 질문 넘기기를 이용해 주세요.', geo_blocked: '허용되지 않은 접속 위치예요.', ip: '허용되지 않은 접속 위치예요.',
         media_demo: '체험 화면에서는 파일을 올릴 수 없어요.', sdk: '결제창을 열 수 없어요. 잠시 후 다시 시도해 주세요.'
       }
     }
@@ -85,4 +85,25 @@
   }
   window.errMsg = errMsg;
   window.ERRMSG = { M, safe, TONE };
+})();
+
+/* qa7 d5 · 이미지 대체(운영 · 학습자 공통) — 운영 CSP(script-src 'self')는 인라인 이벤트 속성(onerror)을 막으므로 화면 코드에 onerror 속성을 쓰지 않는다.
+   문서 전체에 capture 단계 'error' 리스너 1개만 둔다. 화면별 처리는 window.IMG_FB.push(img => true면 처리 끝)로 등록하고,
+   등록된 처리가 없으면 깨진 그림 아이콘 대신 대체 그림(회색 상자 · 그림 아이콘, data: SVG)으로 바꾼다.
+   data-fb="hide"는 숨김, data-fb="remove"는 제거, data-fb="none"은 그대로 둔다. */
+(() => {
+  'use strict';
+  if (window.IMG_FB) return;
+  const FB = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90" viewBox="0 0 160 90"><rect width="160" height="90" fill="#E9ECF2"/><path d="M62 30h36v30H62z" fill="none" stroke="#9AA3B2" stroke-width="3"/><path d="M64 58l11-12 8 8 6-5 9 9" fill="none" stroke="#9AA3B2" stroke-width="3"/><circle cx="88" cy="38" r="3" fill="#9AA3B2"/></svg>');
+  const L = window.IMG_FB = []; window.IMG_FB_SRC = FB;
+  document.addEventListener('error', ev => {
+    const t = ev.target; if (!t || t.tagName !== 'IMG' || t.dataset.fbDone) return;
+    t.dataset.fbDone = '1';
+    try { for (const f of L) if (f(t)) return; } catch (e) { }
+    const m = t.getAttribute('data-fb');
+    if (m === 'none') return;
+    if (m === 'hide') { t.style.visibility = 'hidden'; return; }
+    if (m === 'remove') { t.remove(); return; }
+    t.classList.add('img-fb'); t.src = FB;
+  }, true);
 })();

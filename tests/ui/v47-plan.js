@@ -78,7 +78,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 
     /* ⑥ 공개 데이터에 plan 없음 · 부운영자 */
     setPlan('E2'); const pub = JSON.stringify(typeof lsSnapshot === 'function' ? lsSnapshot() : {}); ok('게시본에 plan 없음', !/"TRIAL"|"E2"|"aiMonthTokens"|"contract"/.test(pub));
-    S.me.role = 'sub'; const sc = card('org'); ok('부운영자: 잠금 카드에 요금제 안내 버튼 없음', !!sc && !/^요금제 안내$/m.test(sc) && !document.querySelector('#main [data-act="pl-open"]') && /정운영자가 볼 수 있습니다/.test(sc), [sc, CUR, (document.querySelector('#main') || {}).innerText.slice(0, 200)]); S.me.role = 'owner';
+    S.me.role = 'sub'; const sc = card('org'); ok('부운영자: 잠금 카드에 요금제 안내 버튼(2026-11-25 부운영자 열람)', !!sc && /요금제 안내/.test(sc) && !!document.querySelector('#main [data-act="pl-open"]'), [sc, CUR, (document.querySelector('#main') || {}).innerText.slice(0, 200)]); S.me.role = 'owner';
     return out;
   });
   let bad = 0; for (const [p, n, d] of R) { console.log(`${p ? '✓' : '✗'} ${n}${p ? '' : ' ' + d}`); if (!p) bad++; }

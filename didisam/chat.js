@@ -146,6 +146,8 @@ function answer(q) {
   if (/루브릭/.test(q)) { const nm = q.replace(/루브릭|만들어|줘|생성|해/g, '').trim() || '과제'; const rb = AI.rubric(nm); const pid = uid('p'); PLANS[pid] = { run: () => { S.rubrics.push(rb); UI.asF = 'rubric'; return `「${rb.name}」을(를) 루브릭 라이브러리에 저장했습니다.`; }, go: 'assess' }; return { title: '루브릭', text: `「${rb.name}」 초안입니다. 저장할까요?`, html: rubricTable(rb), plan: pid, state: 'pending', cta: '루브릭 저장' }; }
   if (/(AI\s*평가|AI로\s*채점|채점\s*해)/i.test(q)) { const P = pend(); const pid = uid('p'); PLANS[pid] = { run: () => { P.forEach(({ c, id }) => aiEval(c, id)); return `${P.length}건 AI 평가를 마쳤습니다. 평가 화면에서 확정하세요.`; }, go: 'assess' }; return { title: 'AI 평가', text: `채점 대기 ${P.length}건을 루브릭 기준으로 AI 평가합니다. 기준별 점수와 근거가 붙고, 확정은 운영자가 합니다.`, plan: P.length ? pid : '', state: 'pending', cta: 'AI 평가 실행' }; }
   if (/진단/.test(q) && /(만들|생성|새로|설계)/.test(q)) return { text: '진단을 만들겠습니다. AI로 문항을 생성하거나 자료(PDF · 텍스트)를 올려 만들 수 있습니다.', btn: { act: 'dg-new', label: '새 진단 만들기' } };
+  /* QA7: 운영자 · 기록 메뉴가 기본으로 켜지면서 화면 칩 「운영자 추가해줘」가 해석되지 않던 문제 → 운영자 추가 창으로 안내 */
+  if (/운영자/.test(q) && /(추가|초대|지정|등록)/.test(q)) return { text: '운영자 추가 창에서 이름 · 이메일과 권한(부운영자 · ' + t('teacher') + ')을 정하면 초대됩니다. 운영자 지정은 정운영자만 할 수 있습니다.', btn: { act: 'adm-new', label: '+ 운영자 추가' } };
   // 10) 기존 해석기(독려 · 미납 · 승인 · 채점 · 답변 · 커리큘럼 · 퀴즈 · 공지 · 홈페이지 · HRD · 환불 · 자동화 · 요약)
   const P = interpret(q);
   if (/이렇게 이해했습니다/.test(P.title)) return { text: '죄송합니다, 정확히 이해하지 못했습니다. 이런 식으로 말씀해 주세요.', steps: EXQ[S.org.type] };

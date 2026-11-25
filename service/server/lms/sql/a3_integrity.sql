@@ -480,8 +480,8 @@ end $$;
 create or replace function lms_g_me(ctx jsonb) returns text language plpgsql as $$
 begin
   if coalesce(ctx->>'kind', '') <> 'learner' then perform lms_x_err(403, 'role', '학습자 로그인이 필요합니다.'); end if;
-  if not exists (select 1 from lms_person where member_no = ctx->>'sid' and kind = 'student') then perform lms_x_err(403, 'person', '학사 구성원으로 등록되지 않은 학습자입니다.'); end if;
-  return ctx->>'sid';
+  if lms_x_mno(ctx) is null then perform lms_x_err(403, 'person', '학사 구성원으로 등록되지 않은 학습자입니다.'); end if;
+  return lms_x_mno(ctx);
 end $$;
 -- 확인 대상 검사: 출석(차시 · 수강) · 시험(시험 · 수강)
 create or replace function lms_g_idv_ref(mno text, pur text, ref text) returns uuid language plpgsql as $$
