@@ -7,6 +7,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { gcmDecipher } = require('../gcm');
 const calc = require('./calc');
 const { createPay } = require('../fac/pay');
 const { piiKeys } = require('../pii');
@@ -35,7 +36,7 @@ function createLedger(ctx) {
   const aad = (tid, id) => `${tid}|ledger|unit|${id}|toss_secret`;
   function seal(tid, id, v) { if (!K) throw E(503, 'state_key', '암호화 키(PII_KEY)가 없어 비밀키를 저장할 수 없습니다.'); const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', K.enc, iv); c.setAAD(Buffer.from(aad(tid, id)));
     const ct = Buffer.concat([c.update(String(v), 'utf8'), c.final()]); return `${PFX}v1.${iv.toString('base64url')}.${c.getAuthTag().toString('base64url')}.${ct.toString('base64url')}`; }
-  function open(tid, id, s) { if (!s || !K) return ''; try { const [, iv, tag, ct] = s.slice(PFX.length).split('.'); const d = crypto.createDecipheriv('aes-256-gcm', K.enc, Buffer.from(iv, 'base64url')); d.setAAD(Buffer.from(aad(tid, id))); d.setAuthTag(Buffer.from(tag, 'base64url'));
+  function open(tid, id, s) { if (!s || !K) return ''; try { const [, iv, tag, ct] = s.slice(PFX.length).split('.'); const d = gcmDecipher(K.enc, Buffer.from(iv, 'base64url'), Buffer.from(tag, 'base64url')); d.setAAD(Buffer.from(aad(tid, id)));
     return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); } catch { return ''; } }
 
   /* 기관 플래그: doc.ledger.on === true 또는 doc.org.ledger_on === true */

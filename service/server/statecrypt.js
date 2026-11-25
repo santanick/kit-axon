@@ -2,6 +2,7 @@
 /* v31.1 기관 문서의 개인정보를 항목 단위로 암호화한다. 저장 직전 seal, 읽은 직후 open.
    값: enc1:v1.{iv}.{tag}.{암호문}(AES-256-GCM, PII_KEY), AAD = {tid}|state|{묶음}|{id}|{항목}. Java: cmm/DdStateCrypto.java */
 const crypto = require('node:crypto');
+const { gcmDecipher } = require('./gcm');
 const PFX = 'enc1:';
 const SET = { members: ['name', 'nick', 'email', 'phone'], parents: ['name', 'phone'], codes: ['code'], admins: ['name', 'email'], consults: ['title', 'summary', 'text', 'note', 'memo', 'transcript'], msgs: ['to', 'title', 'body'], crmLeads: ['name', 'school', 'pname', 'pphone', 'memo'], crmHist: ['memo'], classes: [], chat: ['text', 'html', 'title'] };
 const TOP_JSON = ['inbox']; /* 묶음 단위로 통째로 암호화한다 */
@@ -11,7 +12,7 @@ const idOf = (kind, x) => String((kind === 'codes' ? x.sid : x.id) == null ? '' 
 function createStateCrypto(K, HttpErr) {
   const enc = (v, aad) => { const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', K.enc, iv); c.setAAD(Buffer.from(aad)); const ct = Buffer.concat([c.update(v, 'utf8'), c.final()]); return `${PFX}v1.${iv.toString('base64url')}.${c.getAuthTag().toString('base64url')}.${ct.toString('base64url')}`; };
   const fail = () => new HttpErr(503, '개인정보 암호화 키가 올바르지 않아 데이터를 읽을 수 없습니다.', 'state_key');
-  const dec = (s, aad) => { if (!K) throw fail(); try { const [, iv, tag, ct] = s.slice(PFX.length).split('.'); const d = crypto.createDecipheriv('aes-256-gcm', K.enc, Buffer.from(iv, 'base64url')); d.setAAD(Buffer.from(aad)); d.setAuthTag(Buffer.from(tag, 'base64url')); return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); } catch (e) { throw fail(); } };
+  const dec = (s, aad) => { if (!K) throw fail(); try { const [, iv, tag, ct] = s.slice(PFX.length).split('.'); const d = gcmDecipher(K.enc, Buffer.from(iv, 'base64url'), Buffer.from(tag, 'base64url')); d.setAAD(Buffer.from(aad)); return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); } catch (e) { throw fail(); } };
   /* v38 등록 회원 이메일의 블라인드 인덱스(ebx) — pii.js bidx(tid, 'email', 이메일)과 같은 값. 가입 이메일과 원문 없이 맞춰 본다 */
   const ebxOf = (tid, e) => crypto.createHmac('sha256', K.idx).update(`${tid}|email|${String(e).trim().toLowerCase()}`).digest('base64url');
   const aadOf = (tid, kind, x, f) => `${tid}|state|${kind}|${idOf(kind, x)}|${f}`;
