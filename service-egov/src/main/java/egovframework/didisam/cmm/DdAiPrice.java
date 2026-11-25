@@ -25,6 +25,8 @@ public final class DdAiPrice {
     public static final List<String> CONTRACTS = List.of("sub", "multi", "build");
     public static final String MSG_LEARNER = "이번 달 AI 사용량을 다 썼어요. 선생님께 질문을 넘겨 주세요";
     public static final String MSG_STAFF = "이번 달 AI 사용량(포함량 + 추가 충전량)을 모두 썼습니다. 설정 → AI 사용량에서 추가 충전하십시오.";
+    public static final String MSG_TRIAL_LEARNER = "무료 체험 기간이 끝나 지금은 AI를 쓸 수 없어요. 선생님께 질문을 넘겨 주세요";
+    public static final String MSG_TRIAL_STAFF = "무료 체험 기간(14일)이 끝나 AI 월 포함량이 0입니다. 설정 → AI 사용량에서 추가 충전하거나 유료 요금제로 전환하십시오.";
 
     static long jsRound(double d) { return (long) Math.floor(d + 0.5); }
     public static long discountOf(long won) { long d = 0; for (long[] x : DISCOUNTS) if (won >= x[0]) d = x[1]; return d; }
@@ -45,10 +47,20 @@ public final class DdAiPrice {
 
     static boolean okTokens(JsonNode v) { if (v == null || v.isNull()) return false; double d = DdAiGateway.jsNum(v); return Double.isFinite(d) && d == Math.rint(d) && d > 0 && d <= MONTH_MAX; }
     /** 기관 설정 정규화(on은 aiplan이 있고 monthTokens가 양의 정수일 때만) */
-    public static Map<String, Object> planOf(JsonNode raw) {
+    public static Map<String, Object> planOf(JsonNode raw) { return planOf(raw, null, null); }
+    /** 체험 종료(Node trialEnded와 같음): plan.code TRIAL이고 since + 14일이 지나면(15일째부터) 월 포함량 0 · on=true → 충전분만 사용 */
+    public static final int TRIAL_DAYS = 14;
+    public static boolean trialEnded(JsonNode contract, String today) {
+        if (contract == null || !contract.isObject() || !"TRIAL".equals(DdAiGateway.s(contract.get("code")))) return false;
+        String since = DdAiGateway.s(contract.get("since")); if (today == null || !since.matches("\\d{4}-\\d{2}-\\d{2}") || !today.matches("\\d{4}-\\d{2}-\\d{2}")) return false;
+        try { return today.compareTo(addDays(since, TRIAL_DAYS)) >= 0; } catch (RuntimeException e) { return false; }
+    }
+    public static Map<String, Object> planOf(JsonNode raw, JsonNode contract, String today) {
         JsonNode p = raw != null && raw.isObject() ? raw : null; boolean on = p != null && okTokens(p.get("monthTokens"));
-        Map<String, Object> m = new LinkedHashMap<>(); m.put("on", on); m.put("monthTokens", on ? (long) DdAiGateway.jsNum(p.get("monthTokens")) : TRIAL_TOKENS);
-        m.put("overage", p != null && "block".equals(DdAiGateway.s(p.get("overage"))) ? "block" : "pack"); return m;
+        String ov = p != null && "block".equals(DdAiGateway.s(p.get("overage"))) ? "block" : "pack"; Map<String, Object> m = new LinkedHashMap<>();
+        if (trialEnded(contract, today)) { m.put("on", true); m.put("monthTokens", 0L); m.put("overage", ov); m.put("trialEnded", true); return m; }
+        m.put("on", on); m.put("monthTokens", on ? (long) DdAiGateway.jsNum(p.get("monthTokens")) : TRIAL_TOKENS);
+        m.put("overage", ov); return m;
     }
     public static String ovKey(JsonNode raw) { if (raw == null || !raw.isObject()) return ""; String ov = DdAiGateway.s(raw.get("overage")); return "block".equals(ov) || "pack".equals(ov) ? ov : ""; }
     public static boolean validPlan(JsonNode raw) {
@@ -109,7 +121,7 @@ public final class DdAiPrice {
     /** 이달 상태(80% 주의 · 100% 초과, 포함량을 넘으면 충전량에서 빠짐) */
     public static Map<String, Object> stateOf(Map<String, Object> plan, String month, long used, long credit) {
         long included = ((Number) plan.get("monthTokens")).longValue(); long limit = included + credit;
-        long pct = limit > 0 ? (long) Math.floor(used * 100.0 / limit) : 0; long creditLeft = Math.max(0, Math.min(credit, limit - Math.max(used, included)));
+        long pct = limit > 0 ? (long) Math.floor(used * 100.0 / limit) : Boolean.TRUE.equals(plan.get("on")) ? 100 : 0; /* 한도 0(체험 종료 · 충전 없음)은 초과 */ long creditLeft = Math.max(0, Math.min(credit, limit - Math.max(used, included)));
         Map<String, Object> m = new LinkedHashMap<>(); m.put("month", month); m.put("used", used); m.put("included", included); m.put("credit", credit); m.put("creditLeft", creditLeft);
         m.put("remaining", Math.max(0, limit - used)); m.put("pct", pct); m.put("state", !Boolean.TRUE.equals(plan.get("on")) ? "off" : pct >= 100 ? "over" : pct >= 80 ? "warn" : "ok"); return m;
     }
@@ -120,6 +132,8 @@ public final class DdAiPrice {
     /** 차단(429 ai_month_quota): 포함량 + 쓸 수 있는 충전량을 다 썼을 때 */
     public static void guard(Map<String, Object> plan, long used, long credit, boolean learner) {
         if (!Boolean.TRUE.equals(plan.get("on"))) return; long lim = ((Number) plan.get("monthTokens")).longValue() + credit;
-        if (used >= lim) throw new DdException(429, learner ? MSG_LEARNER : MSG_STAFF, "ai_month_quota");
+        if (used < lim) return; /* 체험 종료 → trial_ended(Node blockOf와 같음) */
+        if (Boolean.TRUE.equals(plan.get("trialEnded"))) throw new DdException(429, learner ? MSG_TRIAL_LEARNER : MSG_TRIAL_STAFF, "trial_ended");
+        throw new DdException(429, learner ? MSG_LEARNER : MSG_STAFF, "ai_month_quota");
     }
 }

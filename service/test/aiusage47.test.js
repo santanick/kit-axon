@@ -19,6 +19,17 @@ test('aiprice 단위: 고정가 · 할인 경계값 · 10만 원 단위 · 요�
   assert.equal(AP.planOf({ monthTokens: 1e6, overage: 'block' }).overage, 'block'); assert.equal(AP.planOf({ monthTokens: 1e6 }).overage, 'pack');
   assert.ok(AP.validPlan(null) && AP.validPlan({ monthTokens: 1234567, overage: 'pack' })); assert.ok(!AP.validPlan({ monthTokens: -1 })); assert.ok(!AP.validPlan({ overage: 'x' })); assert.ok(!AP.validPlan([1]));
   const on = AP.planOf({ monthTokens: 1e6 });
+  /* 체험 종료(since가 1일째 → 15일째부터 포함량 0 · on · trialEnded, 충전분만 사용) — Java AiPriceVectors와 같은 값 */
+  const TR = { code: 'TRIAL', since: '2026-11-01' }, ap1 = { monthTokens: 1e6, overage: 'pack' };
+  assert.deepEqual(AP.planOf(ap1, TR, '2026-11-14'), { on: true, monthTokens: 1e6, overage: 'pack' }); /* 체험 진행 중(14일째) */
+  assert.deepEqual(AP.planOf(ap1, TR, '2026-11-15'), { on: true, monthTokens: 0, overage: 'pack', trialEnded: true }); /* 체험 종료 */
+  assert.equal(AP.planOf(undefined, TR, '2026-12-01').trialEnded, true); assert.deepEqual(AP.planOf(ap1, TR), AP.planOf(ap1)); /* today 없으면 기존 동작 */
+  assert.equal(AP.planOf(ap1, { code: 'E1', since: '2026-01-01' }, '2026-11-15').monthTokens, 1e6); /* 유료 불변 */
+  assert.equal(AP.planOf(null, { code: 'E1', aiMonthTokens: 0 }, '2026-11-15').on, false); assert.equal(AP.planOf(null, null, '2026-11-15').on, false); /* Enterprise 0 · 기존 기관 */
+  assert.equal(AP.trialEnded({ code: 'TRIAL', since: 'x' }, '2026-11-15'), false);
+  const TE = AP.planOf(ap1, TR, '2026-11-15'); assert.equal(AP.blockOf(TE, 0, 500, true), null); /* 종료 + 충전: 허용 */
+  assert.deepEqual(AP.blockOf(TE, 500, 500, true), { code: 'trial_ended', message: AP.MSG_TRIAL_LEARNER }); assert.match(AP.blockOf(TE, 0, 0, false).message, /유료 요금제로 전환하십시오/);
+  assert.deepEqual(AP.blockOf(AP.planOf(ap1, TR, '2026-11-14'), 1e6, 0, false), { code: 'ai_month_quota', message: AP.MSG_STAFF }); assert.match(AP.MSG_TRIAL_LEARNER, /요$/);
   assert.equal(AP.stateOf(on, '2026-11', 790000, 0).state, 'ok'); assert.equal(AP.stateOf(on, '2026-11', 800000, 0).state, 'warn'); assert.equal(AP.stateOf(on, '2026-11', 1e6, 0).state, 'over');
   const s = AP.stateOf(on, '2026-11', 1.2e6, 1e6); assert.equal(s.remaining, 8e5); assert.equal(s.creditLeft, 8e5); assert.equal(s.pct, 60);
   /* 요금제 보존: 저장값이 원천 · 체험 기본값만 새로 켬 · overage는 받음 */
@@ -150,6 +161,22 @@ test('월 한도 · 충전 · 차단 · 권한 · 산타 관리 API', async t =>
   await t.test('새 기관 체험 기본값만 받음(TRIAL)', async () => {
     assert.equal((await call('Z', 'PUT', '/api/state', { doc: { org: { name: '산타', type: 'corp', room: {} }, aiplan: { monthTokens: AP.TRIAL_TOKENS, overage: 'pack' } }, rev: 0 })).status, 200);
     const u = (await call('Z', 'GET', '/api/ai/usage')).j; assert.equal(u.included, AP.TRIAL_TOKENS); assert.equal(u.contractPlan.code, 'TRIAL');
+  });
+
+  await t.test('체험 진행 중 200 · 종료 429 trial_ended · 종료+충전 200 · 유료 전환 250만', async () => {
+    const B = (await call('B', 'POST', '/api/signup', { email: `bt${sfx}@b.kr`, password: 'Passw0rd-bbb', orgName: `체험대학${sfx}`, type: 'univ', code: 'C0DE' })).j.tenant;
+    assert.equal((await call('B', 'PUT', '/api/state', { doc: doc(null), rev: 0 })).status, 200);
+    const kd = n => AP.addDays(new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10), n); /* KST 오늘 ± n일 */
+    const bs = () => call('B', 'POST', '/api/ai/messages', { messages: [{ role: 'user', content: '안녕' }] });
+    assert.equal((await santaPut('Z', B.tid, { code: 'TRIAL', since: kd(-13) })).status, 200); /* 14일째: 진행 중 */
+    let u = (await call('B', 'GET', '/api/ai/usage')).j; assert.equal(u.included, AP.TRIAL_TOKENS); assert.equal(u.plan.trialEnded, undefined); assert.equal((await bs()).status, 200);
+    assert.equal((await santaPut('Z', B.tid, { code: 'TRIAL', since: kd(-14) })).status, 200); /* 15일째: 종료 */
+    u = (await call('B', 'GET', '/api/ai/usage')).j; assert.equal(u.included, 0); assert.equal(u.plan.trialEnded, true); assert.equal(u.state, 'over');
+    const x = await bs(); assert.equal(x.status, 429); assert.equal(x.j.error, 'trial_ended'); assert.equal(x.j.message, AP.MSG_TRIAL_STAFF);
+    await inTenant(pool, B.tid, c => c.query("insert into ai_credit (id, tenant_id, month, pack, tokens, amount, order_id, status, paid_at, expires_at) values ($1, $2, to_char(now() at time zone 'Asia/Seoul', 'YYYY-MM'), 'w1', 5000000, 110000, $3, 'paid', now(), (now() at time zone 'Asia/Seoul')::date + 365)", ['ac_tr' + sfx, B.tid, 'aitop-tr' + sfx]));
+    u = (await call('B', 'GET', '/api/ai/usage')).j; assert.equal(u.included, 0); assert.equal(u.credit, 5e6); assert.equal((await bs()).status, 200); /* 종료 + 충전: 충전분 사용 */
+    assert.equal((await santaPut('Z', B.tid, { code: 'E1', since: kd(-14) })).status, 200); /* 유료 전환 */
+    u = (await call('B', 'GET', '/api/ai/usage')).j; assert.equal(u.included, AP.PAID_MONTH_TOKENS); assert.equal(u.plan.trialEnded, undefined); assert.equal((await bs()).status, 200);
   });
 
   await t.test('토스 키 없음: 결제 연결 준비 중', async () => {

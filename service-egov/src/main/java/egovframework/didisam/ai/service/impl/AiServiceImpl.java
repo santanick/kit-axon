@@ -151,7 +151,7 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
     @org.springframework.beans.factory.annotation.Value("${TOSS_URL:https://api.tosspayments.com}") private String tossUrl = "https://api.tosspayments.com";
     private final java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder().proxy(java.net.http.HttpClient.Builder.NO_PROXY).connectTimeout(java.time.Duration.ofSeconds(10)).build();
     boolean payOn() { return tossKey != null && !tossKey.trim().isEmpty() && tossClient != null && !tossClient.trim().isEmpty(); }
-    Map<String, Object> planOf(String tid) { String s = mapper.selectAiplan(tid); return DdAiPrice.planOf(s == null ? null : parse(s)); }
+    Map<String, Object> planOf(String tid) { String s = mapper.selectAiplan(tid), pl = mapper.selectPlan(tid); return DdAiPrice.planOf(s == null ? null : parse(s), pl == null ? null : parse(pl), kstToday()); } /* 체험 종료 판정 포함 */
     @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:nick@didisam.com}") private String santaEnv = "nick@didisam.com"; /* 기본: 대표님 지정 2026-11-24 */
     /** 충전 차감 계산(충전량 1년 이월) — 기관 범위 트랜잭션 안에서 부른다 */
     DdAiPrice.Sim simOf(String tid, Map<String, Object> plan, String today) {
@@ -219,7 +219,7 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
         for (Map<String, Object> t : rows) {
             String tid = (String) t.get("tid");
             Map<String, Object> st = tx.inTenant(tid, () -> { Map<String, Object> r = mapper.selectPlanRow(tid); Map<String, Object> o = new HashMap<>(); if (r == null) return o;
-                JsonNode ap = js(r.get("aiplan")); Map<String, Object> plan = DdAiPrice.planOf(ap); String m = DdAiPrice.monthOf(td);
+                JsonNode ap = js(r.get("aiplan")); Map<String, Object> plan = DdAiPrice.planOf(ap, js(r.get("plan")), td); String m = DdAiPrice.monthOf(td);
                 o.put("r", true); o.put("plan", js(r.get("plan"))); o.put("aiplan", ap); o.put("used", mapper.monthUsed(tid, m + "-01")); return o; });
             List<Map<String, Object>> log = new ArrayList<>();
             for (Map<String, Object> l : tx.plain(() -> mapper.selectSantaLog(tid))) { Map<String, Object> x = new LinkedHashMap<>(); x.put("at", l.get("at")); x.put("actor", l.get("actor")); x.put("before", js(l.get("before"))); x.put("after", js(l.get("after"))); x.put("memo", l.get("memo")); log.add(x); }

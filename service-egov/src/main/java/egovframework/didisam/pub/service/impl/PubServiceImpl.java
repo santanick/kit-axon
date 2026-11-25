@@ -502,7 +502,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             int calls = mapper.incUsage(tid, kstToday());
             if (calls > p.aiDaily) throw processException("dd.429.quota.tutor", new String[]{ String.valueOf(p.aiDaily) });
             sec.postAi(SK, calls);
-            { java.util.Map<String, Object> plan = egovframework.didisam.cmm.DdAiPrice.planOf(col.apply("aiplan")); /* v47 이달 AI 한도(aiplan 있는 기관만) — 학습자 문구 */
+            { java.util.Map<String, Object> plan = egovframework.didisam.cmm.DdAiPrice.planOf(col.apply("aiplan"), col.apply("plan"), kstToday()); /* v47 이달 AI 한도(aiplan 있는 기관만) — 학습자 문구 */
               if (Boolean.TRUE.equals(plan.get("on"))) { String m = egovframework.didisam.cmm.DdAiPrice.monthOf(kstToday()); String td = kstToday(); java.util.List<java.util.Map<String, Object>> cr = mapper.selectCreditRows(tid, egovframework.didisam.cmm.DdAiPrice.creditFrom(td));
                 long credit = cr.isEmpty() ? 0 : egovframework.didisam.cmm.DdAiPrice.sim(cr, mapper.selectUsageFrom(tid, egovframework.didisam.cmm.DdAiPrice.usageFrom(cr, td)), ((Number) plan.get("monthTokens")).longValue(), td).credit();
                 egovframework.didisam.cmm.DdAiPrice.guard(plan, mapper.monthUsed(tid, m + "-01"), credit, true); } }

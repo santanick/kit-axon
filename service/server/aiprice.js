@@ -33,9 +33,15 @@ const packId = won => 'w' + (won / STEP); /* ai_credit.pack: w1 = 10만 원 */
 
 /* 기관 설정 정규화. on은 aiplan이 있고 monthTokens가 양수일 때만 */
 const okTokens = v => Number.isInteger(+v) && +v > 0 && +v <= MONTH_MAX;
-function planOf(raw) {
-  const p = raw && typeof raw === 'object' ? raw : null; const on = !!p && okTokens(p.monthTokens);
-  return { on, monthTokens: on ? +p.monthTokens : TRIAL_TOKENS, overage: p && p.overage === 'block' ? 'block' : 'pack' };
+/* 체험 종료(대표님 2026-11-25): 요금제(S.plan)가 TRIAL이고 since + 14일이 지나면(since가 1일째, 15일째부터) 월 포함량 0 · on=true
+   → 충전분(이월 포함)만 쓸 수 있고 없으면 429 trial_ended(충전 · 유료 전환 안내). plan · today를 넘기지 않으면 기존 동작 그대로 */
+const TRIAL_DAYS = 14;
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const trialEnded = (contract, today) => !!contract && typeof contract === 'object' && contract.code === 'TRIAL' && DAY_RE.test(String(contract.since || '')) && DAY_RE.test(String(today || '')) && today >= addDays(contract.since, TRIAL_DAYS);
+function planOf(raw, contract, today) {
+  const p = raw && typeof raw === 'object' ? raw : null; const on = !!p && okTokens(p.monthTokens); const overage = p && p.overage === 'block' ? 'block' : 'pack';
+  if (trialEnded(contract, today)) return { on: true, monthTokens: 0, overage, trialEnded: true };
+  return { on, monthTokens: on ? +p.monthTokens : TRIAL_TOKENS, overage };
 }
 const ovKey = raw => raw && typeof raw === 'object' ? (raw.overage === 'block' ? 'block' : raw.overage === 'pack' ? 'pack' : '') : '';
 const validPlan = raw => raw == null || (typeof raw === 'object' && !Array.isArray(raw) && (raw.monthTokens == null || okTokens(raw.monthTokens)) && (raw.overage == null || raw.overage === 'block' || raw.overage === 'pack'));
@@ -92,12 +98,19 @@ async function monthState(c, tid, plan, today) {
 /* 계산만(Java DdAiPrice.state와 같은 규칙): 80% 주의 · 100% 초과. 포함량을 넘으면 충전량에서 빠진다 */
 function stateOf(plan, month, used, credit) {
   const included = plan.monthTokens; const limit = included + credit;
-  const pct = limit > 0 ? Math.floor(used * 100 / limit) : 0;
+  const pct = limit > 0 ? Math.floor(used * 100 / limit) : plan.on ? 100 : 0; /* 한도 0(체험 종료 · 충전 없음)은 초과 */
   const creditLeft = Math.max(0, Math.min(credit, limit - Math.max(used, included)));
   return { month, used, included, credit, creditLeft, remaining: Math.max(0, limit - used), pct, state: !plan.on ? 'off' : pct >= 100 ? 'over' : pct >= 80 ? 'warn' : 'ok' };
 }
 /* 차단 문구: 학습자(해요체) · 운영자(합니다체) */
 const MSG_LEARNER = '이번 달 AI 사용량을 다 썼어요. 선생님께 질문을 넘겨 주세요';
 const MSG_STAFF = '이번 달 AI 사용량(포함량 + 추가 충전량)을 모두 썼습니다. 설정 → AI 사용량에서 추가 충전하십시오.';
+const MSG_TRIAL_LEARNER = '무료 체험 기간이 끝나 지금은 AI를 쓸 수 없어요. 선생님께 질문을 넘겨 주세요';
+const MSG_TRIAL_STAFF = '무료 체험 기간(14일)이 끝나 AI 월 포함량이 0입니다. 설정 → AI 사용량에서 추가 충전하거나 유료 요금제로 전환하십시오.';
+/* 차단 판정(429): 포함량 + 쓸 수 있는 충전량을 다 썼을 때. 체험 종료는 code trial_ended, 그 밖은 ai_month_quota → { code, message } 또는 null */
+function blockOf(plan, used, credit, learner) {
+  if (!plan.on || used < plan.monthTokens + credit) return null;
+  return plan.trialEnded ? { code: 'trial_ended', message: learner ? MSG_TRIAL_LEARNER : MSG_TRIAL_STAFF } : { code: 'ai_month_quota', message: learner ? MSG_LEARNER : MSG_STAFF };
+}
 
-module.exports = { PRICE_PER_M, VAT, STEP, MIN_WON, MAX_WON, DISCOUNTS, TRIAL_TOKENS, PAID_MONTH_TOKENS, MONTH_MAX, CONTRACTS, CREDIT_DAYS, addDays, simCredits, discountOf, validWon, quote, priceInfo, packId, planOf, ovKey, validPlan, keepPlan, santaInput, santaSet, monthOf, monthState, stateOf, MSG_LEARNER, MSG_STAFF };
+module.exports = { TRIAL_DAYS, trialEnded, blockOf, MSG_TRIAL_LEARNER, MSG_TRIAL_STAFF, PRICE_PER_M, VAT, STEP, MIN_WON, MAX_WON, DISCOUNTS, TRIAL_TOKENS, PAID_MONTH_TOKENS, MONTH_MAX, CONTRACTS, CREDIT_DAYS, addDays, simCredits, discountOf, validWon, quote, priceInfo, packId, planOf, ovKey, validPlan, keepPlan, santaInput, santaSet, monthOf, monthState, stateOf, MSG_LEARNER, MSG_STAFF };

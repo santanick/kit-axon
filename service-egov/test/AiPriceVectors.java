@@ -26,6 +26,17 @@ public class AiPriceVectors {
       try { ok(DdAiPrice.santaInput(om.readTree("{\"code\":\"E2\"}"), "d").get("aiMonthTokens").asLong() == 2500000, "빈값 유료"); ok(DdAiPrice.santaInput(om.readTree("{\"code\":\"U0\",\"aiMonthTokens\":\"\"}"), "d").get("aiMonthTokens").asLong() == 2500000, "빈 문자열");
         ok(DdAiPrice.santaInput(om.readTree("{\"code\":\"TRIAL\",\"aiMonthTokens\":null}"), "d").get("aiMonthTokens").asLong() == 1000000, "빈값 체험"); ok(DdAiPrice.santaInput(om.readTree("{\"code\":\"E3\",\"aiMonthTokens\":0}"), "d").get("aiMonthTokens").asLong() == 0, "0 유지"); }
       catch (Exception e) { ok(false, "santaInput " + e); } }
+    /* 체험 종료(Node aiusage47.test.js와 같은 값): since 11-01 → 11-14까지 체험, 11-15부터 포함량 0 · on · trialEnded */
+    { ObjectMapper om = new ObjectMapper(); var ap = om.readTree("{\"monthTokens\":1000000,\"overage\":\"pack\"}"); var tr = om.readTree("{\"code\":\"TRIAL\",\"since\":\"2026-11-01\"}");
+      var in = DdAiPrice.planOf(ap, tr, "2026-11-14"); ok(Boolean.TRUE.equals(in.get("on")) && in.get("monthTokens").equals(1000000L) && !in.containsKey("trialEnded"), "체험 중 " + in);
+      var end = DdAiPrice.planOf(ap, tr, "2026-11-15"); ok(Boolean.TRUE.equals(end.get("on")) && end.get("monthTokens").equals(0L) && Boolean.TRUE.equals(end.get("trialEnded")), "체험 종료 " + end);
+      ok(Boolean.TRUE.equals(DdAiPrice.planOf(null, tr, "2026-12-01").get("trialEnded")), "체험 종료 aiplan 없음");
+      ok(DdAiPrice.planOf(ap, om.readTree("{\"code\":\"E1\",\"since\":\"2026-01-01\"}"), "2026-11-15").get("monthTokens").equals(1000000L), "유료 불변");
+      ok(Boolean.FALSE.equals(DdAiPrice.planOf(null, om.readTree("{\"code\":\"E1\",\"aiMonthTokens\":0}"), "2026-11-15").get("on")), "Enterprise 0 한도 없음");
+      ok(Boolean.FALSE.equals(DdAiPrice.planOf(null, null, "2026-11-15").get("on")), "기존 기관 불변"); ok(!DdAiPrice.trialEnded(om.readTree("{\"code\":\"TRIAL\",\"since\":\"x\"}"), "2026-11-15"), "since 오류");
+      try { DdAiPrice.guard(end, 0, 500, true); } catch (Exception e) { ok(false, "충전 있으면 허용 " + e); }
+      try { DdAiPrice.guard(end, 500, 500, true); ok(false, "충전 소진 차단"); } catch (egovframework.didisam.cmm.DdException e) { ok(e.getMessage().equals(DdAiPrice.MSG_TRIAL_LEARNER) && "trial_ended".equals(e.getCode()), "trial 문구 " + e.getMessage()); }
+      try { DdAiPrice.guard(in, 1000000, 0, false); ok(false, "체험 중 한도"); } catch (egovframework.didisam.cmm.DdException e) { ok(e.getMessage().equals(DdAiPrice.MSG_STAFF) && "ai_month_quota".equals(e.getCode()), "quota 문구"); } }
     System.out.println(bad == 0 ? "AiPriceVectors PASS" : "AiPriceVectors FAIL " + bad); System.exit(bad == 0 ? 0 : 1);
   }
 }

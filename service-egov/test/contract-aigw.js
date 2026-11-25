@@ -91,6 +91,11 @@ async function scenario(base, tag, pol) {
     const st = await call(base, 'GET', '/api/state', { cookie: ck });
     R.ownerPut = await call(base, 'PUT', '/api/state', { cookie: ck, body: { doc: { ...st.j.doc, aiplan: { monthTokens: 9000000, overage: 'block' }, plan: { code: 'U0' } }, rev: st.j.rev } });
     R.usage3 = await call(base, 'GET', '/api/ai/usage', { cookie: ck });
+    /* 체험 종료(since + 14일 경과): 포함량 0 · trialEnded → 운영자 · 학습자 429 trial_ended(문구 같음) */
+    R.trialPut = await call(base, 'PUT', `/api/santa/orgs/${tid}/plan`, { cookie: sck, body: { code: 'TRIAL', aiMonthTokens: 1000000, since: '2026-01-01', memo: '체험 종료 시험' } });
+    R.usage4 = await call(base, 'GET', '/api/ai/usage', { cookie: ck });
+    mock.cur = tag + ':trialStudio'; R.trialStudio = await call(base, 'POST', '/api/ai/messages', { cookie: ck, body: { messages: [{ role: 'user', content: '안녕' }] } });
+    await T('trialTutor', { q: '체험 끝?' });
   }
   return R;
 }
@@ -105,10 +110,11 @@ const pick = R => ({
   month: R.usage.j && (({ used, included, credit, creditLeft, remaining, pct, state, plan, contractPlan, price, payOnline, credits }) => ({ used, included, credit, creditLeft, remaining, pct, state, plan, contractPlan, price, payOnline, credits }))(R.usage.j),
   topupOff: R.topupOff.j, santaPut: R.santaPut && R.santaPut.j && { ...R.santaPut.j, tid: !!R.santaPut.j.tid },
   santaFind: R.santaFind && R.santaFind.j && R.santaFind.j.orgs && R.santaFind.j.orgs.map(o => ({ n: o.name, ready: o.ready, plan: o.plan, aiplan: o.aiplan, used: o.used, memo: o.memo, log: o.log.map(l => [l.actor === undefined, l.before, l.after, l.memo]) })),
-  usage2: R.usage2 && R.usage2.j && [R.usage2.j.included, R.usage2.j.plan, R.usage2.j.contractPlan], usage3: R.usage3 && R.usage3.j && [R.usage3.j.included, R.usage3.j.plan, R.usage3.j.contractPlan],
+  usage2: R.usage2 && R.usage2.j && [R.usage2.j.included, R.usage2.j.plan, R.usage2.j.contractPlan], usage3: R.usage3 && R.usage3.j && [R.usage3.j.included, R.usage3.j.plan, R.usage3.j.contractPlan], usage4: R.usage4 && R.usage4.j && [R.usage4.j.included, R.usage4.j.plan, R.usage4.j.state, R.usage4.j.pct, R.usage4.j.remaining],
+  trialMsg: R.trialStudio && [R.trialStudio.j && R.trialStudio.j.message, R.trialTutor.j && R.trialTutor.j.message],
   monthFeature: R.usage.j && R.usage.j.monthFeature,
 });
-const KEYS = ['put', 'site', 'login', 'me', 'plain', 'exam', 'h1', 'h3skip', 'h2noatt', 'h2', 'hbad', 'l2', 'l2b', 'a3', 'quota', 'usage', 'lev', 'levC', 'levBad', 'post', 'postText', 'postValText', 'postVerb', 'postMany', 'postEmpty', 'postNo', 'prog', 'me2', 'lev2', 'putTrain', 'topupBad', 'topupOff', 'topupCf', 'santaNo', 'santaMe', 'santaBad', 'santaOwner', 'santaPut', 'santaFind', 'ownerPut'];
+const KEYS = ['trialPut', 'usage4', 'trialStudio', 'trialTutor', 'put', 'site', 'login', 'me', 'plain', 'exam', 'h1', 'h3skip', 'h2noatt', 'h2', 'hbad', 'l2', 'l2b', 'a3', 'quota', 'usage', 'lev', 'levC', 'levBad', 'post', 'postText', 'postValText', 'postVerb', 'postMany', 'postEmpty', 'postNo', 'prog', 'me2', 'lev2', 'putTrain', 'topupBad', 'topupOff', 'topupCf', 'santaNo', 'santaMe', 'santaBad', 'santaOwner', 'santaPut', 'santaFind', 'ownerPut'];
 
 (async () => {
   const srv = await startMock();
@@ -142,6 +148,7 @@ const KEYS = ['put', 'site', 'login', 'me', 'plain', 'exam', 'h1', 'h3skip', 'h2
       ok(RA.santaFind.j.orgs.length === 1 && RA.santaFind.j.orgs[0].memo === '1차 계약' && RA.santaFind.j.orgs[0].log.length === 1, `${P} santa find`);
       ok(RA.usage2.j.included === 3000000 && RA.usage2.j.contractPlan.code === 'E1' && RA.ownerPut.st === 200 && RA.usage3.j.included === 3000000 && RA.usage3.j.plan.overage === 'block' && RA.usage3.j.contractPlan.code === 'E1', `${P} owner cannot change ${JSON.stringify(RA.usage3.j && RA.usage3.j.plan)}`);
     }
+    if (RA.trialStudio) ok(RA.usage4.j.included === 0 && RA.usage4.j.plan.trialEnded === true && RA.usage4.j.state === 'over' && RA.trialStudio.st === 429 && RA.trialStudio.j.error === 'trial_ended' && /유료 요금제로 전환/.test(RA.trialStudio.j.message) && RA.trialTutor.st === 429 && RA.trialTutor.j.error === 'trial_ended' && /요$/.test(RA.trialTutor.j.message), `${P} trial ended ${RA.trialStudio.st} ${JSON.stringify(RA.trialStudio.j)} ${JSON.stringify(RA.trialTutor.j)}`);
     ok(RA.topupBad.st === 400 && RA.topupBad.j.error === 'won' && RA.topupOff.st === 503 && RA.topupOff.j.error === 'pay_off' && RA.topupCf.st === 400 && RA.topupCf.j.error === 'bad_pay', `${P} topup ${RA.topupOff.st} ${RA.topupOff.j && RA.topupOff.j.error}`);
     ok(RA.putTrain.st === 200, `${P} owner train ${RA.putTrain.st} ${JSON.stringify(RA.putTrain.j)}`);
     if (!RB) continue;
