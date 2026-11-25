@@ -244,7 +244,13 @@ function ltRender() {
 function ltPlace() { const R = $('#ltut'); if (!R) return; let b = 0;
   document.querySelectorAll('.tabbar, body[data-luxr=class] .shp-side, .lt-avoid').forEach(el => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return; const r = el.getBoundingClientRect(); if (!r.height || r.top >= innerHeight || r.bottom < innerHeight - 200) return; if (!['fixed', 'sticky'].includes(cs.position)) return; b = Math.max(b, innerHeight - r.top); });
   R.style.setProperty('--lt-b', b ? Math.round(b + 10) + 'px' : ''); }
-addEventListener('resize', () => ltPlace()); { let tk = 0; addEventListener('scroll', () => { if (tk) return; tk = requestAnimationFrame(() => { tk = 0; ltPlace(); }); }, { passive: true }); }
+addEventListener('resize', () => ltPlace());
+/* qa8(2026-11-25) 대표님 「학습자 웹 AI 버튼이 계속 움직여 산만하다 — 관리자 화면처럼 고정, 처음엔 보이다가 스크롤 멈추면 뜨게」:
+   스크롤마다 자리(--lt-b)를 다시 계산하던 것을 멈춤 뒤 1회로 바꾸고, 스크롤하는 동안은 숨겼다가(body.lt-scr) 멈추고 0.45초 뒤 같은 자리에 다시 보인다.
+   튜터 대화창 · 시트 · 모달 안의 스크롤은 제외. 학습자 앱 · 튜브 단추(#tbFab)도 같은 규칙(lx47.css). */
+{ let t = 0; addEventListener('scroll', e => { const B = document.body && document.body.classList; if (!B || LT.open) return; const tg = e.target; if (tg && tg.nodeType === 1 && tg.closest && tg.closest('#ltut .lt-panel, .tbw, .tb-sheet, .modal, .mwrap, [role=dialog]')) return;
+  B.add('lt-scr'); clearTimeout(t); t = setTimeout(() => { ltPlace(); B.remove('lt-scr'); }, 450); }, { capture: true, passive: true });
+  addEventListener('hashchange', () => { document.body.classList.remove('lt-scr'); }); }
 function ltOpen() {
   /* v23.4 대표님(2026-11-03): '학습자 AI 튜터는 로그인하기 전부터 작동해야 돼' — 방문자도 열고 질문(강좌 · 수강 방법 · 가입 안내), 로그인하면 내 기록 맞춤 */
   if (!LT.open) LT.anim = true; LT.open = true; LT.hint = ''; try { sessionStorage.setItem(LTK(), '1'); } catch (e) { } LT.nudge = ''; document.body.classList.add('lt-on');
