@@ -83,7 +83,7 @@ const REG = '20261001', NOREG = '20269999';
       ok(/동의 링크를 확인해 주세요/.test(g.t) && !g.no && !reqs.slice(n0).some(r => /guardian/.test(r)), `${T} #4 토큰 없는 #guardian: 호출 0 · 안내 화면`);
       await p.evaluate(() => toast('지난 안내예요.', 'bad')); await wait(600); await go('#home'); ok(!(await p.$('.ltoast')), `${T} #4 화면을 옮기면 지난 토스트 정리`);
       /* #3 회귀: 원래 있는 화면은 홈으로 옮기지 않는다 */
-      { const moved = []; for (const h of ['#my', '#rec', '#cal', '#acct', '#msg', '#notice', '#comm', '#notes', '#courses', '#tutorials', '#my/plan']) { await go(h); await wait(300); const now = '#' + p.url().split('#')[1]; if (now !== h) moved.push(h + '→' + now); }
+      { const moved = []; for (const h of ['#my', '#rec', '#cal', '#acct', '#msg', '#notice', '#comm', '#notes', '#courses', '#tutorials', '#my/plan']) { /* qa8: 사이트 페이지형 주소(#courses · #tutorials)는 이 기관 사이트에 그 페이지가 있을 때만 '있는 화면'이다 — 없으면 홈으로 옮기는 것이 #3의 의도 */ if (['#courses', '#tutorials'].includes(h) && !(await p.evaluate(id => { try { return !!pageOf(id); } catch (e) { return true; } }, h.slice(1)))) continue; await go(h); await wait(300); const now = '#' + p.url().split('#')[1]; if (now !== h) moved.push(h + '→' + now); }
         ok(!moved.filter(x => /→#home$/.test(x)).length, `${T} #3 있는 화면은 그대로 (${moved.join(', ')})`); }
       /* #5 테마 */
       await go('#acct'); await p.waitForSelector('.thm-box [data-thm="light"]', { timeout: 8000 }).catch(() => { });
