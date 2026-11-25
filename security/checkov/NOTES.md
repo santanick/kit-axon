@@ -16,3 +16,16 @@ Checkov는 gcloud 셸 스크립트를 읽지 못하므로 아래는 직접 점�
 확인된 양호 항목: 실행 사용자 `USER node`, 빌드 비밀은 BuildKit `--mount=type=secret`(이미지에 남지 않음), 운영 비밀은 Secret Manager(`--set-secrets`), Cloud SQL 삭제 보호 · PITR · 백업 30개, WIF 조건이 저장소 + `main` 브랜치로 제한, 이미지 태그는 커밋 해시.
 
 `CKV_DOCKER_2`(HEALTHCHECK) 제외 근거: Cloud Run은 컨테이너 HEALTHCHECK를 쓰지 않고 자체 시작 프로브로 `/api/health`를 확인합니다.
+
+## 가디언 5차 스캔 도구 로컬 실행 결과(2026-11-25, 보안전문가 g3)
+도커 데몬이 없어 이미지 스캔은 CI에서 처음 실행합니다. 아래는 같은 고정 버전을 저장소에 직접 실행한 결과이며, 원장 반영은 통합 담당이 finding으로 넣습니다.
+
+| 도구 | 대상 | 결과 | 조치(권고) |
+|---|---|---|---|
+| Checkov 3.2.469 | service · service-egov · .github | dockerfile 192 · github_actions 313 통과, 실패 0(CKV_GHA_7은 근거 주석 후 제외) | - |
+| Trivy 0.76.2 fs | service-egov/pom.xml(전이 의존성) | CRITICAL 10 · HIGH 18 — tomcat-embed-core 10.1.54(C8 · H4, 수정 10.1.59), spring-webmvc 6.2.18(C2 · H2, 수정 6.2.19), jackson-databind/core 2.21.2(H8, 수정 2.21.7), postgresql 42.7.10(H2, 수정 42.7.12), spring-expression(H1) | Spring Boot 3.5.x 최신 패치로 올리고 tomcat · jackson 속성 고정. **이 상태로는 `trivy`(egov) · `osv` 잡이 실패 기준에 걸립니다** |
+| Trivy 0.76.2 config | didisam/deploy/terraform/gcp/main.tf:74 | HIGH GCP-0015 Cloud SQL SSL 강제 없음 | `ssl_mode = "ENCRYPTED_ONLY"`(IAC-04와 같은 조치) |
+| OSV-Scanner 2.7.1 | package-lock · pom.xml | npm 0건, Maven 53건(C10 · H17 · M21 · L5) | 위와 같음 |
+| 교차(OSV-Scanner × 가디언 SBOM×OSV) | 같은 파일 | 가디언 scan 0건 · 스캐너에만 11개 구성요소, 그중 10개는 SBOM 미포함(Maven 전이 의존성) | `service/security/sbom.js`가 pom 직접 의존성만 담음 — 전이 의존성(또는 OSV-Scanner 결과 합류) 보완 필요 |
+| Semgrep 공개 규칙 p/java · p/owasp-top-ten | service/server · service-egov/src · didisam | 89건(ERROR 6 · WARNING 83). ERROR 6은 `gcm-no-tag-length` — aigw · ledger · lms/aria · mfa · pii · statecrypt의 AES-GCM 복호화에 태그 길이 미지정 | `createDecipheriv(..., { authTagLength: 16 })` 지정(짧은 태그 위조 방지). WARNING은 innerHTML 기준선과 같은 계열 |
+| 외부 노출면 | example.com(기능 확인용 중립 도메인) | TLS 1.3 · 구버전 거부 · HSTS 없음 P2, crt.sh 시간 초과 → '미연결' 처리 확인 | 실제 대상은 `vars.SURFACE_DOMAINS` 설정 후 CI에서 실행 |

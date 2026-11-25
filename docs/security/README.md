@@ -115,18 +115,22 @@ API 계약(요약): `GET /api/security/summary` · `findings` · `threats` · `p
 네트워크나 키가 없으면 수집기는 픽스처로 동작하고 '미연결'을 표시합니다. 버전1(PHP · Laravel · WordPress) · Java 런타임 추가 소스는 보고서 Part 8의 목록을 따르며 스킬 9-1절에 병합되어 있습니다.
 
 ## 9. 스캔 스택과 런타임 탐지
-| 영역 | 1순위(무료) | 시점 |
-|---|---|---|
-| 의존성 | OSV-Scanner v2(npm · Maven · 이미지, fix) | PR · 야간 |
-| 보안 업데이트 | Dependabot(그룹화, PR 상한 2, cooldown) | 자동 |
-| SAST | Semgrep 무료 + 사내 RLS · 권한 · 비밀값 규칙(`security/semgrep/`) | PR · 야간 |
-| 시크릿 | gitleaks CLI(pre-commit · CI · 이력 주 1회) | 커밋 · PR |
-| IaC · 설정 | Firebase 규칙 테스트, Checkov, gcloud 점검(미인증 호출 · 공인 IP · SSL · 삭제 보호) | PR · 주 1회 |
-| 클라우드 태세 | SCC Standard | 상시 |
-| DAST | ZAP baseline(스테이징) | 주 1회 |
-| 컨테이너 | Trivy(커밋 SHA 고정) + Artifact Registry | 빌드 |
-| AI 전용 | promptfoo redteam(`node security/redteam/run.js`) | PR 스모크 · 주 1회 |
-| 외부 노출면 | crt.sh 서브도메인, testssl.sh, 헤더 점검 | 주 1회 |
+운영비 0원: 아래 도구는 모두 무료 오픈소스 · 무료 공개 데이터이며 가입 · 유료 키를 쓰지 않습니다. CI는 `.github/workflows/security-scan.yml`(PR · 주 1회 월 10:17 KST · 수동)이고, **실패 기준은 P0 · CRITICAL(수정 버전 있음)만**입니다. 나머지는 산출물(JSON)로 보고하고, 결과는 `guard.js ingest --kind finding`으로 원장에 넣습니다(`security/ci/to-ingest.js`가 형식 변환).
+
+| 영역 | 도구(고정) | CI 잡 | 실패 기준 | 상태 |
+|---|---|---|---|---|
+| 의존성 | OSV-Scanner v2.7.1(릴리스 바이너리 sha256 대조) — package-lock · pom.xml 전이 의존성 해석, 가디언 SBOM×OSV와 교차(`cross.scanner_only` · `not_in_sbom`) | `osv` | CRITICAL(수정 버전 있음) · OSV `MAL-` | 적용 |
+| 보안 업데이트 | Dependabot(그룹화, PR 상한 2, cooldown) | 자동 | - | 적용 |
+| SAST | Semgrep 1.180.0 사내 규칙(`security/semgrep/`) + 공개 규칙 p/java · p/owasp-top-ten(무료 레지스트리 · `--metrics=off`) | `semgrep` | 사내 ERROR만(공개 규칙은 보고) | 적용 |
+| 시크릿 | gitleaks 8.30.1(CI · 이력) | `secrets` | 발견 시 | 적용 |
+| IaC · 설정 | Checkov 3.2.469(`security/checkov/.checkov.yaml` — service · service-egov · .github), gcloud 스크립트는 직접 점검(`security/checkov/NOTES.md`) | `checkov` | 보고만(오프라인은 등급 정보 없음) | 적용 |
+| 클라우드 태세 | SCC Standard(무료 등급) | 상시 | - | 콘솔 설정 필요 |
+| DAST | ZAP baseline 2.17.0(다이제스트 고정, 스테이징) | `zap` | 규칙 파일 FAIL | 대상 `vars.ZAP_TARGET` 필요 |
+| 컨테이너 | Trivy v0.76.2(릴리스 바이너리 sha256 대조 — 2026-03 trivy-action 태그 변조 사례로 Action 미사용), studio · egov 이미지 빌드 후 HIGH · CRITICAL 보고 | `trivy` | CRITICAL(수정 버전 있음) | 적용 |
+| AI 전용 | 사내 레드팀(`node security/redteam/run.js`, 키 불필요) | `guardian` | 실패 사례 | 적용 |
+| 외부 노출면 | `security/surface/check.js`(Node 내장만): crt.sh 서브도메인, Server · X-Powered-By 노출 · HSTS, TLS 협상 버전 · 구버전 허용 · 인증서 만료 | `surface` | 인증서 만료(P0) | 대상 `vars.SURFACE_DOMAINS`(쉼표 구분) · 자산 목록 `vars.SURFACE_KNOWN` 필요 |
+
+외부 노출면 판정: 만료 P0 · 만료 14일 이내 · 인증서 검증 실패 · TLS 1.0/1.1 허용 P1 · HSTS 없음 · 자산 목록에 없는 호스트 P2 · 버전 노출 헤더 P3. 비공격(GET 1회 · TLS 핸드셰이크)이며, crt.sh 응답은 호스트 이름 형식만 통과시킵니다. crt.sh가 응답하지 않으면 '미연결'로 표시하고 루트 도메인만 점검합니다.
 
 모든 GitHub Action은 커밋 SHA로 고정합니다(2026-03 Trivy 액션 태그 변조 사례). promptfoo는 버전 고정 · 텔레메트리 차단을 적용합니다.
 
