@@ -393,6 +393,8 @@ td code{font-family:monospace;font-size:12.5px;word-break:break-all}
 .lvsw{margin:14px 0 0;font-size:13px;color:var(--mute,#667)}.linkb{background:none;border:0;padding:0;color:var(--brand,#00862D);font-weight:700;cursor:pointer;text-decoration:underline}
 /* v32.4 운영자 소셜 로그인 */
 .lvsoc{display:grid;gap:8px;margin:12px 0 4px}.lvsb{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;border-radius:8px;border:1px solid var(--line,#dde);background:var(--surface,#fff);color:#1f1f1f;font-weight:700;font-size:14px;text-decoration:none}.lvsb:hover{filter:brightness(.97)}.lvsb.kakao{background:#FEE500;border-color:#FEE500;color:#191919}.lvsb:focus-visible{outline:2px solid var(--brand,#00862D);outline-offset:2px}
+/* 다크 모드 진입 화면: 소셜 · 이메일 버튼 글자가 어두운 배경에 묻히던 문제(대비 1.08:1) — 버튼 글자는 테마 글자색, Google은 공식 다크 버튼(#131314 · 테두리 #8E918F · 글자 #E3E3E3), 카카오는 공식 노란 버튼 그대로 */
+html[data-theme="dark"] .lvsb{color:var(--g900,#EAF2EC);border-color:rgba(255,255,255,.22)}html[data-theme="dark"] .lvsb.google{background:#131314;border-color:#8E918F;color:#E3E3E3}html[data-theme="dark"] .lvsb.kakao{background:#FEE500;border-color:#FEE500;color:#191919}
 .lvor{display:flex;align-items:center;gap:10px;margin:10px 0 2px;color:var(--mute,#667);font-size:12px}.lvor::before,.lvor::after{content:'';flex:1;height:1px;background:var(--line,#dde)}
 .lvpend{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0;padding:10px 12px;border-radius:8px;background:var(--soft,#ECFDF3);font-size:13px;overflow-wrap:anywhere}
 .lvacct{display:flex;align-items:center;gap:6px;margin-top:8px;min-width:0}.lvacct small{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute,#667)}
