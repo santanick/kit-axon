@@ -14,10 +14,12 @@
     try {
       const r = await api('GET', '/api/access-review'); const g = await api('GET', '/api/org/sec/geo').catch(() => ({ krOnly: false }));
       box.innerHTML = `<p class="ar-due">${r.due ? '이번 분기 접근권한 검토가 필요합니다.' : '이번 분기 검토를 마쳤습니다.'} 마지막 검토: ${r.lastReview ? esc(day(r.lastReview.at)) + ' · ' + esc(r.lastReview.by) : '없음'}</p>
-        <table class="ar-t"><thead><tr><th>계정</th><th>역할</th><th>마지막 로그인</th></tr></thead><tbody>${r.rows.map(x => `<tr><td>${esc(x.email)}</td><td>${esc(ROLE[x.role] || x.role)}</td><td>${esc(day(x.lastLogin))}</td></tr>`).join('')}</tbody></table>
+        <div style="overflow-x:auto;max-width:100%"><table class="tbl ar-t"><thead><tr><th>계정</th><th>역할</th><th>마지막 로그인</th></tr></thead><tbody>${r.rows.map(x => `<tr><td>${esc(x.email)}</td><td>${esc(ROLE[x.role] || x.role)}</td><td>${esc(day(x.lastLogin))}</td></tr>`).join('')}</tbody></table></div>
         <label>검토 메모 <input class="ar-note" maxlength="500" placeholder="예: 퇴사자 계정 없음, 역할 적정"></label>
-        <button class="btn ar-ok">검토 완료 기록</button>
+        <p><button class="btn ar-ok">검토 완료 기록</button></p>
+        <h4>해외 운영자 로그인 차단</h4>
         <label class="ar-geo"><input type="checkbox" class="ar-kr" ${g.krOnly ? 'checked' : ''}> 해외에서의 운영자 로그인 차단(국내만 허용)</label>
+        <p class="muted">켜면 국외 IP에서 운영자 계정으로 로그인할 수 없습니다. 학습자 로그인에는 적용되지 않습니다.</p>
         <p class="ar-msg" role="status"></p>`;
       const msg = box.querySelector('.ar-msg');
       box.querySelector('.ar-ok').onclick = async () => { try { await api('POST', '/api/access-review', { note: box.querySelector('.ar-note').value }); await load(box); box.querySelector('.ar-msg').textContent = '검토 결과를 기록했습니다.'; } catch (e) { msg.textContent = em(e); } };
@@ -74,7 +76,7 @@
     opts = opts || {}; rows = Array.isArray(rows) ? rows : []; const k = String(kind || 'csv').replace(/[^\w.:-]/g, '_').slice(0, 60) || 'csv';
     const keys = Array.isArray(opts.cols) ? opts.cols.map((c, i) => [i, String(c)]) : [...new Set(rows.flatMap(r => r && typeof r === 'object' && !Array.isArray(r) ? Object.keys(r) : []))].map(c => [c, c]);
     const sid = keys.filter(([, c]) => SIDC.test(c.trim()) || /학번/.test(c)).map(([i]) => i);
-    const reason = askReason(); if (reason == null) return null;
+    const reason = opts.reason != null && String(opts.reason).trim().length >= 2 ? String(opts.reason).trim().slice(0, 200) : askReason(); if (reason == null) return null; /* QA7: 화면에서 이미 사유를 받았으면(opts.reason) 다시 묻지 않는다 */
     let raw = opts.raw === true;
     if (opts.raw == null && sid.length && roleNow() === 'owner') raw = window.confirm('학번(내부ID)을 가리지 않은 원본으로 내려받으시겠습니까?\n[확인] 원본 · [취소] 끝 4자리만 표시');
     if (ON()) { try { raw = !!(await api('POST', '/api/export/log', { kind: k, n: rows.length, reason, raw })).raw; } catch (e) { window.alert(em(e)); return null; } }
@@ -84,7 +86,7 @@
   };
   window.exportGuard.PII = PIIC; window.exportGuard.SID = SIDC;
   window.exportGuard.needs = (name, cols, rows) => Array.isArray(cols) && Array.isArray(rows) && rows.length > 0 && !/양식/.test(String(name || '')) && Date.now() > srvUntil && cols.some(c => PIIC.test(String(c)));
-  if (typeof downloadCSV === 'function') { const D0 = downloadCSV;
+  if (typeof downloadCSV === 'function') { const D0 = downloadCSV; window.exportGuard.save = (name, cols, rows) => D0(name, cols, rows); /* exportGuard를 이미 거친 파일을 저장(사유를 다시 묻지 않음) */
     downloadCSV = function (name, cols, rows) { /* eslint-disable-line no-global-assign */
       if (!window.exportGuard.needs(name, cols, rows)) return D0(name, cols, rows);
       return window.exportGuard('csv:' + (lastAct || 'download'), rows, { cols }).then(g => { if (g) D0(name, cols, g.rows); return g; });

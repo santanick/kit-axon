@@ -177,11 +177,11 @@ function resolve(id) {
   if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id)) { UI.settings = id; return { ws: 'settings', tab: '' }; } /* v32.8 설정 하위 화면 바로가기(현황 › 요금제 [업그레이드] 등) */
   return { ws: 'home', tab: '' };
 }
-const TEACH_NO = ['site', 'sales', 'billing', 'ledger', 'fac', 'crmbill', 'admins', 'org', 'auto', 'settings', 'dash']; /* v43 P3-F01: 강사에게 수납 · 매출 · 시설 · 청구 금액 숨김(서버 requireRole과 같게) */ /* v32.8 설정 · 기관 현황은 교수자 직접 이동도 막음(QA U4) */
+const TEACH_NO = ['site', 'sales', 'billing', 'ledger', 'fac', 'crmbill', 'admins', 'org', 'auto', 'settings', 'dash', 'lmsm', 'lmsp']; /* QA7 q2#5: 학사 LMS 시스템 관리 · 공통 설정도 교수자 제외 */ /* v43 P3-F01: 강사에게 수납 · 매출 · 시설 · 청구 금액 숨김(서버 requireRole과 같게) */ /* v32.8 설정 · 기관 현황은 교수자 직접 이동도 막음(QA U4) */
 function go(id, keep) {
   let r = resolve(id);
   if (r.tab && MENU[r.tab]?.owner && S.me.role !== 'owner') { toast('정운영자만 볼 수 있는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; }
-  if (S.me.role === 'teacher' && (TEACH_NO.includes(r.tab) || TEACH_NO.includes(r.ws))) { toast('교수자 권한으로는 열 수 없는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; } /* v25 메뉴 숨김뿐 아니라 직접 이동도 막음 */
+  if (S.me.role === 'teacher' && (TEACH_NO.includes(r.tab) || TEACH_NO.includes(r.ws) || (WS[r.ws] && r.ws !== 'home' && !r.tab && !wsTabs(r.ws).length))) { toast('교수자 권한으로는 열 수 없는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; } /* v25 메뉴 숨김뿐 아니라 직접 이동도 막음 */
   if (r.tab && !menuOn(r.tab)) { toast(`'${mlabel(r.tab)}' 탭은 꺼져 있습니다. 설정에서 켤 수 있습니다.`, 'warn'); r = resolve(r.ws); }
   CUR = r; if (r.tab) UI['tab_' + r.ws] = r.tab;
   try { history.replaceState(null, '', '#' + r.ws + (r.tab ? '/' + r.tab : '')); } catch (e) { }
@@ -189,7 +189,8 @@ function go(id, keep) {
 }
 function rail() {
   const badge = w => { if (w === 'learn') { const n = typeof pend === 'function' ? pend().length : 0; return n ? `<em>${n}</em>` : ''; } if (w === 'home') { const n = briefCount(); return n ? `<em class="mg">${n}</em>` : ''; } return ''; };
-  return S.nav.ws.map(w => `<button class="ri ${CUR.ws === w ? 'on' : ''}" data-act="go" data-v="${w}" ${CUR.ws === w ? 'aria-current="page"' : ''}>${ic(WS[w].icon)}<span>${esc(lab(WS[w]))}</span>${badge(w)}</button>`).join('');
+  const vis = w => WS[w] && !(S.me.role === 'teacher' && (TEACH_NO.includes(w) || (w !== 'home' && !wsTabs(w).length))); /* QA7 q2#7: 교수자에게 열 수 없는 공간(현황 · 홈페이지 등)은 레일에서 숨김 */
+  return S.nav.ws.filter(vis).map(w => `<button class="ri ${CUR.ws === w ? 'on' : ''}" data-act="go" data-v="${w}" ${CUR.ws === w ? 'aria-current="page"' : ''}>${ic(WS[w].icon)}<span>${esc(lab(WS[w]))}</span>${badge(w)}</button>`).join('');
 }
 const briefCount = () => (typeof BRIEF === 'function' ? BRIEF().filter(b => b.n > 0).length : 0);
 function render() {
