@@ -48,7 +48,7 @@
   { const base = viewPage; viewPage = (id, ...a) => { const H = HP(); const p = pageOf(id); if (!H || !H.home || (id !== 'home' && p) || H.mode === 'learn') return base(id, ...a); if (id !== 'home' && !p) LR.unk = id; /* QA7 #3: 없는 주소는 홈으로(lapp.js 끝) */
     const hp = pageOf('home'); const secs = hp && !(hp.access === '로그인' && !LR.me) ? hp.sections : [];
     const R = (s) => { try { return (SECR[s.type] || (() => ''))(s.data || {}); } catch (e) { console.error(e); return ''; } };
-    let out = '<div class="smhost smhome" data-smk="home"></div>';
+    let out = (id !== 'home' && !p ? '<i data-unk hidden></i>' : '') + '<div class="smhost smhome" data-smk="home"></div>'; /* QA7: 없는 주소 표식(lapp.js) */
     if (H.mode === 'mix' && LR.me) { const pr = secs.find(s => s.type === 'progress'); if (pr) out = R(pr) + out; }
     if (H.mode === 'both') out += secs.filter(s => s.type !== 'hero').map(R).join('');
     return out; }; }

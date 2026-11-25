@@ -133,7 +133,8 @@ const only = (process.env.ONLY || 'corp,k12,k12b,univ,pub,life,date,r2,c3,c17,wh
     ok(u.g.includes('컴퓨터공학과') && u.g.includes('경영학과') && u.mg.includes('컴퓨터공학과'), `U10: 학과가 그룹으로 생김 ${JSON.stringify(u)}`);
     const tab = await op.evaluate(() => { const c = S.classes[0] || (makeCourse({ name: '특강', weeks: 2 }), S.classes[0]); c.learners = S.members.map(m => m.id); UI.cls = c.id; go('class'); render(); const th = [...document.querySelectorAll('#main th')].map(x => x.textContent); const td = [...document.querySelectorAll('#main td')].map(x => x.textContent); try { pickTargets('수강 권한 부여', [], () => {}); } catch (e) { } const seg = [...document.querySelectorAll('.c2pt button')].map(b => b.textContent).join('|'); return { th: th.slice(0, 4), dept: td.includes('컴퓨터공학과'), seg }; });
     ok(tab.th.includes('학번') && tab.dept && /학과 단위/.test(tab.seg) && !/팀 단위/.test(tab.seg), `U9 · U10: 교과목 학생 표 학번 · 학과, 권한 부여 '학과 단위' ${JSON.stringify(tab)}`);
-    const tid = await pub(op); const l = await lp(ctx, tid, '#join'); const g = await l.evaluate(() => document.querySelector('#lm, main, body').innerText); ok(/접근코드 받기 요청/.test(g), 'U18: 미등록 학생 #join에 접근코드 받기 요청 길');
+    const tid = await pub(op); const l = await lp(ctx, tid, '#join'); const g = await l.evaluate(() => document.querySelector('#lm, main, body').innerText); /* QA7(2026-11-25) 대표님 학습자 가입 정책: 대학도 이메일 · SNS 가입(학번 · 학과만)을 연다 — 접근코드 기관이면 '접근코드 받기 요청', 가입을 연 기관이면 학번을 받는 가입 양식이 길이다 */
+    ok(/접근코드 받기 요청/.test(g) || (/학번/.test(g) && /가입/.test(g)), 'U18: 미등록 학생 #join에 가입 또는 접근코드 받기 요청 길 ' + g.replace(/\s+/g, ' ').slice(0, 80));
     await ctx.close(); }
 
   if (only.includes('pub')) { const { ctx, op } = await mk('public');

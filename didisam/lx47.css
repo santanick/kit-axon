@@ -132,7 +132,7 @@ html body.lapp .ap-nav,html body.tube .ap-nav.tb-nav{background:var(--surface,#f
 /* ═════ qa7(2026-11-25) 대표님: 「웹 기반의 AX 튜터는 상단 배치가 아니고 사이트의 하단 구석(모니터 보는 쪽 우측 하단)에 늘 따라다녀야 · 클릭하면 대화창」 ═════
    - 학습자 웹(PC · 휴대폰) · 앱 모두 우측 하단 고정 원형 버튼 하나. 홈 · 내 학습 · 강좌 · 로그인 화면에서도 숨기지 않음(예전 홈 첫 화면 · 내 학습 · 머리 줄 배치는 없앰)
    - 앱에서 디디쌤 튜브 단추(#tbFab)가 있으면 그것 하나만(같은 튜터 창을 엶), 없으면 #ltut 단추를 아래 탭 바 위에
-   - 숨기는 경우만 남김: 대화창이 열렸을 때(.hide) · 보호자 홈(lpar, 튜터는 자녀 계정) · 인쇄
+   - 숨기는 경우만 남김: 대화창이 열렸을 때(.hide) · 튜터 대화 화면(#ai, tb-fhome) · 앱에서 멈춘 자리가 본문 버튼을 덮을 때(tb-fcov, 조금 밀면 다시 보임) · 보호자 홈(lpar, 튜터는 자녀 계정) · 인쇄
    - 대화창: PC는 우측 하단 약 400×600 카드, 휴대폰(≤860px)은 아래에서 올라오는 시트 */
 html body:not(#q7) #ltut .lt-fab:not(.hide){position:fixed!important;display:flex!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;transform:none;left:auto!important;top:auto!important;right:calc(24px + env(safe-area-inset-right))!important;bottom:calc(24px + env(safe-area-inset-bottom) + var(--lt-b,0px))!important;z-index:57!important;width:56px!important;min-width:56px!important;height:56px!important;padding:0!important;border-radius:50%!important;justify-content:center!important;gap:0!important}
 html body:not(#q7) #ltut .lt-fab .lt-ft{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap}
@@ -145,7 +145,7 @@ body.lt-dock{padding-right:0!important}
 html body.lapp:not(#q7) #ltut .lt-fab:not(.hide){bottom:calc(var(--ap-nav,64px) + var(--ap-sb,0px) + 12px)!important}
 html body.lapp:not(#q7) #tbFab.tb-fab{left:auto!important;right:calc(12px + env(safe-area-inset-right))!important;bottom:calc(var(--ap-nav,64px) + var(--ap-sb,0px) + 12px)!important;width:52px!important;height:52px!important;padding:0!important;gap:0!important;border-radius:50%!important;flex-direction:row!important;transform:none}
 html body.lapp:not(#q7) #tbFab.tb-fab span{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap;display:inline!important}
-html body.tube.tb-fhome #tbFab.tb-fab,html body.lapp.tb-fcov:not(#q7) #tbFab.tb-fab,html body.tube.tb-fsm:not(#q7) #tbFab.tb-fab{opacity:1;transform:none;pointer-events:auto}
+html body.tube.tb-fsm:not(#q7) #tbFab.tb-fab{opacity:1;transform:none;pointer-events:auto}
 @media (max-width:899px){html body.tube .ap-nav.tb-nav{right:0!important}}
 @media (min-width:900px){html body.tube:not(.tb-watch):has(> #tbFab) .ap-nav.tb-nav{transform:translateX(-50%)}}
 @media (max-width:860px){

@@ -553,8 +553,8 @@
   const blank = lm => !lm.textContent.trim() && !lm.querySelector('img, svg, iframe, video, canvas, input, button, select, textarea, a[href]');
   let tk = 0;
   const check = () => { clearTimeout(tk); const h0 = location.hash; tk = setTimeout(() => { try {
-    if (location.hash !== h0 || typeof SITE !== 'function' || !SITE()) return; const a = route().a; if (a === 'home') return;
-    const lm = document.getElementById('lm'); if ((lm && blank(lm)) || (LR.unk && LR.unk === a)) location.replace('#home');
+    if (location.hash !== h0 || typeof SITE !== 'function' || !SITE()) return; const a = route().a; if (a === 'home' || (window.LR_KNOWN || []).includes(a)) return; /* 다른 모듈이 나중에 그리는 전용 주소(튜브 #review · #done 등)는 홈으로 보내지 않는다 */
+    const lm = document.getElementById('lm'); if ((lm && blank(lm)) || (LR.unk && LR.unk === a && lm && lm.querySelector('[data-unk]'))) location.replace('#home'); /* 표식(data-unk)이 남아 있을 때만 — 앱 전용 화면(#ai · #connect 등)은 뒤 모듈이 본문을 새로 그려 표식이 사라진다 */
   } catch (e) { } }, 450); };
   const wrap = () => { const base = lrender; lrender = (...x) => { LR.unk = ''; const r = base(...x); try { if (route().a === 'lm') { location.replace('#home'); return r; } check(); } catch (e) { } return r; }; }; // eslint-disable-line no-global-assign
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(wrap, 0)); else setTimeout(wrap, 0);

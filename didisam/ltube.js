@@ -324,6 +324,7 @@
     T = T.map(([k, h, l]) => { if (k === 'find') { const b = info().browse; if (b && b !== '#home') h = b; } if (k === 'my') l = info().learn || l; return [k, h, l]; }); /* 찾기 칸은 그 기관에서 실제로 열리는 목록(#shop · #courses) */
     const all = [['home', '#home', '홈'], ...T]; if (facOK() && !T.some(x => x[0] === 'fac')) all.push(['fac', '#fac', '시설']); all.push(['me', '#acct', '나']); return all; }
   /* v47 D11: 아래 탭 4칸 = 홈 · 내 학습 · 찾기 · 나. 일정 · 출석 · 여정 · 노트 · 기록은 「내 학습」 안, 목록 · 커뮤니티 · 공지는 「찾기」 안(칸이 따로 있으면 그 칸이 먼저) */
+  (window.LR_KNOWN = window.LR_KNOWN || []).push('review', 'done'); /* QA7: lapp.js 「알 수 없는 주소 → 홈」에서 튜브 전용 주소 제외 */
   const RT = { att: ['attend', 'att'], home: ['home', 'review', 'ai', 'done'], my: ['my', 'c', 'cert', 'badge', 'lms', 'knq', 'cal', 'attend', 'journey', 'notes', 'rec'], find: ['courses', 'shop', 'class', 'tutorials', 'dg', 'comm', 'notice'], cal: ['cal'], fac: ['fac'], me: ['acct', 'inbox', 'msg', 'mypay', 'connect', 'payd', 'mile', 'ledger'] };
   function curTab(T) { const a = route().a; T = T || tabsOf(); const keys = T.map(x => x[0]);
     const hit = T.find(([k, h]) => k === 'find' && h.slice(1).split('/')[0] === a); if (hit) return 'find';
@@ -559,7 +560,7 @@
     return S; });
   /* v43 R9(J4 113 · 205): 홈 첫 화면에서 떠 있는 AX 튜터 단추가 튜터 카드 · 사진을 가림 → 홈에서는 본문 튜터 바를 지나 내려간 뒤에만 단추를 보인다 */
   /* v43.7 Q4: 휴대폰 「AI 튜터」 대화 화면(#ai)은 화면 자체가 튜터 — 떠 있는 단추가 입력 칸 오른쪽을 반쯤 가리던 것(가장자리 손잡이) → 이 화면에서는 단추를 숨긴다 */
-  const fhome = () => { const B = document.body; if (!B) return; /* qa7(2026-11-25) 대표님 「늘 따라다녀야」: 홈 · #ai에서도 떠 있는 튜터 단추를 접지 않는다(홈 입력창은 그대로, 단추를 누르면 같은 대화가 이어지는 창) */ B.classList.remove('tb-fhome'); if (B) return; if (route().a === 'ai' && B.classList.contains('lapp') && B.classList.contains('tube')) { B.classList.add('tb-fhome'); return; } const t = route().a === 'home' && B.classList.contains('tube') ? document.querySelector('#lm .tb-tut') : null; B.classList.toggle('tb-fhome', !!t && t.getBoundingClientRect().bottom > 0); };
+  const fhome = () => { const B = document.body; if (!B) return; /* qa7(2026-11-25) 대표님 「늘 따라다녀야」: 홈 · #ai에서도 떠 있는 튜터 단추를 접지 않는다(홈 입력창은 그대로, 단추를 누르면 같은 대화가 이어지는 창) */ B.classList.remove('tb-fhome'); /* 단, 튜터 대화 화면(#ai) 자체에서는 같은 창을 여는 단추가 입력 칸을 가리므로 숨긴다(qa437-q4) */ if (route().a === 'ai' && B.classList.contains('lapp') && B.classList.contains('tube')) { B.classList.add('tb-fhome'); } return; const t = route().a === 'home' && B.classList.contains('tube') ? document.querySelector('#lm .tb-tut') : null; B.classList.toggle('tb-fhome', !!t && t.getBoundingClientRect().bottom > 0); };
   addEventListener('scroll', fhome, { passive: true }); addEventListener('resize', fhome);
   function demoSeed() { try { if (!on() || LR.mode !== 'demo' || LR.tid !== 'sample') return; const t = rec(); if (t.demoSeeded || Object.keys(t.sec).length) return; t.demoSeeded = 1;
     const o = SITE().org || {}; const key = (o.type || '') + (o.ed || '') + (LR.me.sid || ''); let h = 7; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;

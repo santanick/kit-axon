@@ -156,15 +156,14 @@
   const lapi = async (method, url, body) => { const r = await fetch(url, { method, credentials: 'same-origin', headers: { 'x-didisam': '1', ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined }); const j = await r.json().catch(() => ({})); if (!r.ok || j.ok === false) { const e = new Error(j.message || `오류 ${r.status}`); e.status = r.status; e.code = j.error; e.extra = j; throw e; } return j; };
   const P = act => `/api/pub/${encodeURIComponent(LR.tid)}/mile-${act}`;
   /* QA7 #2: 게시된 기관 설정(SITE().mileage.on)이 꺼져 있으면 서버에 묻지 않는다(마일리지 꺼진 기관의 mile-my 404 반복 방지) */
-  const siteOn = () => { try { const s = SITE(); return !!(s && s.mileage && s.mileage.on); } catch (e) { return false; } };
-  async function loadMy(force) { if (!live() || !LR.me || MI.busy || MI.off) return; if (!siteOn()) { MI.off = true; return; } if (!force && MI.my && Date.now() - MI.at < 20000) return; MI.busy = true;
+  async function loadMy(force) { if (!live() || !LR.me || MI.busy || MI.off) return; /* QA7: 게시본(SITE().mileage)은 마일리지 설정 · 켜기 뒤 다시 게시하기 전까지 비어 있거나 옛 값이라 판단에 쓰지 않는다 — 서버 첫 답(404 · mile_off)을 MI.off로 기억해 같은 화면 묶음에서 다시 묻지 않는다 */ if (!force && MI.my && Date.now() - MI.at < 20000) return; MI.busy = true;
     try { const r = await lapi('GET', P('my')); if (r.on === false) MI.off = true; else { MI.my = r; MI.at = Date.now(); MI.err = ''; } }
     catch (e) { if (e.status === 403 || e.status === 404 || e.code === 'mile_off') MI.off = true; else MI.err = e.status === 401 ? '로그인이 끝났어요. 다시 로그인해 주세요.' : '마일리지를 불러오지 못했어요. 잠시 후 다시 열어 주세요.'; }
     MI.busy = false; rer(true); }
-  async function loadList(force) { if (!live() || MI.lbusy || MI.off || !siteOn()) return; if (!force && MI.list && Date.now() - MI.lat < 20000) return; MI.lbusy = true;
+  async function loadList(force) { if (!live() || MI.lbusy || MI.off) return; if (!force && MI.list && Date.now() - MI.lat < 20000) return; MI.lbusy = true;
     try { const r = await lapi('GET', P('list') + '?limit=100'); const L = r.items || r.entries || r.rows || (r.months || []).flatMap(m => m.rows || m.items || []); MI.list = L.map(nE); MI.lat = Date.now(); } catch (e) { MI.list = MI.list || []; if (e.status === 403 || e.code === 'mile_off') MI.off = true; }
     MI.lbusy = false; rer(); }
-  async function loadRw(force) { if (!live() || MI.rbusy || MI.off || !siteOn()) return; if (!force && MI.rw && Date.now() - MI.rat < 20000) return; MI.rbusy = true;
+  async function loadRw(force) { if (!live() || MI.rbusy || MI.off) return; if (!force && MI.rw && Date.now() - MI.rat < 20000) return; MI.rbusy = true;
     try { const r = await lapi('GET', P('rewards')); MI.rw = r; MI.rat = Date.now(); } catch (e) { MI.rw = MI.rw || { rewards: [] }; if (e.status === 403 || e.code === 'mile_off') MI.off = true; }
     MI.rbusy = false; rer(); }
   const on = () => { try { if (!LR.me) return false; if (live()) { if (MI.off) return false; if (MI.my) return isPar() ? Array.isArray(MI.my.kids) && MI.my.kids.length > 0 : true; const s = SITE(); return !!(s && s.mileage && s.mileage.on); } if (isPar()) return demoOn() && kidsDemo().length > 0; return demoOn(); } catch (e) { return false; } };
@@ -358,7 +357,7 @@
     return page('lm-' + (b || 'main'), h) + sheetHTML(M); }
 
   /* ── 라우팅: 꺼진 기관은 기본(없는 주소) 화면 ── */
-  { const base = viewPage; viewPage = (id, ...a) => { if (id !== 'mile') return base(id, ...a); try { if ((LR.me && !live() && !on()) || (live() && LR.me && (MI.off || !siteOn()))) { setTimeout(() => { if (route().a === 'mile') location.replace('#home'); }, 0); return base('home', ...a); } /* QA7 #3: 마일리지 꺼진 기관의 #mile은 홈으로 */ return view(); } catch (e) { console.error('lmil', e); return page('lm-off', '<p class="lm-none">마일리지 화면을 그리지 못했어요. 새로 고침해 주세요.</p>'); } }; }
+  { const base = viewPage; viewPage = (id, ...a) => { if (id !== 'mile') return base(id, ...a); try { if ((LR.me && !live() && !on()) || (live() && LR.me && MI.off)) { setTimeout(() => { if (route().a === 'mile') location.replace('#home'); }, 0); return base('home', ...a); } /* QA7 #3: 마일리지 꺼진 기관의 #mile은 홈으로 */ return view(); } catch (e) { console.error('lmil', e); return page('lm-off', '<p class="lm-none">마일리지 화면을 그리지 못했어요. 새로 고침해 주세요.</p>'); } }; }
 
   /* ── 웹 마이페이지 블록(시안 a2-13) — MYB_DEF에 「내 마일리지」 등록, 관리자가 끄면 숨김 ── */
   try { if (typeof MYB_DEF !== 'undefined' && !MYB_DEF.some(x => x[0] === 'mile')) MYB_DEF.splice(1, 0, ['mile', '내 마일리지']); } catch (e) { }

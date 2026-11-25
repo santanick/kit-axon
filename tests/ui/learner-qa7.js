@@ -69,7 +69,8 @@ const REG = '20261001', NOREG = '20269999';
       ok(!/학사 구성원으로 등록되지 않은|학사 정보에 등록된 학번이 아닙니다/.test(await text()), `${T} #1 서버 오류 문구 대신 안내`);
       /* #2 마일리지 꺼짐: 홈 · 나 · 내 학습에서 mile-my 호출 없음 */
       for (const h of ['#home', '#acct', '#my']) await go(h);
-      ok(!reqs.some(r => /mile-/.test(r)), `${T} #2 마일리지 꺼진 기관은 mile-* 호출 0 (${reqs.filter(r => /mile-/.test(r)).join(',')})`);
+      /* 통합 회귀(2026-11-25): 게시본에는 마일리지 켜짐 여부가 늘 실리지 않아(서버에서 켠 뒤 재게시 전) 첫 mile-my 1회로 서버에 묻고, 꺼짐 답을 기억해 다시 묻지 않는다 — 반복 호출이 문제였다(mil42-live · mil42-learner와 함께 맞춤) */
+      ok(reqs.filter(r => /mile-my/.test(r)).length <= 1 && !reqs.some(r => /mile-(list|rewards)/.test(r)), `${T} #2 마일리지 꺼진 기관은 mile-my 1회 이하 · 내역 · 보상 호출 0 (${reqs.filter(r => /mile-/.test(r)).join(',')})`);
       /* #3 #mile · 알 수 없는 주소 → 홈, 본문 바로가기 */
       await go('#mile'); await wait(300); ok(/#home$/.test(p.url()) && (await text()).trim().length > 10, `${T} #3 #mile(꺼짐) → 홈 ${p.url().split('#')[1]}`);
       await go('#zzz-none'); await wait(500); ok(/#home$/.test(p.url()) && (await text()).trim().length > 10, `${T} #3 알 수 없는 주소 → 홈 ${p.url().split('#')[1]}`);
