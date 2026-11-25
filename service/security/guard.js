@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 /* 디디쌤 가디언 CLI (Phase 0 · 수집 · 판정)
-   node service/security/guard.js scan    [--offline] [--out f.json] [--cards] [--sbom sbom.json] [--aibom aibom.json]  저장소 SBOM × OSV 판정 + AIBOM 요약 · 잠금 대조 → findings JSON
+   node service/security/guard.js scan    [--offline] [--out f.json] [--cards] [--sbom sbom.json] [--aibom aibom.json]  저장소 SBOM × OSV 판정 + 런타임 버전 대조(GUARD_NODE_VERSION=빌드 기록 node -v) + AIBOM 요약 · 잠금 대조 → findings JSON
    node service/security/guard.js aibom   [--out aibom.json] [--check] [--update-lock]                AI 구성(모델 · MCP · 플러그인 · 프롬프트 해시) CycloneDX ML-BOM · 잠금 대조
-   node service/security/guard.js collect [--offline] [--out f.json]                                NVD · KEV · GHSA · KISA 수집 + 영향 판정
+   node service/security/guard.js collect [--offline] [--out f.json]                                NVD · KEV · GHSA · KISA + 플랫폼 10종 · OSV 감시 수집 + 영향 판정
    node service/security/guard.js report  --in findings.json [--threats t.json] [--out r.md] [--notify] 주간 리포트(md)
    node service/security/guard.js ingest  --in findings.json [--kind finding|threat]                 GUARD_TOKEN 있으면 /api/security/ingest 전송, 없으면 dry
    node service/security/guard.js weekly  [--offline] [--force] [--dir security/weekly] [--no-cards] [--notify]  자가 보완 루프: collect(+ATLAS · OWASP · AI 3사) → scan → 레드팀 생성 · 실행 → 결과 · 보고서 · 대책 카드
@@ -11,7 +11,7 @@
    기본은 dry · 미연결 안전 정지. 운영 DB 쓰기 · 비밀키 보유 · 병합은 하지 않는다. */
 const path = require('node:path'); const fs = require('node:fs');
 const { buildSbom } = require('./sbom'); const aibom = require('./aibom'); const intel = require('./intel'); const { assess, cmp } = require('./impact');
-const { score } = require('./score'); const { dedup } = require('./dedup'); const { createCard } = require('./cards');
+const { score } = require('./score'); const runtime = require('./runtime'); const { dedup } = require('./dedup'); const { createCard } = require('./cards');
 const { notify } = require('./notify'); const { plain, writeJson, readJson, fenceText } = require('./util');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -20,7 +20,7 @@ const SENSITIVE_LOC = [/^service\/server\//, /^service-egov\//]; // 학습자 PI
 /* 이 구성요소에 맞는 수정 버전 중 현재보다 높은 최소값(다른 패키지 범위는 제외) */
 function fixedFor(item, c) {
   if (!c || !c.version) return item.fixed || [];
-  const eco = { npm: 'npm', maven: 'Maven' }[c.ecosystem];
+  const eco = { npm: 'npm', maven: 'Maven', composer: 'Packagist' }[c.ecosystem];
   const vs = (item.affected || []).filter(a => a.ecosystem === eco && a.name === c.name).flatMap(a => (a.ranges || []).flatMap(r => (r.events || []).filter(e => e.fixed).map(e => e.fixed))).filter(v => cmp(v, c.version) > 0).sort(cmp);
   return vs.length ? [vs[0]] : [];
 }
@@ -43,7 +43,7 @@ function finalize(list, { kevSet, epssMap, now }) {
 }
 const tally = fs_ => ({ P0: 0, P1: 0, P2: 0, P3: 0, ...fs_.reduce((m, f) => ((m[f.priority] = (m[f.priority] || 0) + 1), m), {}) });
 
-async function runScan({ root = ROOT, offline = false, fetchImpl, now = new Date(), cardsDir, files } = {}) {
+async function runScan({ root = ROOT, offline = false, fetchImpl, now = new Date(), cardsDir, files, nodeVersion } = {}) {
   const opts = { offline, fetchImpl };
   const sbom = buildSbom(root, { files, now });
   const osvR = await intel.osv.scan(sbom.purls, opts);
@@ -52,9 +52,12 @@ async function runScan({ root = ROOT, offline = false, fetchImpl, now = new Date
   const kevR = raw.length ? await intel.kev.collect(opts) : { origin: 'skipped', set: new Map() };
   const epssR = await intel.epss.lookup(raw.flatMap(f => f.aliases), opts);
   const findings = finalize(raw, { kevSet: kevR.set, epssMap: epssR.map, now });
+  /* 런타임 버전 대조(Node 보안 릴리스 미만 P1) — 대책 카드는 의존성 건만 만든다 */
+  const rt = await runtime.check(root, { ...opts, now, ...(nodeVersion ? { nodeVersion } : {}) });
   const cards = cardsDir ? findings.map(f => createCard(f, { dir: cardsDir, now })) : [];
   const ab = aibom.buildAibom(root, { now }); /* 13 AIBOM: 요약 · 잠금 대조(drift)를 scan 결과에 포함 */
-  return { kind: 'scan', generated_at: now.toISOString(), origin: { osv: osvR.origin, kev: kevR.origin, epss: epssR.origin }, sbom: { components: sbom.components.length, purls: sbom.purls.length, files: [...new Set(sbom.components.map(c => c.location))] }, summary: { ...tally(findings), 해당: findings.filter(f => f.verdict === '해당').length, 일부: findings.filter(f => f.verdict === '일부').length }, findings, cards, aibom: { summary: ab.summary, lock: ab.lock, diff: ab.diff }, cyclonedx: sbom.cyclonedx, aibom_cyclonedx: ab.cyclonedx };
+  findings.push(...rt.findings);
+  return { kind: 'scan', generated_at: now.toISOString(), origin: { osv: osvR.origin, kev: kevR.origin, epss: epssR.origin, runtime: rt.origin }, runtime: { min: rt.min, versions: rt.versions }, sbom: { components: sbom.components.length, purls: sbom.purls.length, files: [...new Set(sbom.components.map(c => c.location))] }, summary: { ...tally(findings), 해당: findings.filter(f => f.verdict === '해당').length, 일부: findings.filter(f => f.verdict === '일부').length }, findings, cards, aibom: { summary: ab.summary, lock: ab.lock, diff: ab.diff }, cyclonedx: sbom.cyclonedx, aibom_cyclonedx: ab.cyclonedx };
 }
 
 async function runCollect({ root = ROOT, offline = false, fetchImpl, now = new Date(), queue, seen, ai } = {}) {

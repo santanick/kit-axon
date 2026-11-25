@@ -10,6 +10,7 @@ const { untrusted, plain, fenceText, isBusinessDay, kstDate, readJson, writeJson
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const CONTROL = new Set(['ATLAS', 'OWASP', 'AI-BLOG']);
+const PLATFORM_IDS = require('./intel/platform').IDS;
 const GUARD_FILES = { node: 'service/server/aiguard.js', java: 'service-egov/src/main/java/egovframework/didisam/cmm/DdAiGuard.java' };
 /* 놓친 검사 → 보강 함수(Node · Java 같은 이름) */
 const CHECKS = [
@@ -62,7 +63,7 @@ function loadState(file) { try { const s = readJson(file); return { seen: s.seen
 /* live로 받은 소스만 seen 갱신(픽스처 · 차단 결과로 '이미 봤음' 처리하지 않음) */
 function nextState(state, collect, { trustFixture = false } = {}) {
   const seen = { ...state.seen }; const ok = s => collect.sources[s] && (collect.sources[s].origin === 'live' || (trustFixture && /fixture/.test(collect.sources[s].origin)));
-  for (const s of CONTROL) {
+  for (const s of [...CONTROL, ...PLATFORM_IDS]) { // 플랫폼 변경 감지형 소스도 seen 관리(new 표시)
     if (!ok(s)) continue;
     const ids = collect.threats.filter(t => t.source === s).map(t => t.external_id).concat(s === 'ATLAS' ? collect.atlas_catalog || [] : []);
     seen[s] = [...new Set([...(seen[s] || []), ...ids])].sort();

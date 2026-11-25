@@ -7,6 +7,7 @@
    - ingest는 가디언 서비스 토큰(GUARD_TOKEN, 32자 이상) 전용. 없으면 403. 수집 텍스트는 데이터로만 저장한다(지시로 해석하지 않음).
    - 모든 쓰기는 security.audit 해시 체인(prev_hash · hash)에 남긴다. */
 const crypto = require('node:crypto');
+const K = require('../security/kpi'); // 운영 지표 · 종합 점수(이미지: /app/security/kpi.js)
 
 const ISO = c => `to_char(${c} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
 const SEV = ['critical', 'high', 'medium', 'low']; const PRI = ['P0', 'P1', 'P2', 'P3'];
@@ -128,7 +129,7 @@ function createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, ch
     await owner(req); await expire();
     const p = { P0: 0, P1: 0, P2: 0, P3: 0 };
     (await pool.query('select priority, count(*)::int n from security.finding where status <> all($1) group by priority', [DONE])).rows.forEach(r => { p[r.priority] = r.n; });
-    const score = Math.max(0, 100 - (p.P0 * 25 + p.P1 * 10 + p.P2 * 3 + p.P3));
+    const sc = K.scoreOf(p, K.readSnapshot(env.SECURITY_SCORE_FILE)); const score = sc.score; const kpi = await K.kpi(pool);
     const mttd = (await pool.query('select round((avg(extract(epoch from f.created_at - t.published_at)) / 3600)::numeric, 1)::float8 h from security.finding f join security.threat_item t on t.id = f.threat_id where t.published_at is not null')).rows[0].h;
     const mttr = (await pool.query("select round((avg(extract(epoch from resolved_at - created_at)) / 3600)::numeric, 1)::float8 h from security.finding where status = 'fixed' and resolved_at is not null")).rows[0].h;
     const prs = (await prRows("where status in ('open','pending')")).slice(0, 5).map(x => ({ kind: 'pr', id: x.id, title: x.title, severity: x.severity, need: x.need, have: x.have }));
@@ -138,7 +139,7 @@ function createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, ch
     const X = (await pool.query(`select (select count(*)::int from security.finding where status <> all($1) and severity in ('critical','high')) high, (select count(*)::int from security.finding where status <> all($1) and sla_due_at < now()) sla_over,
       (select count(*)::int from security.fix_pr where status in ('open','pending')) pr_pending, (select ${ISO('max(at)')} from security.scan) last`, [DONE])).rows[0];
     const state = p.P0 > 0 ? 'crit' : p.P1 > 0 || X.sla_over > 0 ? 'warn' : 'ok';
-    return { score, state, p, high: X.high, slaOver: X.sla_over, prPending: X.pr_pending, last: X.last, delta: null, mttd, mttr, todo: [...prs, ...fs].slice(0, 8), threats, killMode: live() ? 'live' : 'dry', killActive };
+    return { score, state, p, high: X.high, slaOver: X.sla_over, prPending: X.pr_pending, last: X.last, delta: null, mttd, mttr, kpi, scoreParts: sc.parts, todo: [...prs, ...fs].slice(0, 8), threats, killMode: live() ? 'live' : 'dry', killActive };
   };
   R['GET /api/security/findings'] = async req => {
     await owner(req); const u = new URL(req.url, 'http://x'); const st = u.searchParams.get('status') || '', sv = u.searchParams.get('sev') || '';

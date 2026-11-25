@@ -54,6 +54,14 @@ async function run(U, tag) {
   const chk = (R, t) => { ok(R.notSanta.j.error === 'santa', t + ' santa'); ok(R.ap1.j.status === 'pending' && R.ap2.j.status === 'approved', t + ' 2인 승인'); ok(R.aiKey.j.error === 'sec_key_off' && R.aiFeat.j.error === 'sec_feature_off' && R.aiEgress.j.error === 'sec_egress', t + ' 실행 지점');
     ok(R.kCap.j.error === 'kill_cap' && R.kills.j.cap.used === 3, t + ' 하루 3회'); ok(Math.round((new Date(R.k2.j.kill.expiresAt) - new Date(R.k2.j.kill.activatedAt)) / 60e3) === 240, t + ' TTL 4시간'); ok(R.relAgent.j.error === 'human_only', t + ' 사람만 해제'); ok(R.audit.j.ok === true, t + ' 해시 체인(교차 검증)'); };
   chk(a, 'node'); chk(b, 'java');
+  /* 5차 g2: 운영 지표(kpi) · 종합 점수(score · scoreParts)는 같은 DB에서 값까지 같아야 한다 — 같은 산타 계정으로 두 서버에 로그인해 바로 비교 */
+  const sumOf = async U => { const e = `sz1_${RUN}@santa.kr`; const r = await fetch(U + '/api/login', { method: 'POST', headers: { 'x-didisam': '1', 'content-type': 'application/json' }, body: JSON.stringify({ email: e, password: 'Passw0rd-z1z' }) }); const c = (r.headers.get('set-cookie') || '').split(';')[0];
+    return (await fetch(U + '/api/security/summary', { headers: { 'x-didisam': '1', cookie: c } })).json(); };
+  const [sa, sb] = [await sumOf(A), await sumOf(B)];
+  const KK = ['mttdH', 'mttrH', 'slaOverHigh', 'prCreated', 'prMerged', 'prAdoption', 'findings', 'falsePositive', 'falsePositiveRate'];
+  ok(sa.kpi && KK.every(k => k in sa.kpi), 'node kpi 키'); ok(JSON.stringify(sa.kpi) === JSON.stringify(sb.kpi), `kpi 값 node ${JSON.stringify(sa.kpi)} != java ${JSON.stringify(sb.kpi)}`);
+  ok(sa.score === sb.score && JSON.stringify(sa.scoreParts) === JSON.stringify(sb.scoreParts), `score node ${sa.score} ${JSON.stringify(sa.scoreParts)} != java ${sb.score} ${JSON.stringify(sb.scoreParts)}`);
+  ok(sa.kpi && sa.kpi.prCreated >= 2 && sa.kpi.findings >= 1, 'kpi 누적값(시나리오의 PR · Finding 반영)');
   await pool.query("delete from security.kill_switch where kday = ((now() at time zone 'Asia/Seoul')::date)"); await pool.end();
   console.log(`pass ${pass} fail ${fail}`); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

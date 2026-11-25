@@ -1,0 +1,179 @@
+<html><body>
+<h3 id="Fixed_in_Apache_Tomcat_10.1.63"><span class="pull-right">not yet released</span> Fixed in Apache Tomcat 10.1.63</h3><div class="text">
+
+    <p><strong>Critical: Cluster TLS-PSK configured to use TLS 1.3 does not
+       validate peer</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-133325" rel="nofollow">CVE-2026-133325</a></p>
+
+    <p>A key exchange without entity authentication vulnerability in allowed an
+       unauthenticated node to join a cluster when the cluster was secured with
+       TLS 1.3 and TLS-PSK.</p>
+
+    <p>Until Tomcat 10.1.63 is available, users are recommended to switch to TLS
+       1.2.</p>
+
+    <p>This was fixed with commit
+       <a href="https://github.com/apache/tomcat/commit/8dcddccc600c2cc315e649df2244bdc902e8801e">8dcddccc</a>.</p>
+
+    <p>This issue was reported to the Tomcat security team on 16 November 2026.
+       The issue was made public on 19 November 2026.</p>
+
+    <p>Affects: 10.1.62</p>
+
+  </div>
+<h3 id="Fixed_in_Apache_Tomcat_10.1.62"><span class="pull-right">2026-11-16</span> Fixed in Apache Tomcat 10.1.62</h3><div class="text">
+
+    <p><strong>Moderate: Multiple vulnerabilities in
+       EncryptInterceptor</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-95517" rel="nofollow">CVE-2026-95517</a></p>
+
+    <p>Multiple vulnerabilities exist in the EncryptInterceptor including
+       reliance on obfuscation or encryption of Security-Relevant inputs without
+       integrity checking, improper validation of integrity check value and
+       clear text transmission of sensitive information. These vulnerabilities
+       have not been addressed. The EncryptInterceptor has been deprecated in
+       favour of TLS encryption using TLS-PSK. All users of the
+       EncryptInterceptor should switch to TLS encryption. Users should be
+       mindful of <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-133325" rel="nofollow">CVE-2026-133325</a> and only use TLS 1.2 until Tomcat
+       10.1.63 is available.</p>
+
+    <p>This issue was reported to the Tomcat security team on 16 September 2026.
+       The issue was made public on 4 September 2026.</p>
+
+    <p>Affects: 10.1.0-M1 to 10.1.61</p>
+
+    <p><strong>Low: Incorrect security-role-ref with
+       RequestDispatcher.forward()</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-106012" rel="nofollow">CVE-2026-106012</a></p>
+
+    <p>An incorrect Authorization vulnerability in Apache Tomcat could occur
+       during a request dispatch if the request depended on a security-role-ref
+       provided by the dispatch target.</p>
+
+    <p>This was fixed with commit
+       <a href="https://github.com/apache/tomcat/commit/76b809b81589c1f326c2885c897cc35d5558d451">76b809b8</a>.</p>
+
+    <p>This issue was reported to the Tomcat security team on 17 September 2026.
+       The issue was made public on 19 November 2026.</p>
+
+    <p>Affects: 10.1.0-M1 to 10.1.61</p>
+  
+    <p><strong>Low: Jakarta Authentication secureResponse AuthException sends
+       unprotected HTTP 200 response</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-116561" rel="nofollow">CVE-2026-116561</a></p>
+
+    <p>An improper cleanup on thrown exception vulnerability in Apache Tomcat
+       meant that an HTTP 200 response was sent rather than an HTTP 500 response
+       after a AuthException was thrown during Jakarta Authentication
+       secureResponse().</p>
+
+    <p>This was fixed with commit
+       <a href="https://github.com/apache/tomcat/commit/8d49ddc3c6d1f6e724dfa69d85fcf42b64046382">8d49ddc3</a>.</p>
+
+    <p>This issue was reported to the Tomcat security team on 17 September 2026.
+       The issue was made public on 19 November 2026.</p>
+
+    <p>Affects: 10.1.0-M1 to 10.1.61</p>
+  
+    <p><strong>Important: Memory leak with OWB integration leads to DoS</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-116600" rel="nofollow">CVE-2026-116600</a></p>
+
+    <p>A missing release of memory after effective lifetime vulnerability in
+       when using WebSocket with the OWB module could lead to a DoS.</p>
+
+    <p>This was fixed with commit
+       <a href="https://github.com/apache/tomcat/commit/1cf262375bca6d15d63d041db9c472431ca82471">1cf26237</a>.</p>
+
+    <p>This issue was reported to the Tomcat security team on 18 September 2026.
+       The issue was made public on 19 November 2026.</p>
+
+    <p>Affects: 10.1.0-M1 to 10.1.61</p>
+  
+    <p><strong>Important: HTTP/2 checks frame type before size leads to DoS</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-116830" rel="nofollow">CVE-2026-116830</a></p>
+
+    <p>A missing release of resource after effective lifetime vulnerability in
+       the HTTP/2 initial connection handling could lead to a DoS.</p>
+
+    <p>This was fixed with commit
+       <a href="https://github.com/apache/tomcat/commit/ebf20995c3c1dd525e96996c06d47d775be6b95d">ebf20995</a>.</p>
+
+    <p>This issue was reported to the Tomcat security team on 23 September 2026.
+       The issue was made public on 19 November 2026.</p>
+
+    <p>Affects: 10.1.0-M1 to 10.1.61</p>
+  
+    <p><strong>Low: The fix for CVE-2026-25854 was incomplete</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-117517" rel="nofollow">CVE-2026-117517</a></p>
+
+    <p>This was fixed with commit
+       <a href="https://github.com/apache/tomcat/commit/b9ad7fa2d2a963bc06f237f3238ae7de510ba0fe">b9ad7fa2</a>.</p>
+
+    <p>This issue was reported to the Tomcat security team on 24 September 2026.
+       The issue was made public on 19 November 2026.</p>
+
+    <p>Affects: 10.1.53 to 10.1.61</p>
+  
+    <p><strong>Important: RewriteValve [F]/[G]/[R] rule matches do not stop
+       processing</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-118028" rel="nofollow">CVE-2026-118028</a></p>
+
+    <p>Execution After Redirect (EAR) vulnerability in Apache Tomcat in
+       RedirectValve affecting flags [F], [G] and [R].</p>
+
+    <p>This was fixed with commit
+       <a href="https://github.com/apache/tomcat/commit/3747d6c787cba377eafa580f8bff5482e9755fd2">3747d6c7</a>.</p>
+
+    <p>This issue was reported to the Tomcat security team on 5 October 2026.
+       The issue was made public on 19 November 2026.</p>
+
+    <p>Affects: 10.1.20 to 10.1.61</p>
+  
+    <p><strong>Low: Memory leak on HTTP upgrade leads to DoS</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-118233" rel="nofollow">CVE-2026-118233</a></p>
+
+    <p>Allocation of resources without limits or throttling vulnerability during
+       HTTP upgrade in some circumstances lead to possible DoS.</p>
+
+    <p>This was fixed with commit
+       <a href="https://github.com/apache/tomcat/commit/54ff272b5567392da9755bf745cf92f330b67cf6">54ff272b</a>.</p>
+
+    <p>This issue was reported to the Tomcat security team on 15 October 2026.
+       The issue was made public on 19 November 2026.</p>
+
+    <p>Affects: 10.1.0-M1 to 10.1.61</p>
+  
+    <p><strong>Moderate: CGIServlet drops chunked POST body and can hang worker
+       thread</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-118436" rel="nofollow">CVE-2026-118436</a></p>
+
+    <p>Allocation of resources without limits or throttling vulnerability in the
+       CGI Servlet when handling POST bodies can result in a DoS for some
+       inputs.</p>
+
+    <p>This was fixed with commit
+       <a href="https://github.com/apache/tomcat/commit/2bdd441d31b2ec4eea89f15ba72f0205c9d8f514">2bdd441d</a>.</p>
+
+    <p>This issue was reported to the Tomcat security team on 15 October 2026.
+       The issue was made public on 19 November 2026.</p>
+
+    <p>Affects: 10.1.0-M1 to 10.1.61</p>
+  
+    <p><strong>Important: ExpiresFilter removes existing Cache-Control: private
+       header</strong>
+       <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2026-121649" rel="nofollow">CVE-2026-121649</a></p>
+
+    <p>Use of cache containing sensitive information vulnerability in
+       ExpiresFilter caused by the filter removing cache-control header fields
+       set by the authentication layer.</p>
+
+    <p>This was fixed with commit
+       <a href="https://github.com/apache/tomcat/commit/2435b5a00f382c8062571076bd0b929e23337a26">2435b5a0</a>.</p>
+
+    <p>This issue was reported to the Tomcat security team on 3 November 2026.
+       The issue was made public on 19 November 2026.</p>
+
+    <p>Affects: 10.1.0-M1 to 10.1.61</p>
+  
+  </div>
+<h3 id="end"></h3></body></html>

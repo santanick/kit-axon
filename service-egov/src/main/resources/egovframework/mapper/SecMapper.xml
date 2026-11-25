@@ -47,6 +47,18 @@
   <select id="openByPriority" resultType="java.util.LinkedHashMap">select priority, count(*)::int n from security.finding where status not in ('fixed','accepted','false_positive') group by priority</select>
   <select id="mttd" resultType="java.lang.Double">select round((avg(extract(epoch from f.created_at - t.published_at)) / 3600)::numeric, 1)::float8 from security.finding f join security.threat_item t on t.id = f.threat_id where t.published_at is not null</select>
   <select id="mttr" resultType="java.lang.Double">select round((avg(extract(epoch from resolved_at - created_at)) / 3600)::numeric, 1)::float8 from security.finding where status = 'fixed' and resolved_at is not null</select>
+  <!-- 운영 지표(KPI) — service/security/kpi.js SQL과 같은 식(값 · 형태 동일) -->
+  <select id="kpi" resultType="string">select json_build_object(
+  'mttdH', (select round((avg(extract(epoch from f.created_at - t.published_at)) / 3600)::numeric, 1)::float8 from security.finding f join security.threat_item t on t.id = f.threat_id where t.published_at is not null and f.created_at >= t.published_at),
+  'mttrH', (select round((avg(extract(epoch from resolved_at - created_at)) / 3600)::numeric, 1)::float8 from security.finding where status = 'fixed' and resolved_at is not null),
+  'slaOverHigh', (select count(*)::int from security.finding where status not in ('fixed','accepted','false_positive') and priority in ('P0','P1') and sla_due_at &lt; now()),
+  'prCreated', (select count(*)::int from security.fix_pr),
+  'prMerged', (select count(*)::int from security.fix_pr where status = 'merged'),
+  'prAdoption', (select case when count(*) = 0 then null else round((count(*) filter (where status = 'merged'))::numeric / count(*), 3)::float8 end from security.fix_pr),
+  'findings', (select count(*)::int from security.finding),
+  'falsePositive', (select count(*)::int from security.finding where status = 'false_positive'),
+  'falsePositiveRate', (select case when count(*) = 0 then null else round((count(*) filter (where status = 'false_positive'))::numeric / count(*), 3)::float8 end from security.finding)
+)::text</select>
   <select id="summaryExtra" resultType="java.util.LinkedHashMap">select (select count(*)::int from security.finding where status not in ('fixed','accepted','false_positive') and severity in ('critical','high')) high,
     (select count(*)::int from security.finding where status not in ('fixed','accepted','false_positive') and sla_due_at &lt; now()) sla_over, (select count(*)::int from security.fix_pr where status in ('open','pending')) pr_pending,
     (select to_char(max(at) at time zone 'UTC', <include refid="iso"/>) from security.scan) last</select>

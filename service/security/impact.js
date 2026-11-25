@@ -36,8 +36,8 @@ function inRangeStr(ver, s) {
   if (!s) return false;
   return s.split(',').map(x => x.trim()).filter(Boolean).every(c => { const m = c.match(/^(>=|<=|>|<|=)?\s*(.+)$/); const k = cmp(ver, m[2]); return { '>=': k >= 0, '<=': k <= 0, '>': k > 0, '<': k < 0, '=': k === 0 }[m[1] || '=']; });
 }
-const ECO = { npm: 'npm', maven: 'Maven' };
-const PLATFORM_KW = ['node.js', 'nodejs', 'postgresql', 'spring framework', 'spring boot', 'spring security', '전자정부', 'egovframe', 'tomcat', 'cloud run', 'firebase', 'model context protocol', 'mcp'];
+const ECO = { npm: 'npm', maven: 'Maven', composer: 'Packagist' };
+const PLATFORM_KW = ['node.js', 'nodejs', 'postgresql', 'spring framework', 'spring boot', 'spring security', '전자정부', 'egovframe', 'tomcat', 'cloud run', 'firebase', 'model context protocol', 'mcp', 'openjdk', 'java se', 'php'];
 const CONTROL_SOURCES = new Set(['ATLAS', 'OWASP', 'PIPC', 'AI-BLOG']);
 
 function assess(threat, components, { hits } = {}) {

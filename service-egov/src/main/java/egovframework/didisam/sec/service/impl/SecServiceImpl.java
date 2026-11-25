@@ -158,13 +158,28 @@ public class SecServiceImpl implements SecService {
     Object summary(HttpServletRequest req) throws Exception {
         owner(req); tick();
         Map<String, Object> pp = M("P0", 0, "P1", 0, "P2", 0, "P3", 0); for (Map<String, Object> r : mapper.openByPriority()) pp.put((String) r.get("priority"), ((Number) r.get("n")).intValue());
-        int score = Math.max(0, 100 - ((int) pp.get("P0") * 25 + (int) pp.get("P1") * 10 + (int) pp.get("P2") * 3 + (int) pp.get("P3")));
+        Map<String, Object> sc = scoreOf(pp, readScoreSnapshot()); int score = (int) sc.get("score");
         List<Object> todo = new ArrayList<>();
         for (JsonNode pr : head(JL(mapper.prList(true)), 5)) todo.add(M("kind", "pr", "id", pr.get("id"), "title", pr.get("title"), "severity", pr.get("severity"), "need", pr.get("need"), "have", pr.get("have")));
         todo.addAll(JL(mapper.todoFindings()));
         Map<String, Object> X = mapper.summaryExtra(); int slaOver = ((Number) X.get("sla_over")).intValue();
         String state = (int) pp.get("P0") > 0 ? "crit" : (int) pp.get("P1") > 0 || slaOver > 0 ? "warn" : "ok";
-        return M("score", score, "state", state, "p", pp, "high", ((Number) X.get("high")).intValue(), "slaOver", slaOver, "prPending", ((Number) X.get("pr_pending")).intValue(), "last", X.get("last"), "delta", null, "mttd", mapper.mttd(), "mttr", mapper.mttr(), "todo", head(todo, 8), "threats", JL(mapper.threats(3)), "killMode", live() ? "live" : "dry", "killActive", mapper.killActiveLive());
+        return M("score", score, "state", state, "p", pp, "high", ((Number) X.get("high")).intValue(), "slaOver", slaOver, "prPending", ((Number) X.get("pr_pending")).intValue(), "last", X.get("last"), "delta", null, "mttd", mapper.mttd(), "mttr", mapper.mttr(), "kpi", parse(mapper.kpi()), "scoreParts", sc.get("parts"), "todo", head(todo, 8), "threats", JL(mapper.threats(3)), "killMode", live() ? "live" : "dry", "killActive", mapper.killActiveLive());
+    }
+    /* 보안 홈 종합 점수 — service/security/kpi.js scoreOf와 같은 식: ① 100 − (P0×25 + P1×10 + P2×3 + P3) · ② · ③은 빌드 스냅숏(SECURITY_SCORE_FILE)
+       종합 = round((① + round(②) + round(③)) ÷ 3), ③ 없으면 ÷ 2, 스냅숏 없으면 ①만(source vuln_only) */
+    static JsonNode readScoreSnapshot() {
+        String f = System.getenv("SECURITY_SCORE_FILE"); if (f == null || f.isBlank()) return null;
+        try { JsonNode n = parse(new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(f)), StandardCharsets.UTF_8)); return n != null && n.path("checklist").isNumber() ? n : null; } catch (Exception e) { return null; }
+    }
+    static Map<String, Object> scoreOf(Map<String, Object> pp, JsonNode snap) {
+        int vuln = Math.max(0, 100 - ((int) pp.get("P0") * 25 + (int) pp.get("P1") * 10 + (int) pp.get("P2") * 3 + (int) pp.get("P3")));
+        Map<String, Object> parts = new LinkedHashMap<>(); parts.put("vuln", vuln);
+        if (snap == null) { parts.put("checklist", null); parts.put("cert", null); parts.put("source", "vuln_only"); parts.put("at", null); return M("score", vuln, "parts", parts); }
+        double c = snap.get("checklist").asDouble(); boolean hasK = snap.path("cert").isNumber(); double k = hasK ? snap.get("cert").asDouble() : 0;
+        int score = hasK ? (int) Math.round((vuln + Math.round(c) + Math.round(k)) / 3.0) : (int) Math.round((vuln + Math.round(c)) / 2.0);
+        parts.put("checklist", snap.get("checklist")); parts.put("cert", hasK ? snap.get("cert") : null); parts.put("source", "snapshot"); parts.put("at", snap.path("at").isTextual() ? snap.get("at").asText() : null);
+        return M("score", score, "parts", parts);
     }
     Object findings(HttpServletRequest req) throws Exception {
         owner(req); String st = req.getParameter("status"), sv = req.getParameter("sev"); st = st == null ? "" : st; sv = sv == null ? "" : sv;

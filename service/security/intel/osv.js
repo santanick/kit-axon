@@ -46,4 +46,17 @@ async function scan(purls, opts = {}) {
   const items = []; for (const id of ids) { const it = await vuln(id, q.origin === 'live' ? opts : { ...opts, offline: true }); if (it) items.push(it); }
   return { origin: q.origin, items, hits: q.map };
 }
-module.exports = { querybatch, vuln, scan, normalize };
+/* 감시 목록(버전 무관, 패키지 이름 단위) — Next.js 권고 · MCP SDK · 스킬 생태계 악성 패키지(MAL-) 경보. /v1/query는 키 없이 무료.
+   최근 opts.days(기본 30)일 안에 수정된 항목만. 오프라인 · 실패 시 fixtures/osv-watch.json({"<생태계>:<이름>": {vulns:[…]}}) */
+const WATCH = [['npm', 'next'], ['npm', '@modelcontextprotocol/sdk'], ['PyPI', 'mcp']];
+async function watch(opts = {}) {
+  const since = new Date(opts.now || Date.now()).getTime() - (opts.days || 30) * 86400e3; const items = []; const origins = new Set(); let fx = null;
+  for (const [ecosystem, name] of opts.watch || WATCH) {
+    const r = await fetchOr(API + '/query', { ...opts, method: 'POST', body: { package: { name, ecosystem } } });
+    let vulns; if (r.origin === 'live') vulns = r.data.vulns || []; else { fx = fx || JSON.parse(fs.readFileSync(path.join(FIX, 'osv-watch.json'), 'utf8')); vulns = ((fx[`${ecosystem}:${name}`] || {}).vulns) || []; }
+    origins.add(r.origin === 'live' ? 'live' : r.origin === 'blocked' ? 'blocked' : 'fixture');
+    for (const v of vulns) { if (!(new Date(v.modified || v.published || 0).getTime() >= since)) continue; const it = normalize(v, r.origin === 'live' ? 'live' : 'fixture'); it.source = 'OSV-WATCH'; it.watch = `${ecosystem}:${name}`; it.keywords = [name]; it.malAlert = it.malicious; it.malicious = false; /* 사용 중 패키지가 아니면 강제 P0 아님 — 경보만(실제 사용 판정은 scan의 querybatch) */ items.push(it); }
+  }
+  const o = [...origins]; return { origin: o.length === 1 ? o[0] : o.join(','), items };
+}
+module.exports = { querybatch, vuln, scan, normalize, watch, WATCH };

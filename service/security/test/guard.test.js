@@ -67,7 +67,7 @@ test('중복 제거: 별칭 겹침 × purl × 위치', () => {
 test('파이프라인: 픽스처 scan → 해당 판정 → P 점수 → 카드 생성', async () => {
   const dir = tmp();
   const r = await guard.runScan({ root: REPO, offline: true, fetchImpl: noNet, now: NOW, cardsDir: dir });
-  assert.deepEqual(r.origin, { osv: 'fixture', kev: 'fixture', epss: 'fixture' });
+  assert.deepEqual(r.origin, { osv: 'fixture', kev: 'fixture', epss: 'fixture', runtime: 'fixture' });
   const lo = r.findings.find(f => f.aliases.includes('CVE-2021-23337'));
   assert.equal(lo.verdict, '해당'); assert.equal(lo.component.purl, 'pkg:npm/lodash@4.17.20'); assert.equal(lo.cvss, 7.2);
   assert.equal(lo.percentile, 0.97523); assert.equal(lo.priority_score, 71); assert.equal(lo.priority, 'P1'); assert.deepEqual(lo.fixed, ['4.17.21']);

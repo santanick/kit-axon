@@ -25,6 +25,7 @@ public interface SecMapper {
     List<String> killList();
     List<String> killActive();
     Map<String, Object> summaryExtra();
+    String kpi();
     int rejectPr(@Param("id") String id, @Param("reason") String reason);
     Map<String, Object> killForUpdate(@Param("id") String id);
     int releaseKill(@Param("id") String id, @Param("by") String by, @Param("note") String note);
