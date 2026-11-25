@@ -49,6 +49,7 @@ const LP = { cls: { c0: { items: { itpom3lya: { done: true, at: '2026-11-12T10:0
     ok(r.tabs.join() === '홈,내 강의,둘러보기,나' && r.on === '홈', `홈: 하단 탭 4칸(v43 대표님 지시: 학습자 입장 유형별 탭 — 성인 학원) — ${r.tabs.join(' · ')} (선택 ${r.on})`);
     /* v43 R9(J4 113 · 205): 홈 첫 화면에서는 본문 튜터 바가 보이는 동안 떠 있는 단추를 접는다(카드 · 사진을 가리지 않게) → 튜터 바가 보이면 접힘, 지나 내려간 뒤(위로 조금 올림) 다시 보임 */
     /* qa7(2026-11-25) 통합 기준: 대표님 「늘 따라 다녀야」 — 홈에서도 떠 있는 단추를 접지 않는다(v43 R9 접힘 기대값 변경). 홈 튜터 바는 그대로 */
+    await p.waitForTimeout(700); /* qa8: 스크롤하는 동안 숨었다가 멈추고 0.45초 뒤 다시 보인다(lt-scr) — 멈춘 뒤에 본다 */
     ok(await p.evaluate(() => { const b = document.getElementById('tbFab'); return !!b && !document.body.classList.contains('tb-fhome') && getComputedStyle(b).opacity === '1' && b.getBoundingClientRect().width > 0; }), '홈: 튜터 바가 보여도 떠 있는 단추는 늘 보임(qa7)');
     await p.evaluate(() => { const t = document.querySelector('#lm .tb-tut'); if (t) scrollTo({ top: scrollY + t.getBoundingClientRect().bottom + 60, behavior: 'instant' }); }); await p.waitForTimeout(150); await p.evaluate(() => scrollTo({ top: Math.max(0, scrollY - 20), behavior: 'instant' })); await p.waitForTimeout(350);
     const fb = await p.evaluate(() => { const b = document.getElementById('tbFab'); if (!b) return null; const R = b.getBoundingClientRect(); const n = document.querySelector('.ap-nav.tb-nav').getBoundingClientRect(); return { t: b.textContent.trim(), l: b.getAttribute('aria-label'), w: R.width, above: R.bottom <= n.top, dock: Math.abs(R.bottom - n.bottom) <= 4 && R.left >= n.right, fixed: getComputedStyle(b).position }; });

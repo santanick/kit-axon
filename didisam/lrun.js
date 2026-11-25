@@ -45,7 +45,7 @@ const lKeepOn = () => { const K = [...document.querySelectorAll('form#laLogin [n
 const lKeepK = () => 'didisam.keep.' + (LR.tid || 'x') + (lKeepApp() ? '.app' : '.web'); /* 앱 · 웹 따로 기억 */
 function lKeepSave(me) { try { if (me && LR.mode !== 'live' && lKeepOn()) localStorage.setItem(lKeepK(), JSON.stringify({ me, exp: Date.now() + 30 * 864e5 })); else localStorage.removeItem(lKeepK()); } catch (e) { } }
 function lKeepLoad() { try { const v = JSON.parse(localStorage.getItem(lKeepK()) || 'null'); if (!v || !v.me || !(v.exp > Date.now())) { localStorage.removeItem(lKeepK()); return null; } return v.me; } catch (e) { return null; } }
-const lKeepHTML = () => `<label class="ckl la-keep"><input type="checkbox" name="keep" ${lKeepDef() ? 'checked' : ''}> 이 기기에서 로그인 유지 <small>공용 PC에서는 끄세요</small></label>`;
+const lKeepHTML = () => `<label class="ckl la-keep"><input type="checkbox" name="keep" ${lKeepDef() ? 'checked' : ''} title="공용 PC에서는 끄세요"> 로그인 유지</label>`; /* qa8 심플: 안내 문구는 마우스를 올리면(title) */
 Object.assign(window, { lKeepSave, lKeepLoad, lKeepOn, lKeepHTML });
 LR.api = {
   async load() {

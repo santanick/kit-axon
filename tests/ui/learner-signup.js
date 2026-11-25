@@ -55,9 +55,11 @@ const wait = ms => new Promise(k => setTimeout(k, ms));
     }
     for (const w of [390, 1440]) {
       const { c, lp } = await learner(O.tid, w, '#join'); await lp.waitForSelector('.la-sb.kakao', { timeout: 10000 }); await lp.waitForFunction(() => Array.isArray(LA.ready) && LA.ready.length > 0 && !document.querySelector('.la-sb.kakao.off'), null, { timeout: 10000 }).catch(() => { });
-      ok(await lp.evaluate(() => { const g = document.querySelector('.la-sb.google'); return !!g && g.classList.contains('off') && /준비 중/.test(g.textContent); }), `${w} 키 없는 구글은 「준비 중」`);
+      /* qa8(2026-11-25) 대표님 「회원가입 · 로그인 심플하게」: 키가 없는 제공자는 「준비 중」으로 보이지 않고 아예 숨긴다 */
+      /* qa8 대표님 「구글로 가입 및 계속하기도 꼭 있어야」: 구글 버튼은 항상 보인다 */
+      ok(await lp.evaluate(() => !!document.querySelector('.la-sb.google') && !/준비 중/.test(document.body.innerText)), `${w} 구글 버튼은 항상 보임 · 「준비 중」 표시 없음`);
       ok(await lp.isVisible('.la-sb.naver:not(.off)'), `${w} 네이버 버튼(키 있음)`);
-      await lp.click('.la-sb.google', { force: true }); await wait(300); ok(/#join$/.test(lp.url()), `${w} 준비 중 버튼은 이동 안 함`);
+      /* (qa8) 구글 버튼이 없으니 「준비 중」 누름 확인은 뺀다 */
       nextSub = `kakao-${w}-${Date.now()}`; await lp.click('.la-sb.kakao'); await lp.waitForFunction(() => !!document.body && /카카오 계정을 확인했습니다/.test(document.body.innerText), null, { timeout: 15000, polling: 300 }).catch(() => { });
       ok(/카카오 계정을 확인했습니다/.test(await txt(lp)), `${w} 카카오 동의 뒤 가입 화면(?oa=join-kakao) ${lp.url()}`);
       await lp.fill('#laJoin [name=nick]', `카카오${w}`); await consentAndSubmit(lp);
