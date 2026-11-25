@@ -14,6 +14,7 @@ const INVENTORY = {
   'lms/mod-o.js': [2, 'user'],      // Anthropic(환경변수) + 학내 LLM(기관 입력 주소, 서버 허용 목록 + ssrf.checkSelfUrl)
   'aigw.js': [1, 'env'],            // ANTHROPIC_URL
   'oauth.js': [2, 'env'],           // 구글 · 카카오 고정 주소(시험은 OAUTH_MOCK)
+  'loauth.js': [2, 'env'],          // QA7 학습자 구글 · 카카오 · 네이버 고정 주소(시험은 OAUTH_MOCK)
   'mail.js': [1, 'env'],            // MAIL_WEBHOOK_URL
   'fac/pay.js': [1, 'env'],         // 토스 고정 주소(TOSS_URL)
 };
@@ -36,7 +37,7 @@ test('외부 요청 지점 전수 — 목록에 없는 새 지점 금지', () =>
 });
 
 test('서버 외부 요청은 리다이렉트를 따라가지 않음(Java HttpClient 기본 NEVER와 같게)', () => {
-  for (const f of ['lms/mod-o.js', 'aigw.js', 'oauth.js', 'mail.js']) {
+  for (const f of ['lms/mod-o.js', 'aigw.js', 'oauth.js', 'loauth.js', 'mail.js']) {
     const s = fs.readFileSync(path.join(SRV, f), 'utf8');
     const calls = s.match(/await fetch\([^)]*?\{[^}]*/g) || [];
     assert.ok(calls.length > 0, f);

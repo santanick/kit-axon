@@ -38,7 +38,7 @@ const evIns = (L, tid, sid, type, data) => L('insert into learner_events (tenant
 function redactDeep(v, depth = 0, key = '') { if (depth > 6) return null; if (typeof v === 'string') return /mask$/i.test(key) ? v.slice(0, 120) : G.redact(v).text; if (Array.isArray(v)) return v.slice(0, 100).map(x => redactDeep(x, depth + 1)); if (v && typeof v === 'object') { const o = {}; for (const [k, x] of Object.entries(v).slice(0, 60)) { if (!/^[\w.$\-가-힣 ]{1,40}$/.test(k) || ['pw', 'password', 'pw2', 'code', 'email', 'phone', 'name'].includes(k)) continue; o[k] = redactDeep(x, depth + 1, k); } return o; } return typeof v === 'number' || typeof v === 'boolean' || v === null ? v : null; }
 const cleanExtra = x => { if (!x || typeof x !== 'object' || Array.isArray(x)) return {}; const o = {}; for (const [k, v] of Object.entries(x).slice(0, 20)) { const kk = String(k).slice(0, 40); if (typeof v === 'string') o[kk] = G.redact(v.slice(0, 200)).text; /* v36 여러 개 고르기 답(쉼표로 이음)까지 200자 */ else if (v && typeof v === 'object') o[kk] = { name: String(v.name || '').slice(0, 120), size: +v.size || 0, type: String(v.type || '').slice(0, 60) }; } return o; };
 
-function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook }) {
+function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook, tickets }) {
   const K = piiKeys(env);
   const devOtp = env.PII_DEV_OTP === '1';     // 개발 · 테스트 전용: 응답에 인증번호 · 보호자 토큰을 돌려준다
   const devOauth = env.OAUTH_DEV === '1';     // 개발 · 테스트 전용: SNS 토큰 대신 dev_sub 허용
@@ -72,10 +72,12 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
   /* SNS 식별자 → 해시. 운영: 공급자 토큰을 서버에서 검증해 sub(회원 번호)를 받는다.
      카카오 GET https://kapi.kakao.com/v2/user/me · 네이버 GET https://openapi.naver.com/v1/nid/me · 구글 id_token 검증(tokeninfo/JWKS) · 애플 id_token JWKS 검증.
      이메일 · 이름 · 프로필은 동의 항목에서 받지 않는다(닉네임만 선택 제공). */
-  async function snsSub(b) {
+  async function snsSub(b, req, tid) {
+    /* QA7 학습자 OAuth: 콜백이 남긴 서명 쿠키(15분, 제공자 + sub 해시)로 가입 — 원문 sub는 서버도 다시 보지 않는다 */
+    if (b.oauth === true) { const o = tickets && req ? tickets.snsGet(req, tid) : null; if (!o || !PROVIDERS.includes(o.p)) throw new HttpErr(400, '소셜 로그인 정보가 만료되었어요. 다시 시도해 주세요.', 'oauth_pending'); return { prov: o.p, h: o.h }; }
     const prov = String(b.provider || ''); if (!PROVIDERS.includes(prov)) throw new HttpErr(400, '지원하지 않는 로그인 방식입니다.', 'provider');
     /* 운영: const sub = await verifyOAuth(prov, b.token) */
-    if (devOauth && /^[\w.-]{3,80}$/.test(String(b.dev_sub || ''))) return { prov, sub: String(b.dev_sub) };
+    if (devOauth && /^[\w.-]{3,80}$/.test(String(b.dev_sub || ''))) return { prov, h: bidx(tid, 'sub:' + prov, String(b.dev_sub)) };
     throw new HttpErr(501, 'SNS 로그인 연동(OAuth 앱 등록)이 아직 설정되지 않았습니다.', 'oauth_unset');
   }
   async function useOtp(P, tid, b, purpose, code) {
@@ -129,12 +131,14 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
         if (!g) throw new HttpErr(403, '사용할 수 없는 연결 링크입니다. 이미 썼거나 만료되었습니다.', 'gtok_bad'); famSid = g.learner_id; tokOk = true; }
       if (org.mode === 'invite' && !tokOk) throw new HttpErr(403, '초대받은 회원만 가입할 수 있습니다.', 'mode');
       let nick = String(b.nickname || '').trim(); let login = via, sub = null, email = '', stu = null, dept = '';
-      if (univ) { if (via !== 'univ') throw new HttpErr(400, '대학 계정은 학번으로 가입합니다.', 'via');
+      if (univ) { if (via !== 'univ' && via !== 'sns') throw new HttpErr(400, '대학 계정은 학번으로 가입합니다.', 'via');
         stu = String(b.student_no || '').trim(); dept = String(b.dept || '').trim().slice(0, 40);
         if (!STU_RE.test(stu)) throw new HttpErr(400, '학번은 숫자 6~10자리입니다.', 'student_no'); if (!dept) throw new HttpErr(400, '학과를 입력하세요.', 'dept');
-        if (String(b.pw || '').length < 8) throw new HttpErr(400, '비밀번호는 8자 이상입니다.', 'pw'); if (org.strictPw && !pwRule(b.pw)) throw new HttpErr(400, '비밀번호는 영문 · 숫자 · 특수문자 중 2종 10자 이상 또는 3종 8자 이상입니다.', 'pw_rule'); sub = bidx(tid, 'univ', stu); if (!nick) nick = stu.slice(-4) + '학번'; }
+        if (via === 'sns') { /* QA7 대학 소셜 가입: 제공자 해시 + 학번 · 학과만(이메일 · 비밀번호 없음) */ const s = await snsSub(b, req, tid); if (!org.social.includes(s.prov)) throw new HttpErr(403, '이 기관에서 쓰지 않는 로그인 방식입니다.', 'provider'); login = s.prov; sub = s.h; b.pw = ''; }
+        else { if (String(b.pw || '').length < 8) throw new HttpErr(400, '비밀번호는 8자 이상입니다.', 'pw'); if (org.strictPw && !pwRule(b.pw)) throw new HttpErr(400, '비밀번호는 영문 · 숫자 · 특수문자 중 2종 10자 이상 또는 3종 8자 이상입니다.', 'pw_rule'); sub = bidx(tid, 'univ', stu); login = 'univ'; }
+        if (!nick) nick = stu.slice(-4) + '학번'; }
       else if (via === 'email') { email = String(b.email || '').trim().toLowerCase(); if (!MAIL_RE.test(email)) throw new HttpErr(400, '이메일 형식을 확인하세요.', 'email'); await useOtp(P, tid, bidx(tid, 'email', email), 'signup', b.code); }
-      else if (via === 'sns') { const s = await snsSub(b); if (!org.social.includes(s.prov)) throw new HttpErr(403, '이 기관에서 쓰지 않는 로그인 방식입니다.', 'provider'); login = s.prov; sub = bidx(tid, 'sub:' + s.prov, s.sub); }
+      else if (via === 'sns') { const s = await snsSub(b, req, tid); if (!org.social.includes(s.prov)) throw new HttpErr(403, '이 기관에서 쓰지 않는 로그인 방식입니다.', 'provider'); login = s.prov; sub = s.h; }
       else throw new HttpErr(400, '가입 방법을 고르세요.', 'via');
       if (!NICK_RE.test(nick)) throw new HttpErr(400, '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.', 'nickname');
       const minor = !univ && kind !== 'parent' && b.age14 !== true; let gContact = '';
@@ -145,26 +149,28 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       const pw = b.pw ? (String(b.pw).length >= 8 && String(b.pw).length <= 64 ? await hashPw(String(b.pw)) : (() => { throw new HttpErr(400, '비밀번호는 8~64자입니다.', 'pw'); })()) : null;
       const st = minor ? 'guardian_pending' : 'active'; const pend = !minor && org.approve === 'manual' && !tokOk;
       let lid;
-      try { lid = (await L('insert into learner_accounts (tenant_id, kind, login, nickname, student_no, dept, status, minor, mkt) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning learner_id', [tid, kind, univ ? 'univ' : login, nick, stu, dept, st, minor, !!consent.mkt])).rows[0].learner_id; }
+      try { lid = (await L('insert into learner_accounts (tenant_id, kind, login, nickname, student_no, dept, status, minor, mkt) values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning learner_id', [tid, kind, login, nick, stu, dept, st, minor, !!consent.mkt])).rows[0].learner_id; }
       catch (e) { if (e.code === '23505') throw new HttpErr(409, '이미 가입한 학번입니다. 로그인하거나 비밀번호를 찾으세요.', 'exists'); throw e; }
       const cons = { tos: true, privacy: true, ...(consent.third ? { third: true } : {}), mkt: !!consent.mkt, ver: String(consent.ver || 'v23').slice(0, 20), at: new Date().toISOString() };
-      try { await P('insert into pii.identity (tid, learner_id, provider, provider_sub_hash, email_bidx, email_enc, email_mask, pw_hash, consent) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [tid, lid, univ ? 'univ' : login, sub, email ? bidx(tid, 'email', email) : null, email ? enc(email, aad(tid, lid, 'email')) : null, email ? maskEmail(email) : null, pw, JSON.stringify(cons)]); }
+      try { await P('insert into pii.identity (tid, learner_id, provider, provider_sub_hash, email_bidx, email_enc, email_mask, pw_hash, consent) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)', [tid, lid, login, sub, email ? bidx(tid, 'email', email) : null, email ? enc(email, aad(tid, lid, 'email')) : null, email ? maskEmail(email) : null, pw, JSON.stringify(cons)]); }
       catch (e) { if (e.code === '23505') throw new HttpErr(409, univ ? '이미 가입한 학번입니다.' : via === 'email' ? '이미 가입한 이메일입니다. 로그인하세요.' : '이미 가입한 SNS 계정입니다. 로그인하세요.', 'exists'); throw e; }
       let gtok = '';
       if (minor) { gtok = crypto.randomBytes(24).toString('base64url'); await P('insert into pii.guardian (tid, learner_id, contact_enc, token_hash, expires_at) values ($1, $2, $3, $4, now() + interval \'7 days\')', [tid, lid, enc(gContact, aad(tid, lid, 'guardian')), crypto.createHash('sha256').update(gtok).digest('hex')]);
         /* 운영: 보호자에게 동의 링크 발송(이메일 또는 알림톡) — learner.html?t=<tid>#guardian/<토큰>. 7일 안에 동의하지 않으면 가입 정보는 자동 삭제. */ }
       await plog(P, tid, 'self', 'create', lid, 'signup', [email ? 'email' : '', sub ? 'provider_sub' : '', pw ? 'pw' : '', minor ? 'guardian' : ''].filter(Boolean));
-      await L('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, 'learner:' + lid, 'learner.signup', JSON.stringify({ login: univ ? 'univ' : login, minor })]);
+      await L('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, 'learner:' + lid, 'learner.signup', JSON.stringify({ login: login, minor })]);
       /* v33 운영자 요청함으로 가입 알림(가명 sid · 닉네임 · 가린 이메일만). 보호자 동의가 필요한 가입은 동의 후에 보낸다 */
       if (minor && tokOk && tok) await L('update learner_accounts set invite_token = $3 where tenant_id = $1 and learner_id = $2', [tid, lid, tok]); /* 보호자 동의 뒤 요청함에 실어 보낸다 */
       const lk = kind === 'learner' && email && !univ ? await linkOf(L, tid, bidx(tid, 'email', email)) : null;
-      const jd = { kind, login: univ ? 'univ' : login, sid: lid, nick, emailMask: email ? maskEmail(email) : '', dept, minor, consent: { tos: true, privacy: true, mkt: !!consent.mkt, at: cons.at }, extra: cleanExtra(b.extra), ...(tokOk && tok ? { token: tok } : {}), ...(famSid ? { famSid } : {}), ...(lk ? { link: lk } : {}) };
+      const jd = { kind, login: login, sid: lid, nick, emailMask: email ? maskEmail(email) : '', dept, minor, consent: { tos: true, privacy: true, mkt: !!consent.mkt, at: cons.at }, extra: cleanExtra(b.extra), ...(tokOk && tok ? { token: tok } : {}), ...(famSid ? { famSid } : {}), ...(lk ? { link: lk } : {}) };
       if (!minor) await evIns(L, tid, lid, 'acct-join', jd);
       if (!minor && mileHook) await mileHook(L, tid, lid, 'signup', 'acct', lid, null, 'A'); /* v42 가입 적립(제도 켠 기관만, 같은 트랜잭션 · 세이브포인트) */
-      return { lid, st, nick, login: univ ? 'univ' : login, gtok, pend };
+      return { lid, st, nick, login: login, gtok, pend };
     });
-    if (out.st === 'active' && !out.pend) await newLearnerSession(res, tid, out.lid);
-    return { me: { sid: out.lid, nickname: out.nick, login: out.login, status: out.pend ? 'pending' : out.st }, ...(out.st === 'guardian_pending' ? { guardian: 'sent', ...(devCode ? { dev_token: out.gtok } : {}) } : {}) };
+    if (out.st === 'active' && !out.pend) await newLearnerSession(res, tid, out.lid); /* 세션 쿠키가 set-cookie를 새로 쓰므로 보조 쿠키는 그 뒤에 덧붙인다 */
+    if (b.oauth === true && tickets) tickets.snsClear(res);
+    if (out.pend && tickets) tickets.pendSet(res, tid, out.lid); /* QA7 승인 대기 표(30일) — 새로 고침 · 재방문에도 대기 화면 · 승인되면 GET pending이 바로 로그인 */
+    return { me: { sid: out.lid, nickname: out.nick, login: out.login, status: out.pend ? 'pending' : out.st }, ...(out.pend ? { pending: { status: 'pending', nick: out.nick, login: out.login, at: new Date().toISOString() } } : {}), ...(out.st === 'guardian_pending' ? { guardian: 'sent', ...(devCode ? { dev_token: out.gtok } : {}) } : {}) };
   }
 
   async function guardian(req, res, tid) {
@@ -200,7 +206,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
         row = (await P('select learner_id, pw_hash from pii.identity where tid = $1 and email_bidx = $2', [tid, e])).rows[0];
         if (b.code) { await useOtp(P, tid, e, 'login', b.code); if (!row) throw new HttpErr(401, '가입한 계정이 없습니다. 가입하기를 눌러 주세요.', 'login'); }
         else { const ok = await checkPw(String(b.pw || ''), row && row.pw_hash ? row.pw_hash : DUMMY); if (!row || !ok) throw new HttpErr(401, '이메일 또는 비밀번호가 올바르지 않습니다. 비밀번호가 없다면 이메일 인증번호로 로그인하세요.', 'login'); } }
-      else if (via === 'sns') { const s = await snsSub(b); row = (await P('select learner_id from pii.identity where tid = $1 and provider = $2 and provider_sub_hash = $3', [tid, s.prov, bidx(tid, 'sub:' + s.prov, s.sub)])).rows[0]; if (!row) throw new HttpErr(404, '가입한 계정이 없습니다. 같은 SNS로 간편가입을 진행하세요.', 'no_account'); }
+      else if (via === 'sns') { const s = await snsSub(b, req, tid); row = (await P('select learner_id from pii.identity where tid = $1 and provider = $2 and provider_sub_hash = $3', [tid, s.prov, s.h])).rows[0]; if (!row) throw new HttpErr(404, '가입한 계정이 없습니다. 같은 SNS로 간편가입을 진행하세요.', 'no_account'); }
       else if (via === 'univ') { const stu = String(b.student_no || '').trim(); limit(`llu:${tid}:${stu}`, 8, 600e3); row = STU_RE.test(stu) ? (await P("select learner_id, pw_hash from pii.identity where tid = $1 and provider = 'univ' and provider_sub_hash = $2", [tid, bidx(tid, 'univ', stu)])).rows[0] : null;
         const ok = await checkPw(String(b.pw || ''), row && row.pw_hash ? row.pw_hash : DUMMY); if (!row || !ok) throw new HttpErr(401, '학번 또는 비밀번호가 올바르지 않습니다.', 'login'); }
       else throw new HttpErr(400, '로그인 방법을 고르세요.', 'via');
@@ -209,7 +215,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       if (a.status === 'guardian_pending') throw new HttpErr(403, '보호자 동의를 기다리고 있습니다. 보호자에게 보낸 동의 링크를 확인해 주세요.', 'guardian_pending');
       await approval(L, tid, row.learner_id);
       return row.learner_id;
-    }); } catch (e) { if (lk && e && (e.status === 401 || e.code === 'otp_bad')) await lockLog(tid, lk, 'llogin.fail'); throw e; }
+    }); } catch (e) { if (lk && e && (e.status === 401 || e.code === 'otp_bad')) await lockLog(tid, lk, 'llogin.fail'); if (e && e.lid && tickets) tickets.pendSet(res, tid, e.lid); throw e; }
     if (lk) await lockLog(tid, lk, 'llogin');
     await newLearnerSession(res, tid, lid);
     return lid;
@@ -217,10 +223,52 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
 
   /* v33 운영자 승인: 스튜디오 회원(상태 문서 members)의 등급으로 판단한다. 승인제 기관은 회원으로 등록되어 승인 대기 · 거절이 아닐 때만 로그인 */
   async function approval(L, tid, lid) {
-    const r = (await L("select doc->'settings'->'acct'->>'approve' ap, (select jsonb_build_object('g', m->>'grade', 'r', m->>'reject') from jsonb_array_elements(case when jsonb_typeof(doc->'members') = 'array' then doc->'members' else '[]'::jsonb end) m where m->>'sid' = $2 limit 1) m from tenant_state where tenant_id = $1", [tid, lid])).rows[0] || {};
-    const m = r.m || null;
-    if (m && m.g === '거절') throw new HttpErr(403, '가입이 승인되지 않았습니다.' + (m.r ? ' 사유: ' + String(m.r).slice(0, 200) : '') + ' 운영자에게 문의하세요.', 'rejected');
-    if ((m && m.g === '승인 대기') || (!m && r.ap === 'manual')) throw new HttpErr(403, '운영자 승인을 기다리고 있습니다. 승인되면 로그인할 수 있어요.', 'pending');
+    /* QA7: 서버 결정(learner_accounts.decision — POST /api/learners/decide)이 먼저, 없으면 스튜디오 회원 문서 등급(v33). 대기 · 거절은 신청 정보(닉네임 · 신청일 · 가입 수단 · 사유)를 함께 돌려준다 */
+    const r = (await L("select doc->'settings'->'acct'->>'approve' ap, doc->'org'->>'type' ty, (select jsonb_build_object('g', m->>'grade', 'r', m->>'reject') from jsonb_array_elements(case when jsonb_typeof(doc->'members') = 'array' then doc->'members' else '[]'::jsonb end) m where m->>'sid' = $2 limit 1) m, (select jsonb_build_object('d', decision, 'r', reject_reason, 'n', nickname, 'at', created_at, 'lg', login) from learner_accounts where tenant_id = $1 and learner_id::text = $2) a from tenant_state where tenant_id = $1", [tid, lid])).rows[0] || {};
+    const m = r.m || null; const a = r.a || {}; const info = { nick: a.n || '', at: a.at || '', login: a.lg || '' };
+    const stop = (code, msg, status, reason) => { const e = new HttpErr(403, msg, code); e.extra = { pending: { ...info, status, ...(reason ? { reason } : {}) } }; e.lid = lid; throw e; };
+    if (a.d === 'ok') return;
+    if (a.d === 'no' || (!a.d && m && m.g === '거절')) { const rs = String((a.d === 'no' ? a.r : m.r) || '').slice(0, 200); stop('rejected', '가입이 승인되지 않았습니다.' + (rs ? ' 사유: ' + rs : '') + ' 운영자에게 문의하세요.', 'rejected', rs); }
+    if ((m && m.g === '승인 대기') || (!m && (r.ap === 'manual' || r.ty === 'voc'))) stop('pending', '운영자 승인을 기다리고 있습니다. 승인되면 로그인할 수 있어요.', 'pending');
+  }
+
+  /* QA7 승인 대기 표(쿠키) → 지금 상태. 승인되었으면 바로 로그인(세션)하고 표를 지운다 */
+  async function pendingV(req, res, tid) {
+    const t = tickets ? tickets.pendGet(req, tid) : null; if (!t) throw new HttpErr(404, '확인할 가입 신청이 없어요. 로그인해 주세요.', 'no_pending');
+    if (req.method === 'DELETE') { tickets.pendClear(res); return { ok: true }; }
+    limit('lpd:' + ip(req), 60, 600e3);
+    try { await tx(tid, async ({ L }) => { const a = (await L('select status from learner_accounts where tenant_id = $1 and learner_id::text = $2', [tid, t.l])).rows[0];
+      if (!a || a.status === 'withdrawn') throw new HttpErr(404, '가입 신청을 찾을 수 없어요. 다시 가입해 주세요.', 'no_pending'); await approval(L, tid, t.l); }); }
+    catch (e) { if (e && e.extra && e.extra.pending) return e.extra.pending; if (e && e.code === 'no_pending') tickets.pendClear(res); throw e; }
+    await newLearnerSession(res, tid, t.l); tickets.pendClear(res); return { status: 'active', sid: t.l };
+  }
+  /* QA7 학습자 OAuth 콜백 → ok(로그인) | join(가입 보류 쿠키) | pending | rejected */
+  async function oauthLogin(req, res, tid, p, rawSub) {
+    const h = bidx(tid, 'sub:' + p, rawSub); let lid;
+    try { lid = await tx(tid, async ({ L, P }) => { const row = (await P('select learner_id from pii.identity where tid = $1 and provider = $2 and provider_sub_hash = $3', [tid, p, h])).rows[0]; if (!row) return null;
+      const a = (await L('select status from learner_accounts where tenant_id = $1 and learner_id = $2', [tid, row.learner_id])).rows[0]; if (!a || a.status === 'withdrawn') return null;
+      if (a.status === 'guardian_pending') throw new HttpErr(403, '보호자 동의를 기다리고 있습니다.', 'guardian_pending');
+      await approval(L, tid, row.learner_id); return row.learner_id; }); }
+    catch (e) { if (e && e.lid) { tickets.pendSet(res, tid, e.lid); return e.code === 'rejected' ? 'rejected' : 'pending'; } throw e; }
+    if (!lid) { tickets.snsSet(res, tid, p, h); return 'join'; }
+    await newLearnerSession(res, tid, lid); await tx(tid, ({ L }) => L('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, 'learner:' + lid, 'llogin', JSON.stringify({ via: p })])).catch(() => {});
+    return 'ok';
+  }
+  const socialOn = async (tid, p) => tx(tid, async ({ L }) => (await orgOf(L, tid)).social.includes(p));
+
+  /* QA7 운영자 가입 신청 처리: 승인 · 거절(사유) · 일괄 — 서버 결정 저장 · 감사 기록 learner.approve/reject · 이메일 가입자에게 메일(미설정이면 건너뜀, 화면 알림은 스튜디오가 알림함으로) */
+  async function decide(a, req) {
+    if (a.role === 'teacher') throw new HttpErr(403, '운영자만 가입 신청을 처리할 수 있습니다.', 'role');
+    const b = await readBody(req, 16384); const ok = b.ok === true; const reason = G.redact(String(b.reason || '').trim().slice(0, 200)).text;
+    const ids = [...new Set((Array.isArray(b.sids) ? b.sids : []).map(String))].filter(isAccount).slice(0, 200);
+    if (!ids.length) throw new HttpErr(400, '처리할 가입 신청을 고르세요.', 'sids'); if (!ok && !reason) throw new HttpErr(400, '거절 사유를 입력하세요.', 'reason');
+    const R = await tx(a.tid, async ({ L }) => {
+      const rows = (await L("update learner_accounts set decision = $3, reject_reason = $4, decided_at = now() where tenant_id = $1 and learner_id::text = any($2::text[]) and status <> 'withdrawn' returning learner_id, login", [a.tid, ids, ok ? 'ok' : 'no', ok ? null : reason])).rows;
+      for (const r of rows) await L('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [a.tid, a.email, ok ? 'learner.approve' : 'learner.reject', JSON.stringify({ sid: r.learner_id, ...(ok ? {} : { reason }) })]);
+      const org = String(((await L("select doc->'org'->>'name' n from tenant_state where tenant_id = $1", [a.tid])).rows[0] || {}).n || '디디쌤').slice(0, 40); return { rows, org }; });
+    let mailed = 0;
+    for (const r of R.rows) if (r.login === 'email') { try { if (await mailTo(a.tid, r.learner_id, ok ? `[${R.org}] 가입이 승인되었어요` : `[${R.org}] 가입 신청 결과 안내`, ok ? `${R.org} 학습 사이트 가입이 승인되었어요. 지금 로그인해 학습을 시작해 보세요.` : `${R.org} 학습 사이트 가입이 승인되지 않았어요.\n사유: ${reason}\n궁금한 점은 기관에 문의해 주세요.`)) mailed++; } catch (e) { } }
+    return { ok: true, n: R.rows.length, mailed, mail: !!mailer.on };
   }
 
   /* ── 본인 세션 필요 ── */
@@ -314,7 +362,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
     const r = await tx(tid, async ({ P }) => (await P('select learner_id, email_enc from pii.identity where tid = $1 and learner_id::text = $2', [tid, String(lid)])).rows[0]); if (!r || !r.email_enc) return false;
     await mailer.send({ to: dec(r.email_enc, aad(tid, r.learner_id, 'email')), subject, text }); return true; }
   const hasPw = (tid, lid) => tx(tid, async ({ P }) => !!((await P('select pw_hash from pii.identity where tid = $1 and learner_id = $2', [tid, lid])).rows[0] || {}).pw_hash);
-  return { mailTo, evIns, redactDeep, isAccount, changePw, hasPw, pubOpen: { 'POST otp': otp, 'POST signup': signup, 'POST guardian': guardian }, pubAuth: { 'GET pii': myPii, 'PUT pii': myPii, 'POST withdraw': withdraw, 'POST verify': verify }, login, meExtra, adminList, adminPii, adminLog, purge, maskEmail };
+  return { mailTo, evIns, redactDeep, isAccount, changePw, hasPw, pubOpen: { 'POST otp': otp, 'POST signup': signup, 'POST guardian': guardian, 'GET pending': pendingV, 'DELETE pending': pendingV }, pubAuth: { 'GET pii': myPii, 'PUT pii': myPii, 'POST withdraw': withdraw, 'POST verify': verify }, login, meExtra, oauthLogin, socialOn, decide, adminList, adminPii, adminLog, purge, maskEmail };
 }
 
 module.exports = { createPii, piiKeys, maskEmail };
