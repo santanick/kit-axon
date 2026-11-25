@@ -33,7 +33,7 @@ public class DdExceptionHandler {
         return body(st, code, e.getMessage());
     }
     @ExceptionHandler(DdException.class)
-    public ResponseEntity<Map<String, Object>> dd(DdException e) { return body(e.getStatus(), e.getCode(), e.getMessage()); }
+    public ResponseEntity<Map<String, Object>> dd(DdException e) { ResponseEntity<Map<String, Object>> r = body(e.getStatus(), e.getCode(), e.getMessage()); if (e.getExtra() != null) r.getBody().putAll(e.getExtra()); return r; }
     /* Node 서버: 등록되지 않은 "메서드 경로" 조합은 모두 404 */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<Map<String, Object>> method(Exception e) { return body(404, "not_found", "없는 주소입니다."); }

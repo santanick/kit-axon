@@ -561,6 +561,10 @@ const MIGRATIONS = [
    create unique index if not exists sec_incident_kill on security.incident (kill_id) where kill_id is not null;
    create index if not exists sec_incident_st on security.incident (status, created_at desc);
    revoke all on security.incident from didisam_tenant;`,
+  /* QA7 학습자 가입 승인: 운영자 결정(ok · no) · 거절 사유 · 결정 시각 — POST /api/learners/decide(Node · Java 같음). 없으면 예전처럼 스튜디오 회원 문서 등급으로 판단 */
+  `alter table learner_accounts add column if not exists decision text check (decision is null or decision in ('ok','no'));
+   alter table learner_accounts add column if not exists reject_reason text check (reject_reason is null or length(reject_reason) <= 200);
+   alter table learner_accounts add column if not exists decided_at timestamptz;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).

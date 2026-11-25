@@ -25,7 +25,7 @@ public final class DdModule {
     public static boolean apiAllowed(String mod, String method, String path) {
         if (mod.isEmpty()) return true;
         if ("GET".equals(method) && DdApiFilter.MEDIA.matcher(path).matches()) return true; /* v34.5 게시 홈페이지 이미지는 모든 모듈에서 공개 */
-        boolean pub = DdApiFilter.PUB.matcher(path).matches();
+        boolean pub = DdApiFilter.PUB.matcher(path).matches() || DdApiFilter.LOAUTH.matcher(path).matches(); /* QA7 학습자 소셜 로그인은 학습자 모듈 */
         if ("learner".equals(mod)) return ("GET".equals(method) && ("/api/health".equals(path) || "/api/config".equals(path))) || pub;
         if ("tutor".equals(mod)) return TUTOR_API.contains(method + " " + path);
         return !pub;

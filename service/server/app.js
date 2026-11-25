@@ -51,6 +51,7 @@ const AP = require('./aiprice'); /* v47 AI 월 포함량 · 추가 충전 요금
 const { createPay } = require('./fac/pay');
 const LEV = require('./lev'); /* v46 Ver2 학습 이벤트 */
 const { createOAuth } = require('./oauth');
+const { createLearnerOAuth, createTickets } = require('./loauth'); /* QA7 학습자 소셜 가입 · 로그인(구글 · 카카오 · 네이버) */
 const REC = require('./records'); /* 가디언 4차 기록 · 데이터(접근권한 검토 · 내려받기 통제 · 국외 차단 · 보관 파기) */
 const { createMfa } = require('./mfa'); /* 보안 4차 #1 관리자 추가 인증 */
 const { createDevices } = require('./devices'); const { createSessions } = require('./session'); /* 가디언 4차 세션 정책 */ /* 보안 2차: 새 환경 로그인 알림(2단계 인증 대신) */
@@ -255,7 +256,9 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
   /* 가디언: owner + 산타 관리자 전용 /api/security/*, 긴급 차단(기본 dry-run · SECURITY_KILL_LIVE=1일 때만 적용) */
   const sec = createSecurity({ pool, inTenant, need, readBody, HttpErr, limit, ip, checkPw, isSanta, env, log });
   const mileage = require('./mileage').createMileage({ exportGateOf: (...x) => rec.exportGateOf(...x), pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, env, log });
-  const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook: mileage.hook });
+  const ltk = createTickets({ pepper, cookies, secure });
+  const pii = createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, checkPw, DUMMY, newLearnerSession, mileHook: mileage.hook, tickets: ltk });;
+  const loauth = createLearnerOAuth({ env, HttpErr, limit, ip, cookies, secure, pepper, pii, tickets: ltk, TID_RE });
   { const base = pii.mailTo; pii.mailTo = async (tid, ...r) => (await sec.egressBlocked(tid)) ? false : base(tid, ...r); } /* 가디언 egress 차단: 기관 알림 메일 발송 중단 */
   const cpl = createCompliance({ pool, inTenant, readBody, limit, ip, HttpErr, hashPw, checkPw, pii, crypt, env, mileHook: mileage.hook });
   /* 단체가입 최초 로그인 · 중도탈락 표시 */
@@ -301,6 +304,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (act.startsWith('ledger-')) return ledger.pub(req, res, tid, act); /* v41 통합 수납 원장 */
     if (act.startsWith('mile-')) return mileage.pub(req, res, tid, act); /* v42 학습 마일리지 */
     if (pii.pubOpen[key]) return pii.pubOpen[key](req, res, tid);
+    if (key === 'GET loauth') return { ready: loauth.ready }; /* QA7 키가 설정된 학습자 소셜 제공자(나머지는 화면에서 「준비 중」) */
     if (key === 'GET events' || key === 'POST events') return eventsRoute(req, res, tid, key);
     if (key === 'GET site') {
       const site = await inTenant(pool, tid, async c => { const r = (await c.query(`select doc->'lsite'->'pub' pub, doc->'aipol' aipol, coalesce(doc->'ledger'->>'on', doc->'org'->>'ledger_on') = 'true' led, ${SEQ_SQL} seq from tenant_state where tenant_id = $1`, [tid])).rows[0]; if (r && r.pub && r.pub.comm) r.live = (await c.query(COMM_LIVE_Q, [tid, r.seq])).rows.map(x => x.cm); return r; });
@@ -682,6 +686,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     },
     /* v23: 학습자 계정 목록(닉네임 + 가린 이메일만) · 목적이 있는 개인정보 열람(정운영자 · 기록) · 열람 기록 */
     'GET /api/learners/accounts': async req => pii.adminList(await needStaff(req)),
+    'POST /api/learners/decide': async req => pii.decide(await needStaff(req), req), /* QA7 가입 신청 승인 · 거절 */
     'POST /api/learners/pii': async req => pii.adminPii(await needStaff(req), req),
     'GET /api/learners/pii-log': async req => pii.adminLog(await needStaff(req)),
     /* v36 일괄 등록 뒤 남은 학습자 로그인 계정(접근코드 해시)을 500건씩 마저 만든다 — 응답 { pending } 이 0이 될 때까지 화면이 반복 호출 */
@@ -772,7 +777,8 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname.startsWith('/api/') && !M.apiAllowed(mod, req.method, url.pathname)) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
       if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?)$/);
+        if (url.pathname.includes('/loauth/') && url.pathname.startsWith('/api/pub/') && await loauth.handle(req, res, url)) return;
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?)$/);
         const sp = req.method === 'PUT' && url.pathname.match(/^\/api\/santa\/orgs\/(tn_[a-z0-9]{8,16})\/plan$/);
         const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname) || sec.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
