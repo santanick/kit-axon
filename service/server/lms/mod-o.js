@@ -1,4 +1,5 @@
 'use strict';
+const { checkSelfUrl } = require('../ssrf'); // 가디언 4차 #19 SSRF
 /* v30 학사 LMS 묶음 O — AI(SFR-013 · 074 · 076 · 077 · 079 · 080 · 082~087)
    ① RAG: 파일(txt · md · csv · html · docx · xlsx · srt · vtt) 서버 추출 → 문단 구조 보존 → 청크 → 결정적 로컬 임베딩(해시 BoW 256차원) → DB 벡터(lms_o_vec) · 유사도(lms_o_cos)
       임베딩은 embedCounts() 한 곳에서만 만든다 — 외부 임베딩 엔드포인트로 바꿀 때 여기만 교체(설정 embed.kind = endpoint는 「연동 후 동작」)
@@ -311,7 +312,7 @@ module.exports = ctx => {
     anthropic: {
       ready: () => { if (!aiKey) throw E(503, '서버에 AI 키가 설정되지 않았습니다.', 'ai_off'); },
       call: async (p, model, sys, msgs, temperature, max, signal) => {
-        const r = await fetch(aiUrl, { method: 'POST', signal, headers: { 'content-type': 'application/json', 'x-api-key': aiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: max, temperature, system: [{ type: 'text', text: sys, cache_control: { type: 'ephemeral' } }], messages: msgs }) });
+        const r = await fetch(aiUrl, { method: 'POST', redirect: 'manual', signal, headers: { 'content-type': 'application/json', 'x-api-key': aiKey, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: max, temperature, system: [{ type: 'text', text: sys, cache_control: { type: 'ephemeral' } }], messages: msgs }) });
         const j = await r.json().catch(() => ({}));
         const text = (Array.isArray(j.content) ? j.content : []).filter(x => x && x.type === 'text' && typeof x.text === 'string').map(x => x.text).join('');
         const u = j.usage || {}; return { status: r.status, ok: r.ok, text, tin: +u.input_tokens || 0, tout: +u.output_tokens || 0 };
@@ -320,7 +321,7 @@ module.exports = ctx => {
     openai_compat: { /* 학내 자체 LLM(OpenAI 호환 /v1/chat/completions) — 서버 허용 목록(LLM_SELFHOST_HOSTS)에 있는 주소만 호출 */
       ready: p => { const hm = /^https?:\/\/([^\s/?#]+)/i.exec(p.endpoint_url || ''); const h = hm ? hm[1].toLowerCase() : ''; if (!h || !selfHosts.includes(h)) throw E(503, '학내 LLM 서버 연동 후 동작합니다(서버 허용 목록에 주소 등록 필요).', 'provider_pending'); },
       call: async (p, model, sys, msgs, temperature, max, signal) => {
-        const r = await fetch(p.endpoint_url, { method: 'POST', signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model, temperature, max_tokens: max, messages: [{ role: 'system', content: sys }, ...msgs] }) });
+        const r = await fetch(p.endpoint_url, { method: 'POST', signal, redirect: 'manual', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model, temperature, max_tokens: max, messages: [{ role: 'system', content: sys }, ...msgs] }) });
         const j = await r.json().catch(() => ({}));
         const c = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content; const u = j.usage || {};
         return { status: r.status, ok: r.ok, text: typeof c === 'string' ? c : '', tin: +u.prompt_tokens || 0, tout: +u.completion_tokens || 0 };
@@ -336,7 +337,7 @@ module.exports = ctx => {
   }
   async function llm(a, feature, system, user, { temperature = 0.3, max = 1500, history = [] } = {}) {
     const p = await T(a, async c => (await run(c, 'prov_for', { tid: a.tid, feature })) || { kind: 'anthropic', model: MODELS[0], name: 'Anthropic Claude', endpoint_url: null });
-    const P = PROVIDERS[p.kind]; P.ready(p);
+    const P = PROVIDERS[p.kind]; P.ready(p); if (p.kind === 'openai_compat') { try { await checkSelfUrl(p.endpoint_url); } catch (e) { throw E(e.status || 503, e.message, e.code || 'provider_blocked'); } }
     const model = p.kind === 'anthropic' ? (MODELS.includes(p.model) ? p.model : MODELS[0]) : p.model;
     const st = await T(a, async c => {
       if (p.kind === 'anthropic') { const room = (await run(c, 'room_policy', { tid: a.tid })) || {}; if ((room.ai && room.ai !== 'anthropic') || (room.egress && room.egress.ai === false)) throw E(403, '이 기관의 데이터룸 정책에서 AI 외부 연결이 꺼져 있습니다.', 'policy'); }

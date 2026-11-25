@@ -103,5 +103,32 @@
   { let q = 0; const tick = () => { if (q) return; q = requestAnimationFrame(() => { q = 0; try { if (typeof window.lmMount === "function") window.lmMount(); lxMount(); bdFill(); lcApply(); } catch (e) { console.error('lhead lx', e); } }); };
     const host = () => document.getElementById('lapp') || document.body; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => new MutationObserver(tick).observe(host(), { childList: true, subtree: true }), { once: true }); else new MutationObserver(tick).observe(host(), { childList: true, subtree: true });
     addEventListener('hashchange', tick); }
-  { const base = lrender; lrender = (...a) => { const r = base(...a); try { apply(); } catch (e) { console.error('lhead', e); } return r; }; }
+  /* v47 D17(LX-SPEC 2-1): 로그인한 학습자의 웹 머리 메뉴 = 앱 아래 탭과 같은 4개 「홈 · 내 ○○ · 찾기(유형별 이름) · 나」.
+     기존 메뉴(단계별 코스 · 커뮤니티 · 공지사항 · 진단 · 튜토리얼 · 배지 · 디지털북 · 캘린더 · 내 노트 · 기관 메뉴)는 지우지 않고 「찾기」 아래 메뉴로(lux 더 보기와 같은 열림 동작).
+     오른쪽 알림 · 메시지 아이콘 · 계정 메뉴(로그아웃)는 그대로, 「내 학습」 아바타 링크는 메뉴와 중복이라 숨김(#acct로 바꿔 둠). 방문자 · 보호자 · 앱 화면(body.lapp)은 그대로 */
+  const ME = ['acct', 'inbox', 'msg', 'mypay', 'connect', 'mile', 'ledger', 'who'], MY = ['my', 'c', 'cert', 'badge', 'lms', 'knq', 'cal', 'attend', 'journey', 'notes'];
+  function menu4() { const b = document.body; if (!b || b.classList.contains('lapp')) return; let me = null; try { me = LR.me; } catch (e) { } if (!me || me.kind === 'parent') return;
+    const nav = document.querySelector('header.lh nav.ln'); if (!nav || nav.dataset.l47) return; nav.dataset.l47 = '1'; nav.dataset.lux = '1';
+    const items = []; [...nav.children].forEach(el => { if (el.classList.contains('lux-more')) [...(el.querySelector('.lux-dd') || el).children].forEach(x => { if (!x.matches('button.lux-mb')) items.push(x); }); else items.push(el); });
+    const hOf = el => { const a = el.matches('a') ? el : el.querySelector(':scope > a'); return a ? a.getAttribute('href') || '' : ''; };
+    let T = []; try { const S0 = typeof window.lappScn === 'function' ? window.lappScn() : null; T = S0 && Array.isArray(S0.tabs) ? S0.tabs : []; } catch (e) { T = []; }
+    let ty = ''; try { ty = SITE().org.type; } catch (e) { }
+    const myL = String((T.find(t => t[0] === 'my') || [])[2] || '내 학습'); const fT = T.find(t => t[0] === 'find');
+    const fL = String((fT && fT[2]) || { univ: '교과목 찾기', corp: '교육과정', voc: '훈련과정', adult: '둘러보기' }[ty] || '찾기');
+    const home = items.find(x => hOf(x) === '#home'); const rest = items.filter(x => x !== home && !/^#(my|acct)$/.test(hOf(x)));
+    const fH = (fT && fT[1]) || (rest.some(x => hOf(x) === '#shop') ? '#shop' : '#courses'); rest.sort((x, y) => (hOf(y) === fH) - (hOf(x) === fH));
+    const a0 = (() => { try { return route().a; } catch (e) { return ''; } })(); const onF = rest.some(x => x.matches('a.on') || x.querySelector('a.on'));
+    nav.textContent = '';
+    const A = (h, l, on) => { const a = document.createElement('a'); a.href = h; a.textContent = l; if (on) { a.className = 'on'; a.setAttribute('aria-current', 'page'); } return a; };
+    nav.appendChild(home || A('#home', '홈', a0 === 'home')); if (home) home.textContent = '홈';
+    nav.appendChild(A('#my', myL, MY.includes(a0)));
+    if (rest.length) { const w = document.createElement('span'); w.className = 'lux-more l47-find'; w.innerHTML = `<button type="button" class="lux-mb${onF ? ' on' : ''}" aria-expanded="false" aria-haspopup="true">${esc2(fL)}<i aria-hidden="true">▾</i></button><span class="lux-dd"></span>`;
+      rest.forEach(x => { if (x.matches('a')) x.classList.remove('on'); w.lastElementChild.appendChild(x); }); nav.appendChild(w); }
+    nav.appendChild(A('#acct', '나', ME.includes(a0)));
+    const av = document.querySelector('header.lh .acct a.me'); if (av) { av.href = '#acct'; av.classList.add('l47'); av.setAttribute('aria-label', '나 · 계정과 받은 메시지'); }
+    if (!document.getElementById('l47navCss')) { const st = document.createElement('style'); st.id = 'l47navCss'; st.textContent = 'header.lh .acct a.me.l47{display:none}header.lh nav.ln[data-l47]{display:flex;align-items:center}'; document.head.appendChild(st); } }
+  window.l47Menu = menu4;
+  { let q2 = 0; const t2 = () => { if (q2) return; q2 = requestAnimationFrame(() => { q2 = 0; try { menu4(); } catch (e) { console.error('lhead menu4', e); } }); };
+    const go = () => new MutationObserver(t2).observe(document.getElementById('lapp') || document.body, { childList: true, subtree: true }); if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true }); else go(); }
+  { const base = lrender; lrender = (...a) => { const r = base(...a); try { apply(); menu4(); } catch (e) { console.error('lhead', e); } return r; }; }
 })();

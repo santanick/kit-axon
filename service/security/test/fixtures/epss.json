@@ -1,0 +1,4 @@
+{ "status": "OK", "data": [
+  { "cve": "CVE-2021-23337", "epss": "0.201580000", "percentile": "0.975230000", "date": "2026-11-23" },
+  { "cve": "CVE-2099-0002", "epss": "0.5", "percentile": "0.99", "date": "fixture" }
+] }

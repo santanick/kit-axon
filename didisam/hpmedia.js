@@ -54,7 +54,7 @@
   /* 바로 고치기 · AI SAM 첨부용: 서버 주소를 돌려주고, 안 되면 받은 data URL을 그대로 돌려준다(화면 흐름이 멈추지 않게) */
   async function keep(x, name) { if (!on()) return typeof x === 'string' ? x : toURL(x);
     try { return (await put(x, { name })).url; }
-    catch (e) { HPM.last = { err: e.message, code: e.code || '' }; try { console.warn('HPM: 서버 저장 실패 — data URL로 저장합니다', e.message); } catch (x2) { } return typeof x === 'string' ? x : toURL(x); } }
+    catch (e) { HPM.last = { err: errMsg(e), code: e.code || '' }; try { console.warn('HPM: 서버 저장 실패 — data URL로 저장합니다', e.message); } catch (x2) { } return typeof x === 'string' ? x : toURL(x); } }
   async function list(o) { if (!on()) return { rows: [], used: 0, max: 0, n: 0, local: true };
     const r = await fetch('/api/media?limit=' + Math.max(1, Math.min(200, +((o || {}).limit) || 50)), { credentials: 'same-origin', headers: { 'x-didisam': '1' } }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.message || `오류 ${r.status}`); return j; }
   async function del(x) { const id = idOf(x); if (!on() || !/^tn_/.test(id)) return { ok: true, local: true };
@@ -175,7 +175,7 @@
     return Promise.all(Array.from(L).map(async el => {
       const v = el.getAttribute('data-hpm-src'); if (!v || el.getAttribute('data-hpm-done') === v) return;
       try { const u = await src(v); if (el.tagName === 'A') { el.href = u; const n = el.getAttribute('data-hpm-name'); if (n) el.setAttribute('download', n); } else el.src = u; el.setAttribute('data-hpm-done', v); el.removeAttribute('data-hpm-err'); }
-      catch (e) { el.setAttribute('data-hpm-err', e.message); if (el.title !== undefined) el.title = e.message; }
+      catch (e) { el.setAttribute('data-hpm-err', errMsg(e)); if (el.title !== undefined) el.title = errMsg(e); }
     }));
   }
   /* 파일 내용(Blob) — 화면 CSP(connect-src)가 blob: 주소 fetch를 막으므로 이 브라우저 보관 파일은 IndexedDB에서 바로 읽는다 */

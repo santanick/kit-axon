@@ -278,8 +278,8 @@
           const onT = T2.filter(x => x[0]).map(x => x[1]).join(''), offT = T2.filter(x => !x[0]).map(x => x[1]).join('');
           return `${onT ? `<h4 class="r7-cgh">연결됨 <em>${T2.filter(x => x[0]).length}</em></h4><div class="sx-logos r7-on">${onT}</div>` : ''}<h4 class="r7-cgh">연결할 수 있음</h4><div class="sx-logos">${offT}${ext}</div>`; } },
       ...(O || sxPay() ? [{ k: 'pay', n: sxPay() ? '요금제 · 결제' : '요금제', i: 'chart', subs: O ? ['plan'] : [], kw: '요금제 플랜 결제 수강료 pg 토스 환불 매출 청구',
-        sum: `${esc(({ standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' })[S.org.plan] || '체험')}${sxPay() ? ` · 결제 ${pgOn ? '연결됨' : '미연결'}` : ''}`,
-        q: () => sxRow('요금제', esc(({ standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' })[S.org.plan] || '체험')) + (sxPay() ? sxRow(`${t('fee')} 온라인 결제`, pgOn ? '토스페이먼츠 연결됨' : '연결 전') : '') +
+        sum: `${esc(window.PLAN ? PLAN.chip() : ({ standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' })[S.org.plan] || '체험')}${sxPay() ? ` · 결제 ${pgOn ? '연결됨' : '미연결'}` : ''}`,
+        q: () => sxRow('요금제', esc(window.PLAN ? PLAN.chip() : ({ standard: '스탠다드', premium: '프리미엄', enterprise: '엔터프라이즈' })[S.org.plan] || '체험')) + (window.PLAN ? sxRow('AI 레벨 상한', esc(PLAN.maxLevel())) : '') + (sxPay() ? sxRow(`${t('fee')} 온라인 결제`, pgOn ? '토스페이먼츠 연결됨' : '연결 전') : '') +
           `<div class="sx-acts">${O ? sxBtn('요금제 보기', 'sx-sub', 'pay|plan') : ''}${sxPay() && MENU.sales ? sxBtn('매출 · 결제 열기', 'go', 'sales') : ''}${sxPay() && O && !pgOn ? sxBtn('결제 연결', 'sl-cn', 'toss') : ''}</div>` }] : []),
       ...(typeof window.SXC_X === 'function' ? window.SXC_X(SXN) : []), /* v46 D3: 다른 파일이 설정 카드를 덧붙이는 훅(aipol.js 「AI 사용 정책」) */
       { k: 'learn', n: '학습 규칙 · AI 튜터', i: 'book', subs: ['rules'], kw: '진도 수료 이수 기준 배속 건너뛰기 ai 튜터 학습 규칙', sum: '진도 · 수료 기준 · AI 튜터',

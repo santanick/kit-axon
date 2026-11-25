@@ -1,0 +1,4 @@
+{ "resultsPerPage": 2, "vulnerabilities": [
+  { "cve": { "id": "CVE-2099-0200", "published": "2099-01-04T00:00:00", "lastModified": "2099-01-04T00:00:00", "descriptions": [{ "lang": "en", "value": "Fixture: Node.js HTTP parser request smuggling (시험용)." }], "metrics": { "cvssMetricV31": [{ "cvssData": { "baseScore": 6.5 } }] }, "configurations": [{ "nodes": [{ "cpeMatch": [{ "criteria": "cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*" }] }] }] } },
+  { "cve": { "id": "CVE-2099-0201", "published": "2099-01-04T00:00:00", "lastModified": "2099-01-04T00:00:00", "descriptions": [{ "lang": "en", "value": "Fixture: unrelated printer firmware issue." }], "metrics": {} } }
+] }

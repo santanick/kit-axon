@@ -32,7 +32,7 @@ public class InterimAesGcmAdapter implements LmsCryptoAdapter {
     }
     @Override public String decrypt(String ct, String aad) throws Exception {
         if (key == null) throw new IllegalStateException("키 없음");
-        byte[] raw = Base64.getUrlDecoder().decode(ct.substring(3));
+        byte[] raw = Base64.getUrlDecoder().decode(ct.substring(3)); if (raw.length < 28) throw new IllegalStateException("gcm_tag");
         byte[] body = new byte[raw.length - 12]; System.arraycopy(raw, 28, body, 0, raw.length - 28); System.arraycopy(raw, 12, body, raw.length - 28, 16);
         Cipher c = Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, raw, 0, 12)); c.updateAAD(aad.getBytes(StandardCharsets.UTF_8));
         return new String(c.doFinal(body), StandardCharsets.UTF_8);

@@ -443,7 +443,10 @@ public class LedgerServiceImpl extends EgovAbstractServiceImpl implements Ledger
     static final Pattern CSV_Q = Pattern.compile("[\",\\n\\r]"), CSV_F = Pattern.compile("^[=+\\-@]"), INTS = Pattern.compile("^-?\\d+$");
     static String esc(Object v) { String s = v == null ? "" : String.valueOf(v); boolean f = CSV_F.matcher(s).find(); return CSV_Q.matcher(s).find() || f ? "\"" + (f && !INTS.matcher(s).matches() ? "'" : "") + s.replace("\"", "\"\"") + "\"" : s; }
     Object export(Map<String, Object> a, HttpServletRequest q, HttpServletResponse res) throws Exception {
+        egovframework.didisam.records.Records.Gate X = egovframework.didisam.records.Records.gate(q, String.valueOf(a.get("role"))); /* 가디언 4차 #14 사유 필수 · 학번 기본 가림 · 원본은 정운영자 */
         String[] R = range(q); List<Map<String, Object>> E0 = entries(tid(a), q);
+        if (!X.raw()) for (Map<String, Object> e : E0) e.put("sid", egovframework.didisam.records.Records.mask(e.get("sid")));
+        X.done(tx, tid(a), email(a), "ledger", E0.size());
         List<String> H = List.of("type", "id", "at", "unit", "sid", "itemType", "title", "method", "channel", "amount", "status", "approvalNo", "receipt", "ruleType", "diffReason");
         StringBuilder sb = new StringBuilder("﻿").append(String.join(",", H)); for (Map<String, Object> e : E0) { sb.append("\r\n"); List<String> c = new ArrayList<>(); for (String h : H) c.add(esc(e.get(h))); sb.append(String.join(",", c)); } sb.append("\r\n");
         byte[] out = sb.toString().getBytes(StandardCharsets.UTF_8);

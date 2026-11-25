@@ -48,21 +48,22 @@
   const hrefOf = k => { const it = k.st === 'prog' && k.check ? k.check : k.next; return it ? `#c/${encodeURIComponent(k.cid)}/${encodeURIComponent(it.id)}` : `#c/${encodeURIComponent(k.cid)}`; };
   const pips = k => { const n = Math.max(2, k.need || 2); const f = k.st === 'done' ? n : Math.min(n, k.run || 0); return `<span class="v2-pips" aria-hidden="true">${Array.from({ length: n }, (_, i) => `<i class="${i < f ? 'f' : ''}"></i>`).join('')}</span>`; };
   function rowHTML(k, i, canSwap) { const s = ST[k.st] || ST.new;
-    return `<li class="v2-cpt mj-row${k.st === 'done' ? ' is-done' : i === 0 ? ' is-cur' : ''}" data-mjk="${E(k.cid + '/' + k.id)}"><div class="v2-cpt__tx"><b>${E(k.name)}</b><small><span class="mj-st">${s[0]}</span> · ${E(nextTxt(k))}${k.cname ? ` · ${E(k.cname)}` : ''}</small>${pips(k)}</div>
-      <span class="v2-ms ${s[1]}">${k.st === 'done' ? I('check', 13) : ''}${s[0]}</span><span class="mj-act"><a class="lbtn${k.st === 'done' ? '' : ' pri'} sm mj-go" href="${hrefOf(k)}" data-mj="go">${k.st === 'done' ? '복습' : '바로 학습'}</a>${canSwap && k.st !== 'done' ? `<button type="button" class="mj-sw" data-mj="swap" data-i="${i}">다른 개념으로</button>` : ''}</span></li>`; }
+    return `<li class="v2-cpt mj-row${k.st === 'done' ? ' is-done' : i === 0 ? ' is-cur' : ''}${i > 0 ? ' is-mini' : ''}" data-mjk="${E(k.cid + '/' + k.id)}"><div class="v2-cpt__tx"><b>${E(k.name)}</b><small><span class="mj-st">${s[0]}</span> · ${E(nextTxt(k))}${k.cname ? ` · ${E(k.cname)}` : ''}</small>${pips(k)}</div>
+      <span class="v2-ms ${s[1]}">${k.st === 'done' ? I('check', 13) : ''}${s[0]}</span><span class="mj-act"><a class="lbtn ghost sm mj-go" href="${hrefOf(k)}" data-mj="go">${k.st === 'done' ? '복습' : '바로 학습'}</a>${canSwap && k.st !== 'done' ? `<button type="button" class="mj-sw" data-mj="swap" data-i="${i}">다른 개념으로</button>` : ''}</span></li>`; }
   function sumHTML(D) { const mt = mileTxt(); const st = M.streak(actDays(D), D.now); const nd = D.all.filter(k => k.st === 'done').length;
     return `<div class="v2-sum mj-sum"><a href="#journey"><b>${weekN(D)}개</b><small>이번 주 작은 성취</small></a>${mt ? `<a href="#mile" class="is-p"><b>${mt}</b><small>마일리지</small></a>` : `<a href="#journey"><b>${nd}개</b><small>숙달한 개념</small></a>`}<a href="#journey"><b>${st}일</b><small>연속 학습</small></a></div>`; }
   function cardHTML() { const D = data(); diffEmit(D); const T = todayOf(D); const just = goalDone(T); mileHook(D);
     let body;
-    if (T.empty === 'none') body = `<p class="mj-empty">아직 듣는 과정이 없어요. 과정을 찾아볼까요?</p><a class="lbtn pri sm" href="#courses">과정 찾기</a>`;
+    if (T.empty === 'none') body = `<p class="mj-empty">아직 듣는 과정이 없어요. 과정을 찾아볼까요?</p><a class="lbtn ghost sm" href="#courses">과정 찾기</a>`;
     else if (T.empty === 'all') body = `<p class="mj-empty">지금 익힐 개념을 모두 숙달했어요. 복습할 개념을 골라 볼까요?</p><a class="lbtn sm" href="#journey">복습할 개념 고르기</a>`;
     else body = `${T.done ? `<p class="mj-done" role="status">${I('award', 18)} 오늘 목표를 모두 해냈어요!</p>` : ''}<ol class="mj-list">${T.rows.map((k, i) => rowHTML(k, i, T.more > 0)).join('')}</ol>`;
     const n = T.rows.length, d = T.rows.filter(k => k.st === 'done').length;
-    return { just, html: `<section class="mj-card${T.done ? ' is-done' : ''}" data-mj="today" aria-labelledby="mjT"><header class="mj-h"><span class="mj-ic" aria-hidden="true">${I('target', 20)}</span><div><h2 id="mjT">오늘 익힐 것</h2><small>${n ? `${n}개 중 ${d}개 숙달` : '숙달을 향해 한 걸음씩'}</small></div></header>${body}</section>${sumHTML(D)}` }; }
+    return { just, html: `<section class="mj-card${T.done ? ' is-done' : ''}" data-mj="today" aria-labelledby="mjT"><header class="mj-h"><span class="mj-ic" aria-hidden="true">${I('target', 20)}</span><div><h2 id="mjT">오늘 익힐 것</h2><small>${n ? `${n}개 중 ${d}개 숙달` : '숙달을 향해 한 걸음씩'}</small></div></header>${body}</section>` }; } /* v47 D4: 작은 성취 요약 3칸(.mj-sum)은 홈이 아니라 「내 학습 › 기록」(앱 #rec) · 웹 마이페이지로 */
   function mountHome() { const lm = document.getElementById('lm'); if (!lm || lm.querySelector('.mj-card')) return; const R = cardHTML(); const box = document.createElement('div'); box.className = 'mj-home'; box.innerHTML = R.html;
     const hero = lm.querySelector('#apScroll .ap-hero'); const hub = lm.querySelector('.lhb-home .lhb-in');
-    const tut = lm.querySelector('.tb-tut'); /* 통합 v46: 디디쌤 튜브 홈(ltube)은 AI 입력 줄 바로 아래 */
+    const tut = lm.querySelector('.tb-main > .tb-now') || lm.querySelector('.tb-main > .tb-hero') || lm.querySelector('.tb-main > .tb-tut'); /* v47 D1: 튜브 홈은 「지금 할 일」 바로 아래 */ /* v46.2: 튜브 홈은 「오늘 목표」 바로 아래(첫 화면에 보이게) */ /* 통합 v46: 디디쌤 튜브 홈(ltube)은 AI 입력 줄 바로 아래 */
     if (hero) hero.insertAdjacentElement('afterend', box); else if (tut) tut.insertAdjacentElement('afterend', box); else if (hub) hub.insertAdjacentElement('afterbegin', box); else lm.insertAdjacentElement('afterbegin', box);
+    { const vc = lm.querySelector('.v2-vcard'); if (vc && box.isConnected && !lm.querySelector('.tb-more-in')) box.insertAdjacentElement('afterend', vc); } /* v47 D5: 튜브 홈은 비전 카드를 「더 보기」 안에 둔다 */ /* v46.2: 「나의 비전 만들기」는 「오늘 익힐 것」 바로 아래 */
     if (R.just && typeof toast === 'function') toast('오늘 목표를 모두 해냈어요! 작은 성취 +1', 'ok'); }
 
   /* ── ⑩ 나의 여정(#journey) ── */
@@ -92,11 +93,12 @@
   if (typeof lrender === 'function') { const base = lrender; lrender = function () { /* eslint-disable-line no-global-assign */
     const r = base.apply(this, arguments); try { if (!on() || !me() || !LR.lp) return r; const a = typeof route === 'function' ? route().a : '';
       if (a === 'home' && !document.body.classList.contains('ap-pickon')) { mountHome(); setTimeout(mountHome, 0); /* ltube가 홈을 다시 그린 뒤에도 */ }
-      if (a === 'my') { const lm = document.getElementById('lm'); if (lm && !lm.querySelector('.mj-mylink')) { const t = lm.querySelector('.ap-my') || lm.querySelector('section'); const h = `<a class="mj-mylink" href="#journey">${I('map', 18)}<span><b>나의 여정</b><small>작은 성취 · 정거장 · 나의 비전</small></span>${I('arrow', 16)}</a>`; if (t) t.insertAdjacentHTML('afterend', h); else lm.insertAdjacentHTML('afterbegin', h); } }
+      if (a === 'my' && !appMode()) { const lm = document.getElementById('lm'); /* v47 통합: 웹 내 학습에는 성취 3칸을 넣지 않음(「기록」 · 「나의 여정」 링크와 중복 — 같은 목적지 링크 ≤ 2) */ if (lm && !lm.querySelector('.mj-mylink')) { const t = lm.querySelector('.ap-my') || lm.querySelector('section'); const h = `<a class="mj-mylink" href="#journey">${I('map', 18)}<span><b>나의 여정</b><small>작은 성취 · 정거장 · 나의 비전</small></span>${I('arrow', 16)}</a>`; if (t) t.insertAdjacentHTML('afterend', h); else lm.insertAdjacentHTML('afterbegin', h); } }
     } catch (e) { console.error('ljourney render', e); } return r; }; }
   document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-mj]'); if (!el || !on() || !me()) return; const k = el.dataset.mj;
     if (k === 'swap') { e.preventDefault(); const D = data(); const T = M.swap(D.all, stKey(), +el.dataset.i, { now: D.now }); LR.lp.mtoday = { d: T.d, ids: T.ids, skip: T.skip }; save(); if (typeof lrender === 'function') lrender(); }
     if (k === 'vision') { e.preventDefault(); try { window.LV2 && LV2.openVision && LV2.openVision(); } catch (x) { } } });
 
-  window.MJ = Object.freeze({ on, data, today: () => todayOf(data()), journeyHTML, cardHTML: () => cardHTML().html });
+  function appMode() { try { return document.body.classList.contains('lapp') && typeof window.lappOn === 'function' && !!window.lappOn(); } catch (e) { return false; } }
+  window.MJ = Object.freeze({ on, data, today: () => todayOf(data()), journeyHTML, cardHTML: () => cardHTML().html, sumHTML: () => sumHTML(data()) });
 })();

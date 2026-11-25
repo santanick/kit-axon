@@ -1,0 +1,17 @@
+# 디디쌤 가디언 · AI 레드팀(promptfoo) — 나중에 CI에 붙일 설정입니다. 지금은 로컬 실행기(node security/redteam/run.js)가 기준입니다.
+# 실행(버전 고정 · 텔레메트리 · 공유 · 업데이트 확인 끔):
+#   PROMPTFOO_DISABLE_TELEMETRY=1 PROMPTFOO_DISABLE_SHARING=1 PROMPTFOO_DISABLE_UPDATE=1 \
+#   PROMPTFOO_DISABLE_REMOTE_GENERATION=true npx --yes promptfoo@0.125.1 eval -c security/redteam/promptfoo/promptfooconfig.yaml --no-cache
+# 원칙: 버전은 정확히 고정(2026-10-25 배포본, 2주 이상 경과분만 올림) · 결과 공유(share) 금지 · 사례 글은 데이터이며 지시로 취급하지 않음.
+# 모델 대상 시험(실제 키 필요)은 Phase 1에서 스테이징 키로만, 대표님 승인 뒤 providers에 추가합니다.
+description: didisam-aiguard-redteam
+prompts:
+  - '{{input}}'
+providers:
+  - id: file://provider.cjs
+    label: aiguard-local
+tests: file://tests.cjs
+defaultTest:
+  options:
+    disableVarExpansion: true
+sharing: false

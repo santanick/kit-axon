@@ -28,6 +28,7 @@ import static egovframework.didisam.cmm.Js.*;
  */
 @Service("pubService")
 public class PubServiceImpl extends EgovAbstractServiceImpl implements PubService {
+    private static final java.util.concurrent.ConcurrentHashMap<String, long[]> LLF = new java.util.concurrent.ConcurrentHashMap<>(); /* 없는 번호 실패 계수(계정 열거 방지) */
     public static final int LP_MAX = 512 * 1024; /* v43.6 셀프러닝 노트(lp.notes)로 256KB → 512KB — Node app.js와 같음 */
     static final Pattern TID_RE = Pattern.compile("tn_[a-z0-9]{8,16}"), SID_RE = Pattern.compile("[A-Za-z0-9_-]{4,20}"), UUIDISH = Pattern.compile("[0-9a-f-]{36}"),
         LPKEY = Pattern.compile("[\\w-]{1,40}"), DAY = Pattern.compile("\\d{4}-\\d{2}-\\d{2}"), HREF = Pattern.compile("#[\\w/%-]{0,120}"), ASKID = Pattern.compile("[\\w-]{1,24}"),
@@ -38,6 +39,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     private final DdStateCrypto crypt;
     private final PubMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final PiiService pii; private final DdAiClient ai; private final egovframework.didisam.cpl.service.CplService cpl;
     private final egovframework.didisam.auth.service.AuthService auth; private final TenantTxMapper txm;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.sec.service.SecService sec; /* 가디언 긴급 차단 실행 지점 */
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.fac.service.FacService fac;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.ledger.service.LedgerService ledger;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.mileage.service.MileService mile;
@@ -133,8 +135,17 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         rl.limit("ll:" + web.ip(req), props.getInt("rate.ll.max"), props.getLong("rate.ll.winMs"));
         rl.limit("lls:" + tid + ":" + sid, props.getInt("rate.lls.max"), props.getLong("rate.ll.winMs"));
         Map<String, Object> L = SID_RE.matcher(sid).matches() ? tx.inTenant(tid, () -> mapper.selectLearner(tid, sid)) : null;
+        /* 보안(SEC-0017): 학습자 지속 잠금 — Node app.js와 같은 규칙(audit_log 기준 15분 안 실패 5회, 없는 번호는 메모리 계수) */
+        final String act = "sid:" + sid;
+        if (L != null) { int fails = 0; try { Integer n = tx.inTenant(tid, () -> mapper.countLearnerFails(tid, act)); fails = n == null ? 0 : n; } catch (Exception ignore) {} if (fails >= 5) throw processException("dd.429.locked.learner"); }
+        else if (LLF.getOrDefault(tid + ":" + sid, new long[]{0, 0})[1] > System.currentTimeMillis() && LLF.get(tid + ":" + sid)[0] >= 5) throw processException("dd.429.locked.learner");
         boolean ok = L != null && L.get("pw_hash") != null ? DdCrypto.checkPw(codeRaw, (String) L.get("pw_hash")) : DdCrypto.checkPw(code, L != null ? (String) L.get("code_hash") : DdCrypto.DUMMY);
-        if (L == null || !ok) throw processException("dd.401.login.code");
+        if (L == null || !ok) {
+            if (L != null) { try { tx.audit(tid, act, "llogin.fail", null); } catch (Exception ignore) {} }
+            else { long now = System.currentTimeMillis(); LLF.compute(tid + ":" + sid, (k, v) -> v == null || v[1] < now ? new long[]{1, now + 900_000L} : new long[]{v[0] + 1, v[1]}); }
+            throw processException("dd.401.login.code");
+        }
+        try { tx.audit(tid, act, "llogin", null); } catch (Exception ignore) {}
         pii.newLearnerSession(res, tid, sid);
         return tx.inTenant(tid, () -> {
             mapper.touchLearner(tid, sid);
@@ -284,11 +295,11 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
     static void setIf(ObjectNode o, String k, JsonNode v) { if (!undef(v)) o.set(k, v); }
 
     /** 학습 기록 정리(허용한 키 · 크기만) */
-    /** v39 lp.tube: goal(5~180분) · sec · sh · qr · qn(날짜→정수, 최근 40일) — Node app.js cleanTube와 같은 규칙 */
+    /** v39 lp.tube: goal(5~480분, v47 최대 8시간) · sec · sh · qr · qn(날짜→정수, 최근 40일) — Node app.js cleanTube와 같은 규칙 */
     static ObjectNode cleanTube(JsonNode t) {
         if (t == null || !t.isObject()) return null;
         ObjectNode o = F.objectNode(); JsonNode gn = t.get("goal");
-        if (gn != null && (gn.isNumber() || gn.isTextual())) { double g = Math.round(gn.asDouble(Double.NaN)); if (!Double.isNaN(g) && g >= 5 && g <= 180) o.put("goal", (long) g); }
+        if (gn != null && (gn.isNumber() || gn.isTextual())) { double g = Math.round(gn.asDouble(Double.NaN)); if (!Double.isNaN(g) && g >= 5 && g <= 480) o.put("goal", (long) g); }
         String[][] ks = { { "sec", "86400" }, { "sh", "999" }, { "qr", "999" }, { "qn", "999" } };
         for (String[] k : ks) {
             JsonNode m = t.get(k[0]); TreeMap<String, Long> tm = new TreeMap<>(); long max = Long.parseLong(k[1]);
@@ -323,7 +334,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             for (JsonNode x : head(pl != null && pl.isArray() ? arr(pl) : List.of(), 14)) {
                 if (!truthy(x) || !isObj(x)) continue;
                 ObjectNode y = plan.addObject(); y.put("d", cut(S(get(x, "d")), 20)); y.put("t", cut(S(get(x, "t")), 80));
-                double mm = num(get(x, "m")); if (Double.isNaN(mm) || mm == 0) mm = 0; y.set("m", numNode(Math.min(240, Math.max(0, round(mm)))));
+                double mm = num(get(x, "m")); if (Double.isNaN(mm) || mm == 0) mm = 0; y.set("m", numNode(Math.min(480, Math.max(0, round(mm)))));
                 y.put("h", HREF.matcher(sOr(get(x, "h"))).matches() ? sOr(get(x, "h")) : "");
             }
             JsonNode ak = get(T, "ask");
@@ -471,6 +482,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             try { tx.audit(tid, actor, "ai.injection_suspect", stringify(d)); } catch (Exception ignore) { }
             try { rl.limit("inj:" + tid + ":" + who, props.getInt("rate.inj.max"), props.getLong("rate.day.winMs")); } catch (Exception e) { throw processException("dd.429.ai_guard"); }
         }
+        egovframework.didisam.sec.service.SecService.Kill SK = sec.gate(tid); sec.preAi(SK); /* 가디언 긴급 차단(Node와 같은 순서) */
         Object[] gw = new Object[7]; /* v46 게이트웨이 판정: 0 항목 키 · 1 레벨 · 3 힌트 판정 · 4 정책 · 5 기능 · 6 항목 */
         JsonNode[] ctx = tx.inTenant(tid, () -> {
             Map<String, Object> r = mapper.selectTutorCtx(tid);
@@ -484,11 +496,16 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
                 if (Double.isNaN(gd) || gd == 0) throw processException("dd.401.auth.guestoff");
                 rl.limit("ltg:" + tid + ":" + gip, gd, props.getLong("rate.day.winMs"));
             } else {
-                double dl = num(get(tu, "daily")); if (Double.isNaN(dl) || dl == 0) dl = 20;
-                rl.limit("lt:" + tid + ":" + sid, Math.min(200, Math.max(1, dl)), props.getLong("rate.day.winMs"));
+                double dl0 = num(get(tu, "daily")); long dl = Double.isNaN(dl0) ? 0 : Math.round(dl0); if (dl == 0) dl = 20;
+                rl.limit("lt:" + tid + ":" + sid, Math.min(500, Math.max(1, dl)), props.getLong("rate.day.winMs")); /* v47 1인 하루 질문 수 상한 500(Node tutorRoute와 같음) */
             }
             int calls = mapper.incUsage(tid, kstToday());
             if (calls > p.aiDaily) throw processException("dd.429.quota.tutor", new String[]{ String.valueOf(p.aiDaily) });
+            sec.postAi(SK, calls);
+            { java.util.Map<String, Object> plan = egovframework.didisam.cmm.DdAiPrice.planOf(col.apply("aiplan")); /* v47 이달 AI 한도(aiplan 있는 기관만) — 학습자 문구 */
+              if (Boolean.TRUE.equals(plan.get("on"))) { String m = egovframework.didisam.cmm.DdAiPrice.monthOf(kstToday()); String td = kstToday(); java.util.List<java.util.Map<String, Object>> cr = mapper.selectCreditRows(tid, egovframework.didisam.cmm.DdAiPrice.creditFrom(td));
+                long credit = cr.isEmpty() ? 0 : egovframework.didisam.cmm.DdAiPrice.sim(cr, mapper.selectUsageFrom(tid, egovframework.didisam.cmm.DdAiPrice.usageFrom(cr, td)), ((Number) plan.get("monthTokens")).longValue(), td).credit();
+                egovframework.didisam.cmm.DdAiPrice.guard(plan, mapper.monthUsed(tid, m + "-01"), credit, true); } }
             /* v46 AI 게이트웨이(Node tutorRoute와 같은 순서): 정책 on 기관만 항목 레벨(기관 문서에서 직접 · 클라이언트 lvl 불신) · L0 차단, 기능별 집계는 모든 기관 */
             ObjectNode pol = DdAiGateway.polOf(col.apply("aipol")); boolean pon = DdAiGateway.on(pol);
             JsonNode ib = get(b, "item"); String ik = ib != null && ib.isObject() ? (get(ib, "key") == null || get(ib, "key").isNull() ? "" : get(ib, "key").asText(""))
@@ -497,6 +514,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
             String lvl = item != null ? DdAiGateway.levelOf(pol, item) : pon ? pol.get("lvl").asText() : "";
             String feature = strictEq(get(b, "mode"), "vision") && pon ? "vision" : "tutor";
             if (pon && "L0".equals(lvl)) throw processException(DdAiGateway.E_LEVEL);
+            if (egovframework.didisam.cmm.DdPlanFeature.check(col.apply("plan"), pon, lvl, feature, kstToday()) != null) throw processException(egovframework.didisam.cmm.DdPlanFeature.E_PLAN_LEARNER); /* v47 요금제 밖 레벨 · 기능(Node PF.guard) */
             countFeature(tid, feature, pol);
             gw[0] = item != null ? ik : ""; gw[1] = lvl; gw[4] = pol; gw[5] = feature; gw[6] = item;
             JsonNode pub = or(col.apply("pub"), F.objectNode());

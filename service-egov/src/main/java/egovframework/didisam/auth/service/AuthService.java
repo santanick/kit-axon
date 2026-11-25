@@ -10,12 +10,20 @@ public interface AuthService {
     Map<String, Object> config() throws Exception;
     Map<String, Object> signup(byte[] body, HttpServletRequest req, HttpServletResponse res) throws Exception;
     Map<String, Object> login(JsonNode b, HttpServletRequest req, HttpServletResponse res) throws Exception;
+    /** 보안 4차 #1 관리자 추가 인증: POST /api/login/mfa · /api/login/mfa/resend · GET/POST/DELETE /api/me/mfa */
+    Map<String, Object> loginMfa(JsonNode b, HttpServletRequest req, HttpServletResponse res) throws Exception;
+    Map<String, Object> loginMfaResend(JsonNode b, HttpServletRequest req) throws Exception;
+    Map<String, Object> mfaGet(Map<String, Object> a) throws Exception;
+    Map<String, Object> mfaPost(Map<String, Object> a, JsonNode b) throws Exception;
+    Map<String, Object> mfaDelete(Map<String, Object> a, JsonNode b) throws Exception;
     Map<String, Object> logout(HttpServletRequest req, HttpServletResponse res) throws Exception;
     /** 세션 확인(유휴 연장 포함). 없으면 null */
     Map<String, Object> auth(HttpServletRequest req) throws Exception;
     /** 세션 필수. 없으면 401 */
     Map<String, Object> need(HttpServletRequest req) throws Exception;
     Map<String, Object> meOut(Map<String, Object> a);
+    /** 보안 2차: 본인 최근 로그인 기기(GET /api/me/devices) */
+    Map<String, Object> devices(Map<String, Object> a, HttpServletRequest req);
     /** 교강사 제외 */
     Map<String, Object> needStaff(HttpServletRequest req) throws Exception;
     /** 정운영자만 */

@@ -6,3 +6,6 @@ crs-sheets/
 
 # fac40-admin.js 점검이 저장소 루트에 남기는 캡처
 /fac-*.png
+
+# 가디언 주간 루프가 날짜별로 다시 만드는 레드팀 생성 사례(결정적 · gen.js로 재생성) — 대표 사례는 cases.json에 편입
+security/redteam/generated/

@@ -23,7 +23,7 @@ module.exports = (ctx, S) => {
     const acct = (Array.isArray(d.pc) ? d.pc : []).find(x => x && (x.sid === sid || x.lid === sid)); if (!acct) return [];
     const ids = new Set((Array.isArray(d.pa) ? d.pa : []).filter(x => x && x.acct === acct.id && /연결됨|승인|ok/i.test(String(x.status || ''))).map(x => String(x.child)));
     return (Array.isArray(d.mb) ? d.mb : []).filter(m => m && ids.has(String(m.id)) && m.sid).map(m => String(m.sid)); }
-  const hasGuardian = async (c, tid, sid) => { try { return (await pool.query("select 1 from pii.guardian where tid = $1 and learner_id::text = $2 and status = 'ok' limit 1", [tid, sid])).rowCount > 0; } catch { return false; } };
+  const hasGuardian = async (c, tid, sid) => { try { return (await S.inPii(tid, "select 1 from pii.guardian where tid = $1 and learner_id::text = $2 and status = 'ok' limit 1", [tid, sid])).rowCount > 0; } catch { return false; } };
   const R = {
     'GET mile-my': async (req, res, tid) => { const sid = await who(req, tid); return T(tid, async c => { const p = await S.pol(c, tid); const W = await wallet(c, tid, sid); const w = W[0];
       const rules = (await c.query("select distinct on (id) * from mil_rule where tenant_id = $1 order by id, ver desc", [tid])).rows.filter(r => r.active && r.trigger !== 'penalty');

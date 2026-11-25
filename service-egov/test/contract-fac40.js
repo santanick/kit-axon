@@ -116,7 +116,7 @@ async function run(U, tag) {
   const st = await call('A', 'GET', `/api/fac/stats?from=${T0}&to=${T1}`); R.stats = [st.st, Array.isArray(st.j.rows)];
   R.learnerAdmin = (await call('L1', 'GET', '/api/fac/overview')).st;
   R.noshow = (await call('A', 'GET', '/api/fac/noshow')).st;
-  const ex = await fetch(U + `/api/fac/export?from=${T0}&to=${T1}`, { headers: { cookie: jar.A } }); R.export = [ex.status, /csv/.test(ex.headers.get('content-type') || '')];
+  const ex = await fetch(U + `/api/fac/export?from=${T0}&to=${T1}&reason=%EC%A0%95%EC%82%B0`, { headers: { cookie: jar.A } }); R.export = [ex.status, /csv/.test(ex.headers.get('content-type') || '')];
   R.kioskBad = (await call('A', 'POST', '/api/fac/kiosk/start', { pin: '0000', fac: 'f_golf' })).j.error;
   const ks = await call('A', 'POST', '/api/fac/kiosk/start', { pin: '4321', fac: 'f_golf' }); R.kiosk = [ks.st, !!ks.j.kioskToken];
   const pq3 = await call('L2', 'POST', P('fac-qr'), { passId: bu2.j.pass.id }); R.pausedQr = pq3.j.error;

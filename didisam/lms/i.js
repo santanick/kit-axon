@@ -181,13 +181,13 @@
     const mno = ($('#w3imno')?.value || '').trim(); UI.w3iMno = mno; P.msg = '';
     try { const r = await W3.call('POST', '/api/lms/i/play/start', { content_id: UI.w3iC, member_no: mno });
       if (r.blocked) { P.msg = '다른 기기 · 창에서 재생 중입니다. 동시 재생은 허용되지 않습니다(재생 로그에 기록됨).'; render(); return; }
-      P.st = r; P.pos = r.resume_pos; P.from = r.resume_pos; P.rate = 1; await loadSide(r.content_id); render(); ACT['w3i-toggle'](); } catch (e) { P.msg = e.message; render(); }
+      P.st = r; P.pos = r.resume_pos; P.from = r.resume_pos; P.rate = 1; await loadSide(r.content_id); render(); ACT['w3i-toggle'](); } catch (e) { P.msg = errMsg(e); render(); }
   };
   async function beat(extra) {
     const s = P.st; if (!s) return; const pos = Math.floor(P.pos); const from = Math.floor(P.from);
     try { const r = await W3.call('POST', '/api/lms/i/play/beat', { play_id: s.play_id, from, pos: Math.max(pos, from), rate: P.rate }); Object.assign(s, { watched_sec: r.watched_sec, pct: r.pct, segments: r.segments }); P.from = pos;
       const st = document.getElementById('w3stat'); if (st) st.textContent = `학습 인정 ${mmss(r.watched_sec)} · 진도 ${r.pct}%${r.completed ? ' · 완료' : ''}`; paint(); }
-    catch (e) { if (e.code === 'play_over' || /바뀐 재생/.test(e.message)) { stop(); P.st = null; P.msg = '다른 기기에서 재생을 시작해 이 재생을 멈췄습니다.'; render(); } else toast(e.message, 'warn'); }
+    catch (e) { if (e.code === 'play_over' || /바뀐 재생/.test(e.message)) { stop(); P.st = null; P.msg = '다른 기기에서 재생을 시작해 이 재생을 멈췄습니다.'; render(); } else toast(errMsg(e), 'warn'); }
     if (extra) extra();
   }
   W3.beat = beat;
@@ -209,7 +209,7 @@
   ACT['w3i-q'] = el => { UI.w3iQ = el.value; el.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === el)); };
   ACT['w3i-lang'] = async el => { P.lang = el.value; if (!P.lang) { P.cues = []; render(); return; } const subs = await W3.call('GET', '/api/lms/i/subtitles', { content_id: UI.w3iC }).catch(() => []); P.cues = (subs.find(x => x.lang === P.lang) || {}).cues || []; render(); };
   ACT['w3i-ans'] = async el => { const q = P.quiz; if (!q) return; try { const r = await W3.call('POST', '/api/lms/i/quiz/answer', { quiz_id: q.quiz_id, member_no: UI.w3iMno, choice: +el.dataset.i }); q.mine = { choice: r.choice, correct: r.correct }; toast(r.correct ? `정답입니다. 영상 퀴즈 점수 ${r.score}점` : `오답입니다(정답 ${r.answer + 1}번). 영상 퀴즈 점수 ${r.score}점`, r.correct ? 'ok' : 'warn'); }
-    catch (e) { q.skip = 1; toast(e.message, 'warn'); } P.quiz = null; render(); ACT['w3i-toggle'](); };
+    catch (e) { q.skip = 1; toast(errMsg(e), 'warn'); } P.quiz = null; render(); ACT['w3i-toggle'](); };
   function endPlay(silent) { const s = P.st; stop(); if (!s) return; const pos = Math.floor(P.pos); P.st = null; P.quiz = null;
     W3.call('POST', '/api/lms/i/play/beat', { play_id: s.play_id, from: Math.floor(P.from), pos: Math.max(pos, Math.floor(P.from)), rate: P.rate }).catch(() => { }).finally(() => W3.call('POST', '/api/lms/i/play/end', { play_id: s.play_id, pos }).catch(() => { }).finally(() => { W3.drop('prog:'); W3.drop('anom:'); if (!silent) render(); })); }
   ACT['w3i-end'] = () => { endPlay(false); toast('재생을 마쳤습니다.'); };

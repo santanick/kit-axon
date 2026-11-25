@@ -6,12 +6,13 @@
    · 쓰기 도구는 기관 상태를 낙관적 잠금(rev)으로 갱신하고 감사 기록을 남긴다. 데이터룸 정책 room.egress.mcp === false면 거부 */
 const crypto = require('node:crypto');
 const { inTenant } = require('./db');
+const { mcpPin } = require('./aitools');
 
 const PROTO = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const KEY_RE = /^dds_[A-Za-z0-9_-]{40}$/;
 const MAX_KEYS = 20;
 
-function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, version = '16.0' }) {
+function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, version = '16.0', blocked = null, onDrift = null, pinHash = '' }) {
   const fp = key => crypto.createHmac('sha256', 'mcp|' + pepper).update(key).digest('hex');
 
   /* ── 키 관리(스튜디오 세션 · 정운영자) ── */
@@ -20,8 +21,10 @@ function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, versi
     return { keys: rows };
   }
   async function createKey(a, req) {
-    if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 API 키를 발급할 수 있습니다.', 'role');
+    /* 보안 2차 SEC-0011: 쓰기(write) 키 발급은 정운영자만, 부운영자는 읽기(read) 키만. 교강사는 needStaff에서 막힌다 */
+    if (a.role !== 'owner' && a.role !== 'sub') throw new HttpErr(403, '정운영자만 API 키를 발급할 수 있습니다.', 'role');
     const b = await readBody(req, 2048); const name = String(b.name || '').trim().slice(0, 40); const scope = b.scope === 'write' ? 'write' : 'read';
+    if (scope === 'write' && a.role !== 'owner') throw new HttpErr(403, '쓰기 권한 키는 정운영자만 발급할 수 있습니다. 부운영자는 읽기 전용 키만 발급할 수 있습니다.', 'role');
     if (!name) throw new HttpErr(400, '키 이름(어디에 쓰는지)을 입력하세요.', 'name');
     const n = (await pool.query('select count(*)::int n from api_keys where tenant_id = $1 and revoked_at is null', [a.tid])).rows[0].n;
     if (n >= MAX_KEYS) throw new HttpErr(400, `사용 중인 키는 ${MAX_KEYS}개까지입니다. 쓰지 않는 키를 폐기하세요.`, 'max');
@@ -31,9 +34,11 @@ function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, versi
     return { id, name, scope, prefix: key.slice(0, 12), key };
   }
   async function revokeKey(a, req) {
-    if (a.role !== 'owner') throw new HttpErr(403, '정운영자만 폐기할 수 있습니다.', 'role');
+    if (a.role !== 'owner' && a.role !== 'sub') throw new HttpErr(403, '정운영자만 폐기할 수 있습니다.', 'role');
     const b = await readBody(req, 1024); const id = String(b.id || '');
-    const r = await pool.query('update api_keys set revoked_at = now() where tenant_id = $1 and id = $2 and revoked_at is null', [a.tid, id]);
+    /* 보안 2차 SEC-0011: 부운영자는 읽기 키만 폐기(쓰기 키는 정운영자만) */
+    const r = await pool.query(`update api_keys set revoked_at = now() where tenant_id = $1 and id = $2 and revoked_at is null${a.role === 'owner' ? '' : " and scope = 'read'"}`, [a.tid, id]);
+    if (!r.rowCount && a.role !== 'owner' && (await pool.query("select 1 from api_keys where tenant_id = $1 and id = $2 and revoked_at is null and scope = 'write'", [a.tid, id])).rowCount) throw new HttpErr(403, '쓰기 권한 키는 정운영자만 폐기할 수 있습니다.', 'role');
     if (!r.rowCount) throw new HttpErr(404, '없는 키이거나 이미 폐기되었습니다.', 'key');
     await inTenant(pool, a.tid, c => audit(c, a.tid, a.email, 'apikey.revoke', { id }));
     return { ok: true };
@@ -45,6 +50,7 @@ function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, versi
     if (!KEY_RE.test(key)) return null;
     const { rows } = await pool.query("select k.id, k.tenant_id tid, k.name, k.scope, t.name org, t.type from api_keys k join tenants t on t.id = k.tenant_id where k.hash = $1 and k.revoked_at is null", [fp(key)]);
     if (!rows[0]) return null;
+    if (blocked && await blocked(rows[0].tid)) return null; /* 가디언 긴급 차단(키 비활성 · egress) — 키는 지우지 않는다 */
     pool.query('update api_keys set last_used = now(), calls = calls + 1 where id = $1', [rows[0].id]).catch(() => {});
     return rows[0];
   }
@@ -89,7 +95,11 @@ function createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, versi
   ];
 
   const rpcErr = (id, code, message) => ({ jsonrpc: '2.0', id: id ?? null, error: { code, message } });
+  /* 체크리스트 11: 도구 목록 해시가 허용목록 고정값과 다르면 연결을 멈추고 '기능 끄기' 신호를 한 번 남긴다(aitools.MCP_ALLOW) */
+  const PIN = mcpPin('didisam-studio', TOOLS, pinHash); let drift = false;
   async function handle(req, res, send) {
+    if (!PIN.ok) { if (!drift) { drift = true; try { onDrift && onDrift({ id: 'didisam-studio', want: PIN.want, got: PIN.got }); } catch (e) { /* 신호 실패는 차단에 영향 없음 */ } }
+      return send(res, 503, rpcErr(null, -32003, '도구 목록이 허용목록 해시와 달라 연결을 멈췄습니다. 보안 재검토 후 다시 열립니다.')); }
     if (req.method === 'GET' || req.method === 'DELETE') return send(res, 405, { error: 'method', message: '이 서버는 POST(JSON 응답)만 지원합니다.' }, { allow: 'POST' });
     if (req.method !== 'POST') return send(res, 405, 'method');
     const a = await keyAuth(req);

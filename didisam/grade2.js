@@ -23,6 +23,7 @@
     const mock = (c, id) => { const r = aiEval(c, id); Object.assign(r, { model: 'rule', at: Date.now(), st: 'draft', ok: false, res: r.total >= 70 ? 'graded' : 'returned' }); delete r.fin; return r; };
     /* 운영: 게이트웨이(feature 'grade'), 실패 · 한도 초과면 규칙 모의 */
     async function draft(c, id) { const p = c.prog[id]; const rb = rbOf(c); if (!rb) throw Object.assign(new Error('rubric'), { code: 'rubric' }); if (!readable(p.sub)) throw Object.assign(new Error('unread'), { code: 'unread' });
+      if (window.PLAN && !PLAN.can('grade')) throw Object.assign(new Error('plan'), { code: 'plan_feature' }); /* v47 요금제(Pro부터) */
       if (!live() || typeof api !== 'function') return mock(c, id);
       try { const sid = (M(id) && (M(id).sid || (M(id).extra || {})['학번'])) || 'learner';
         const sys = '너는 교수자의 채점 조교다. 루브릭 기준마다 수준(0=우수,1=보통,2=미흡)과 근거 한 줄, 전체 피드백 초안(3문장 이내, 존댓말)을 JSON으로만 답한다: {"crit":[{"li":0,"why":""}],"fb":""}. 점수 확정은 교수자가 한다.';
@@ -31,8 +32,8 @@
         const tx = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join(''); const o = JSON.parse(tx.slice(tx.indexOf('{'), tx.lastIndexOf('}') + 1));
         const crit = rb.criteria.map((x, k) => { const li = Math.min(2, Math.max(0, +((o.crit || [])[k] || {}).li || 0)); return { li, score: Math.round(x.pts * PTS[li]), why: String(((o.crit || [])[k] || {}).why || '').slice(0, 200) }; });
         const total = crit.reduce((a, x) => a + x.score, 0); return p.ai = { crit, total, rb: rb.id, fb: String(o.fb || '').slice(0, 1000), model: j.model || 'gw', at: Date.now(), st: 'draft', ok: false, res: total >= 70 ? 'graded' : 'returned' };
-      } catch (e) { return mock(c, id); } }
-    const errMsg = e => e && e.code === 'rubric' ? '루브릭을 연결해야 AI 초안을 만들 수 있습니다.' : e && e.code === 'unread' ? '제출물 글자를 읽지 못해 초안을 만들 수 없습니다. 직접 채점해 주세요.' : 'AI 초안을 만들지 못했습니다. 직접 채우거나 다시 시도해 주세요.';
+      } catch (e) { if (e && e.code === 'plan_feature') throw e; return mock(c, id); } }
+    const errMsg = e => e && e.code === 'plan_feature' ? `AI 채점 초안은 ${window.PLAN ? PLAN.name(PLAN.need('grade')) : 'Pro'} 요금제부터 이용할 수 있습니다. 설정 › 요금제에서 확인하십시오.` : e && e.code === 'rubric' ? '루브릭을 연결해야 AI 초안을 만들 수 있습니다.' : e && e.code === 'unread' ? '제출물 글자를 읽지 못해 초안을 만들 수 없습니다. 직접 채점해 주세요.' : 'AI 초안을 만들지 못했습니다. 직접 채우거나 다시 시도해 주세요.';
     const stOf = p => p.fbSent && !(p.ai && (p.ai.st === 'edit' || p.ai.st === 'draft') && p.ai.at > (p.fbSent.at || 0)) ? 'sent' : p.ai ? (p.ai.ok ? 'ok' : p.ai.st === 'edit' ? 'edit' : 'draft') : 'none';
     const STN = { none: '초안 전', draft: '초안', edit: '수정 중', ok: '확인됨', sent: '발송됨' };
     /* 발송: 확인한 건만. 이미 보낸 건은 이력 · 알림 */
@@ -77,14 +78,14 @@
     { const base = ACT.grade; ACT.grade = (el, ...r) => on() ? open(el) : base(el, ...r); }
     { const base = ACT['g-ai']; ACT['g-ai'] = (el, ...r) => on() ? open(el) : base(el, ...r); }
     /* 대기 전체 초안 · 확인한 건 일괄 발송 */
-    ACT['g2-all'] = async () => { const P = pend(); let n = 0, bad = 0; for (const { c, id } of P) { if (c.prog[id].ai && c.prog[id].ai.st !== 'sent') continue; try { await draft(c, id); n++; } catch (e) { bad++; } } S.ai.usage = (S.ai.usage || 0) + n; save(); render(); toast(`${n}건 AI 초안을 만들었습니다.${bad ? ` ${bad}건은 루브릭 연결 · 제출물 확인이 필요합니다.` : ''} 한 건씩 확인 후 보내세요.`, n ? 'ok' : 'warn'); };
+    ACT['g2-all'] = async () => { if (window.PLAN && !PLAN.can('grade')) { toast(errMsg({ code: 'plan_feature' }), 'warn'); return; } const P = pend(); let n = 0, bad = 0; for (const { c, id } of P) { if (c.prog[id].ai && c.prog[id].ai.st !== 'sent') continue; try { await draft(c, id); n++; } catch (e) { bad++; } } S.ai.usage = (S.ai.usage || 0) + n; save(); render(); toast(`${n}건 AI 초안을 만들었습니다.${bad ? ` ${bad}건은 루브릭 연결 · 제출물 확인이 필요합니다.` : ''} 한 건씩 확인 후 보내세요.`, n ? 'ok' : 'warn'); };
     ACT['g2-send'] = () => { const P = S.classes.flatMap(c => Object.keys(c.prog || {}).filter(id => c.prog[id].ai && c.prog[id].ai.ok).map(id => ({ c, id }))).filter(x => S.me.role !== 'teacher' || pend().some(y => y.c === x.c) || x.c.teacher === S.me.name);
       if (!P.length) { toast('확인 표시한 초안이 없습니다. 채점 화면에서 「확인」을 체크하세요.', 'warn'); return; } P.forEach(({ c, id }) => send(c, id)); save(); render(); toast(`확인한 ${P.length}건을 보냈습니다.`, 'ok'); };
     ACT['g2-ok'] = el => { const c = C(el.dataset.c), p = c && c.prog[el.dataset.v]; if (!p || !p.ai) return; p.ai.ok = !p.ai.ok; save(); render(); };
     { const base = VIEWS.assess; VIEWS.assess = (...a) => { const h = base(...a); if (!on()) return h; try {
       const P = pend(); if (S.aipol.autoDraft !== false && !live()) P.forEach(({ c, id }) => { const p = c.prog[id]; if (!p.ai && rbOf(c) && readable(p.sub)) mock(c, id); });
       const D = P.map(({ c, id }) => ({ c, id, p: c.prog[id] })); const okN = S.classes.reduce((s, c) => s + Object.values(c.prog || {}).filter(p => p.ai && p.ai.ok).length, 0);
-      const box = `<section class="card g2-box"><div class="g2-bh"><b>${icx('lock', 15)} AI 초안 — 확인 전에는 학습자에게 보이지 않습니다</b><span class="sp"></span><button class="btn sm ink" data-act="g2-all">${icx('spark', 14)} 대기 ${P.length}건 초안 만들기</button><button class="btn sm pri" data-act="g2-send" ${okN ? '' : 'disabled'}>확인한 ${okN}건 보내기</button></div>
+      const box = `<section class="card g2-box"><div class="g2-bh"><b>${icx('lock', 15)} ${(typeof aiMark === 'function' ? aiMark('grade') : '')} 확인 전에는 학습자에게 보이지 않습니다</b><span class="sp"></span><button class="btn sm ink" data-act="g2-all">${icx('spark', 14)} 대기 ${P.length}건 초안 만들기</button><button class="btn sm pri" data-act="g2-send" ${okN ? '' : 'disabled'}>확인한 ${okN}건 보내기</button></div>
         ${D.length ? `<ul class="g2-list">${D.slice(0, 30).map(({ c, id, p }) => `<li><label><input type="checkbox" data-act="g2-ok" data-c="${esc2(c.id)}" data-v="${esc2(id)}" ${p.ai && p.ai.ok ? 'checked' : ''} ${p.ai ? '' : 'disabled'} aria-label="확인"> ${mn(id)} · ${esc2(c.name)}</label><span class="g2-st s-${stOf(p)}">${STN[stOf(p)]}</span>${p.ai ? `<small>AI ${p.ai.total}점${p.ai.fin != null ? ` → ${p.ai.fin}점` : ''}</small>` : ''}<button class="btn sm ink" data-act="grade" data-c="${esc2(c.id)}" data-v="${esc2(id)}">채점</button></li>`).join('')}</ul>` : `<p class="g2-empty">채점할 제출물이 없습니다. <a href="#" data-act="as-done">지난 발송 내역</a></p>`}</section>`;
       const k = h.indexOf('<section class="kpis">'); return k < 0 ? box + h : h.slice(0, k) + box + h.slice(k); } catch (e) { console.error('grade2', e); return h; } }; }
     ACT['as-done'] = () => { UI.asF = 'done'; render(); };

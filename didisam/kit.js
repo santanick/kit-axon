@@ -179,7 +179,7 @@ VIEWS.progress = () => {
   <div class="card"><div class="ch"><b>AI 학습 튜터</b>${tag(tu.enabled ? '사용 중' : '꺼짐', tu.enabled ? 'g' : '')}</div>
     ${sw('enabled', '튜터 사용', tu, '학습 화면 오른쪽 아래에 표시')}
     <label class="fl">튜터 이름<input maxlength="12" value="${esc(tu.name)}" data-chg="tu" data-k="name"></label>
-    <label class="rng2"><span><b>1인 하루 질문 수</b><small>비용 조절</small></span><span class="r7-rr"><input type="range" min="5" max="50" step="5" value="${tu.daily}" data-chg="tu" data-k="daily"><em>${tu.daily}회</em></span></label>
+    ${(() => { const d = tuDailyOf(tu.daily); /* v47: 운영자가 숫자를 직접 입력(1~500회 · 비용 보호 상한) + 자주 쓰는 값 칩 */ return `<div class="rng2 v47-dq"><span><b>1인 하루 질문 수</b><small>비용 조절 · 1~${TU_DAILY_MAX}회, 숫자를 직접 넣을 수 있습니다</small></span><span class="v47-dqv"><span class="v47-dqc" role="group" aria-label="자주 쓰는 값">${TU_DAILY_CHIPS.map(n => `<button type="button" class="btn sm${n === d ? ' on' : ''}" aria-pressed="${n === d}" data-act="tud" data-v="${n}">${n}회</button>`).join('')}</span><label class="v47-dqn"><input type="number" min="1" max="${TU_DAILY_MAX}" step="1" inputmode="numeric" value="${d}" data-chg="tud" aria-label="1인 하루 질문 수(1~${TU_DAILY_MAX}회)"><em>회</em></label></span></div>`; })()}
     <label class="fl">도움 범위<select data-chg="tu" data-k="help"><option value="hint" ${tu.help === 'hint' ? 'selected' : ''}>힌트만</option><option value="feedback" ${tu.help === 'feedback' ? 'selected' : ''}>초안을 평가 기준으로 피드백</option></select></label>
     <label class="fl">모델<select data-chg="tu" data-k="model"><option value="haiku" ${tu.model === 'haiku' ? 'selected' : ''}>빠르고 저렴(Haiku 5.5, 기본)</option><option value="sonnet" ${tu.model === 'sonnet' ? 'selected' : ''}>깊이 있는 답변(Sonnet 5.5)</option></select></label>
     <label class="rng2"><span><b>방문자(로그인 전) 질문 수</b><small>브라우저당 하루 · 강좌 · 수강 · 가입 안내</small></span><span class="r7-rr"><input type="range" min="0" max="30" step="5" value="${tu.guestDaily ?? 10}" data-chg="tu" data-k="guestDaily"><em>${tu.guestDaily ?? 10}회</em></span></label>
@@ -188,6 +188,13 @@ VIEWS.progress = () => {
     <p class="mini">과제 결과물을 대신 써 주지 않습니다. 위기 상황은 상담 기관 안내, 개인정보 질문은 거절합니다.</p></div></section>`;
 };
 ACT.pg = el => { const v = el.type === 'checkbox' ? el.checked : +el.value; S.settings.progress[el.dataset.k] = v; save(); if (el.type === 'range') el.nextElementSibling.textContent = v + (el.dataset.k === 'watchThr' ? '%' : '회'); else toast('저장했습니다.', 'ok'); };
+/* v47 1인 하루 질문 수: 1~500(서버 app.js tutorRoute · Java PubServiceImpl와 같은 상한), 빈 값 · 0 · 숫자 아님은 기본 20 */
+const TU_DAILY_MAX = 500, TU_DAILY_CHIPS = [10, 20, 50, 100];
+function tuDailyOf(v) { const n = Math.round(+v); return Number.isFinite(n) && n > 0 ? Math.min(TU_DAILY_MAX, n) : 20; }
+ACT.tud = el => { const raw = String(el.dataset.v != null ? el.dataset.v : el.value).trim(); const n = Math.round(+raw);
+  if (!raw || !Number.isFinite(n)) { toast(`1인 하루 질문 수는 숫자(1~${TU_DAILY_MAX}회)로 넣어 주세요.`, 'warn'); render(); return; }
+  const v = Math.max(1, Math.min(TU_DAILY_MAX, n)); S.settings.tutor.daily = v; save();
+  if (String(v) !== raw) toast(`1인 하루 질문 수는 1~${TU_DAILY_MAX}회로 정할 수 있어 ${v}회로 맞췄습니다.`, 'warn'); else toast(`1인 하루 질문 수를 ${v}회로 저장했습니다.`, 'ok'); render(); };
 ACT.tu = el => { const v = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value; S.settings.tutor[el.dataset.k] = v; save(); if (el.type === 'range') el.nextElementSibling.textContent = v + '회'; else if (el.type === 'checkbox') render(); else toast('저장했습니다.', 'ok'); };
 
 /* ═════════ 공지 · 알림함 ═════════ */

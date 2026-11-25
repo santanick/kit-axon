@@ -88,7 +88,7 @@ ACT['ls-gauto'] = () => { LSV().grid = lsGridAuto(); save(); render(); toast('�
 ACT['ls-brand'] = el => { LSV().brand.short = el.value.trim().slice(0, 8); save(); };
 ACT['ls-look'] = el => { LSV().look = el.value; save(); render(); };
 ACT['ls-pub'] = () => { const L = LSV(); L.pub = lsSnapshot(); L.pubAt = nowStr(); logAudit('학습자 사이트 게시'); save(); render(); toast('홈페이지 · 학습 사이트를 게시했습니다.', 'ok'); };
-ACT['ls-lpsync'] = async () => { if (typeof LIVE !== 'undefined') { try { window.__LP = (await api('GET', '/api/learners/progress')).lp || {}; } catch (e) { toast(e.message, 'bad'); return; } } const n = lpApply(); save(); render(); toast(`학습자 활동 ${n}건을 회원 · 과정 · 진단에 반영했습니다.`, 'ok'); };
+ACT['ls-lpsync'] = async () => { if (typeof LIVE !== 'undefined') { try { window.__LP = (await api('GET', '/api/learners/progress')).lp || {}; } catch (e) { toast(errMsg(e), 'bad'); return; } } const n = lpApply(); save(); render(); toast(`학습자 활동 ${n}건을 회원 · 과정 · 진단에 반영했습니다.`, 'ok'); };
 
 /* ── 학습 › 튜토리얼 ── */
 VIEWS.tutorial = () => {

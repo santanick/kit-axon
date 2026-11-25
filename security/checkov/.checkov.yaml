@@ -1,0 +1,27 @@
+# 디디쌤 Checkov 설정(IaC · 컨테이너 · CI 설정 점검) — 버전 고정: checkov==3.2.469
+# 실행(저장소 루트): checkov --config-file security/checkov/.checkov.yaml
+# 외부 플랫폼 연동 없음(API 키 미사용 · 정책 내려받기 끔). 결과는 가디언 원장에 finding으로만 넣고, 수정은 PR + 사람 승인.
+directory:
+  - service
+  - service-egov
+  - .github
+framework:
+  - dockerfile
+  - github_actions
+  - secrets
+skip-download: true
+download-external-modules: false
+compact: true
+quiet: true
+# Phase 0은 정보 수집용(빌드 중단 안 함). Phase 1에서 High 이상만 실패로 전환합니다.
+soft-fail: true
+output:
+  - cli
+skip-path:
+  - service/server/node_modules
+  - service/public
+skip-check:
+  # Cloud Run은 자체 시작 · 활성 프로브를 쓰므로 이미지 HEALTHCHECK를 두지 않습니다(근거: security/checkov/NOTES.md)
+  - CKV_DOCKER_2
+  # security-scan.yml의 zap_target 입력은 빌드 산출물에 쓰이지 않고 https 형식 확인 뒤 ZAP 대상 URL로만 쓰입니다(가디언 5차 g3)
+  - CKV_GHA_7

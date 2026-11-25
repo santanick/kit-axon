@@ -70,7 +70,7 @@ async function scenario(base, tag) {
   R.makeup = await call('POST', '/api/lms/g/makeup', { cookie: ck, body: { session_id: S(5), starts_at: '2026-10-10T10:00:00+09:00', room: '공학관 205' } });
   R.online = await call('POST', '/api/lms/g/online', { cookie: ck, body: { section_id: sec } });
   R.roster = await call('GET', '/api/lms/g/roster?section_id=' + sec, { cookie: ck });
-  R.export = await call('GET', '/api/lms/g/export?section_id=' + sec, { cookie: ck });
+  R.export = await call('GET', '/api/lms/g/export?reason=%EC%A0%90%EA%B2%80&section_id=' + sec, { cookie: ck });
   R.beacons = await call('GET', '/api/lms/g/beacons', { cookie: ck });
   R.beacon = await call('POST', '/api/lms/g/beacon', { cookie: ck, body: { beacon_id: 'BLE-HUM101', kind: 'ble', room: '인문관 101' } });
   R.beaconBad = await call('POST', '/api/lms/g/beacon', { cookie: ck, body: { beacon_id: 'X1', kind: 'wifi', room: 'a' } });

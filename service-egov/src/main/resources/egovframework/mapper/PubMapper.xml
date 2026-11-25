@@ -8,6 +8,7 @@
   <select id="selectCommLive" resultType="string">select (data->'_cm')::text cm from learner_events where tenant_id = #{tid} and id &gt; #{seq} and type in ('post-new', 'post-cmt') and data->'_cm' is not null and at &gt; now() - interval '30 days' order by id limit 300</select>
   <!-- v37 L2 링크 공유 미리보기(og): 게시본의 검색 노출 값 · 사이트 이름만(Node app.js serveStatic과 같은 열) -->
   <select id="selectOg" resultType="java.util.LinkedHashMap">select (doc->'lsite'->'pub'->'hp'->'seo')::text seo, doc->'lsite'->'pub'->'hp'->>'name' name, (doc->'lsite'->'pub'->'org')::text org from tenant_state where tenant_id = #{tid}</select>
+  <select id="countLearnerFails" resultType="int">select count(*)::int from audit_log where tenant_id = #{tid} and actor = #{actor} and action = 'llogin.fail' and at &gt; greatest(now() - interval '15 minutes', coalesce((select max(at) from audit_log where tenant_id = #{tid} and actor = #{actor} and action = 'llogin'), 'epoch'::timestamptz))</select>
   <select id="selectLearner" resultType="java.util.LinkedHashMap">select sid, dept, code_hash, pw_hash from learners where tenant_id = #{tid} and sid = #{sid}</select>
   <select id="selectLearnerDept" resultType="java.util.LinkedHashMap">select dept, pw_hash from learners where tenant_id = #{tid} and sid = #{sid}</select>
   <update id="touchLearner">update learners set last_login = now() where tenant_id = #{tid} and sid = #{sid}</update>
@@ -30,6 +31,9 @@
     values (#{tid}, #{sid}, #{f}, #{cls}, #{item}, #{lvl}, #{q}, #{a}, #{tin}, #{tout}, now() + make_interval(days => #{days}))
   </insert>
   <delete id="purgeTurn">delete from ai_turn where tenant_id = #{tid} and purge_at &lt; now()</delete>
+  <select id="monthUsed" resultType="long" flushCache="true" useCache="false">select coalesce(sum(tin + tout), 0)::bigint n from ai_usage where tenant_id = #{tid} and day &gt;= cast(#{from} as date)</select>
+  <select id="selectCreditRows" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select id, pack, tokens::bigint tokens, amount::bigint amount, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD') pday, to_char(paid_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') at, expires_at::text expires from ai_credit where tenant_id = #{tid} and status = 'paid' and expires_at &gt;= cast(#{from} as date) order by paid_at</select>
+  <select id="selectUsageFrom" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select day::text, (tin + tout)::bigint n from ai_usage where tenant_id = #{tid} and day &gt;= cast(#{from} as date) order by day</select>
   <select id="selectAipol" resultType="string">select (doc->'aipol')::text from tenant_state where tenant_id = #{tid}</select>
   <insert id="upsertProgress">
     insert into learner_progress (tenant_id, sid, lp, bytes) values (#{tid}, #{sid}, cast(#{lp} as jsonb), #{bytes})
@@ -37,7 +41,7 @@
   </insert>
   <select id="selectTutorCtx" resultType="java.util.LinkedHashMap">
     select (doc->'settings'->'tutor')::text tu, (doc->'org'->'room')::text room, doc->'org'->>'type' type, (doc->'lsite'->'pub')::text pub,
-           (doc->'members')::text members, (doc->'classes')::text classes, (doc->'badges')::text badges, (doc->'tq')::text tq, (doc->'bkgrades')::text bkgrades, (doc->'aipol')::text aipol
+           (doc->'members')::text members, (doc->'classes')::text classes, (doc->'badges')::text badges, (doc->'tq')::text tq, (doc->'bkgrades')::text bkgrades, (doc->'aipol')::text aipol, (doc->'aiplan')::text aiplan, (doc->'plan')::text plan
       from tenant_state where tenant_id = #{tid}
   </select>
   <select id="incUsage" resultType="int" flushCache="true" useCache="false">
@@ -48,7 +52,7 @@
   <insert id="insertLearnerSession">insert into learner_sessions (id, tenant_id, sid, expires_at) values (#{id}, #{tid}, #{sid}, now() + interval '30 days')</insert>
   <select id="selectLearnerSession" resultType="java.util.LinkedHashMap">select tenant_id, sid, extract(epoch from now() - last_at)::float8 idle from learner_sessions where id = #{id} and expires_at &gt; now()</select>
   <select id="selectIdleH" resultType="java.lang.String">select doc->'org'->'cpl'->>'idleH' from tenant_state where tenant_id = #{tid} and (doc->'org'->'cpl'->>'on')::boolean</select>
-  <update id="touchLearnerSession">update learner_sessions set last_at = now() where id = #{id}</update>
+  <update id="touchLearnerSession">update learner_sessions set last_at = now(), expires_at = case when keep then least(created_at + interval '90 days', now() + interval '30 days') else expires_at end where id = #{id}</update><!-- 가디언 4차 #8: 유지 켬은 마지막 사용 + 30일(최대 90일) -->
   <delete id="deleteLearnerSession">delete from learner_sessions where id = #{id}</delete>
   <!-- v33 학습자 → 운영자 요청함 · 대학 첫 로그인 동의 -->
   <select id="selectEvents" resultType="java.util.LinkedHashMap">

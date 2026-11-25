@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:php="http://php.net/ns/releases">
+    <title>PHP.net releases</title>
+    <link href="/releases.atom" rel="self"/>
+    <icon>/images/news/php-logo.gif</icon>
+    <author>
+        <name>Webmaster</name>
+        <uri>http://php.net/contact</uri>
+        <email>php-webmaster@lists.php.net</email>
+    </author>
+    <id>http://php.net/releases/index.php</id>
+    <updated>2026-11-19T00:00:00+00:00</updated>
+    <entry>
+        <title>PHP 8.6.0 released!</title>
+        <id>http://php.net/releases/8_6_0.php</id>
+        <php:version>8.6.0</php:version>
+        <published>2026-11-19T00:00:00+00:00</published>
+        <summary type="html">There is a new PHP release in town!</summary>
+        <link rel="enclosure" title="PHP 8.6.0 (tar.gz)" href="/distributions/php-8.6.0.tar.gz">
+            <php:sha256>62337dccde3d9fcc39797d4529f42637613036eaf3875353c206874e5813a3c1</php:sha256>
+            <php:releaseDate>2026-11-19T00:00:00+00:00</php:releaseDate>
+        </link>
+        <link rel="enclosure" title="PHP 8.6.0 (tar.bz2)" href="/distributions/php-8.6.0.tar.bz2">
+            <php:sha256>9e233e38999a89f351a33ae6a7276d1caf5addcba11e09e3bbe3a8d25f411ff1</php:sha256>
+            <php:releaseDate>2026-11-19T00:00:00+00:00</php:releaseDate>
+        </link>
+        <link rel="enclosure" title="PHP 8.6.0 (tar.xz)" href="/distributions/php-8.6.0.tar.xz">
+            <php:sha256>5f84beaa3d763aee1e4feed99bf54ec692c383b322e25626807b589238c3a087</php:sha256>
+            <php:releaseDate>2026-11-19T00:00:00+00:00</php:releaseDate>
+        </link>
+        <updated>2026-11-19T00:00:00+00:00</updated>
+        <content src="http://php.net/releases/8_6_0.php" type="application/xhtml+xml"/>
+    </entry>
+<entry>
+        <title>PHP 8.5.13 released!</title>
+        <id>http://php.net/releases/8_5_13.php</id>
+        <php:version>8.5.13</php:version>
+        <published>2026-11-19T00:00:00+00:00</published>
+        <summary type="html">There is a new PHP release in town!</summary>
+        <link rel="enclosure" title="PHP 8.5.13 (tar.gz)" href="/distributions/php-8.5.13.tar.gz">
+            <php:sha256>3aeb20a7e667e197929747f76047409196f91f0172357439319cba344df8b3e1</php:sha256>
+            <php:releaseDate>2026-11-19T00:00:00+00:00</php:releaseDate>
+        </link>
+        <link rel="enclosure" title="PHP 8.5.13 (tar.bz2)" href="/distributions/php-8.5.13.tar.bz2">
+            <php:sha256>47d50c36016784a4a71f019cd7bfa29c31e4be0de22d3fa06095b280a6299e2f</php:sha256>
+            <php:releaseDate>2026-11-19T00:00:00+00:00</php:releaseDate>
+        </link>
+        <link rel="enclosure" title="PHP 8.5.13 (tar.xz)" href="/distributions/php-8.5.13.tar.xz">
+            <php:sha256>607602acaf0c3061818e9916ec44a058e8b3d43959a83862b9cd3ec7bf5b785f</php:sha256>
+            <php:releaseDate>2026-11-19T00:00:00+00:00</php:releaseDate>
+        </link>
+        <php:tag>security</php:tag>
+        <updated>2026-11-19T00:00:00+00:00</updated>
+        <content src="http://php.net/releases/8_5_13.php" type="application/xhtml+xml"/>
+    </entry>
+</feed>

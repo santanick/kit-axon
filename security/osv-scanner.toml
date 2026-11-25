@@ -1,0 +1,11 @@
+# 가디언 위험 수용 목록(SEC-0041, 승인 대상: 대표님 · 부대표) — 만료일이 지나면 다시 실패 기준에 걸린다(재검토 강제)
+# spring-webmvc 6.2.19: 6.2.x 수정본 없음(7.0.9 · Spring Boot 4에서만 수정), 디디쌤은 SseEmitter · FragmentsRendering · XsltView를 쓰지 않아 도달 불가
+[[IgnoredVulns]]
+id = "GHSA-j9f9-w8pj-32f8"
+ignoreUntil = 2027-02-28T00:00:00Z
+reason = "SEC-0041 CVE-2026-47890 SSE 조각 렌더링 — 미사용 경로, Boot 4 전환 시 해소"
+
+[[IgnoredVulns]]
+id = "GHSA-pc63-qcmh-9cmg"
+ignoreUntil = 2027-02-28T00:00:00Z
+reason = "SEC-0041 CVE-2026-47884 XsltView — 미사용 경로, Boot 4 전환 시 해소"

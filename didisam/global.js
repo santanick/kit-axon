@@ -130,7 +130,7 @@ const TRC = {}; let TRDL = 0; /* 번역 모델 내려받기 실패 시 60초 동
 const withTO = (pr, ms) => Promise.race([pr, new Promise((_, no) => setTimeout(() => no(new Error('timeout')), ms))]);
 async function trEngine(from, to) {
   const k = from + '>' + to; if (TRC[k] && (TRC[k].v || Date.now() - TRC[k].at < 60000)) return TRC[k].v;
-  try { if (self.Translator) { const a = await withTO(Translator.availability({ sourceLanguage: from, targetLanguage: to }), 3000); if (a === 'available' || (a !== 'unavailable' && Date.now() - TRDL > 60000)) { TRDL = a === 'available' ? TRDL : Date.now(); const v = await withTO(Translator.create({ sourceLanguage: from, targetLanguage: to }), a === 'available' ? 5000 : 25000); TRDL = 0; TRC[k] = { v, at: Date.now() }; return v; } } } catch (e) { console.warn('translator', e.message || e); }
+  try { if (self.Translator) { const a = await withTO(Translator.availability({ sourceLanguage: from, targetLanguage: to }), 3000); if (a === 'available' || (a !== 'unavailable' && Date.now() - TRDL > 60000)) { TRDL = a === 'available' ? TRDL : Date.now(); const v = await withTO(Translator.create({ sourceLanguage: from, targetLanguage: to }), a === 'available' ? 5000 : 25000); TRDL = 0; TRC[k] = { v, at: Date.now() }; return v; } } } catch (e) { console.warn('translator', errMsg(e)); }
   TRC[k] = { v: null, at: Date.now() }; return null;
 }
 async function trText(text, to, from = 'ko') { if (!text || to === from) return { t: text, how: 'orig' }; if (DICT[text]?.[to]) return { t: DICT[text][to], how: 'dict' }; const tr = await trEngine(from, to); if (!tr) return null; try { return { t: await withTO(tr.translate(text), 8000), how: 'browser' }; } catch (e) { return null; } }

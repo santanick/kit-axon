@@ -61,7 +61,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     const nav = await a.evaluate(() => [...document.querySelectorAll('.ap-nav a span')].map(s => parseFloat(getComputedStyle(s).fontSize)));
     ok(nav.length && Math.min(...nav) >= 12, `앱 360 아래 탭 글자 12px 이상 (${Math.min(...nav)})`);
     ok(await a.evaluate(() => !/가격/.test((document.querySelector('.ap-home') || {}).textContent || '')), '앱 홈: 가격 안내 없음');
-    await login(a, code); await go(a, '#acct', 700); const me = await a.evaluate(() => ({ t: (document.querySelector('.ls-me') || {}).textContent || '', out: !!document.querySelector('.ls-me [data-lact=logout]'), fs: !!document.querySelector('[data-lfs=toggle]') }));
+    await login(a, code); await go(a, '#acct', 700); const me = await a.evaluate(() => ({ t: (document.querySelector('.ls-me') || {}).textContent || '', out: !!document.querySelector('.ls-me [data-lact=logout], .ls-out [data-lact=logout]') /* v47 D12: 로그아웃은 「나」 맨 아래 별도 줄(.ls-out) */, fs: !!document.querySelector('[data-lfs=toggle]') }));
     ok(!/결제 · 환불/.test(me.t), '앱 \'나\': 결제 · 환불 줄 없음'); ok(me.out, '앱 \'나\': 로그아웃 바로 있음'); ok(me.fs, '앱 \'나\': 글자 크게 보기');
     await a.click('[data-lfs=toggle]'); await a.waitForTimeout(150); ok(await a.evaluate(() => document.documentElement.classList.contains('lfs-lg')), '글자 크게 켜짐(모든 화면)'); await a.click('[data-lfs=toggle]');
     const tut = await a.evaluate(() => { const f = LSAM.find('글씨 크게 하려면?'); const g = LSAM.find('환불은 어떻게 해요?'); return [f && f.r().t, g && g.r().t]; });

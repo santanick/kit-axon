@@ -9,7 +9,7 @@ const MCP_TOOLS = [['get_overview', '운영 현황 요약', 'r'], ['list_courses
 async function mcpLoad(force) {
   if (MCPX.busy) return; if (MCPX.keys && !force) return;
   if (!mcpLive()) { MCPX.keys = (S.apikeys || []).slice(); return; }
-  MCPX.busy = true; try { MCPX.keys = (await api('GET', '/api/keys')).keys || []; MCPX.err = ''; } catch (e) { MCPX.err = e.message; MCPX.keys = []; } finally { MCPX.busy = false; }
+  MCPX.busy = true; try { MCPX.keys = (await api('GET', '/api/keys')).keys || []; MCPX.err = ''; } catch (e) { MCPX.err = errMsg(e); MCPX.keys = []; } finally { MCPX.busy = false; }
   if (UI.settings === 'integr' && CUR.ws === 'settings') render();
 }
 const mcpPol = () => { const r = S.org.room || (S.org.room = {}); r.egress = r.egress || {}; return r.egress.mcp !== false; };
@@ -55,12 +55,12 @@ ACT['mcp-new'] = async () => {
       r = { id: 'k_' + Math.random().toString(16).slice(2, 14).padEnd(12, '0'), name: name.trim().slice(0, 40), scope, prefix: key.slice(0, 12), key };
       S.apikeys = [{ id: r.id, name: r.name, prefix: r.prefix, scope, created_by: S.me.name, created_at: today(), last_used: null, calls: 0, revoked_at: null }, ...(S.apikeys || [])].slice(0, 50); }
     logAudit(`API 키 발급 — ${r.name}(${scope === 'write' ? '읽기 + 쓰기' : '읽기'})`); save(); MCPX.keys = null; await mcpLoad(true); render(); mcpShow(r);
-  } catch (e) { toast(e.message || '발급하지 못했습니다.', 'warn'); }
+  } catch (e) { toast(errMsg(e, '발급하지 못했습니다.'), 'warn'); }
 };
 ACT['mcp-revoke'] = el => { const k = (MCPX.keys || []).find(x => x.id === el.dataset.v); if (!k) return;
   modal('API 키 폐기', `<p>「${esc(k.name)}」(${esc(k.prefix)}…) 키를 폐기합니다. 이 키로 연결된 AI는 즉시 접근할 수 없게 됩니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '폐기', kind: 'red', run: async () => {
     try { if (mcpLive()) await api('POST', '/api/keys/revoke', { id: k.id }); else { const x = (S.apikeys || []).find(y => y.id === k.id); if (x) x.revoked_at = today(); }
-      logAudit(`API 키 폐기 — ${k.name}`); save(); MCPX.keys = null; await mcpLoad(true); render(); toast('키를 폐기했습니다.', 'ok'); } catch (e) { toast(e.message, 'warn'); } } }]); };
+      logAudit(`API 키 폐기 — ${k.name}`); save(); MCPX.keys = null; await mcpLoad(true); render(); toast('키를 폐기했습니다.', 'ok'); } catch (e) { toast(errMsg(e), 'warn'); } } }]); };
 ACT['mcp-pol'] = el => { const r = S.org.room || (S.org.room = {}); r.egress = { ...(r.egress || {}), mcp: !!el.checked }; logAudit(`데이터룸 정책 — 외부 AI 연결(MCP) ${el.checked ? '허용' : '차단'}`); save(); toast(el.checked ? '외부 AI 연결을 허용했습니다.' : '외부 AI 연결을 막았습니다. 모든 키의 도구 호출이 거부됩니다.', el.checked ? 'ok' : 'warn'); };
 /* AI SAM: 'API 키 · MCP' 지시는 연동 화면으로 */
 { const base = answer; answer = (q, ...r) => { if (/(mcp|MCP|API\s*키|api\s*key|외부\s*AI|AI\s*연결|키\s*발급)/.test(q) && !/튜터/.test(q)) { UI.settings = 'integr'; setTimeout(() => { go('settings'); setTimeout(() => { const n = $('#mcpName'); if (n) { n.scrollIntoView({ block: 'center' }); n.focus(); } }, 120); }, 50);

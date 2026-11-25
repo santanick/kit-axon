@@ -17,14 +17,20 @@ import org.springframework.stereotype.Service;
 
 @Service("authService")
 public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthService {
+    private static final java.util.concurrent.ConcurrentHashMap<String, long[]> LF = new java.util.concurrent.ConcurrentHashMap<>(); /* 없는 계정 실패 계수(SEC-0016) */
     static final List<String> TYPES = List.of("corp", "univ", "public", "k12", "adult", "lifelong", "voc");
     static final List<String> MODELS = List.of("claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5");
     static final Pattern EMAIL = Pattern.compile("^[^\\s@<>]+@[^\\s@<>]+\\.[^\\s@<>]{2,}$");
     static final Pattern HAS_ALPHA = Pattern.compile("[a-zA-Z]"), HAS_DIGIT = Pattern.compile("\\d");
 
     @Resource(name = "propertiesService") private EgovPropertyService props;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.records.RecordsService rec; /* 가디언 4차 #15 국내 전용 로그인 */
+    @org.springframework.beans.factory.annotation.Autowired private LoginDevices devices;
+    @org.springframework.beans.factory.annotation.Autowired private LoginMfa mfa; /* 보안 4차 #1 관리자 추가 인증 */ /* 보안 2차 새 환경 로그인 알림 */
+    @org.springframework.beans.factory.annotation.Autowired private SessionPolicy sessions; /* 가디언 4차 세션 정책 */
     private final AuthMapper mapper; private final TenantTx tx; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl; private final DdOAuth oa;
     @org.springframework.beans.factory.annotation.Value("${TOSS_SECRET_KEY:}") private String tossKey = "";
+    @org.springframework.beans.factory.annotation.Value("${SANTA_ADMIN_EMAILS:}") private String santaEnv = ""; /* v47 산타 관리자 표시(user.santa) */
     public AuthServiceImpl(AuthMapper mapper, TenantTx tx, DdProps p, DdWeb web, DdRateLimiter rl, DdOAuth oa) { this.mapper = mapper; this.tx = tx; this.p = p; this.web = web; this.rl = rl; this.oa = oa; }
 
     static boolean emailOk(String e) { return e.length() <= 120 && EMAIL.matcher(e).matches(); }
@@ -41,10 +47,13 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         return m;
     }
 
-    private void newSession(HttpServletResponse res, String uid, String tid) throws Exception {
-        String token = DdCrypto.newToken();
-        mapper.insertSession(DdCrypto.sha(token), uid, tid, Math.min(p.idleH, props.getInt("session.days") * 24));
-        web.setSid(res, token);
+    /** 가디언 4차: SessionPolicy(유휴 60분 · 기관 10~60 · 최대 12시간 · 세션 쿠키 · 동시 세션 제한). 반환 = 다른 활성 세션 수(others) */
+    int newSession(HttpServletResponse res, String uid, String tid) throws Exception {
+        org.springframework.web.context.request.RequestAttributes ra = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        HttpServletRequest req = ra instanceof org.springframework.web.context.request.ServletRequestAttributes sa ? sa.getRequest() : null;
+        int others = sessions.create(req, res, uid, tid);
+        devices.seen(res, uid, tid); /* 보안 2차: 새 환경 로그인 알림(가입 · 로그인 · 소셜 로그인 공통) */
+        return others;
     }
 
     @Override public Map<String, Object> signup(byte[] body, HttpServletRequest req, HttpServletResponse res) throws Exception {
@@ -80,8 +89,15 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         long win = props.getLong("rate.login.winMs");
         rl.limit("li:" + web.ip(req), props.getInt("rate.loginIp.max"), win); rl.limit("le:" + email, props.getInt("rate.loginEmail.max"), win);
         Map<String, Object> u = mapper.selectUserByEmail(email);
+        if (u != null) { /* 보안 점검(체크리스트 06): 계정 잠금 — Node app.js와 같은 규칙(15분 안 실패 5회 → 15분) */
+            final String ltid = (String) u.get("tenant_id"); int fails = 0;
+            try { Integer n = tx.inTenant(ltid, () -> mapper.countLoginFails(ltid, email)); fails = n == null ? 0 : n; } catch (Exception ignore) {}
+            if (fails >= 5) throw processException("dd.429.locked");
+        }
+        else { long[] e = LF.get(email); if (e != null && e[1] > System.currentTimeMillis() && e[0] >= 5) throw processException("dd.429.locked"); } /* SEC-0016: 없는 계정도 같은 잠금 응답 */
         boolean ok = DdCrypto.checkPw(DdWeb.str(b, "password"), u != null ? (String) u.get("pw") : DdCrypto.DUMMY);
         if (u == null || !ok) {
+            if (u == null) { long now = System.currentTimeMillis(); LF.compute(email, (k, v) -> v == null || v[1] < now ? new long[]{1, now + 900_000L} : new long[]{v[0] + 1, v[1]}); }
             if (u != null) {
                 String masked = web.ip(req).replaceAll("\\d+$", "x");
                 try { tx.audit((String) u.get("tenant_id"), email, "login.fail", DdWeb.JSON.createObjectNode().put("ip", masked).toString()); } catch (Exception ignore) {}
@@ -90,11 +106,28 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         }
         String uid = (String) u.get("id"), tid = (String) u.get("tenant_id");
         if (!p.module.isEmpty() && !DdModule.roleAllowed(p.module, u.get("role"))) throw processException("dd.403.module");
-        mapper.updateLastLogin(uid); mapper.deleteExpiredSessions(uid);
-        newSession(res, uid, tid);
-        tx.audit(tid, email, "login", null);
-        return meOut(mapper.selectMe(uid, email));
+        rec.geoCheck(req, tid, email); /* 가디언 4차 #15: 2단계 메일 발송 전 — Node와 같음 */
+        if (!mfa.off) return mfa.start(res, uid, tid, email, ""); /* 보안 4차 #1: 비밀번호 성공 → 세션 대신 2단계 티켓 */
+        return finishLogin(res, uid, tid, email, null, false);
     }
+
+    /** 보안 4차 #1: 2단계까지 끝난 운영자 로그인의 공통 마무리(Node finishLogin과 같음) */
+    Map<String, Object> finishLogin(HttpServletResponse res, String uid, String tid, String email, String detail, boolean totpSetup) throws Exception {
+        mapper.updateLastLogin(uid); mapper.deleteExpiredSessions(uid);
+        int others = newSession(res, uid, tid);
+        tx.audit(tid, email, "login", detail);
+        Map<String, Object> o = meOut(mapper.selectMe(uid, email)); if (others > 0) o.put("others", others); /* 가디언 4차 #4 */ if (totpSetup) o.put("totpSetup", true); return o;
+    }
+    @Override public Map<String, Object> loginMfa(JsonNode b, HttpServletRequest req, HttpServletResponse res) throws Exception {
+        Map<String, Object> v = mfa.verify(b, req, res);
+        com.fasterxml.jackson.databind.node.ObjectNode d = DdWeb.JSON.createObjectNode().put("mfa", (String) v.get("kind")); String via = (String) v.get("via"); if (!via.isEmpty()) d.put("via", via);
+        rec.geoCheck(req, (String) v.get("tid"), (String) v.get("email")); /* 가디언 4차 #15 */
+        return finishLogin(res, (String) v.get("uid"), (String) v.get("tid"), (String) v.get("email"), d.toString(), Boolean.TRUE.equals(v.get("totpSetup")));
+    }
+    @Override public Map<String, Object> loginMfaResend(JsonNode b, HttpServletRequest req) throws Exception { return mfa.resend(b, req); }
+    @Override public Map<String, Object> mfaGet(Map<String, Object> a) throws Exception { return mfa.get(a); }
+    @Override public Map<String, Object> mfaPost(Map<String, Object> a, JsonNode b) throws Exception { return mfa.post(a, b); }
+    @Override public Map<String, Object> mfaDelete(Map<String, Object> a, JsonNode b) throws Exception { return mfa.delete(a, b); }
 
     @Override public Map<String, Object> logout(HttpServletRequest req, HttpServletResponse res) throws Exception {
         String t = web.sidToken(req); if (t != null) mapper.deleteSession(DdCrypto.sha(t));
@@ -103,9 +136,8 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
 
     @Override public Map<String, Object> auth(HttpServletRequest req) throws Exception {
         String t = web.sidToken(req); if (t == null || t.isEmpty() || t.length() > 100) return null;
-        Map<String, Object> a = mapper.selectAuth(DdCrypto.sha(t), Math.max(0, p.idleH - 1), props.getInt("session.days"));
+        Map<String, Object> a = sessions.check(req, false);
         if (a != null && !p.module.isEmpty() && !DdModule.roleAllowed(p.module, a.get("role"))) return null;
-        if (a != null && Boolean.TRUE.equals(a.get("slide"))) mapper.slideSession((String) a.get("sid"), props.getInt("session.days"), p.idleH);
         return a;
     }
     @Override public Map<String, Object> need(HttpServletRequest req) throws Exception {
@@ -121,6 +153,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         mapper.updatePw(uid, DdCrypto.hashPw(b.get("next").asText())); mapper.deleteOtherSessions(uid, (String) a.get("sid"));
         tx.audit(tid, (String) a.get("email"), "password.change", null); return Map.of("ok", true);
     }
+    @Override public Map<String, Object> devices(Map<String, Object> a, HttpServletRequest req) { return devices.list(a, req); }
     @Override public Map<String, Object> staffList(Map<String, Object> a) throws Exception { Map<String, Object> o = new LinkedHashMap<>(); o.put("rows", mapper.selectStaff((String) a.get("tid"))); return o; }
     @Override public Map<String, Object> staffCreate(Map<String, Object> a, JsonNode b) throws Exception {
         String tid = (String) a.get("tid"); rl.limit("staff:" + tid, 30, 3600_000L);
@@ -141,6 +174,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     }
     @Override public Map<String, Object> meOut(Map<String, Object> a) {
         Map<String, Object> u = new LinkedHashMap<>(); u.put("email", a.get("email")); u.put("role", a.get("role")); if (Boolean.TRUE.equals(a.get("pw_temp"))) u.put("pwTemp", true);
+        if (egovframework.didisam.cmm.DdAiPrice.santaSet(santaEnv).contains(String.valueOf(a.get("email")).toLowerCase(java.util.Locale.ROOT))) u.put("santa", true);
         Map<String, Object> t = new LinkedHashMap<>(); t.put("tid", a.get("tid")); t.put("name", a.get("name")); t.put("type", a.get("type")); t.put("mode", a.get("mode"));
         Map<String, Object> o = new LinkedHashMap<>(); o.put("user", u); o.put("tenant", t); return o;
     }

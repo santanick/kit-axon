@@ -15,7 +15,7 @@
   const RISK = { risk: ['주의', 'bad'], watch: ['관찰', 'y'], ok: ['양호', 'ok'] };
   const O = { c: {}, thread: null, room: null, gen: null, view: null, last: null };
   window.LMSO = O;
-  (function css() { if (document.querySelector('link[data-lmso]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/o.css?v=46.1'; l.dataset.lmso = '1'; document.head.appendChild(l); })();
+  (function css() { if (document.querySelector('link[data-lmso]')) return; const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'lms/o.css?v=47.0'; l.dataset.lmso = '1'; document.head.appendChild(l); })();
 
   /* ── 메뉴 · 프리셋 ── */
   MENU.lmso = { label: 'AI 학습 지원', ws: 'learn', only: 'univ' };
@@ -35,13 +35,13 @@
   }
   function load(k, p) {
     if (O.c[k] !== undefined) return O.c[k];
-    O.c[k] = null; api('GET', p).then(j => { O.c[k] = j; render(); }).catch(e => { O.c[k] = { _err: e.message }; render(); });
+    O.c[k] = null; api('GET', p).then(j => { O.c[k] = j; render(); }).catch(e => { O.c[k] = { _err: errMsg(e) }; render(); });
     return null;
   }
   const busy = '<div class="empty">불러오는 중…</div>';
   const errBox = d => d && d._err ? `<div class="empty">${esc(d._err)}</div>` : '';
   const refresh = () => { O.c = {}; render(); };
-  async function act(fn, okMsg) { try { const r = await fn(); if (okMsg) toast(okMsg, 'ok'); refresh(); return r; } catch (e) { toast(e.message || '처리하지 못했습니다.', 'warn'); return null; } }
+  async function act(fn, okMsg) { try { const r = await fn(); if (okMsg) toast(okMsg, 'ok'); refresh(); return r; } catch (e) { toast(errMsg(e, '처리하지 못했습니다.'), 'warn'); return null; } }
   const secSel = (id, cur, all = true) => { const d = load('sections', '/api/lms/o/sections'); const L = d && d.sections || []; return `<select id="${id}">${all ? '<option value="">기관 공통(분반 없음)</option>' : ''}${L.map(s => `<option value="${esc(s.section_id)}" ${cur === s.section_id ? 'selected' : ''}>${esc(s.title)} · ${esc(s.term_id)}</option>`).join('')}</select>`; };
   const secName = id => { const d = O.c.sections; const s = d && d.sections && d.sections.find(x => x.section_id === id); return s ? s.title : id ? '분반' : '기관 공통'; };
   const aiNote = '<p class="mini">AI 생성 결과는 「AI 생성」으로 표시되며, 교수자가 검토 · 승인한 뒤에만 학생에게 배포됩니다. 개인정보는 서버에서 가린 뒤 AI로 보냅니다.</p>';
@@ -62,7 +62,7 @@
     const open = tb === 'gen' && O.gen && ((g && g.items) || []).some(x => x.gen_id === O.gen);
     const btn = rev && !open ? `<button class="btn ${tb === 'qa' || tb === 'cap' ? '' : 'pri'} sm" data-act="lmso-revgo">검토 시작 (${rev}건)</button>` : tb === 'rag' && editable() ? '<label class="btn pri sm" for="loFile">강의자료 올리기</label>' : '';
     if (U) h += U.todo([[((d && d.docs) || []).length, '강의자료'], [rev, '검토 대기', rev ? 'y' : ''], [((th && th.threads) || []).length, '질문 대화'], risk == null ? null : [risk, '주의 학생', risk ? 'r' : '']], btn);
-    try { h += ({ rag: vRag, qa: vQa, gen: vGen, an: vAn, view: vView, cap: vCap })[tb](); } catch (e) { h += `<div class="empty">${esc(e.message)}</div>`; }
+    try { h += ({ rag: vRag, qa: vQa, gen: vGen, an: vAn, view: vView, cap: vCap })[tb](); } catch (e) { h += `<div class="empty">${esc(errMsg(e))}</div>`; }
     return h;
   };
   ACT['lmso-revgo'] = () => { const g = O.c.gens; const f = g && g.items.find(x => x.status === 'review'); UI.loT = 'gen'; UI.loGenF = 'review'; if (f) O.gen = f.gen_id; render(); };
@@ -85,8 +85,8 @@
     const rd = new FileReader(); rd.onload = () => { const b64 = String(rd.result).split(',')[1] || ''; act(() => api('POST', '/api/lms/o/rag/upload', { name: f.name, b64, source_id: val('loSrc') || null, section_id: val('loSec') || null }), `「${f.name}」을 색인했습니다.`); }; rd.readAsDataURL(f);
   };
   ACT['lmso-docdel'] = el => act(() => api('DELETE', '/api/lms/o/rag/doc?id=' + el.dataset.id), '문서를 지웠습니다.');
-  ACT['lmso-docview'] = async el => { try { const { doc } = await api('GET', '/api/lms/o/rag/doc?id=' + el.dataset.id); modal(doc.name, `<p class="mini">문단 ${doc.paras.length}개 · 청크 ${doc.chunks}개 · ${doc.chars.toLocaleString()}자</p><table class="lo-tv"><tbody>${doc.paras.slice(0, 200).map(p => `<tr><td style="width:56px">${tag(p.t)}</td><td class="${p.t}">${esc(p.x)}</td></tr>`).join('')}</tbody></table>`, [{ id: 'c', label: '닫기' }], true); } catch (e) { toast(e.message, 'warn'); } };
-  ACT['lmso-search'] = async () => { const q = val('loQ').trim(); if (!q) return toast('질문을 넣어 주세요.', 'warn'); try { O.c._search = await api('POST', '/api/lms/o/rag/search', { q, top_k: +val('loK') || 4, member_no: val('loMno').trim() || null }); } catch (e) { O.c._search = { _err: e.message }; } render(); };
+  ACT['lmso-docview'] = async el => { try { const { doc } = await api('GET', '/api/lms/o/rag/doc?id=' + el.dataset.id); modal(doc.name, `<p class="mini">문단 ${doc.paras.length}개 · 청크 ${doc.chunks}개 · ${doc.chars.toLocaleString()}자</p><table class="lo-tv"><tbody>${doc.paras.slice(0, 200).map(p => `<tr><td style="width:56px">${tag(p.t)}</td><td class="${p.t}">${esc(p.x)}</td></tr>`).join('')}</tbody></table>`, [{ id: 'c', label: '닫기' }], true); } catch (e) { toast(errMsg(e), 'warn'); } };
+  ACT['lmso-search'] = async () => { const q = val('loQ').trim(); if (!q) return toast('질문을 넣어 주세요.', 'warn'); try { O.c._search = await api('POST', '/api/lms/o/rag/search', { q, top_k: +val('loK') || 4, member_no: val('loMno').trim() || null }); } catch (e) { O.c._search = { _err: errMsg(e) }; } render(); };
 
   /* ── AI Q&A ── */
   function vQa() {
@@ -115,7 +115,7 @@
   ACT['lmso-thredit'] = () => { const t = O.c['thr:' + O.thread].thread; modal('대화 설정', thrForm(t), [{ id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { act(() => api('PUT', '/api/lms/o/qa/thread', { thread_id: t.thread_id, title: fv(w, 'title'), temperature: +fv(w, 'temp'), top_k: parseInt(fv(w, 'topk'), 10) }), '저장했습니다.'); } }]); };
   ACT['lmso-share'] = el => act(() => api('PUT', '/api/lms/o/qa/thread', { thread_id: O.thread, shared: el.dataset.v === '1' }), el.dataset.v === '1' ? '공유 주소를 만들었습니다(같은 기관 구성원만 열람).' : '공유를 껐습니다.');
   ACT['lmso-thrdel'] = () => act(async () => { const r = await api('DELETE', '/api/lms/o/qa/thread?id=' + O.thread); O.thread = null; return r; }, '대화를 지웠습니다.');
-  ACT['lmso-ask'] = async el => { const q = val('loAsk').trim(); if (!q) return toast('질문을 입력해 주세요.', 'warn'); el.disabled = true; try { O.last = await api('POST', '/api/lms/o/qa/ask', { thread_id: O.thread, q }); } catch (e) { toast(e.message, 'warn'); } el.disabled = false; refresh(); };
+  ACT['lmso-ask'] = async el => { const q = val('loAsk').trim(); if (!q) return toast('질문을 입력해 주세요.', 'warn'); el.disabled = true; try { O.last = await api('POST', '/api/lms/o/qa/ask', { thread_id: O.thread, q }); } catch (e) { toast(errMsg(e), 'warn'); } el.disabled = false; refresh(); };
   const msgOf = seq => O.c['thr:' + O.thread].messages.find(m => m.seq === seq);
   ACT['lmso-msged'] = el => { const m = msgOf(+el.dataset.seq); modal('메시지 편집', `<textarea name="c" class="lo-ta" maxlength="8000">${esc(m.content)}</textarea>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '저장', kind: 'pri', run: w => { act(() => api('PUT', '/api/lms/o/qa/message', { thread_id: O.thread, seq: m.seq, content: fv(w, 'c') }), '편집했습니다.'); } }]); };
   ACT['lmso-tofaq'] = el => { const ms = O.c['thr:' + O.thread].messages; const i = ms.findIndex(m => m.seq === +el.dataset.seq); const q = (ms.slice(0, i).reverse().find(m => m.role === 'user') || {}).content || ''; faqModal(q, ms[i].content); };
@@ -162,7 +162,7 @@
     if (k === 'rubric') { p = '/api/lms/o/gen/rubric'; b = { task: val('loRt').trim(), criteria_n: parseInt(val('loRn'), 10) || 4, scale: parseInt(val('loRs'), 10) || 4, section_id: sec }; if (!b.task) return toast('과제 설명을 넣어 주세요.', 'warn'); }
     el.disabled = true; const r = await act(() => api('POST', p, b), 'AI가 만들었습니다 — 검토 대기에 넣었습니다.'); el.disabled = false; if (r && r.gen) { O.gen = r.gen.gen_id; UI.loGenF = 'all'; render(); }
   };
-  ACT['lmso-cls'] = async () => { const t = val('loRt').trim(); if (!t) return toast('분류할 글을 넣어 주세요.', 'warn'); try { O.c._cls = (await api('POST', '/api/lms/o/gen/classify', { text: t })).results[0]; render(); } catch (e) { toast(e.message, 'warn'); } };
+  ACT['lmso-cls'] = async () => { const t = val('loRt').trim(); if (!t) return toast('분류할 글을 넣어 주세요.', 'warn'); try { O.c._cls = (await api('POST', '/api/lms/o/gen/classify', { text: t })).results[0]; render(); } catch (e) { toast(errMsg(e), 'warn'); } };
   ACT['lmso-review'] = el => { const a = el.dataset.a; const run = note => act(() => api('POST', '/api/lms/o/gen/review', { gen_id: O.gen, action: a, note }), { approve: '승인했습니다.', reject: '반려했습니다.', publish: '학생에게 배포했습니다.', revise: '다시 검토 대기로 돌렸습니다.' }[a]);
     if (a === 'reject' || a === 'approve') modal(a === 'reject' ? '반려 의견' : '승인 의견', '<textarea name="n" class="lo-ta" maxlength="500" placeholder="(선택)"></textarea>', [{ id: 'c', label: '취소' }, { id: 'ok', label: '확인', kind: 'pri', run: w => { run(fv(w, 'n') || null); } }]); else run(null); };
   ACT['lmso-genedit'] = () => { const g = O.c.gens.items.find(x => x.gen_id === O.gen); const isText = g.kind === 'summary' || g.kind === 'discussion';
@@ -188,7 +188,7 @@
   }
   ACT['lmso-ansec'] = el => { UI.loAnSec = el.value; render(); };
   ACT['lmso-disc'] = el => { const posts = val('loDisc').split('\n').map(l => { const m = /^\s*([A-Za-z0-9-]{1,20})\s*[:：]\s*(.+)$/.exec(l); return m ? { member_no: m[1], text: m[2] } : l.trim() ? { member_no: 'anon', text: l.trim() } : null; }).filter(Boolean); if (!posts.length) return toast('토론 글을 넣어 주세요.', 'warn'); el.disabled = true; act(async () => { const r = await api('POST', '/api/lms/o/an/discussion', { posts, section_id: UI.loAnSec || null }); O.gen = r.gen.gen_id; return r; }, '토론을 요약했습니다 — 「AI 자료 만들기」 검토함에서 확인하세요.').then(() => { el.disabled = false; }); };
-  ACT['lmso-ed'] = async el => { const t = val('loEd').trim(); if (!t) return toast('글을 넣어 주세요.', 'warn'); el.disabled = true; try { O.c._ed = await api('POST', '/api/lms/o/editor', { action: el.dataset.a, text: t, lang: val('loEdL') }); } catch (e) { toast(e.message, 'warn'); } el.disabled = false; render(); };
+  ACT['lmso-ed'] = async el => { const t = val('loEd').trim(); if (!t) return toast('글을 넣어 주세요.', 'warn'); el.disabled = true; try { O.c._ed = await api('POST', '/api/lms/o/editor', { action: el.dataset.a, text: t, lang: val('loEdL') }); } catch (e) { toast(errMsg(e), 'warn'); } el.disabled = false; render(); };
   ACT['lmso-edcopy'] = () => { const e = document.getElementById('loEd'); if (e && O.c._ed) e.value = O.c._ed.text; };
   ACT['lmso-eval'] = el => { const b = { member_no: val('loEvM').trim(), max_score: +val('loEvMax') || 100, rubric_gen_id: val('loEvR') || null, rubric: val('loEvRt').trim(), answer: val('loEvA').trim(), section_id: UI.loAnSec || null }; el.disabled = true; act(() => api('POST', '/api/lms/o/eval', b), 'AI 평가를 기록했습니다(교수 확정 전 참고용).').then(() => { el.disabled = false; }); };
   ACT['lmso-evok'] = el => modal('AI 평가 확정', `<label class="fl">확정 점수(0~${el.dataset.m})<input name="s" type="number" min="0" max="${el.dataset.m}" step="0.5" value="${esc(el.dataset.s)}"></label><p class="mini">확정해도 성적표 · 학사로 자동 전송하지 않습니다(LMS 기록).</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '확정', kind: 'pri', run: w => { act(() => api('POST', '/api/lms/o/eval/confirm', { eval_id: el.dataset.id, score: +fv(w, 's') }), '확정했습니다.'); } }]);
@@ -240,7 +240,7 @@
     const draw = () => { w.innerHTML = `<header><b>${esc(room ? room.title : '실시간 자막')}</b><select id="loCapL">${(room ? room.langs : [lang]).map(l => `<option value="${l}" ${l === lang ? 'selected' : ''}>${esc(LN[l] || l)}</option>`).join('')}</select><button id="loCapX">닫기</button></header>${err ? `<p>${esc(err)}</p>` : ''}${room && room.status === 'closed' ? '<p><small>수업 자막이 종료되었습니다.</small></p>' : ''}<div style="font-size:${size}px">${lines.slice(-40).map(l => `<p>${esc(l.text)}${l.tr ? `<small>${esc(l.tr)}</small>` : lang !== 'ko' ? '<small>(번역 엔진 연동 후 표시)</small>' : ''}</p>`).join('')}</div>`;
       w.querySelector('#loCapX').onclick = () => { clearInterval(capTimer); w.remove(); if (location.hash.startsWith('#lmso-cap=')) history.replaceState(null, '', location.pathname); };
       w.querySelector('#loCapL').onchange = e => { lang = e.target.value; since = 0; lines = []; tick(); }; w.scrollTop = w.scrollHeight; };
-    const tick = async () => { try { const j = await api('GET', `/api/lms/o/caption/view?code=${encodeURIComponent(code)}&lang=${lang}&since=${since}`); room = j.room; err = ''; j.lines.forEach(l => { const i = lines.findIndex(x => x.seq === l.seq); if (i >= 0) lines[i] = l; else lines.push(l); }); if (j.lines.length) since = Math.max(since, ...j.lines.map(l => l.seq)); } catch (e) { err = e.message; } draw(); };
+    const tick = async () => { try { const j = await api('GET', `/api/lms/o/caption/view?code=${encodeURIComponent(code)}&lang=${lang}&since=${since}`); room = j.room; err = ''; j.lines.forEach(l => { const i = lines.findIndex(x => x.seq === l.seq); if (i >= 0) lines[i] = l; else lines.push(l); }); if (j.lines.length) since = Math.max(since, ...j.lines.map(l => l.seq)); } catch (e) { err = errMsg(e); } draw(); };
     draw(); tick(); capTimer = setInterval(() => { since = 0; tick(); }, 3000);
   }
   function capFromHash() { const m = /^#lmso-cap=([^&]+)&lang=([a-z]{2})(?:&fs=([sml]))?/.exec(location.hash || ''); if (m) capOverlay(decodeURIComponent(m[1]), m[2], m[3] || 'm'); }
@@ -284,7 +284,7 @@
     const cur = UI.aiT || 'model'; const at = h.indexOf('<div class="seg2" role="tablist">');
     /* v43 R6: 탭 9개 2줄 → 기본 5개 + 「더 보기」(운영 서버 탭 4개) */
     if (at >= 0) { const end = h.indexOf('</div>', at); const sel = mine.find(([id]) => id === cur); h = h.slice(0, end) + `<details class="ai-more${sel ? ' on' : ''}"><summary role="tab" aria-selected="${!!sel}">${sel ? esc(sel[1]) : '더 보기'} <em>${mine.length}</em></summary><div class="ai-morep">${mine.map(([id, l]) => `<button role="tab" aria-selected="${id === cur}" class="${id === cur ? 'on' : ''}" data-act="tab" data-key="aiT" data-v="${id}">${esc(l)}</button>`).join('')}</div></details>` + h.slice(end); }
-    if (cur.startsWith('lo-')) { try { h += ({ 'lo-prov': vProv, 'lo-mon': vMon, 'lo-quota': vQuota, 'lo-rag': vSrc })[cur](); } catch (e) { h += `<div class="empty">${esc(e.message)}</div>`; } }
+    if (cur.startsWith('lo-')) { try { h += ({ 'lo-prov': vProv, 'lo-mon': vMon, 'lo-quota': vQuota, 'lo-rag': vSrc })[cur](); } catch (e) { h += `<div class="empty">${esc(errMsg(e))}</div>`; } }
     return h;
   };
   function vProv() {

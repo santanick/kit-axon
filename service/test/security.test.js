@@ -43,6 +43,12 @@ test('서버 보안', async t => {
     assert.equal(r.status, 200); const sent = JSON.stringify(lastBody.messages); assert.ok(!sent.includes('010-9876') && !sent.includes('hong@ex.com')); assert.ok(sent.includes('가림'));
     assert.match(JSON.stringify(lastBody.system), /보안 원칙/); assert.equal(r.j.redacted.mobile, 1); assert.equal(r.j.redacted.email, 1);
   });
+  await t.test('SEC-0004 운영자 AI 프록시: 도구 허용 목록(사용자 정의 · web_search만, web_search 최대 5회)', async () => {
+    const tools = [{ name: 'studio_action', input_schema: { type: 'object' } }, { type: 'web_fetch_20250910', name: 'web_fetch' }, { type: 'code_execution_20250825', name: 'code_execution' }, { type: 'bash_20250124', name: 'bash' }, { type: 'web_search_20250305', name: 'web_search', max_uses: 50 }, 'x', null];
+    const r = await call('A', 'POST', '/api/ai/messages', { messages: [{ role: 'user', content: 'x' }], tools }); assert.equal(r.status, 200);
+    assert.deepEqual(lastBody.tools.map(x => x.name), ['studio_action', 'web_search']); assert.equal(lastBody.tools[1].max_uses, 5);
+    await call('A', 'POST', '/api/ai/messages', { messages: [{ role: 'user', content: 'x' }], tools: [{ type: 'web_fetch_20250910', name: 'web_fetch' }] }); assert.equal(lastBody.tools, undefined);
+  });
   await t.test('운영자 AI 프록시: 응답 속 API 키 가림', async () => { reply = '설정 키는 sk-ant-api03-ABCDEFGHIJKLMNOP 입니다'; const r = await call('A', 'POST', '/api/ai/messages', { messages: [{ role: 'user', content: 'x' }] }); reply = 'ok'; assert.ok(!JSON.stringify(r.j.content).includes('sk-ant-api03')); });
 
   const P = `/api/pub/${A.tid}/tutor`;
@@ -62,6 +68,13 @@ test('서버 보안', async t => {
     assert.equal(last.status, 429);
   });
   await t.test('로그인 실패 감사 기록', async () => { await call('z', 'POST', '/api/login', { email: `sa${sfx}@a.kr`, password: 'wrong-pass-1' }); const { rows } = await tq(A.tid, "select 1 from audit_log where tenant_id = $1 and action = 'login.fail'", [A.tid]); assert.ok(rows.length >= 1); });
+  await t.test('계정 잠금: 15분 안 실패 5회면 맞는 비밀번호도 429 locked, 성공 기록 이후로는 다시 셈', async () => {
+    const em = `sa${sfx}@a.kr`; for (let i = 0; i < 5; i++) await call('z', 'POST', '/api/login', { email: em, password: 'wrong-pass-' + i });
+    const r = await call('z', 'POST', '/api/login', { email: em, password: 'Passw0rd-aaa' }); assert.equal(r.status, 429, JSON.stringify(r.j)); assert.equal(r.j.error, 'locked', JSON.stringify(r.j));
+    await tq(A.tid, "insert into audit_log (tenant_id, actor, action) values ($1, $2, 'login')", [A.tid, em]);
+    const ghost = `ghost${sfx}@a.kr`; for (let i = 0; i < 5; i++) await call('z2', 'POST', '/api/login', { email: ghost, password: 'wrong-pass-' + i });
+    const g = await call('z2', 'POST', '/api/login', { email: ghost, password: 'x' }); assert.equal(g.status, 429); assert.equal(g.j.error, 'locked'); /* SEC-0016 없는 계정도 같은 응답 */ /* 잠금 해제 상당(운영에서는 15분 경과 · 비밀번호 재설정) */
+  });
   await t.test('유휴 만료: 마지막 사용 후 SESSION_IDLE_H 지나면 다시 로그인', async () => {
     await pool.query("update sessions set expires_at = now() - interval '1 minute' where tenant_id = $1", [A.tid]); // sessions는 RLS 대상 아님
     assert.equal((await call('A', 'GET', '/api/me')).status, 401);

@@ -1,0 +1,5 @@
+{
+  "pkg:npm/lodash@4.17.20": ["GHSA-35jh-r3h4-6jhm"],
+  "pkg:npm/fixture-evil-pkg@1.0.0": ["MAL-2099-0001"],
+  "pkg:npm/fixture-kev-lib@2.0.0": ["GHSA-fx00-kev0-0002"]
+}

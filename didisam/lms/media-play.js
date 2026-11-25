@@ -38,10 +38,10 @@
     const pre = { t: D.get.call(v) || 0, play: !v.paused };
     const st = hold(v); st.t = pre.t; st.play = pre.play; v.addEventListener('loadedmetadata', () => st.release(), { once: true });
     if (!live()) { if (M.blobs[id]) v.src = M.blobs[id]; else note(v, '데모: 이 브라우저에서 올린 영상만 재생됩니다.'); return; }
-    let u; try { u = await M.url(id); } catch (e) { note(v, e.message || '재생 주소를 받지 못했습니다.'); return; }
+    let u; try { u = await M.url(id); } catch (e) { note(v, errMsg(e, '재생 주소를 받지 못했습니다.')); return; }
     if (u.poster) v.poster = u.poster;
     if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = u.url; return; }
-    let Hls; try { Hls = await M.loadHls(); } catch (e) { note(v, e.message); return; }
+    let Hls; try { Hls = await M.loadHls(); } catch (e) { note(v, errMsg(e)); return; }
     if (!Hls.isSupported()) { note(v, '이 브라우저는 스트리밍 재생을 지원하지 않습니다.'); return; }
     const h = new Hls({ enableWorker: false, startPosition: st.t || -1, capLevelToPlayerSize: true }); v._hls = h; let retry = 0;
     h.on(Hls.Events.ERROR, async (ev, d) => {

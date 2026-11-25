@@ -38,6 +38,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
     @Resource(name = "propertiesService") private EgovPropertyService props;
     private final PiiMapper mapper; private final PiiTx ptx; private final TenantTxMapper txm; private final DdPiiCrypto K; private final DdProps p; private final DdWeb web; private final DdRateLimiter rl;
     @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.mileage.service.MileService mile; /* v42 수집 훅 */
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy private egovframework.didisam.sec.service.SecService sec; /* 가디언 긴급 차단 실행 지점 */
     private final egovframework.didisam.cpl.service.CplService cpl; private final DdMail mail;
     public PiiServiceImpl(PiiMapper mapper, PiiTx ptx, TenantTxMapper txm, DdPiiCrypto K, DdProps p, DdWeb web, DdRateLimiter rl, egovframework.didisam.cpl.service.CplService cpl, DdMail mail) { this.cpl = cpl; this.mail = mail;
         this.mapper = mapper; this.ptx = ptx; this.txm = txm; this.K = K; this.p = p; this.web = web; this.rl = rl;
@@ -59,7 +60,9 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         return d.length() == 11 ? d.substring(0, 3) + "-" + d.substring(3, 7) + "-" + d.substring(7) : d.length() == 10 ? d.substring(0, 3) + "-" + d.substring(3, 6) + "-" + d.substring(6) : "";
     }
     private void plog(String tid, String actor, String action, String lid, String purpose, List<String> fields) {
-        mapper.insertLog(tid, cut(String.valueOf(actor), 80), action, lid, purpose, String.join(",", fields));
+        /* 가디언 4차 #5: 접속지(ip) — 현재 요청의 원값(요청 밖 파기 작업 등은 빈 값). Node pii.js plog와 같다 */
+        String ip = ""; try { var at = (org.springframework.web.context.request.ServletRequestAttributes) org.springframework.web.context.request.RequestContextHolder.getRequestAttributes(); if (at != null) ip = cut(web.ip(at.getRequest()), 64); } catch (Exception e) { ip = ""; }
+        mapper.insertLog(tid, cut(String.valueOf(actor), 80), action, lid, purpose, String.join(",", fields), ip);
     }
     record Org(String type, JsonNode mode, boolean under14, JsonNode social, boolean idvOn, String idvReason, boolean manual, boolean parent) {}
     /** v33 메일 미설정: 운영(NODE_ENV=production)은 '발송 미설정' 안내(503), 개발은 응답에 인증번호(dev_code) */
@@ -119,6 +122,13 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
         if (!DdPiiCrypto.eqConst(h, (String) r.get("code_hash"))) { ptx.run(tid, r2 -> r2.P(() -> mapper.incOtp(tid, b, purpose))); throw processException("dd.400.otp_bad"); }
         mapper.deleteOtp(tid, b, purpose);
     }
+
+    private static boolean lockable(Exception e) {
+        if (e instanceof egovframework.didisam.cmm.DdException d) return d.getStatus() == 401 || "otp_bad".equals(d.getCode());
+        if (e instanceof org.egovframe.rte.fdl.cmmn.exception.EgovBizException b) { String[] k = String.valueOf(b.getMessageKey()).split("\\."); return k.length >= 3 && ("401".equals(k[1]) || "otp_bad".equals(k[2])); }
+        return false;
+    }
+    private void lockLog(String tid, String actor, String action) { try { ptx.run(tid, r -> r.L(() -> { mapper.insertLockLog(tid, actor, action); return null; })); } catch (Exception ignore) { } }
 
     @Override public void newLearnerSession(HttpServletResponse res, String tid, String sid) throws Exception {
         org.springframework.web.context.request.RequestAttributes ra = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
@@ -259,7 +269,13 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
 
     @Override public String login(HttpServletRequest req, HttpServletResponse res, String tid, JsonNode b) throws Exception {
         limit("ll:" + web.ip(req), "rate.ll.max", "rate.ll.winMs"); String via = sOr(get(b, "via"));
-        String lid = ptx.run(tid, r -> {
+        /* 가디언 4차 #9: 이메일 · 학번(간편가입) 로그인도 DB 기준 15분 5회 잠금(Node pii.js와 같은 actor lk:e:… · lk:u:…, 계정 유무 무관) */
+        String lk = null;
+        if ("email".equals(via)) { String e0 = trim(sOr(get(b, "email"))).toLowerCase(Locale.ROOT); if (MAIL_RE.matcher(e0).matches()) lk = "lk:e:" + bidx(tid, "email", e0).substring(0, 32); }
+        else if ("univ".equals(via)) { String u0 = trim(sOr(get(b, "student_no"))); if (STU_RE.matcher(u0).matches()) lk = "lk:u:" + bidx(tid, "univ", u0).substring(0, 32); }
+        final String LK = lk;
+        if (LK != null) { int n = 0; try { Integer c = ptx.run(tid, r -> r.L(() -> mapper.countLockFails(tid, LK))); n = c == null ? 0 : c; } catch (Exception ignore) { } if (n >= 5) throw processException("dd.429.locked.learner"); }
+        String lid; try { lid = ptx.run(tid, r -> {
             String id;
             if ("email".equals(via)) {
                 String email = trim(sOr(get(b, "email"))).toLowerCase(Locale.ROOT); if (!MAIL_RE.matcher(email).matches()) throw processException("dd.400.email");
@@ -286,13 +302,15 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
             if ("guardian_pending".equals(st)) throw processException("dd.403.guardian_pending");
             r.L(() -> { approval(tid, fid); return null; });
             return id;
-        });
+        }); } catch (Exception e) { if (LK != null && lockable(e)) lockLog(tid, LK, "llogin.fail"); throw e; }
+        if (LK != null) lockLog(tid, LK, "llogin");
         newLearnerSession(res, tid, lid);
         return lid;
     }
 
     @Override public boolean mailTo(String tid, String lid, String subject, String text) throws Exception {
         if (!mail.on || lid == null || !lid.matches("(?i)^[0-9a-f-]{36}$")) return false;
+        if (sec.egressBlocked(tid)) return false; /* 가디언 egress 차단: 기관 알림 메일 중단 */
         String to = ptx.run(tid, r -> r.P(() -> { Map<String, Object> x = mapper.selectMine(tid, lid); return x == null || x.get("email_enc") == null ? null : dec(x.get("email_enc"), DdPiiCrypto.aad(tid, lid, "email")); }));
         if (to == null || to.isEmpty()) return false; mail.send(to, subject, text); return true;
     }

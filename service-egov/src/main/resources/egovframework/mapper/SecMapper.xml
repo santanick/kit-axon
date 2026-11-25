@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 가디언(보안봇) security 스키마 — 내부 전용(plain 트랜잭션). 행은 Node security.js 출력과 같은 JSON(camelCase · ISO 시각)으로 만든다 -->
+<mapper namespace="egovframework.didisam.sec.service.impl.SecMapper">
+  <sql id="iso">'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'</sql>
+  <sql id="fJson">json_build_object('id', id, 'key', key, 'origin', origin, 'title', title, 'severity', severity, 'priority', priority, 'score', score, 'status', status, 'tenantScope', tenant_scope, 'owner', owner,
+    'slaDueAt', to_char(sla_due_at at time zone 'UTC', <include refid="iso"/>), 'jiraKey', jira_key, 'note', note, 'threatId', threat_id, 'evidence', evidence,
+    'createdAt', to_char(created_at at time zone 'UTC', <include refid="iso"/>), 'updatedAt', to_char(updated_at at time zone 'UTC', <include refid="iso"/>), 'resolvedAt', to_char(resolved_at at time zone 'UTC', <include refid="iso"/>))::text</sql>
+  <sql id="tJson">json_build_object('id', id, 'source', source, 'externalId', external_id, 'title', title, 'summary', summary, 'cvss', cvss, 'epss', epss, 'kev', kev, 'affected', affected, 'attackType', attack_type, 'url', url,
+    'publishedAt', to_char(published_at at time zone 'UTC', <include refid="iso"/>), 'verdict', verdict, 'createdAt', to_char(created_at at time zone 'UTC', <include refid="iso"/>), 'untrusted', json_build_array('title', 'summary'))::text</sql>
+  <sql id="cJson">json_build_object('id', id, 'threatId', threat_id, 'title', title, 'threatPattern', threat_pattern, 'controls', controls, 'regressionTests', regression_tests, 'skillRefs', skill_refs, 'playbook', playbook,
+    'body', body, 'reuseCount', reuse_count, 'version', version, 'status', status, 'createdAt', to_char(created_at at time zone 'UTC', <include refid="iso"/>), 'updatedAt', to_char(updated_at at time zone 'UTC', <include refid="iso"/>))</sql>
+  <sql id="kJson">json_build_object('id', id, 'action', action, 'tenant', tenant_id, 'mode', mode, 'trigger', trigger, 'ruleId', rule_id, 'reason', reason, 'signals', signals, 'actor', actor,
+    'activatedAt', to_char(activated_at at time zone 'UTC', <include refid="iso"/>), 'expiresAt', to_char(expires_at at time zone 'UTC', <include refid="iso"/>), 'releasedAt', to_char(released_at at time zone 'UTC', <include refid="iso"/>),
+    'releasedBy', released_by, 'releaseNote', release_note, 'status', case when mode = 'dry' then 'dry' when released_at is null then 'active' when released_by = 'ttl' then 'expired' else 'released' end)::text</sql>
+  <sql id="pJson">json_build_object('id', p.id, 'number', p.pr_number, 'title', p.title, 'findingIds', p.finding_ids, 'severity', p.severity, 'changeType', p.change_type, 'files', p.files, 'verifyResult', p.verify_result,
+    'risk', p.risk, 'rollbackRef', p.rollback_ref, 'url', p.url, 'status', p.status, 'rejectReason', p.reject_reason, 'need', case when p.severity in ('critical','high') then 2 else 1 end,
+    'have', (select count(*)::int from security.approval x where x.pr_id = p.id),
+    'approvals', coalesce((select json_agg(json_build_object('by', x.approver, 'method', x.method, 'at', to_char(x.at at time zone 'UTC', <include refid="iso"/>)) order by x.id) from security.approval x where x.pr_id = p.id), '[]'::json),
+    'createdAt', to_char(p.created_at at time zone 'UTC', <include refid="iso"/>), 'approvedAt', to_char(p.approved_at at time zone 'UTC', <include refid="iso"/>), 'mergedAt', to_char(p.merged_at at time zone 'UTC', <include refid="iso"/>))::text</sql>
+
+  <select id="lock" flushCache="true" useCache="false" resultType="string">select pg_advisory_xact_lock(#{k})::text</select>
+  <select id="lastHash" flushCache="true" useCache="false" resultType="string">select hash from security.audit order by id desc limit 1</select>
+  <insert id="insertAudit">insert into security.audit (ts, actor, actor_kind, action, target, detail, ip_masked, prev_hash, hash) values (#{ts}, #{actor}, #{kind}, #{action}, #{target}, #{detail}, #{ip}, #{prev}, #{hash})</insert>
+  <select id="chainRows" resultType="java.util.LinkedHashMap">select id::int id, ts, actor, action, target, detail, prev_hash, hash from security.audit order by id</select>
+  <select id="auditRows" resultType="string">select json_build_object('id', id::int, 'at', to_char(at at time zone 'UTC', <include refid="iso"/>), 'actor', actor, 'actorKind', actor_kind, 'action', action, 'target', target, 'detail', detail, 'ipMasked', ip_masked, 'prevHash', prev_hash, 'hash', hash)::text from security.audit order by id desc limit 100</select>
+  <select id="selectPw" resultType="string">select pw from users where id = cast(#{uid} as uuid)</select>
+  <select id="tenantExists" resultType="java.lang.Integer">select 1 from tenants where id = #{tid}</select>
+
+  <!-- 긴급 차단 -->
+  <select id="expireKills" flushCache="true" useCache="false" resultType="java.util.LinkedHashMap">update security.kill_switch set released_at = now(), released_by = 'ttl' where released_at is null and expires_at is not null and expires_at &lt;= now() returning id, tenant_id, action</select>
+  <select id="liveActions" resultType="string">select action from security.kill_switch where tenant_id = #{tid} and mode = 'live' and released_at is null and (expires_at is null or expires_at &gt; now())</select>
+  <select id="killCountDay" resultType="int">select count(*)::int from security.kill_switch where kday = cast(#{day} as date)</select>
+  <select id="killActiveLive" resultType="int">select count(*)::int from security.kill_switch where mode = 'live' and released_at is null</select>
+  <select id="killDup" resultType="java.lang.Integer">select 1 from security.kill_switch where tenant_id = #{tid} and action = #{action} and mode = 'live' and released_at is null and (expires_at is null or expires_at &gt; now()) limit 1</select>
+  <insert id="insertKill">insert into security.kill_switch (id, action, tenant_id, mode, trigger, rule_id, reason, signals, actor, expires_at, kday)
+    values (#{id}, #{action}, #{tid}, #{mode}, #{trigger}, #{rule}, #{reason}, cast(#{signals} as jsonb), #{actor}, case when cast(#{ttl} as int) is null then null else now() + make_interval(mins => cast(#{ttl} as int)) end, cast(#{day} as date))</insert>
+  <select id="killJson" resultType="string">select <include refid="kJson"/> from security.kill_switch where id = #{id}</select>
+  <select id="killList" resultType="string">select <include refid="kJson"/> from security.kill_switch order by activated_at desc, id limit 100</select>
+  <select id="killActive" resultType="string">select json_build_object('id', id, 'action', action, 'tenant', tenant_id, 'reason', reason, 'leftMin', case when expires_at is null then null else greatest(0, ceil(extract(epoch from expires_at - now()) / 60))::int end, 'dry', mode = 'dry')::text
+    from security.kill_switch where released_at is null and (expires_at is null or expires_at &gt; now()) order by activated_at desc, id limit 100</select>
+  <select id="killForUpdate" resultType="java.util.LinkedHashMap">select id, tenant_id, action, released_at::text released_at from security.kill_switch where id = #{id} for update</select>
+  <update id="releaseKill">update security.kill_switch set released_at = now(), released_by = #{by}, release_note = #{note} where id = #{id}</update>
+  <insert id="tenantAudit">insert into audit_log (tenant_id, actor, action, detail) values (#{tid}, #{actor}, #{action}, cast(#{detail} as jsonb))</insert>
+
+  <!-- 요약 -->
+  <select id="openByPriority" resultType="java.util.LinkedHashMap">select priority, count(*)::int n from security.finding where status not in ('fixed','accepted','false_positive') group by priority</select>
+  <select id="mttd" resultType="java.lang.Double">select round((avg(extract(epoch from f.created_at - t.published_at)) / 3600)::numeric, 1)::float8 from security.finding f join security.threat_item t on t.id = f.threat_id where t.published_at is not null</select>
+  <select id="mttr" resultType="java.lang.Double">select round((avg(extract(epoch from resolved_at - created_at)) / 3600)::numeric, 1)::float8 from security.finding where status = 'fixed' and resolved_at is not null</select>
+  <!-- 운영 지표(KPI) — service/security/kpi.js SQL과 같은 식(값 · 형태 동일) -->
+  <select id="kpi" resultType="string">select json_build_object(
+  'mttdH', (select round((avg(extract(epoch from f.created_at - t.published_at)) / 3600)::numeric, 1)::float8 from security.finding f join security.threat_item t on t.id = f.threat_id where t.published_at is not null and f.created_at >= t.published_at),
+  'mttrH', (select round((avg(extract(epoch from resolved_at - created_at)) / 3600)::numeric, 1)::float8 from security.finding where status = 'fixed' and resolved_at is not null),
+  'slaOverHigh', (select count(*)::int from security.finding where status not in ('fixed','accepted','false_positive') and priority in ('P0','P1') and sla_due_at &lt; now()),
+  'prCreated', (select count(*)::int from security.fix_pr),
+  'prMerged', (select count(*)::int from security.fix_pr where status = 'merged'),
+  'prAdoption', (select case when count(*) = 0 then null else round((count(*) filter (where status = 'merged'))::numeric / count(*), 3)::float8 end from security.fix_pr),
+  'findings', (select count(*)::int from security.finding),
+  'falsePositive', (select count(*)::int from security.finding where status = 'false_positive'),
+  'falsePositiveRate', (select case when count(*) = 0 then null else round((count(*) filter (where status = 'false_positive'))::numeric / count(*), 3)::float8 end from security.finding)
+)::text</select>
+  <select id="summaryExtra" resultType="java.util.LinkedHashMap">select (select count(*)::int from security.finding where status not in ('fixed','accepted','false_positive') and severity in ('critical','high')) high,
+    (select count(*)::int from security.finding where status not in ('fixed','accepted','false_positive') and sla_due_at &lt; now()) sla_over, (select count(*)::int from security.fix_pr where status in ('open','pending')) pr_pending,
+    (select to_char(max(at) at time zone 'UTC', <include refid="iso"/>) from security.scan) last</select>
+  <select id="todoFindings" resultType="string">select json_build_object('kind', 'finding', 'id', id, 'title', title, 'priority', priority, 'slaDueAt', to_char(sla_due_at at time zone 'UTC', <include refid="iso"/>))::text from security.finding
+    where status not in ('fixed','accepted','false_positive') and priority in ('P0','P1') order by priority, sla_due_at nulls last, id limit 5</select>
+
+  <!-- 취약점 · 위협 · 카드 · PR -->
+  <select id="findings" resultType="string">select <include refid="fJson"/> from security.finding where (#{st} = '' or status = #{st}) and (#{sv} = '' or severity = #{sv}) order by priority, score desc, id limit 300</select>
+  <select id="findingStatusForUpdate" resultType="string">select status from security.finding where id = #{id} for update</select>
+  <update id="updateFinding">update security.finding set status = #{st}, note = case when #{note} = '' then note else #{note} end, updated_at = now(),
+    resolved_at = case when #{st} in ('fixed','accepted','false_positive') then coalesce(resolved_at, now()) else null end where id = #{id}</update>
+  <select id="findingJson" resultType="string">select <include refid="fJson"/> from security.finding where id = #{id}</select>
+  <select id="threats" resultType="string">select <include refid="tJson"/> from security.threat_item order by published_at desc nulls last, id limit #{n}</select>
+  <select id="threatRow" resultType="java.util.LinkedHashMap">select id, source, external_id, title, attack_type, verdict from security.threat_item where id = #{id}</select>
+  <select id="cardOfThreat" resultType="string">select id from security.countermeasure where threat_id = #{tid} order by id limit 1</select>
+  <update id="cardReuse">update security.countermeasure set reuse_count = reuse_count + 1, updated_at = now() where id = #{id}</update>
+  <select id="cardMax" resultType="int">select coalesce(max(substring(id from 6)::int), 0) from security.countermeasure where id ~ '^CARD-[0-9]{4,}$'</select>
+  <insert id="insertCard">insert into security.countermeasure (id, threat_id, title, threat_pattern, controls, regression_tests, skill_refs, playbook, body) values (#{id}, #{threat}, #{title}, #{pattern}, cast(#{controls} as jsonb), cast(#{tests} as jsonb), cast(#{skills} as jsonb), #{playbook}, #{body})</insert>
+  <select id="cardJson" resultType="string">select <include refid="cJson"/>::text from security.countermeasure where id = #{id}</select>
+  <select id="cardList" resultType="string">select (<include refid="cJson"/>::jsonb - 'body')::text from security.countermeasure order by id limit 300</select>
+  <select id="prList" resultType="string">select <include refid="pJson"/> from security.fix_pr p <if test="open"> where p.status in ('open','pending')</if> order by p.created_at desc, p.id limit 100</select>
+  <update id="rejectPr">update security.fix_pr set status = 'rejected', reject_reason = #{reason} where id = #{id}</update>
+  <select id="prForUpdate" resultType="java.util.LinkedHashMap">select id, severity, status, files::text files from security.fix_pr where id = #{id} for update</select>
+  <select id="prExists" resultType="java.lang.Integer">select 1 from security.fix_pr where id = #{id}</select>
+  <select id="linkRow" resultType="java.util.LinkedHashMap">select pr_id, uid::text uid, secret_hash, expires_at &gt; now() live, used_at::text used_at from security.approve_link where id = #{id}</select>
+  <update id="useLink">update security.approve_link set used_at = now() where id = #{id} and used_at is null</update>
+  <insert id="insertLink">insert into security.approve_link (id, secret_hash, pr_id, uid, email, expires_at) values (#{id}, #{secret}, #{pr}, cast(#{uid} as uuid), #{email}, now() + make_interval(mins => #{min}))</insert>
+  <select id="linkExpires" resultType="string">select to_char(expires_at at time zone 'UTC', <include refid="iso"/>) from security.approve_link where id = #{id}</select>
+  <insert id="insertApproval">insert into security.approval (pr_id, approver, method) values (#{pr}, #{by}, #{method}) on conflict do nothing</insert>
+  <select id="approvalCount" flushCache="true" useCache="false" resultType="int">select count(*)::int from security.approval where pr_id = #{pr}</select>
+  <select id="approvers" resultType="string">select approver from security.approval where pr_id = #{pr} order by id</select>
+  <update id="setPrStatus">update security.fix_pr set status = #{st}, approved_at = case when #{st} = 'approved' then now() else null end where id = #{id}</update>
+
+  <!-- ingest(가디언 토큰) — 반환: 새로 넣었으면 true -->
+  <select id="upFinding" flushCache="true" useCache="false" resultType="java.lang.Boolean">insert into security.finding (id, key, origin, title, severity, priority, score, tenant_scope, owner, sla_due_at, threat_id, evidence)
+    values (#{id}, #{key}, #{origin}, #{title}, #{sev}, #{pri}, #{score}, #{scope}, #{owner}, cast(#{sla} as timestamptz), #{threat}, cast(#{ev} as jsonb))
+    on conflict (key) do update set title = excluded.title, severity = excluded.severity, priority = excluded.priority, score = excluded.score, tenant_scope = excluded.tenant_scope, sla_due_at = excluded.sla_due_at,
+    threat_id = coalesce(excluded.threat_id, security.finding.threat_id), evidence = excluded.evidence, updated_at = now() returning (xmax = 0)</select>
+  <select id="upThreat" flushCache="true" useCache="false" resultType="java.lang.Boolean">insert into security.threat_item (id, source, external_id, title, cvss, epss, kev, affected, attack_type, url, published_at, verdict, hash, summary)
+    values (#{id}, #{src}, #{ext}, #{title}, cast(#{cvss} as double precision), cast(#{epss} as double precision), #{kev}, cast(#{affected} as jsonb), #{attack}, #{url}, cast(#{pub} as timestamptz), #{verdict}, #{hash}, #{summary})
+    on conflict (source, external_id) do update set title = excluded.title, summary = excluded.summary, cvss = excluded.cvss, epss = excluded.epss, kev = excluded.kev, affected = excluded.affected, attack_type = excluded.attack_type, url = excluded.url,
+    published_at = excluded.published_at, verdict = excluded.verdict, hash = excluded.hash, updated_at = now() returning (xmax = 0)</select>
+  <insert id="insScan">insert into security.scan (type, target, tool, tool_version_sha, findings_count, raw_ref) values (#{type}, #{target}, #{tool}, #{sha}, #{n}, #{raw})</insert>
+  <select id="upPr" flushCache="true" useCache="false" resultType="java.lang.Boolean">insert into security.fix_pr (id, pr_number, title, finding_ids, severity, change_type, files, verify_result, risk, rollback_ref, url)
+    values (#{id}, cast(#{num} as int), #{title}, cast(#{fids} as jsonb), #{sev}, #{ct}, cast(#{files} as jsonb), #{vr}, #{risk}, #{rb}, #{url})
+    on conflict (id) do update set title = excluded.title, verify_result = excluded.verify_result, risk = excluded.risk, files = excluded.files, url = excluded.url where security.fix_pr.status in ('open','pending') returning (xmax = 0)</select>
+  <select id="upCard" flushCache="true" useCache="false" resultType="java.lang.Boolean">insert into security.countermeasure (id, threat_id, title, threat_pattern, controls, regression_tests, skill_refs, playbook, body)
+    values (#{id}, #{threat}, #{title}, #{pattern}, cast(#{controls} as jsonb), cast(#{tests} as jsonb), cast(#{skills} as jsonb), #{playbook}, #{body})
+    on conflict (id) do update set title = excluded.title, controls = excluded.controls, regression_tests = excluded.regression_tests, body = excluded.body, version = security.countermeasure.version + 1, updated_at = now() returning (xmax = 0)</select>
+
+  <!-- 사고 대응(F8) — 행은 Node security.js I_JSON과 같은 JSON -->
+  <sql id="iJson">json_build_object('id', id, 'type', type, 'title', title, 'severity', severity, 'status', status, 'phase', phase, 'scope', scope, 'timeline', timeline, 'decisions', decision_log, 'killId', kill_id, 'createdBy', created_by,
+    'notifyDueAt', to_char(notify_due_at at time zone 'UTC', <include refid="iso"/>), 'leftMin', ceil(extract(epoch from notify_due_at - now()) / 60)::int, 'notified', exists (select 1 from jsonb_array_elements(decision_log) d where d->>'kind' = 'notify' and d->>'decided' = 'true'),
+    'createdAt', to_char(created_at at time zone 'UTC', <include refid="iso"/>), 'updatedAt', to_char(updated_at at time zone 'UTC', <include refid="iso"/>))::text</sql>
+  <insert id="insertIncident">insert into security.incident (id, type, title, severity, scope, phase, status, timeline, notify_due_at, kill_id, created_by)
+    values (#{id}, #{type}, #{title}, #{sev}, cast(#{scope} as jsonb), #{phase}, 'open', cast(#{timeline} as jsonb), now() + make_interval(hours => #{hours}), #{kill}, #{by})</insert>
+  <select id="incidentJson" resultType="string">select <include refid="iJson"/> from security.incident where id = #{id}</select>
+  <select id="incidentList" resultType="string">select <include refid="iJson"/> from security.incident order by (status = 'open') desc, created_at desc, id limit 100</select>
+  <update id="incidentStep">update security.incident set timeline = timeline || cast(#{entry} as jsonb), phase = #{phase}, status = case when #{phase} = 'prevent' then 'closed' else 'open' end, updated_at = now() where id = #{id}</update>
+  <update id="incidentDecision">update security.incident set decision_log = decision_log || cast(#{entry} as jsonb), updated_at = now() where id = #{id}</update>
+  <select id="incidentDraftRow" resultType="java.util.LinkedHashMap">select type, scope::text scope, timeline::text timeline, to_char(created_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') c, to_char(notify_due_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') d from security.incident where id = #{id}</select>
+</mapper>

@@ -490,7 +490,7 @@
     try { if (ytKey()) { const r = await tutApi(base, more ? T.token : ''); T.mode = 'api'; T.token = r.next; T.list = T.list.concat(r.list.filter(v => !T.list.some(x => x.id === v.id))); T.end = !r.next; }
       else { T.mode = 'demo'; /* v36 1-5: 키가 없으면 주제에 맞는 데모 영상만 카드로 보이고, 모자라는 만큼은 'YouTube에서 찾기' 한 줄(검색어 링크)로 묶는다 */
         T.list = tutDemo(base); const qs = await tutQueries(base, 0); T.qby = qs.by; T.finds = qs.list.slice(0, 8); T.end = true; }
-      T.page++; } catch (e) { T.err = e.message || String(e); }
+      T.page++; } catch (e) { T.err = errMsg(e); }
     T.busy = false; tutDraw(); try { S.ai && (S.ai.usage = (S.ai.usage || 0) + 1); } catch (e) { } }
   const tutKey = v => v.id ? 'y:' + v.id : 'q:' + v.q;
   function tutSave(v) { const T = TUT(); const k = tutKey(v); if (T.saved[k]) return null;

@@ -248,17 +248,17 @@
       const mime = f.type || 'application/octet-stream'; const bad = LMP.fileOk(f.name, mime);
       if (bad) { toast(`${f.name}: ${bad}`, 'warn'); continue; } if (f.size > MAXF) { toast(`${f.name}: 파일은 100MB까지 올릴 수 있습니다.`, 'warn'); continue; } if (!f.size) { toast(`${f.name}: 빈 파일입니다.`, 'warn'); continue; }
       const u = UI.lmspUp = { name: f.name, size: f.size, pct: 0, done: false }; render();
-      if (/\.zip$/i.test(f.name)) { try { u.entries = await zipList(f); const t = u.entries.find(e => /\.(txt|md|csv|json|c|py|js|html)$/i.test(e.name)); if (t) u.preview = await zipPreview(f, t).catch(() => null); } catch (e) { toast('zip 목록을 읽지 못했습니다: ' + e.message, 'warn'); } }
+      if (/\.zip$/i.test(f.name)) { try { u.entries = await zipList(f); const t = u.entries.find(e => /\.(txt|md|csv|json|c|py|js|html)$/i.test(e.name)); if (t) u.preview = await zipPreview(f, t).catch(() => null); } catch (e) { toast('zip 목록을 읽지 못했습니다: ' + errMsg(e), 'warn'); } }
       const ids = []; const n = Math.ceil(f.size / CHUNK);
       try {
         for (let k = 0; k < n; k++) { const r = await LMP.putBlob(f.slice(k * CHUNK, (k + 1) * CHUNK), n > 1 ? `${f.name}.part${k + 1}` : f.name, mime); ids.push(r.file_id); u.pct = Math.min(99, Math.round((k + 1) / n * 100)); const bar = $('.lmp-prog i'); if (bar) bar.style.width = u.pct + '%'; const pb = $('.lmp-prog'); if (pb) pb.setAttribute('aria-valuenow', u.pct); }
-      } catch (e) { toast(`${f.name}: 올리지 못했습니다 — ${e.message}`, 'warn'); UI.lmspUp = null; render(); continue; }
+      } catch (e) { toast(`${f.name}: 올리지 못했습니다 — ${errMsg(e)}`, 'warn'); UI.lmspUp = null; render(); continue; }
       if (f.size <= 64 * 1048576 && crypto.subtle) u.sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', await f.arrayBuffer()))].map(x => x.toString(16).padStart(2, '0')).join('');
       u.pct = 100; u.done = true;
       await LMP.run('p', 'upload.add', { name: f.name, size: f.size, mime, sha256: n === 1 ? (u.sha || '') : '', file_ids: ids, entries: (u.entries || []).map(e => ({ name: e.name, size: e.size })) }, `${f.name}을(를) 파일 저장소에 올렸습니다(조각 ${n}개).`, 'p:up');
     }
   }
-  ACT['lmsp-dl'] = async el => { try { const r = await LMP.call('p', 'upload.get', { id: el.dataset.id }); const parts = []; for (const id of r.chunks) parts.push(await LMP.getBlob(id, r.mime)); LMP.saveBlob(new Blob(parts, { type: r.mime }), r.name); } catch (e) { toast(e.message, 'warn'); } };
+  ACT['lmsp-dl'] = async el => { try { const r = await LMP.call('p', 'upload.get', { id: el.dataset.id }); const parts = []; for (const id of r.chunks) parts.push(await LMP.getBlob(id, r.mime)); LMP.saveBlob(new Blob(parts, { type: r.mime }), r.name); } catch (e) { toast(errMsg(e), 'warn'); } };
   LMP.handleFiles = handleFiles;
   document.addEventListener('dragover', e => { const d = e.target.closest && e.target.closest('#lmspDrop'); if (d) { e.preventDefault(); d.classList.add('over'); } });
   document.addEventListener('dragleave', e => { const d = e.target.closest && e.target.closest('#lmspDrop'); if (d) d.classList.remove('over'); });
@@ -267,9 +267,9 @@
   document.addEventListener('input', e => { if (e.target.id === 'lmspEd') { UI.lmspEd = e.target.value; const p = $('#lmspPrev'); if (p) p.innerHTML = texDoc(e.target.value); } });
   /* 에디터 */
   ACT['lmsp-ins'] = el => { const t = $('#lmspEd'); if (!t) return; const s = t.selectionStart || t.value.length; t.value = t.value.slice(0, s) + ' ' + el.dataset.v + ' ' + t.value.slice(t.selectionEnd || s); t.dispatchEvent(new Event('input', { bubbles: true })); t.focus(); };
-  const saveDraft = async auto => { const t = $('#lmspEd'); if (!t) return; try { const r = await LMP.call('p', 'draft.save', { doc_key: 'editor:demo', body: t.value }); UI.lmspDraftMsg = `${auto ? '자동 ' : ''}임시저장 ${new Date().toTimeString().slice(0, 8)} · ${r.chars}자`; const m = $('#lmspDraftMsg'); if (m) m.textContent = UI.lmspDraftMsg; } catch (e) { toast(e.message, 'warn'); } };
+  const saveDraft = async auto => { const t = $('#lmspEd'); if (!t) return; try { const r = await LMP.call('p', 'draft.save', { doc_key: 'editor:demo', body: t.value }); UI.lmspDraftMsg = `${auto ? '자동 ' : ''}임시저장 ${new Date().toTimeString().slice(0, 8)} · ${r.chars}자`; const m = $('#lmspDraftMsg'); if (m) m.textContent = UI.lmspDraftMsg; } catch (e) { toast(errMsg(e), 'warn'); } };
   ACT['lmsp-draft'] = () => saveDraft(false);
-  ACT['lmsp-load'] = async () => { try { const r = await LMP.call('p', 'draft.get', { doc_key: 'editor:demo' }); if (r.draft) { UI.lmspEd = r.draft.body; render(); toast('임시저장본을 불러왔습니다.', 'ok'); } else toast('임시저장본이 없습니다.'); } catch (e) { toast(e.message, 'warn'); } };
+  ACT['lmsp-load'] = async () => { try { const r = await LMP.call('p', 'draft.get', { doc_key: 'editor:demo' }); if (r.draft) { UI.lmspEd = r.draft.body; render(); toast('임시저장본을 불러왔습니다.', 'ok'); } else toast('임시저장본이 없습니다.'); } catch (e) { toast(errMsg(e), 'warn'); } };
   setInterval(() => { if (CUR && CUR.tab === 'lmsp' && UI.lmspT === 'editor' && UI.lmspEd != null) saveDraft(true); }, 30000);
   /* KOCW */
   ACT['lmsp-kocw'] = async () => { const term = ($('#lmspTerm') || {}).value || ''; if (LMP.live()) { const a = document.createElement('a'); a.href = '/api/lms/p/kocw?term_id=' + encodeURIComponent(term); a.download = 'kocw-metadata.xml'; document.body.appendChild(a); a.click(); a.remove(); return; }
@@ -279,13 +279,13 @@
   const tokGet = () => { try { return sessionStorage.getItem(TOKK) || ''; } catch (e) { return ''; } };
   LMP.hdr = (b, op) => (b === 'p' && /^admin\./.test(op) && tokGet() ? { 'x-lms-admin': tokGet() } : null);
   const admLogin = async force => { const pw = ($('#lmspPw') || {}).value || ''; try { const r = await LMP.call('p', 'admin.login', { password: pw, force }); try { sessionStorage.setItem(TOKK, r.token); } catch (e) { } LMP.drop('p:adm'); render(); toast(r.last_login ? `관리자 모드 · 최종 접속 ${LMP.ts(r.last_login.at)} (${r.last_login.ip})` : '관리자 모드에 들어왔습니다.', 'ok'); }
-    catch (e) { if (e.code === 'concurrent' || /다른 곳에서/.test(e.message)) modal('동시 접속', `<p>${esc(e.message)}</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '이어서 들어가기', kind: 'pri', run: () => { admLogin(true); } }]); else { toast(e.message, 'warn'); LMP.drop('p:adm'); render(); } } };
+    catch (e) { if (e.code === 'concurrent' || /다른 곳에서/.test(e.message)) modal('동시 접속', `<p>${esc(errMsg(e))}</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '이어서 들어가기', kind: 'pri', run: () => { admLogin(true); } }]); else { toast(errMsg(e), 'warn'); LMP.drop('p:adm'); render(); } } };
   ACT['lmsp-adm'] = () => admLogin(false);
   ACT['lmsp-admout'] = async () => { await LMP.run('p', 'admin.logout', {}, '관리자 모드에서 나왔습니다.', 'p:adm'); try { sessionStorage.removeItem(TOKK); } catch (e) { } };
   /* 개인정보 열람 */
   ACT['lmsp-pii'] = async () => { const r = await LMP.run('p', 'pii.view', { target: $('#lmspPiT').value.trim(), reason_code: $('#lmspPiR').value, reason_text: $('#lmspPiX').value, fields: $$('[name=lmspPiF]:checked').map(x => x.value) }, '열람 사유를 기록했습니다.', 'p:pii'); if (r) { UI.lmspPiiMsg = r.source; render(); } };
   /* 무들 */
-  async function mbzPick(f) { if (!f) return; try { const b = new Uint8Array(await f.slice(0, 2).arrayBuffer()); const raw = b[0] === 0x1f && b[1] === 0x8b ? await gunzip(f) : new Uint8Array(await f.arrayBuffer()); UI.lmspMig = mbzPayload(untar(raw), f.name); render(); } catch (e) { toast('백업을 읽지 못했습니다: ' + e.message, 'warn'); } }
+  async function mbzPick(f) { if (!f) return; try { const b = new Uint8Array(await f.slice(0, 2).arrayBuffer()); const raw = b[0] === 0x1f && b[1] === 0x8b ? await gunzip(f) : new Uint8Array(await f.arrayBuffer()); UI.lmspMig = mbzPayload(untar(raw), f.name); render(); } catch (e) { toast('백업을 읽지 못했습니다: ' + errMsg(e), 'warn'); } }
   LMP.mbzPick = mbzPick;
   ACT['lmsp-migrun'] = async () => { const p = UI.lmspMig; if (!p) return; const term = ($('#lmspMigTerm') || {}).value || ''; const r = await LMP.run('p', 'mig.import', { ...p, term_id: term || undefined }, r => `이관 #${r.run_id} 완료 — ${r.report.ok ? '원본과 일치' : '확인 필요 ' + r.report.issues.length + '건'}`, 'p:'); if (r) { UI.lmspMig = null; render(); } };
 
@@ -331,7 +331,7 @@
     if (!W3ok()) return head('앱 출석') + '<div class="warn">출결(묶음 G) 화면 모듈이 없습니다.</div>';
     const secs = G('p:g:secs', 'GET', '/api/lms/g/sections', {}); const L = Array.isArray(secs) ? secs : [];
     /* 데모: 분반이 없으면 출결 데모 분반을 바로 만든다(막다른 안내 없음) */
-    if (Array.isArray(secs) && !L.length && !LMP.live() && LMP.isAdm() && W3.call) { if (!UI.lmspSeeding) { UI.lmspSeeding = 1; W3.call('POST', '/api/lms/g/seed', {}).catch(e => toast(e.message, 'warn')).finally(() => { UI.lmspSeeding = 0; W3.drop('p:g:'); render(); }); } return head('앱 출석') + '<div class="card"><p class="mini">샘플 분반 · 차시 · 수강생을 준비하고 있습니다…</p></div>'; }
+    if (Array.isArray(secs) && !L.length && !LMP.live() && LMP.isAdm() && W3.call) { if (!UI.lmspSeeding) { UI.lmspSeeding = 1; W3.call('POST', '/api/lms/g/seed', {}).catch(e => toast(errMsg(e), 'warn')).finally(() => { UI.lmspSeeding = 0; W3.drop('p:g:'); render(); }); } return head('앱 출석') + '<div class="card"><p class="mini">샘플 분반 · 차시 · 수강생을 준비하고 있습니다…</p></div>'; }
     const sec = UI.lmspSec && L.find(x => x.section_id === UI.lmspSec) ? UI.lmspSec : (L[0] || {}).section_id;
     const ses = sec ? G('p:g:ses:' + sec, 'GET', '/api/lms/g/sessions', { section_id: sec }) : null; const SL = Array.isArray(ses) ? ses : [];
     const nowT = Date.now(); const near = SL.slice().sort((a, b) => Math.abs(Date.parse(a.starts_at) - nowT) - Math.abs(Date.parse(b.starts_at) - nowT))[0];
@@ -383,16 +383,16 @@
   /* 학생 출석: 운영 = P /att/checkin(학습자 세션 → G), 데모 = G 데모 checkin(학번) */
   const doCheckin = async b => { if (LMP.live()) return LMP.call('p', 'att.checkin', b); const mno = ($('#lmspMno') || {}).value || UI.lmspMno || ''; UI.lmspMno = mno; return W3.call('POST', '/api/lms/g/checkin', { ...b, member_no: mno, method: b.qr ? 'qr' : 'code' }); };
   const ckMsg = r => r.status === 'late' ? '지각으로 출석했습니다.' : '출석했습니다.';
-  const submit = async b => { try { const r = await doCheckin(b); UI.lmspCkMsg = ckMsg(r); toast(UI.lmspCkMsg, 'ok'); W3.drop('p:g:ros'); } catch (e) { UI.lmspCkMsg = e.message; toast(e.message, 'warn'); } render(); };
+  const submit = async b => { try { const r = await doCheckin(b); UI.lmspCkMsg = ckMsg(r); toast(UI.lmspCkMsg, 'ok'); W3.drop('p:g:ros'); } catch (e) { UI.lmspCkMsg = errMsg(e); toast(errMsg(e), 'warn'); } render(); };
   ACT['lmsp-ck'] = async () => { const code = ($('#lmspCode') || {}).value || ''; const sid = curSes(); if (!navigator.onLine) { qSet([...qGet(), { session_id: sid, code, offline_at: new Date().toISOString() }]); toast('오프라인입니다. 출석부에 저장했다가 연결되면 보냅니다.', 'warn'); render(); return; } await submit({ session_id: sid, code }); };
   ACT['lmsp-ckoff'] = () => { qSet([...qGet(), { session_id: curSes(), code: ($('#lmspCode') || {}).value || '', offline_at: new Date().toISOString() }]); toast('오프라인 출석부에 저장했습니다.', 'ok'); render(); };
   ACT['lmsp-scan'] = async () => {
     if (!('BarcodeDetector' in window)) return toast('QR 인식을 지원하지 않는 브라우저입니다. 인증번호를 입력하세요.', 'warn');
     try { const det = new BarcodeDetector({ formats: ['qr_code'] }); scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); UI.lmspScanning = 1; render(); const v = $('#lmspCam'); v.srcObject = scanStream; await v.play();
       scanT = setInterval(async () => { try { const c = await det.detect(v); const t = c && c[0] && c[0].rawValue; if (t && /^DDATT1\./.test(t)) { stopScan(); UI.lmspScanning = 0; const sid = t.split('.')[1]; await submit({ session_id: sid, qr: t, method: 'qr' }); } } catch (e) { } }, 400);
-    } catch (e) { stopScan(); UI.lmspScanning = 0; render(); toast('카메라를 열 수 없습니다. 인증번호로 출석하세요. (' + e.message + ')', 'warn'); } };
+    } catch (e) { stopScan(); UI.lmspScanning = 0; render(); toast('카메라를 열 수 없습니다. 인증번호로 출석하세요. (' + errMsg(e) + ')', 'warn'); } };
   const sync = async () => { const Q = qGet(); if (!Q.length) return; try { let ok = 0; if (LMP.live()) { const r = await LMP.call('p', 'att.checkin', { items: Q }); ok = r.items.filter(x => x.ok).length; } else { for (const x of Q) { try { await doCheckin(x); ok++; } catch (e) { } } }
-    qSet([]); toast(`오프라인 출석 ${Q.length}건 전송 — 인정 ${ok}건`, ok ? 'ok' : 'warn'); W3.drop('p:g:ros'); render(); } catch (e) { toast(e.message, 'warn'); } };
+    qSet([]); toast(`오프라인 출석 ${Q.length}건 전송 — 인정 ${ok}건`, ok ? 'ok' : 'warn'); W3.drop('p:g:ros'); render(); } catch (e) { toast(errMsg(e), 'warn'); } };
   ACT['lmsp-sync'] = sync; window.addEventListener('online', sync);
 
   /* 강의실 언어 표시(기존 강의실 화면 감싸기) */

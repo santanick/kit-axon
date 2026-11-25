@@ -93,6 +93,7 @@ public class LmsEngine {
         }
     }
 
+    public static final Map<String, String> EXPORTS = Map.of("/api/lms/g/export", "lms_g_attendance");
     public JsonNode run(JsonNode spec, JsonNode r, Callable<Map<String, Object>> need, HttpServletRequest req, byte[] body, Map<String, Function<Map<String, Object>, String>> stmts) throws Exception {
         JsonNode err = spec.get("err");
         /* who: 'any' = 운영자 세션 또는 학습자 포털 세션. 학습자면 학번(member_no)은 본인 것으로 고정 · 보고서는 학생 화면 */
@@ -120,6 +121,8 @@ public class LmsEngine {
         for (JsonNode d : params) P.put(d.get(0).asText(), param(err, src, d));
         JsonNode lim = r.get("limit");
         if (lim != null && lim.isArray()) rl.limit(lim.get(0).asText() + ":" + a.get("uid"), lim.get(1).asInt(), lim.get(2).asLong());
+        final String xk = EXPORTS.get(r.get("p").asText()); final egovframework.didisam.records.Records.Gate X; /* 가디언 4차 #14(d5) 출석부 내려받기(Node mod-g.js engine과 같음) */
+        if (xk != null) { if ("learner".equals(String.valueOf(a.get("role")))) throw bad(err, "role", null); X = egovframework.didisam.records.Records.gate(req, String.valueOf(a.get("role"))); } else X = null;
         String tid = (String) a.get("tid");
         JsonNode out = tx.inTenant(tid, () -> {
             JsonNode o = null;
@@ -140,6 +143,13 @@ public class LmsEngine {
             ObjectNode det = F.objectNode();
             for (JsonNode d : params) { String t = d.get(1).asText(); if (t.equals("uuid") || t.equals("mno") || t.equals("enum")) { Object v = P.get(d.get(0).asText()); if (v == null) det.putNull(d.get(0).asText()); else det.put(d.get(0).asText(), (String) v); } }
             tx.audit(tid, (String) a.get("email"), r.get("audit").asText(), stringify(det));
+        }
+        if (X != null) {
+            JsonNode rows = out == null ? null : out.get("rows"); int ci = -1; JsonNode cols = out == null ? null : out.get("columns");
+            if (cols != null && cols.isArray()) for (int i = 0; i < cols.size(); i++) if ("학번".equals(cols.get(i).asText())) { ci = i; break; }
+            int n = rows != null && rows.isArray() ? rows.size() : 0;
+            if (!X.raw() && ci >= 0) for (int k = 0; k < n; k++) { JsonNode row = rows.get(k); if (row instanceof com.fasterxml.jackson.databind.node.ArrayNode an && ci < an.size()) an.set(ci, TextNode.valueOf(egovframework.didisam.records.Records.mask(an.get(ci).isNull() ? null : an.get(ci).asText()))); }
+            tx.audit(tid, (String) a.get("email"), "export", F.objectNode().put("kind", xk).put("n", n).put("raw", X.raw()).put("reason", X.reason()).toString());
         }
         return out;
     }

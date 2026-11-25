@@ -59,13 +59,13 @@
   const C = {}; const pend = {};
   function load(key, fn) {
     if (C[key] !== undefined) return C[key];
-    if (!pend[key]) pend[key] = Promise.resolve().then(fn).then(v => { C[key] = { ok: v }; }).catch(e => { C[key] = { err: e.message || String(e) }; }).finally(() => { delete pend[key]; if (typeof render === 'function') render(); });
+    if (!pend[key]) pend[key] = Promise.resolve().then(fn).then(v => { C[key] = { ok: v }; }).catch(e => { C[key] = { err: errMsg(e) }; }).finally(() => { delete pend[key]; if (typeof render === 'function') render(); });
     return null;
   }
   const drop = (...pre) => { for (const k of Object.keys(C)) if (!pre.length || pre.some(p => k.startsWith(p))) delete C[k]; };
   const wait = () => '<div class="card"><p class="muted">불러오는 중입니다…</p></div>';
   const errBox = m => `<div class="card"><p class="warn">${esc(m)}</p></div>`;
-  async function run(fn, okMsg, ...dropKeys) { try { const r = await fn(); if (okMsg) toast(okMsg, 'ok'); if (dropKeys.length) { drop(...dropKeys); render(); } return r; } catch (e) { toast(e.message || '오류가 발생했습니다.', 'warn'); return null; } }
+  async function run(fn, okMsg, ...dropKeys) { try { const r = await fn(); if (okMsg) toast(okMsg, 'ok'); if (dropKeys.length) { drop(...dropKeys); render(); } return r; } catch (e) { toast(errMsg(e, '오류가 발생했습니다.'), 'warn'); return null; } }
   function sections() { const r = load('sec', () => call('GET', '/api/lms/e/sections')); return r && r.ok ? r.ok.sections : null; }
   function secPick(uiKey, act) {
     const L = sections(); if (!L) return { html: wait(), sec: null };
@@ -99,7 +99,7 @@
     const cs = cen.reduce((a, b) => a + b.length, 0); const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cs), ...u32(off), ...u16(0)]);
     const all = [...parts, ...cen, end]; const out = new Uint8Array(all.reduce((a, b) => a + b.length, 0)); let p = 0; for (const x of all) { out.set(x, p); p += x.length; } return out;
   }
-  function css() { if (document.getElementById('efhCss')) return; const l = document.createElement('link'); l.id = 'efhCss'; l.rel = 'stylesheet'; l.href = 'lms/e.css?v=46.1'; document.head.appendChild(l); }
+  function css() { if (document.getElementById('efhCss')) return; const l = document.createElement('link'); l.id = 'efhCss'; l.rel = 'stylesheet'; l.href = 'lms/e.css?v=47.0'; document.head.appendChild(l); }
   const peek = k => C[k] && C[k].ok;
   window.EFH = { seedSec: sec => seedSec(sec), peek, ON, LIVE_ON, st, D, call, load, drop, wait, errBox, run, sections, secPick, demoStudents, demoSections, rid, r2, fmt, ERR, nowIso, toB64, dl, b64bytes, zip, css, s0, demoTag, todo, dots, tabs4, mi };
 
@@ -238,7 +238,7 @@
         answers[q.q_id] = q.kind === 'numeric' ? (ok ? q.answer.value : 50) : q.kind === 'short' ? (ok ? q.answer[0] : '모름') : q.kind === 'tf' ? (ok ? q.answer : [q.answer[0] === 't' ? 'f' : 't']) : (ok ? q.answer : [q.choices[q.choices.length - 1].id]);
         marks[q.q_id] = { score: ok ? q.points : 0, ok, auto: true }; if (ok) s += q.points; q.attempts_n++; if (ok) q.correct_n++; });
       const ip = `10.20.${30 + h % 8}.${h % 200 + 10}`; const t = { attempt_id: rid(), exam_id: ex1.exam_id, person_id: p.person_id, no: 1, status: pend ? 'submitted' : 'graded', started_at: iso(t0), deadline_at: iso(t0 + 20 * 6e4), submitted_at: iso(t0 + (12 + h % 7) * 6e4), auto_closed: false,
-        auto_score: s, score: pend ? null : s, max_score: mx, ip_start: ip, ip_last: j === 2 ? '10.99.1.7' : ip, ip_changed: j === 2, ip_log: [{ ip, at: iso(t0), ev: 'start' }], items, answers, marks };
+        auto_score: s, score: pend ? null : s, max_score: mx, ip_start: ip, ip_last: j === 2 ? '203.0.113.7' : ip, ip_changed: j === 2, ip_log: [{ ip, at: iso(t0), ev: 'start' }], items, answers, marks };
       X.atts.push(t); if (!pend) gradePut(sec, it1, p.person_id, r2(100 * s / mx)); });
     /* 성적: 수업계획서 비율(중간 30 · 기말 30 · 과제 20 · 퀴즈 10 · 출석 10) — 과제 · 퀴즈는 위 자동 항목에 비율을 준다 */
     X.items.filter(i => i.section_id === sec).forEach(i => { i.weight_pct = i.source_ref === 'asg:' + a1.asg_id ? 20 : i.source_ref === 'exam:' + ex1.exam_id ? 10 : 0; i.sort = i.weight_pct ? 20 : 60; });
@@ -347,7 +347,7 @@
         const ff = []; for (const f of [...(w.querySelector('[name=ff]').files || [])]) { const up = await call('POST', '/api/lms/e/file', { name: f.name, mime: f.type || 'application/octet-stream', b64: await toB64(f) }); ff.push(up.file_id); }
         const b = { sub_id: s.sub_id, feedback: fv(w, 'fb'), return: fv(w, 'ret'), annotations: [...(s.annotations || []), ...(fv(w, 'aq') || fv(w, 'ac') ? [{ quote: fv(w, 'aq'), comment: fv(w, 'ac') }] : [])], feedback_files: [...(s.feedback_files || []).map(x => x.file_id), ...ff] };
         if (rub) { b.rubric_scores = {}; rub.criteria.forEach(c => { const x = w.querySelector(`[name="rb_${c.key}"]:checked`); if (x) b.rubric_scores[c.key] = +x.value; }); } else b.score = fv(w, 'score');
-        await run(() => call('POST', '/api/lms/e/grade', b), '채점을 저장했습니다.', 'lmse:'); })().catch(e => toast(e.message, 'warn')); } }], true);
+        await run(() => call('POST', '/api/lms/e/grade', b), '채점을 저장했습니다.', 'lmse:'); })().catch(e => toast(errMsg(e), 'warn')); } }], true);
   };
   ACT['lmse-dl'] = async el => { const f = await run(() => call('GET', '/api/lms/e/file', { id: el.dataset.v })); if (f) dl(f.name, b64bytes(f.b64), f.mime); };
   ACT['lmse-rub'] = () => {
@@ -375,9 +375,9 @@
   const myKey = () => 'lmse:my:' + UI.lmseSec + ':' + UI.lmseAs;
   const timers = {};
   document.addEventListener('input', e => { const ta = e.target.closest && e.target.closest('.efh-ta'); if (!ta) return; clearTimeout(timers[ta.dataset.asg]); const sv = document.getElementById('sv_' + ta.dataset.asg); if (sv) sv.textContent = '저장 대기 중…';
-    timers[ta.dataset.asg] = setTimeout(async () => { try { const r = await call('POST', '/api/lms/e/draft', { asg_id: ta.dataset.asg, body: ta.value, base_version: ta.dataset.ver ? +ta.dataset.ver : undefined }); ta.dataset.ver = r.submission.version; const s2 = document.getElementById('sv_' + ta.dataset.asg); if (s2) s2.textContent = `버전 ${r.submission.version} · ${fmt(r.submission.saved_at)} 자동 저장`; drop(myKey()); } catch (x) { toast(x.message, 'warn'); } }, 1200); });
+    timers[ta.dataset.asg] = setTimeout(async () => { try { const r = await call('POST', '/api/lms/e/draft', { asg_id: ta.dataset.asg, body: ta.value, base_version: ta.dataset.ver ? +ta.dataset.ver : undefined }); ta.dataset.ver = r.submission.version; const s2 = document.getElementById('sv_' + ta.dataset.asg); if (s2) s2.textContent = `버전 ${r.submission.version} · ${fmt(r.submission.saved_at)} 자동 저장`; drop(myKey()); } catch (x) { toast(errMsg(x), 'warn'); } }, 1200); });
   ACT['lmse-up'] = async el => { const g = el.dataset.asg; const my = C[myKey()]; const s = my && my.ok && (my.ok.assignments.find(x => x.asg_id === g) || {}).submission; const ids = s ? s.files.map(f => f.file_id) : [];
-    try { for (const f of [...el.files]) { const up = await call('POST', '/api/lms/e/file', { name: f.name, mime: f.type || 'application/octet-stream', b64: await toB64(f) }); ids.push(up.file_id); } await call('POST', '/api/lms/e/draft', { asg_id: g, body: s ? s.body : '', files: ids }); toast('파일을 첨부했습니다.', 'ok'); drop(myKey()); render(); } catch (x) { toast(x.message, 'warn'); } };
+    try { for (const f of [...el.files]) { const up = await call('POST', '/api/lms/e/file', { name: f.name, mime: f.type || 'application/octet-stream', b64: await toB64(f) }); ids.push(up.file_id); } await call('POST', '/api/lms/e/draft', { asg_id: g, body: s ? s.body : '', files: ids }); toast('파일을 첨부했습니다.', 'ok'); drop(myKey()); render(); } catch (x) { toast(errMsg(x), 'warn'); } };
   ACT['lmse-submit'] = el => run(async () => { const ta = document.querySelector(`.efh-ta[data-asg="${el.dataset.v}"]`); if (ta) { clearTimeout(timers[el.dataset.v]); await call('POST', '/api/lms/e/draft', { asg_id: el.dataset.v, body: ta.value }); } return call('POST', '/api/lms/e/submit', { asg_id: el.dataset.v }); }, '제출했습니다.', 'lmse:');
   ACT['lmse-unsub'] = el => run(() => call('POST', '/api/lms/e/submit', { asg_id: el.dataset.v, cancel: true }), '제출을 취소했습니다.', 'lmse:');
   ACT['lmse-vers'] = async el => { const r = await run(() => call('GET', '/api/lms/e/versions', { sub: el.dataset.v })); if (r) modal('버전 기록', table(['버전', '저장한 사람', '시각', '글자 수', '첨부'], r.versions.map(v => [String(v.ver), esc(v.by || ''), fmt(v.at), String(v.chars), String(v.files)]))); };

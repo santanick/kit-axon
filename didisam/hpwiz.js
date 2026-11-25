@@ -334,11 +334,11 @@
   }
   async function gen() {
     const st = W.st; if (st.busy) return; if (!st.brief && !st.url && !st.pasted) { toast('한 줄이라도 적어 주세요.', 'warn'); return; }
-    if (st.url && window.hpBenchURL) { try { hpBenchURL(st.url); } catch (e) { toast(e.message, 'warn'); return; } }
+    if (st.url && window.hpBenchURL) { try { hpBenchURL(st.url); } catch (e) { toast(errMsg(e), 'warn'); return; } }
     st.step = 3; st.busy = true; paint();
     const o = { brief: st.brief, url: st.url, tone: st.tone, pasted: st.pasted }; let res;
     W.want3 = { theme: st.theme };
-    try { res = await hpGenerate(o); } catch (e) { res = { j: hpLocal(o.brief, o), notes: [`AI 연결에 실패해(${e.message}) 규칙으로 만들었습니다.`], via: '기본 설계' }; } finally { W.want3 = null; }
+    try { res = await hpGenerate(o); } catch (e) { res = { j: hpLocal(o.brief, o), notes: [`AI 연결에 실패해(${errMsg(e)}) 규칙으로 만들었습니다.`], via: '기본 설계' }; } finally { W.want3 = null; }
     const local = res.via === '기본 설계'; const j = local ? patchLocal(res.j || {}) : (res.j || {});
     const prev = site(); let url = ''; try { url = st.url && window.hpBenchURL ? hpBenchURL(st.url) : ''; } catch (e) { url = ''; }
     const meta = { brief: String(st.brief || '').slice(0, 1500), url, by: res.via };

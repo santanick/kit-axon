@@ -14,7 +14,7 @@
   /* 학번 가입(비밀번호) 계정은 가입 때 동의했으므로 제외, 체험용 공용 샘플(tid sample)도 제외 */
   const need = () => { if (!SITE() || !LR.me || LR.mode === 'preview' || LR.tid === 'sample' || !isUniv()) return false; if (LR.me.acct) return false;
     if (LR.mode === 'live') return !!LR.me.needConsent; return !store()[LR.me.sid]; };
-  const FREE = ['home', 'privacy', 'login', 'consent'];
+  const FREE = ['privacy', 'login', 'consent']; /* v47: 로그인 후 첫 착지가 #home이라 홈도 동의 전에는 막는다(동의 없이 학습 화면이 열리던 것). 방문자(로그인 전)는 need()가 거짓이라 그대로 */
   const CN = { back: '' };
   window.lcNeedConsent = need;
 
@@ -27,13 +27,13 @@
       <label class="ckl"><input type="checkbox" name="tos"> [필수] 이용약관 동의</label><details><summary>전문 보기</summary><pre>${esc(pol.tos || '이용약관은 학교 홈페이지에서 확인할 수 있어요.')}</pre></details>
       <label class="ckl"><input type="checkbox" name="privacy"> [필수] 개인정보 수집 · 이용 동의</label>
       <details open><summary>받는 항목: 학번 · 학과</summary><table class="la-pol"><thead><tr><th>구분</th><th>수집 항목</th><th>목적</th><th>보유 기간</th></tr></thead><tbody>${rows.map(r => `<tr>${r.map((x, i) => `<td${i === 0 ? ' class="k"' : ''}>${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table>
-      <p class="mini">이름 · 연락처 · 이메일 · 생년월일은 받지 않아요. 비밀번호도 만들지 않고, 학교에서 받은 접근코드로 로그인해요(학교 SSO 연동 예정).</p></details></fieldset>
+      <p class="mini">이름 · 연락처 · 이메일 · 생년월일은 받지 않아요. 비밀번호도 만들지 않고, 학교에서 받은 접근코드로 로그인해요(학교 SSO 연동 예정).</p>${typeof laXferHTML === 'function' ? laXferHTML() : ''}</details></fieldset>
       <p class="err" id="lcCnErr" role="alert"></p><button class="lbtn pri blk" type="submit">동의하고 시작하기</button></form>
     <p class="la-links"><a href="#home" data-cn="out">동의하지 않고 로그아웃</a> · <a href="#privacy">개인정보 처리방침 요약</a></p></div></section>`; };
   if (typeof LA_R === 'object') LA_R.consent = view;
 
   { const base = lrender; lrender = (...a) => {
-      try { if (need()) { const r = route(); if (!FREE.includes(r.a)) { CN.back = location.hash && location.hash !== '#consent' ? location.hash : '#my'; history.replaceState(null, '', location.pathname + location.search + '#consent'); } } } catch (e) { console.error(e); }
+      try { if (need()) { const r = route(); if (!FREE.includes(r.a)) { CN.back = location.hash && location.hash !== '#consent' ? location.hash : '#home'; history.replaceState(null, '', location.pathname + location.search + '#consent'); } } } catch (e) { console.error(e); }
       return base(...a); }; }
 
   document.addEventListener('change', e => { const t = e.target; if (!t || t.dataset.cn !== 'all') return; const f = t.closest('form'); ['tos', 'privacy'].forEach(n => { if (f.elements[n]) f.elements[n].checked = t.checked; }); });
@@ -44,8 +44,8 @@
     try {
       if (LR.mode === 'live') { const r = await api('POST', `/api/pub/${encodeURIComponent(LR.tid)}/consent`, { tos: true, privacy: true, ver: VER }); LR.me.needConsent = false; LR.me.consentAt = r.consentAt || at; }
       else { const s = store(); s[LR.me.sid] = { at, ver: VER }; localStorage.setItem(K(), JSON.stringify(s)); }
-    } catch (x) { b.disabled = false; return say(x.message || '저장하지 못했어요. 다시 시도해 주세요.'); }
-    toast('동의를 마쳤어요. 학습을 시작해요.', 'ok'); const to = CN.back || '#my'; CN.back = ''; if (location.hash === to) lrender(); else location.hash = to; });
+    } catch (x) { b.disabled = false; return say(errMsg(x, '저장하지 못했어요. 다시 시도해 주세요.')); }
+    toast('동의를 마쳤어요. 학습을 시작해요.', 'ok'); const to = CN.back || '#home'; /* v47-fix: 첫 착지 홈 */ CN.back = ''; if (location.hash === to) lrender(); else location.hash = to; });
 
   /* 운영: 새로 고침 뒤에도 계정 회원의 닉네임 · 종류를 화면 상태에 둔다(lacct.js laLiveMe) */
   { const base = LR.api.load; LR.api.load = async (...a) => { const r = await base(...a); try { if (LR.mode === 'live' && LR.me && typeof laLiveMe === 'function') laLiveMe({ me: LR.me }); } catch (e) { console.error(e); } return r; }; }

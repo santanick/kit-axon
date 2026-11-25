@@ -6,7 +6,11 @@ const { Pool } = require('pg');
 
 function poolFrom(env) {
   const cfg = { connectionString: env.DATABASE_URL, max: Number(env.DB_POOL || 8), idleTimeoutMillis: 30000, connectionTimeoutMillis: 10000 };
-  if (env.DB_SSL === 'require') cfg.ssl = { rejectUnauthorized: false };
+  /* 가디언 4차 #13: DB_SSL_CA(PEM 내용 또는 파일 경로, Secret 권장)가 있으면 서버 인증서를 검증한다(rejectUnauthorized: true).
+     DB_SSL=require만 있으면 암호화만(검증 없음 — 이전 동작, 운영은 DB_SSL_CA 권장). Cloud SQL 커넥터(unix 소켓)는 커넥터가 암호화한다. */
+  const ca = String(env.DB_SSL_CA || '').trim();
+  if (ca) cfg.ssl = { rejectUnauthorized: true, ca: /-----BEGIN CERTIFICATE-----/.test(ca) ? ca.replace(/\\n/g, '\n') : require('node:fs').readFileSync(ca, 'utf8'), ...(env.DB_SSL_SERVERNAME ? { servername: env.DB_SSL_SERVERNAME } : {}) };
+  else if (env.DB_SSL === 'require') cfg.ssl = { rejectUnauthorized: false };
   return new Pool(cfg);
 }
 
@@ -403,11 +407,165 @@ const MIGRATIONS = [
      end loop; end $$;
    grant select, insert, update, delete on ai_usage_f, ai_turn, learning_event to didisam_tenant;
    grant usage on sequence ai_turn_id_seq, learning_event_id_seq to didisam_tenant;`,
+  /* v47 AI 추가 충전(ai_credit): 정운영자가 토스로 산 토큰 묶음. ready(결제 창 열림) → paid(서버가 토스 승인 확인) 뒤에만 한도에 더한다.
+     month(YYYY-MM, KST)는 주문한 달. 사용 기간은 expires_at(뒤 이전, 충전일 + 365일)까지 — 남은 양은 다음 달로 이어진다. 금액은 공급가 + 부가세(aiprice.js) */
+  `create table if not exists ai_credit (
+     id text primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     month text not null check (month ~ '^\\d{4}-\\d{2}$'),
+     pack text not null check (pack ~ '^[a-z0-9]{2,12}$'),
+     tokens bigint not null check (tokens > 0),
+     amount integer not null check (amount >= 0),
+     order_id text not null unique,
+     payment_key text,
+     status text not null default 'ready' check (status in ('ready','paid','failed')),
+     demo boolean not null default false,
+     by_email text not null default '',
+     at timestamptz not null default now(),
+     paid_at timestamptz
+   );
+   create index if not exists ai_credit_t on ai_credit (tenant_id, month, status);
+   alter table ai_credit enable row level security;
+   alter table ai_credit force row level security;
+   drop policy if exists tenant_iso on ai_credit;
+   create policy tenant_iso on ai_credit using (tenant_id = current_setting('app.tenant', true)) with check (tenant_id = current_setting('app.tenant', true));
+   grant select, insert, update on ai_credit to didisam_tenant;`,
+  /* v47 산타 관리 변경 이력(santa_plan_log): 산타 관리자가 넣은 요금제 · 월 포함 토큰 · 메모. 기관 역할(didisam_tenant)에는 권한을 주지 않는다 — 산타 내부 메모는 기관에 보이지 않음.
+     기관 쪽에는 audit_log 'santa.plan'(코드 · 포함 토큰만)이 함께 남는다 */
+  `create table if not exists santa_plan_log (
+     id bigserial primary key,
+     tenant_id text not null references tenants(id) on delete cascade,
+     at timestamptz not null default now(),
+     actor text not null,
+     before jsonb,
+     after jsonb not null,
+     memo text not null default ''
+   );
+   create index if not exists santa_plan_log_t on santa_plan_log (tenant_id, id desc);
+   revoke all on santa_plan_log from didisam_tenant;`,
+  /* v47 충전량 1년 사용(이월): 만료일(이 날까지 사용) = 충전일(KST) + 365일. 이미 승인된 충전은 같은 규칙으로 채운다 */
+  `alter table ai_credit add column if not exists expires_at date;
+   update ai_credit set expires_at = (paid_at at time zone 'Asia/Seoul')::date + 365 where status = 'paid' and expires_at is null and paid_at is not null;
+   create index if not exists ai_credit_exp on ai_credit (tenant_id, status, expires_at);`,
+  /* 가디언(보안봇) Phase 0 — 내부 전용 security 스키마(보고서 1231줄 데이터 모델). 기관 역할(didisam_tenant)에는 권한을 주지 않는다.
+     승인 · 긴급 차단 · 감사는 서버 기록만 유효. audit는 해시 체인(prev_hash · hash = sha256(prev|ts|actor|action|target|detail)) — Node security.js · Java SecServiceImpl 같은 식 */
+  `create schema if not exists security;
+   revoke all on schema security from public;
+   create table if not exists security.threat_item (
+     id text primary key, source text not null, external_id text not null, title text not null default '', cvss double precision, epss double precision, kev boolean not null default false,
+     affected jsonb not null default '[]', attack_type text not null default '', url text not null default '', published_at timestamptz, verdict text not null default 'pending', hash text not null default '', summary text not null default '',
+     created_at timestamptz not null default now(), updated_at timestamptz not null default now(), unique (source, external_id));
+   create table if not exists security.finding (
+     id text primary key, key text not null unique, origin text not null default 'scan', title text not null default '', severity text not null default 'medium' check (severity in ('critical','high','medium','low')),
+     priority text not null default 'P3' check (priority in ('P0','P1','P2','P3')), score double precision not null default 0, status text not null default 'open' check (status in ('open','triage','fixing','fixed','accepted','false_positive')),
+     tenant_scope text not null default 'all', owner text not null default '', sla_due_at timestamptz, jira_key text not null default '', note text not null default '', threat_id text, evidence jsonb not null default '{}',
+     created_at timestamptz not null default now(), updated_at timestamptz not null default now(), resolved_at timestamptz);
+   create index if not exists sec_finding_st on security.finding (status, priority);
+   create table if not exists security.scan (
+     id bigserial primary key, type text not null, target text not null default '', tool text not null default '', tool_version_sha text not null default '', findings_count integer not null default 0, raw_ref text not null default '', at timestamptz not null default now());
+   create table if not exists security.fix_pr (
+     id text primary key, pr_number integer, title text not null default '', finding_ids jsonb not null default '[]', severity text not null default 'medium' check (severity in ('critical','high','medium','low')),
+     change_type text not null default '', files jsonb not null default '[]', verify_result text not null default '', risk text not null default '', rollback_ref text not null default '', url text not null default '',
+     status text not null default 'open' check (status in ('open','pending','approved','rejected','merged','closed')), reject_reason text not null default '', created_at timestamptz not null default now(), approved_at timestamptz, merged_at timestamptz);
+   create table if not exists security.approval (
+     id bigserial primary key, pr_id text not null references security.fix_pr(id) on delete cascade, approver text not null, method text not null check (method in ('reauth','link')), at timestamptz not null default now(), unique (pr_id, approver));
+   create table if not exists security.approve_link (
+     id text primary key, secret_hash text not null, pr_id text not null references security.fix_pr(id) on delete cascade, uid uuid not null, email text not null, expires_at timestamptz not null, used_at timestamptz, created_at timestamptz not null default now());
+   create table if not exists security.countermeasure (
+     id text primary key, threat_id text, title text not null default '', threat_pattern text not null default '', controls jsonb not null default '[]', regression_tests jsonb not null default '[]',
+     skill_refs jsonb not null default '[]', playbook text not null default '', body text not null default '', reuse_count integer not null default 0, version integer not null default 1, status text not null default 'draft',
+     created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+   create table if not exists security.incident (
+     id text primary key, type text not null, scope text not null default '', phase text not null default 'detect', timeline jsonb not null default '[]', notify_due_at timestamptz, decision_log jsonb not null default '[]', created_at timestamptz not null default now());
+   create table if not exists security.kill_switch (
+     id text primary key, action text not null check (action in ('key_disable','feature_off','egress_block')), tenant_id text not null references tenants(id) on delete cascade,
+     mode text not null check (mode in ('dry','live')), trigger text not null default 'manual', rule_id text not null default '', reason text not null, signals jsonb not null default '[]', actor text not null,
+     activated_at timestamptz not null default now(), expires_at timestamptz, released_at timestamptz, released_by text, release_note text not null default '', kday date not null);
+   create index if not exists sec_kill_t on security.kill_switch (tenant_id, released_at);
+   create index if not exists sec_kill_day on security.kill_switch (kday);
+   create table if not exists security.audit (
+     id bigserial primary key, at timestamptz not null default now(), ts text not null, actor text not null, actor_kind text not null check (actor_kind in ('user','agent')),
+     action text not null, target text not null default '', detail text not null default '', ip_masked text not null default '', prev_hash text not null, hash text not null);
+   revoke all on all tables in schema security from didisam_tenant;
+   revoke all on schema security from didisam_tenant;`,
+  /* 가디언 2차(SEC-0006) — 일반 audit_log 해시 체인. 기관별 체인: hash = sha256(prev_hash || audit_row_text(행)), 첫 행 prev = '0'×64.
+     계산은 DB 트리거(BEFORE INSERT)가 한다 — 기존 insert 호출부(Node · Java · LMS SQL 함수)는 그대로이고 두 서버 결과가 자동으로 같다.
+     동시성: 기관 단위 advisory xact lock(820824, hashtext(기관)) 안에서 id를 다시 뽑아(nextval) 체인 순서 = id 순서를 보장한다.
+     위변조 방지: UPDATE는 트리거가 거부, 기관 역할(didisam_tenant)의 update · delete 권한 회수(기관 파기 cascade는 로그인 계정이라 유지).
+     기존 행(hash 없음)은 마이그레이션 때 기관마다 'audit.chain.start' 행(legacy 건수 · 다이제스트)을 체인 첫 행으로 남겨 이후 변조도 잡는다.
+     검증은 audit_verify(기관) 한 함수 — GET /api/audit/verify(Node app.js · Java TenantServiceImpl)가 그대로 돌려준다. */
+  `alter table audit_log add column if not exists prev_hash text;
+   alter table audit_log add column if not exists hash text;
+   create index if not exists audit_tenant_id on audit_log (tenant_id, id);
+   create or replace function audit_row_text(p_id bigint, p_tenant text, p_at timestamptz, p_actor text, p_action text, p_detail jsonb) returns text
+     language sql stable as $f$ select jsonb_build_array(p_id, p_tenant, to_char(p_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), p_actor, p_action, p_detail)::text $f$;
+   create or replace function audit_log_chain() returns trigger language plpgsql as $f$
+     declare p text;
+     begin
+       if tg_op = 'UPDATE' then raise exception 'audit_log is append-only' using errcode = '42501'; end if;
+       perform pg_advisory_xact_lock(820824, hashtext(NEW.tenant_id));
+       NEW.id := nextval('audit_log_id_seq'::regclass);
+       NEW.at := coalesce(NEW.at, now());
+       select hash into p from audit_log where tenant_id = NEW.tenant_id and hash is not null order by id desc limit 1;
+       NEW.prev_hash := coalesce(p, repeat('0', 64));
+       NEW.hash := encode(sha256(convert_to(NEW.prev_hash || audit_row_text(NEW.id, NEW.tenant_id, NEW.at, NEW.actor, NEW.action, NEW.detail), 'UTF8')), 'hex');
+       return NEW;
+     end $f$;
+   drop trigger if exists audit_log_chain on audit_log;
+   create trigger audit_log_chain before insert or update on audit_log for each row execute function audit_log_chain();
+   revoke update, delete on audit_log from didisam_tenant;
+   create or replace function audit_legacy_digest(p_tenant text, p_below bigint) returns jsonb language sql stable as $f$
+     select jsonb_build_object('legacy', count(*), 'legacyDigest', encode(sha256(convert_to(coalesce(string_agg(audit_row_text(id, tenant_id, at, actor, action, detail), E'\\n' order by id), ''), 'UTF8')), 'hex'))
+       from audit_log where tenant_id = p_tenant and hash is null and id < p_below $f$;
+   create or replace function audit_verify(p_tenant text) returns jsonb language plpgsql stable as $f$
+     declare r record; prev text := repeat('0', 64); started boolean := false; n integer := 0; legacy integer := 0; d jsonb;
+     begin
+       for r in select id, tenant_id, at, actor, action, detail, prev_hash, hash from audit_log where tenant_id = p_tenant order by id loop
+         if r.hash is null then
+           if started then return jsonb_build_object('ok', false, 'n', n, 'legacy', legacy, 'brokenAt', r.id, 'reason', 'unhashed'); end if;
+           legacy := legacy + 1; continue;
+         end if;
+         started := true; n := n + 1;
+         if r.prev_hash is distinct from prev or r.hash <> encode(sha256(convert_to(prev || audit_row_text(r.id, r.tenant_id, r.at, r.actor, r.action, r.detail), 'UTF8')), 'hex') then
+           return jsonb_build_object('ok', false, 'n', n, 'legacy', legacy, 'brokenAt', r.id, 'reason', 'hash');
+         end if;
+         if r.action = 'audit.chain.start' then
+           d := audit_legacy_digest(p_tenant, r.id);
+           if (d->>'legacy')::int <> legacy or d->>'legacy' is distinct from r.detail->>'legacy' or d->>'legacyDigest' is distinct from r.detail->>'legacyDigest' then
+             return jsonb_build_object('ok', false, 'n', n, 'legacy', legacy, 'brokenAt', r.id, 'reason', 'legacy');
+           end if;
+         end if;
+         prev := r.hash;
+       end loop;
+       return jsonb_build_object('ok', true, 'n', n, 'legacy', legacy, 'head', prev);
+     end $f$;
+   do $$ declare t text; d jsonb; begin
+     for t in select distinct tenant_id from audit_log where hash is null loop
+       perform set_config('app.tenant', t, true);
+       d := audit_legacy_digest(t, 9223372036854775807);
+       if (d->>'legacy')::int > 0 then insert into audit_log (tenant_id, actor, action, detail) values (t, 'system', 'audit.chain.start', d); end if;
+     end loop;
+     perform set_config('app.tenant', '', true);
+   end $$;`,
+  /* 가디언 5차 F8 사고 대응 — security.incident 보강: 제목 · 심각도 · 상태 · 긴급 차단 연결. scope는 {tenants[], data, period} JSON.
+     단계 detect · contain · report · notify · recover · prevent, notify_due_at = 생성 + 72시간. 결정(decision_log)은 사람만 — Node security.js · Java SecServiceImpl 같은 규격 */
+  `alter table security.incident add column if not exists title text not null default '';
+   alter table security.incident add column if not exists severity text not null default 'high';
+   alter table security.incident add column if not exists status text not null default 'open';
+   alter table security.incident add column if not exists kill_id text;
+   alter table security.incident add column if not exists created_by text not null default '';
+   alter table security.incident add column if not exists updated_at timestamptz not null default now();
+   alter table security.incident alter column scope drop default;
+   alter table security.incident alter column scope type jsonb using (case when scope = '' then '{}' else json_build_object('data', scope)::text end)::jsonb;
+   alter table security.incident alter column scope set default '{}';
+   create unique index if not exists sec_incident_kill on security.incident (kill_id) where kill_id is not null;
+   create index if not exists sec_incident_st on security.incident (status, created_at desc);
+   revoke all on security.incident from didisam_tenant;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).
    기본 MIGRATIONS 배열 끝에 새 항목을 더해도 LMS 파일 적용 기록이 밀리지 않는다. */
-const LMS_SQL = [...require('./lms').sqlMigrations(), ...require('./fac').sqlMigrations(), ...require('./ledger').sqlMigrations(), ...require('./mileage').sqlMigrations()]; /* v42 마일리지(mileage/sql) — 원장 뒤(차감 줄 · 환불 훅) */ /* v41 원장 표(ledger/sql) — fac 뒤(시설 이중 기록 트리거) */ /* v40 시설 예약 표(fac/sql) */
+const LMS_SQL = [...require('./lms').sqlMigrations(), ...require('./fac').sqlMigrations(), ...require('./ledger').sqlMigrations(), ...require('./mileage').sqlMigrations(), ...require('./devices').sqlMigrations(), ...require('./records').sqlMigrations(), ...require('./mfa').sqlMigrations(), ...require('./session').sqlMigrations()]; /* 가디언 4차 기록 보관(접속기록 ip · FK cascade 제거 · 파기) */ /* 보안 2차 로그인 기기(이름 기록 — 번호 배열과 충돌 없음) */ /* v42 마일리지(mileage/sql) — 원장 뒤(차감 줄 · 환불 훅) */ /* v41 원장 표(ledger/sql) — fac 뒤(시설 이중 기록 트리거) */ /* v40 시설 예약 표(fac/sql) */
 
 async function migrate(pool) {
   const c = await pool.connect();

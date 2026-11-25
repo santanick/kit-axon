@@ -16,8 +16,9 @@ public class TenantController {
     public TenantController(AuthService authService, TenantService tenantService, PiiService piiService, egovframework.didisam.state.service.StateService stateService) { this.authService = authService; this.tenantService = tenantService; this.piiService = piiService; this.stateService = stateService; }
 
     @GetMapping("/audit") public Map<String, Object> audit(HttpServletRequest req) throws Exception { return tenantService.audit(authService.needStaff(req)); }
+    @GetMapping("/audit/verify") public Object auditVerify(HttpServletRequest req) throws Exception { return tenantService.auditVerify(authService.needStaff(req)); }
     @PostMapping("/tenant/delete") public Map<String, Object> delete(@RequestBody(required = false) byte[] body, HttpServletRequest req, HttpServletResponse res) throws Exception {
-        return tenantService.delete(authService.need(req), body, res);
+        return tenantService.delete(authService.need(req), body, res); // owner-checked: TenantServiceImpl.delete(정운영자 + 비밀번호 + 기관명 확인)
     }
     @GetMapping("/learners/progress") public Map<String, Object> progress(HttpServletRequest req) throws Exception {
         Map<String, Object> a = authService.need(req); Map<String, Object> o = tenantService.progress(a);

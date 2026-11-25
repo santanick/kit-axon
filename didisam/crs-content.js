@@ -200,7 +200,7 @@
       <section class="ct-a4box"><b>학습 목표</b><ul>${D.goals.map((g, i) => `<li>${ce(`goals.${i}`, g)}${xdel(`goals.${i}`, '목표')}</li>`).join('')}</ul>${xadd('goals', '목표 추가')}</section>
       ${D.secs.map((s, i) => `<div class="ct-blk"><h2>${i + 1}. ${ce(`secs.${i}.h`, s.h)}${xdel(`secs.${i}`, `${i + 1}절`)}</h2>${f === 'slide' ? '' : ce(`secs.${i}.body`, s.body, 'p', 'ml')}<ul>${(s.pts || []).map((p, j) => `<li>${ce(`secs.${i}.pts.${j}`, p)}</li>`).join('')}</ul>${f === 'work' ? '<div class="ct-ln"></div><div class="ct-ln"></div>' : ''}</div>`).join('')}
       ${xadd('secs', '+ 절 추가', 'sec')}
-      <h2>실습 활동</h2>${ce('act', D.act, 'p', 'ml')}<h2>확인 문제</h2><ol>${D.check.map((q, i) => `<li>${ce(`check.${i}`, q)}${xdel(`check.${i}`, '문제')}${f === 'work' ? '<div class="ct-ln"></div>' : ''}</li>`).join('')}</ol>${xadd('check', '확인 문제 추가')}<footer>AI 초안을 바탕으로 담당자가 검토한 자료입니다 · ${E(today())}</footer></article>`;
+      <h2>실습 활동</h2>${ce('act', D.act, 'p', 'ml')}<h2>확인 문제</h2><ol>${D.check.map((q, i) => `<li>${ce(`check.${i}`, q)}${xdel(`check.${i}`, '문제')}${f === 'work' ? '<div class="ct-ln"></div>' : ''}</li>`).join('')}</ol>${xadd('check', '확인 문제 추가')}<footer>${typeof aiMark === 'function' ? aiMark('content') : ''}AI 초안을 바탕으로 담당자가 검토한 자료입니다 · ${E(today())}</footer></article>`;
   }
   const xdel = (p, what) => `<button type="button" class="ct-x" data-act="ct-x-del" data-p="${E(p)}" aria-label="${E(what)} 빼기" title="빼기">${svg('x', 14)}</button>`;
   const xadd = (p, lab, t) => `<button type="button" class="ct-xadd" data-act="ct-x-add" data-p="${E(p)}" ${t ? `data-t="${t}"` : ''}>${E(lab.startsWith('+') ? lab : '+ ' + lab)}</button>`;
@@ -365,7 +365,7 @@
   }
   async function upItem() {
     const f = X.file; const fn = upFn(); let meta = {};
-    if (fn) { X.busy = true; draw(); try { meta = (await fn(f.raw, { kind: f.k, course: X.ctx.course && X.ctx.course.id, onProgress: p => { const b = $1('#ctUpP'); if (b) b.textContent = Math.round(p * 100) + '%'; } })) || {}; } catch (e) { X.busy = false; X.upErr = `올리지 못했습니다: ${e.message || e}`; draw(); return null; } X.busy = false; }
+    if (fn) { X.busy = true; draw(); try { meta = (await fn(f.raw, { kind: f.k, course: X.ctx.course && X.ctx.course.id, onProgress: p => { const b = $1('#ctUpP'); if (b) b.textContent = Math.round(p * 100) + '%'; } })) || {}; } catch (e) { X.busy = false; X.upErr = `올리지 못했습니다: ${errMsg(e)}`; draw(); return null; } X.busy = false; }
     return upMake(f, meta, X.upTitle);
   }
   /* 올린 파일(f: {name,size,mime,k,dur,bid}) + 저장 결과(meta) → 과정 항목. 영상 · 자료 S.lib에도 기록(하나 올리기 · 여러 개 올리기 공용) */
@@ -640,7 +640,7 @@
   async function bxGo() {
     if (!BX || BX.busy || !F) return; const d = F.d; const U = unit(); const TG = bxTargets(d, BX.k === 'v' ? 'quiz' : BX.k); const L = itemsOf(d); const ids = [];
     if (BX.k === 'v') { const P = bxPlan(d); const jobs = []; P.rows.forEach(r => { if (r.v) jobs.push([r.s, r.v]); if (r.d) jobs.push([r.s, r.d]); }); if (!jobs.length) return; BX.busy = true; BX.tot = jobs.length; BX.at = 0; bxDraw(); const fn = upFn(); let fail = 0;
-      for (const [s, f] of jobs) { BX.at++; bxDraw(); let meta = {}; if (fn) { try { meta = (await fn(f.raw, { kind: f.k, onProgress: () => { } })) || {}; } catch (e) { fail++; if (e && e.message) BX.lastErr = `${f.name}: ${String(e.message).split(/\.\s/)[0].replace(/\.$/, '')}`; continue; } }
+      for (const [s, f] of jobs) { BX.at++; bxDraw(); let meta = {}; if (fn) { try { meta = (await fn(f.raw, { kind: f.k, onProgress: () => { } })) || {}; } catch (e) { fail++; if (e && e.message) BX.lastErr = `${f.name}: ${String(errMsg(e)).split(/\.\s/)[0].replace(/\.$/, '')}`; continue; } }
         const base = String(f.name).replace(/\.[^.]+$/, '').slice(0, 60); const it = upMake(f, meta, isDocF(f) ? (genericT(s.title) ? base : `${s.title} 자료`) : (genericT(s.title) ? base : s.title)); it.id = nid('it'); it.week = s.w; settle(it, null); L.push(it); ids.push(it.id); }
       BX.busy = false; if (fail) BX.failMsg = `${fail}개는 올리지 못했습니다${BX.lastErr ? `(${BX.lastErr})` : ''}. 그 ${jo(U, '은')} 하나씩 다시 올려 주십시오.`; }
     else { BX.busy = true; BX.tot = TG.length; BX.at = 0; bxDraw();

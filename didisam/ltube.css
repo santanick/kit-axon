@@ -327,7 +327,7 @@ body.tube .tb-main>a.lq-hc{border:0;border-radius:var(--r-card);background:var(-
 .tb-rt{display:grid;place-items:center;border-radius:12px}.tb-rt>i{width:34px;height:34px;border-radius:10px}.tb-rt>i svg{width:18px;height:18px}
 
 /* 하단 탭 4칸: 떠 있는 라이트 바(좌우 12 · 아래 10) · 선택 탭 그린 알약 */
-body.tube .ap-nav.tb-nav{left:12px;right:12px;bottom:calc(10px + var(--ap-sb,0px));padding:6px;border:0;border-radius:24px;background:var(--glass);box-shadow:0 1px 2px rgba(26,24,20,.06),0 16px 36px rgba(26,24,20,.16),0 0 0 1px rgba(26,24,20,.05);gap:4px}
+body.tube .ap-nav.tb-nav{left:12px;right:12px;bottom:calc(10px + var(--ap-sb,0px));padding:6px;border:0;border-radius:24px;background:var(--surface,#fff);/* v47-fix: --glass(.96/.92)는 뒤 글자가 비쳐 불투명 surface */box-shadow:0 1px 2px rgba(26,24,20,.06),0 16px 36px rgba(26,24,20,.16),0 0 0 1px rgba(26,24,20,.05);gap:4px}
 body.tube .ap-nav.tb-nav a{justify-content:center;gap:3px;min-height:48px;border-radius:18px}
 body.tube .ap-nav.tb-nav a svg{width:22px;height:22px}
 @media (min-width:900px){body.tube .ap-nav.tb-nav{left:50%;right:auto;width:480px}}
@@ -342,7 +342,7 @@ body.lapp.tb-watch{color-scheme:dark;
   --g50:#13231B;--g100:#0E1A14;--g200:#13231B;--g300:#21332A;--g400:#2F4438;--g500:#71867A;--g600:#A7B8AD;--g700:#B4C4B9;--g800:#CFDBD2;--g900:#EAF2EC;
   --gr50:#0F2A1B;--gr100:#16402A;--gr700:#2EE06A;--gr800:#5FE08A;
   --surface:#0E1A14;--surface2:#13231B;--canvas:#06100B;--hair:rgba(255,255,255,.08);--glass:rgba(16,30,23,.92);--sh1:0 0 0 1px rgba(255,255,255,.08);--sh2:0 0 0 1px rgba(255,255,255,.08),0 12px 28px rgba(0,0,0,.32);
-  --d-g900:#EAF2EC;--d-g800:#CFDBD2;--d-g700:#B4C4B9;--d-g600:#A7B8AD;--d-g500:#71867A;--d-g400:#2F4438;--d-g300:#21332A;--d-g200:#13231B;--d-g100:#13231B;--d-g50:#0E1A14;--d-p50:#0F2A1B;--d-tx2:#A7B8AD;--d-tp:#5FE08A;--d-link:#5FE08A;
+  --d-g900:#EAF2EC;--d-g800:#CFDBD2;--d-on800:#0C1410;--d-g700:#B4C4B9;--d-g600:#A7B8AD;--d-g500:#71867A;--d-g400:#2F4438;--d-g300:#21332A;--d-g200:#13231B;--d-g100:#13231B;--d-g50:#0E1A14;--d-p50:#0F2A1B;--d-tx2:#A7B8AD;--d-tp:#5FE08A;--d-link:#5FE08A;
   --ap-bg:#06100B;--ap-ink:#EAF2EC;--ap-mute:#A7B8AD;--ap-line:#21332A;--tb-bg:#06100B;--tb-ink:#EAF2EC;--tb-mute:#A7B8AD;--tb-gl:#0F2A1B;--tb-line:#21332A;--tb-chip:rgba(255,255,255,.1);
   background:#06100B;color:#EAF2EC}
 body.lapp.tb-watch #lm,body.lapp.tb-watch .crsb,body.lapp.tb-watch .crsb .in{background:#06100B}
@@ -498,3 +498,13 @@ body.lapp #lm .tb-phk span.tb-phz b{font-size:15px;line-height:1.4;font-weight:7
 body.lapp .thm-seg button{padding:0 6px;gap:4px} /* v43.7 Q4: 390에서 「기기 설정」 글자가 칸 밖으로 2px 넘치던 것 */
 .tb-links:has(>a:nth-child(3):last-child){grid-template-columns:repeat(3,minmax(0,1fr))} /* v43.7 Q4: 바로가기가 3개(대학 · 공단)면 4칸 격자에 빈 칸이 남던 것 → 3칸 */
 body.lapp.tb-fcov #tbFab.tb-fab{opacity:0;pointer-events:none} /* v43.7 Q4: 멈춘 자리에서 본문 버튼을 덮으면 숨김(ltube.js fcov) */
+/* v47 하루 목표 최대 8시간: 칩 8개(4칸 2줄) + 30분 단위 −/+ · 직접 입력(ltube.js goalSheet) */
+.tb-gopt button{font-size:15px;line-height:1.25;padding:0 4px;word-break:keep-all}
+.tb-gin{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin:0 0 4px}
+.tb-gin .tb-gst{min-height:48px;padding:0 12px;border-radius:8px;border:1px solid #d9d9d9;background:var(--surface,#fff);font-size:15px;font-weight:700;color:var(--tb-ink);cursor:pointer}
+.tb-gin label{display:flex;align-items:center;gap:6px;min-height:48px;border:1px solid #d9d9d9;border-radius:8px;padding:0 12px;background:var(--surface,#fff)}
+.tb-gin input{flex:1;min-width:0;width:100%;border:0;outline:0;background:none;font-size:17px;font-weight:700;text-align:right;color:var(--tb-ink)}
+.tb-gin label:focus-within{border-color:var(--tb-gd);box-shadow:0 0 0 3px var(--tb-gl)}
+.tb-gin label span{font-size:15px;color:var(--tb-mute)}
+.tb-gsh .tb-gerr{margin:4px 0 8px;min-height:1em;font-size:13px;color:#C62828}
+.tb-gok{width:100%;min-height:52px;border:0;border-radius:8px;background:var(--tb-gd);color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:8px}

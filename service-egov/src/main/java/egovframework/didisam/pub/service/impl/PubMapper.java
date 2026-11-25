@@ -11,6 +11,7 @@ public interface PubMapper {
     java.util.List<String> selectCommLive(@Param("tid") String tid, @Param("seq") long seq);
     Map<String, Object> selectOg(@Param("tid") String tid); /* v37 L2 og 메타 */
     Map<String, Object> selectLearner(@Param("tid") String tid, @Param("sid") String sid);
+    int countLearnerFails(@Param("tid") String tid, @Param("actor") String actor);
     String selectIdleH(@Param("tid") String tid);
     void touchLearnerSession(@Param("id") String id);
     Map<String, Object> selectLearnerDept(@Param("tid") String tid, @Param("sid") String sid);
@@ -27,6 +28,9 @@ public interface PubMapper {
     void upsertProgress(@Param("tid") String tid, @Param("sid") String sid, @Param("lp") String lp, @Param("bytes") int bytes);
     Map<String, Object> selectTutorCtx(@Param("tid") String tid);
     int incUsage(@Param("tid") String tid, @Param("day") String day);
+    long monthUsed(@Param("tid") String tid, @Param("from") String from); /* v47 이달 AI 한도 */
+    java.util.List<java.util.Map<String, Object>> selectCreditRows(@Param("tid") String tid, @Param("from") String from); /* v47 충전량 1년 이월(DdAiPrice.sim) */
+    java.util.List<java.util.Map<String, Object>> selectUsageFrom(@Param("tid") String tid, @Param("from") String from);
     int addTokens(@Param("tid") String tid, @Param("day") String day, @Param("tin") long tin, @Param("tout") long tout);
     void insertLearnerSession(@Param("id") String id, @Param("tid") String tid, @Param("sid") String sid);
     Map<String, Object> selectLearnerSession(@Param("id") String id);

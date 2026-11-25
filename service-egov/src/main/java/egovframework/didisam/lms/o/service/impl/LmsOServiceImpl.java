@@ -111,7 +111,7 @@ public class LmsOServiceImpl extends EgovAbstractServiceImpl implements LmsOServ
         String kind = pv == null ? "anthropic" : pv.get("kind").asText(); String endpoint = pv == null || pv.get("endpoint_url").isNull() ? null : pv.get("endpoint_url").asText();
         String pm = pv == null ? MODELS.get(0) : pv.get("model").asText();
         if (kind.equals("anthropic")) { if (!p.ai) throw E(503, "서버에 AI 키가 설정되지 않았습니다.", "ai_off"); }
-        else { Matcher hm = HTTP_HOST.matcher(endpoint == null ? "" : endpoint); String h = hm.find() ? hm.group(1).toLowerCase(Locale.ROOT) : ""; if (h.isEmpty() || !selfHosts.contains(h)) throw E(503, "학내 LLM 서버 연동 후 동작합니다(서버 허용 목록에 주소 등록 필요).", "provider_pending"); }
+        else { Matcher hm = HTTP_HOST.matcher(endpoint == null ? "" : endpoint); String h = hm.find() ? hm.group(1).toLowerCase(Locale.ROOT) : ""; if (h.isEmpty() || !selfHosts.contains(h)) throw E(503, "학내 LLM 서버 연동 후 동작합니다(서버 허용 목록에 주소 등록 필요).", "provider_pending"); if (!egovframework.didisam.cmm.DdSsrf.selfUrlOk(endpoint)) throw E(503, egovframework.didisam.cmm.DdSsrf.MSG, "provider_blocked"); }
         String model = kind.equals("anthropic") ? (MODELS.contains(pm) ? pm : MODELS.get(0)) : pm;
         JsonNode st = T(a, () -> {
             if (kind.equals("anthropic")) { JsonNode room = run("room_policy", P("tid", tid(a))); if (room == null || room.isNull()) room = F.objectNode();

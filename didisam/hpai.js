@@ -71,13 +71,13 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
 
   async function hpGenerate(o) {
     o = o || {}; const brief = str(o.brief, 1500); const tone = str(o.tone, 10); const must = (o.sections || []).map(x => str(x, 30)).filter(Boolean).slice(0, 10);
-    let url = ''; const notes = []; try { url = benchURL(o.url); } catch (e) { notes.push(e.message); }
+    let url = ''; const notes = []; try { url = benchURL(o.url); } catch (e) { notes.push(errMsg(e)); }
     if (!aiOn()) { const j = hpLocal(brief, { tone, must }); notes.push('Claude가 연결되지 않아 기본 설계로 만들었습니다. 설정 › 연동에서 Claude를 연결하면 설명 · 벤치마크를 분석해 만듭니다.'); if (url) notes.push('벤치마크 분석은 Claude 연결 후 쓸 수 있습니다.'); return { j, notes, via: '기본 설계', bench: null }; }
     let user = `요청 설명: ${brief || '(없음 — 기관 유형에 맞는 기본 구성)'}${tone ? `\n분위기: ${tone}` : ''}${must.length ? `\n꼭 넣을 섹션: ${must.join(', ')}` : ''}\n기관 정보: ${JSON.stringify(hpOrg())}`;
     let benchText = '', bench = null;
     if (url && isLive() && !o.pasted) { try { const b = await api('POST', '/api/site/benchmark', { url }); bench = { ok: true, title: b.title || '' }; benchText = [b.title, b.desc, ...(b.headings || []), ...(b.nav || []), ...(b.sections || []).map(x => `${x.heading || ''} ${x.text || ''}`)].join('\n');
       user += `\n벤치마크 분석(서버가 읽은 구조 · 구성과 분위기 참고용, 문장을 그대로 쓰지 말 것): ${JSON.stringify({ 제목: b.title, 메뉴: b.nav, 소제목: b.headings, 섹션: (b.sections || []).map(x => ({ 소제목: x.heading, 글자수: (x.text || '').length, 종류추정: x.kind })), 색: b.colors }).slice(0, 7000)}`; }
-      catch (e) { bench = { ok: false, code: e.code || '' }; notes.push(`벤치마크 사이트를 읽지 못했습니다(${e.message}). 설명만으로 만들었습니다. 그 사이트의 글을 복사해 '페이지 글 붙여 넣기'에 넣으면 더 비슷하게 만들 수 있습니다.`); } }
+      catch (e) { bench = { ok: false, code: e.code || '' }; notes.push(`벤치마크 사이트를 읽지 못했습니다(${errMsg(e)}). 설명만으로 만들었습니다. 그 사이트의 글을 복사해 '페이지 글 붙여 넣기'에 넣으면 더 비슷하게 만들 수 있습니다.`); } }
     if (o.pasted) { benchText = str(o.pasted, 12000); user += `\n벤치마크 페이지 글(사용자가 붙여 넣음 — 구성 · 분위기만 참고, 문장을 그대로 쓰지 말 것):\n${benchText}`; bench = { ok: true, pasted: true }; }
     let text = '', model = '';
     if (url && !isLive() && !o.pasted) {
@@ -90,7 +90,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
         text = T.join('\n');
         if (bench && !bench.ok) notes.push(`벤치마크 사이트를 읽지 못했습니다(${bench.code || '접근 불가'}). 설명만으로 만들었습니다. 그 사이트의 글을 복사해 '페이지 글 붙여 넣기'에 넣으면 더 비슷하게 만들 수 있습니다.`);
         if (!bench) notes.push('벤치마크 사이트를 확인하지 못해 설명 중심으로 만들었습니다.');
-      } catch (e) { notes.push(`벤치마크 사이트를 읽지 못했습니다(${e.message}). 설명만으로 만들었습니다.`); bench = { ok: false }; text = ''; user = user.replace(/\n벤치마크 주소:[\s\S]*$/, ''); }
+      } catch (e) { notes.push(`벤치마크 사이트를 읽지 못했습니다(${errMsg(e)}). 설명만으로 만들었습니다.`); bench = { ok: false }; text = ''; user = user.replace(/\n벤치마크 주소:[\s\S]*$/, ''); }
     }
     if (!text) { const r = await CL.call({ system: SYS(), messages: [{ role: 'user', content: user }], max: 6000 }); text = r.text; model = r.model; }
     let j; try { j = jsonOf(text); } catch (e) { throw new Error('AI 응답을 읽지 못했습니다'); }
@@ -215,7 +215,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
   function hpRunFrom(w) {
     const o = { brief: fv(w, 'brief'), url: fv(w, 'url'), tone: fv(w, 'tone'), pasted: fv(w, 'pasted'), color: fv(w, 'colorOn') ? fv(w, 'color') : '', logo: fv(w, 'logo') };
     if (!o.brief && !o.url && !o.pasted) { toast('원하는 내용을 한 줄이라도 적거나 참고할 사이트 주소를 넣어 주세요.', 'warn'); return; }
-    if (o.url) { try { benchURL(o.url); } catch (e) { toast(e.message, 'warn'); return; } }
+    if (o.url) { try { benchURL(o.url); } catch (e) { toast(errMsg(e), 'warn'); return; } }
     hpRun(o);
   }
   async function hpRun(o, opt) {
@@ -223,7 +223,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
     const w = modal('AI로 홈페이지 만들기', `<div class="hpai-wait" role="status" aria-live="polite"><span class="hpai-spin" aria-hidden="true"></span><b>${o.url ? '참고 사이트의 구성을 살펴보고' : '설명을 바탕으로'} ${esc(S.org.name)} 홈페이지를 만들고 있습니다…</b><small>보통 10~40초 걸립니다. 글 · 이미지는 새로 만듭니다.</small></div>`, [{ id: 'c', label: '닫기' }]);
     w.classList.add('hpai-m');
     let res; try { res = await hpGenerate(o); }
-    catch (e) { res = { j: hpLocal(o.brief, o), notes: [`AI 연결에 실패해(${e.message}) 기본 설계로 만들었습니다.`], via: '기본 설계' }; }
+    catch (e) { res = { j: hpLocal(o.brief, o), notes: [`AI 연결에 실패해(${errMsg(e)}) 기본 설계로 만들었습니다.`], via: '기본 설계' }; }
     finally { HPE.busy = false; }
     const draft = hpMake(res.j, site(), { brief: str(o.brief, 1500), url: o.url ? (() => { try { return benchURL(o.url); } catch (e) { return ''; } })() : '', by: res.via });
     if (o.color && /^#[0-9a-f]{6}$/i.test(o.color)) draft.color = o.color; if (o.logo) draft.gnb = Object.assign({}, draft.gnb, { logo: o.logo });
@@ -247,7 +247,7 @@ menus(상위 최대 6개, 하위 최대 6개씩, 첫 메뉴는 {"label":"홈","l
   function paintPv(w) { const D = HPE.draft; const set = (f, h) => { if (!f) return; f.srcdoc = h; f.addEventListener('load', () => { try { const sc = f.parentElement.clientWidth / 1280; f.style.transform = `scale(${sc})`; f.style.height = Math.round((f.parentElement.clientHeight || 420) / sc) + 'px'; } catch (e) { } }, { once: true }); };
     try { set(w.querySelector('[data-hpai-pv=now]'), siteHTML(site())); } catch (e) { } try { set(w.querySelector('[data-hpai-pv=new]'), siteHTML(D.site)); } catch (e) { console.error(e); } }
   ACT['hpai-re'] = async el => { const D = HPE.draft; if (!D) return; const i = +el.dataset.v; const x = D.site.sections[i]; if (!x) return; el.disabled = true; el.textContent = '다시 쓰는 중…';
-    try { const nx = await hpReSection(x, D.o && D.o.brief); D.site.sections[i] = nx; } catch (e) { toast(`다시 쓰지 못했습니다(${e.message}).`, 'warn'); }
+    try { const nx = await hpReSection(x, D.o && D.o.brief); D.site.sections[i] = nx; } catch (e) { toast(`다시 쓰지 못했습니다(${errMsg(e)}).`, 'warn'); }
     if ($('#hpaiBox')) hpPreview(); };
   async function hpReSection(x, brief) {
     const d = x.data || {}; const plain = { type: x.type === 'text' ? 'text' : x.type, variant: d.variant, eyebrow: d.eyebrow, title: d.title, sub: d.sub, body: typeof d.body === 'string' ? d.body : undefined, cta: d.cta, cta2: d.cta2, cols: d.cols, hours: d.hours, alt: d.alt };
@@ -384,7 +384,7 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     if (act === 'hide') { hpPush(); x.hide = !x.hide; if (!x.hide) delete x.hide; save(); hpPaint(); toast(x.hide ? '섹션을 숨겼습니다. 게시된 사이트에는 보이지 않습니다.' : '섹션을 다시 보이게 했습니다.', 'ok'); return; }
     if (act === 'dup') { hpPush(); const c = clone(x); c.id = uid('s'); L.splice(i + 1, 0, c); save(); hpPaint(); toast('섹션을 복제했습니다.', 'ok'); return; }
     if (act === 'del') { modal('섹션 삭제', `<p>이 섹션을 지울까요? 지운 뒤에도 [되돌리기]로 살릴 수 있습니다.</p>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '삭제', kind: 'red', run: () => { hpPush(); L.splice(i, 1); save(); hpPaint(); toast('섹션을 지웠습니다.', 'ok'); } }]); return; }
-    if (act === 'ai') { toast(`${aiOn() ? CL.label() : '기본 설계'}로 이 섹션 글을 다시 쓰고 있습니다…`); hpReSection(x, (site().ai || {}).brief || site().prompt).then(n => { hpPush(); const L2 = secList(HPE.key); const k = L2.indexOf(x); if (k >= 0) L2[k] = n; save(); hpPaint(); toast('섹션 글을 다시 썼습니다. 마음에 들지 않으면 [되돌리기]를 누르세요.', 'ok'); }).catch(e => toast(`다시 쓰지 못했습니다(${e.message}).`, 'warn')); return; }
+    if (act === 'ai') { toast(`${aiOn() ? CL.label() : '기본 설계'}로 이 섹션 글을 다시 쓰고 있습니다…`); hpReSection(x, (site().ai || {}).brief || site().prompt).then(n => { hpPush(); const L2 = secList(HPE.key); const k = L2.indexOf(x); if (k >= 0) L2[k] = n; save(); hpPaint(); toast('섹션 글을 다시 썼습니다. 마음에 들지 않으면 [되돌리기]를 누르세요.', 'ok'); }).catch(e => toast(`다시 쓰지 못했습니다(${errMsg(e)}).`, 'warn')); return; }
     if (act === 'bimg') return imgPick(i, 'img', 0);
     if (act === 'more') { UI.sitePage = HPE.key; hpClose(true); if (CUR.tab !== 'site') go('site'); setTimeout(() => ACT['site-edit'] && ACT['site-edit']({ dataset: { v: String(i) } }), 80); }
   }
@@ -494,7 +494,7 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
     if (a === 'subadd') { const par = s.menus.find(m => m.id === id); if (!par) return; hpPush(); par.subs = par.subs || []; const sb = { id: uid('sb'), l: '새 하위 메뉴', on: true, access: '공개', targets: [], hide: false, link: '', sections: [S2('text', { title: '새 하위 메뉴', body: '안내 글을 입력하세요.' })], seo: { title: '', desc: '', kw: '' } }; par.subs.push(sb); fixSubOn(); save(); hpmPaint(); const n = $(`#hpmBox .hpm-i[data-id="${sb.id}"] .hpm-n`); if (n) { n.focus(); n.select(); } return; }
     if (a === 'topadd') { hpPush(); const m = { id: uid('m'), kind: 'custom', l: '새 메뉴', on: true, access: '공개', targets: [], hide: false, link: '', sections: [S2('text', { title: '새 메뉴', body: '안내 글을 입력하세요.' })], subs: [], subOn: false, seo: { title: '', desc: '', kw: '' } }; s.menus.push(m); save(); hpmPaint(); const n = $(`#hpmBox .hpm-i[data-id="${m.id}"] .hpm-n`); if (n) { n.focus(); n.select(); } return; }
     if (a === 'undo') { hpUndo(); return; }
-    if (a === 'ai') { HPE.mq = ($('#hpmQ') || {}).value || ''; el.disabled = true; el.textContent = '메뉴를 짜는 중…'; hpMenuAI(HPE.mq).then(L => { HPE.mprop = L; hpmPaint(); }).catch(e => { toast(`메뉴를 만들지 못했습니다(${e.message}).`, 'warn'); hpmPaint(); }); return; }
+    if (a === 'ai') { HPE.mq = ($('#hpmQ') || {}).value || ''; el.disabled = true; el.textContent = '메뉴를 짜는 중…'; hpMenuAI(HPE.mq).then(L => { HPE.mprop = L; hpmPaint(); }).catch(e => { toast(`메뉴를 만들지 못했습니다(${errMsg(e)}).`, 'warn'); hpmPaint(); }); return; }
     if (a === 'take') { if (!HPE.mprop) return; hpPush(); s.menus = HPE.mprop; HPE.mprop = null; fixSubOn(); save(); hpmPaint(); toast('AI가 제안한 메뉴로 바꿨습니다. 마음에 들지 않으면 [되돌리기]를 누르세요.', 'ok'); return; }
     if (a === 'drop') { HPE.mprop = null; hpmPaint(); }
   }
@@ -560,7 +560,7 @@ a[href]{cursor:default}.s2chat,.s2pop{pointer-events:none}`;
   if (typeof AG_TOOLS !== 'undefined') {
     AG_TOOLS.push({ name: 'build_homepage', description: 'AI로 홈페이지(첫 화면 섹션 · 상위/하위 2단계 메뉴 · 색 · 분위기)를 기관 이름 · 공개 강좌에 맞춰 새로 만듭니다. brief에는 사용자가 원하는 내용(대상 · 분위기 · 꼭 넣을 섹션)을, benchmark_url에는 참고할 사이트 주소를 넣습니다. 벤치마크는 구성과 분위기만 참고하고 글 · 이미지 · 로고는 새로 만듭니다. 계획 카드를 만들고, 승인하면 만들어 바로 적용(되돌리기 가능)한 뒤 「화면에서 바로 고치기」를 엽니다. 홈페이지 만들기 · 꾸미기 · 리뉴얼 · 벤치마크 · 메뉴 구성 요청은 run_studio_command 대신 이 도구를 쓰세요.', input_schema: { type: 'object', properties: { brief: { type: 'string', description: '원하는 홈페이지 설명(사용자 말 그대로 + 정리)' }, benchmark_url: { type: 'string', description: '참고할 사이트 주소(선택, https://)' }, tone: { type: 'string', description: '신뢰 · 따뜻 · 모던 · 친근(선택)' }, sections: { type: 'array', items: { type: 'string' }, description: '꼭 넣을 섹션(예: 강좌 소개, 수강 방법, 후기, 오시는 길)' } } } });
     const base = agRun; agRun = (name, x, ctx) => { if (name !== 'build_homepage') return base(name, x, ctx); x = x || {};
-      let url = ''; try { url = benchURL(x.benchmark_url); } catch (e) { return { ok: false, 이유: e.message }; }
+      let url = ''; try { url = benchURL(x.benchmark_url); } catch (e) { return { ok: false, 이유: errMsg(e) }; }
       const o = { brief: str(x.brief, 1500), url, tone: TONES[x.tone] ? x.tone : '', sections: Array.isArray(x.sections) ? x.sections.slice(0, 10) : [] };
       agCard(ctx, { title: 'AI로 홈페이지 만들기', text: `${S.org.name} 홈페이지 첫 화면과 메뉴(상위 · 하위)를 ${url ? `참고 사이트(${url})의 구성과 분위기를 살펴` : '말씀하신 내용으로'} 새로 만들겠습니다. 기관 이름 · 공개 ${t('cls')}에 맞춰 글을 새로 쓰고, 다른 사이트의 글 · 이미지 · 로고는 쓰지 않습니다. 승인하시면 만들어 적용하고(되돌리기 가능) 「화면에서 바로 고치기」를 엽니다. 게시는 확인하신 뒤에 합니다.`, steps: [o.brief ? `설명: ${o.brief.slice(0, 80)}` : '설명: 기관 유형 기본 구성', url ? `참고 사이트: ${url} (구성 · 분위기만)` : '참고 사이트: 없음', `${o.tone ? `분위기: ${o.tone} · ` : ''}섹션 4~8개 · 메뉴 2단계`], cta: '만들어 적용하기' },
         () => { setTimeout(() => { if (CUR.tab !== 'site') go('site'); hpRun(o, { apply: true }); }, 60); return '홈페이지를 만들고 있습니다. 잠시 후 적용되고 「화면에서 바로 고치기」가 열립니다.'; }, 'site');

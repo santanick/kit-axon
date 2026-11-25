@@ -161,7 +161,7 @@ async function cnClaudeTest(btn) {
   const c = cnEnsure().claude; if (btn) { btn.disabled = true; btn.textContent = '연결 확인 중…'; }
   /* 운영: 키는 서버 함수(adminAssistant)로 옮기고 서버가 호출 */
   try { const r = await CL.call({ system: '한 단어로만 답하세요.', messages: [{ role: 'user', content: '연결 확인: "확인"이라고 답하세요.' }], max: 16 }); Object.assign(c, { test: `${nowStr()} · ${CL.label(r.model)} 응답 확인`, err: '' }); toast(`${CL.label(r.model)} 연결을 확인했습니다.`, 'ok'); cnDone('claude', '연결 테스트'); }
-  catch (e) { Object.assign(c, { test: `${nowStr()} · 실패`, err: `연결 실패: ${e.message}` }); cnLog('claude', c.err, false); save(); render(); toast(c.err, 'bad'); }
+  catch (e) { Object.assign(c, { test: `${nowStr()} · 실패`, err: `연결 실패: ${errMsg(e)}` }); cnLog('claude', c.err, false); save(); render(); toast(c.err, 'bad'); }
 }
 function cnOff(id) {
   const c = cnEnsure(); const nm = CN[id].name;

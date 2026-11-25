@@ -100,5 +100,22 @@
     if (g.red) { j._redacted = g.red; changed = true; }
     return changed ? new Response(JSON.stringify(j), { status: r.status, statusText: r.statusText, headers: { 'content-type': 'application/json' } }) : r;
   };
-  window.AIG = Object.freeze({ redact, injectScore, fence, leak, stats, SAFE });
+  /* 체크리스트 01 · AI기본법: AI 생성물 표시 — 학습자 튜터 · 스튜디오 AI SAM · 채점 초안 · AI 생성 콘텐츠가 모두 이 함수 하나로 같은 표시를 단다.
+     기존 문구(「✦ AI 초안 — 확인 후 등록」 · 「AI 생성」)를 그대로 쓰고, data-ai-mark로 종류를 남긴다(시험 tests/ui/ai-mark.js). */
+  const MARK = {
+    tutor: ['AI 생성', 'AI가 만든 답변이에요. 중요한 내용은 선생님께 확인해 주세요.'],
+    graded: ['AI 보조 채점 · 선생님 확인', 'AI가 만든 초안을 선생님이 확인해 보낸 결과예요.'],
+    sam: ['AI 생성', 'AI가 만든 답변입니다. 실행 전에 내용을 확인해 주세요.'],
+    draft: ['AI 초안 — 확인 후 등록', 'AI가 만든 초안입니다. 확인 · 수정한 뒤 등록합니다.'],
+    grade: ['AI 채점 초안', 'AI 초안은 참고용입니다. 최종 점수는 운영자가 확정합니다.'],
+    content: ['AI 생성', 'AI가 만든 콘텐츠입니다. 게시 전에 담당자가 검토합니다.'],
+  };
+  const escA = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function aiMark(kind = 'content', label) {
+    const [t, tip] = MARK[kind] || MARK.content;
+    try { if (!document.getElementById('ai-mark-css')) { const st = document.createElement('style'); st.id = 'ai-mark-css'; st.textContent = '.ai-mark{display:inline-flex;align-items:center;gap:3px;margin:0 4px 0 0;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;line-height:1.5;white-space:nowrap;color:var(--t-mag,var(--mag,#7c3aed));background:color-mix(in srgb,var(--t-mag,var(--mag,#7c3aed)) 10%,transparent);vertical-align:middle}'; (document.head || document.documentElement).appendChild(st); } } catch (e) { }
+    return `<small class="ai-mark" data-ai-mark="${escA(MARK[kind] ? kind : 'content')}" title="${escA(tip)}" aria-label="${escA(tip)}">✦ ${escA(label || t)}</small>`;
+  }
+  window.aiMark = aiMark; window.AI_MARK_KINDS = Object.freeze(Object.keys(MARK));
+  window.AIG = Object.freeze({ redact, injectScore, fence, leak, stats, SAFE, aiMark });
 })();

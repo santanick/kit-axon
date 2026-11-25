@@ -1,0 +1,103 @@
+# 디디쌤 가디언 런타임 탐지 — Cloud Logging 로그 기반 지표 · 알림 정의(보고서 1217줄 5종)
+# ⚠ 적용 금지: 이 파일은 정의만 둡니다. gcloud 적용은 대표님 조치(GCP 서비스 계정 · 알림 채널 생성) 후 사람이 실행합니다.
+#   예시(참고용): gcloud logging metrics create <name> --description=… --log-filter=…
+# 로그 필드는 service/server/app.js의 JSON 구조 로그(severity · message · route · status · tid · uid)를 전제로 합니다.
+# 원문 · 개인정보는 지표 라벨로 쓰지 않습니다(테넌트 ID · 가명 사용자 ID만). 알림 문구는 지시가 아닌 데이터로 취급합니다.
+# 주말 · 공휴일 정기 보고는 하지 않으며, Critical은 #ai-security 게시(확정 전)만 합니다.
+version: 1
+service: didisam-studio
+dryRun: true
+notify:
+  channel: slack:#ai-security        # 웹훅 미연결이면 가디언 로그로만 남김
+  quietDays: [sat, sun, holiday]     # 정기 요약 금지일(즉시 알림은 등급 규칙을 따름)
+
+metrics:
+  - name: didisam_login_failed
+    kind: counter
+    description: 로그인 실패(비밀번호 · OTP · SSO 거절)
+    filter: >-
+      resource.type="cloud_run_revision" AND resource.labels.service_name="didisam-studio"
+      AND jsonPayload.route=~"^/api/(auth|learner)/(login|otp|sso)" AND jsonPayload.status=(401 OR 403)
+    labels: { tid: jsonPayload.tid }
+
+  - name: didisam_http_429
+    kind: counter
+    description: 한도 초과 응답(429) — LLMjacking · 무차별 대입 신호
+    filter: >-
+      resource.type="cloud_run_revision" AND resource.labels.service_name="didisam-studio"
+      AND httpRequest.status=429
+    labels: { route: jsonPayload.route }
+
+  - name: didisam_ai_tokens
+    kind: distribution
+    description: AI 토큰 사용량(테넌트 · 가명 사용자) — ai_usage 기록과 같은 값
+    filter: >-
+      resource.type="cloud_run_revision" AND resource.labels.service_name="didisam-studio"
+      AND jsonPayload.message="ai.usage"
+    valueExtractor: EXTRACT(jsonPayload.tokens)
+    labels: { tid: jsonPayload.tid, uid: jsonPayload.uid }
+
+  - name: didisam_cross_tenant_404
+    kind: counter
+    description: 다른 테넌트 자원 접근으로 생긴 404(RLS가 0행을 돌려 준 경우)
+    filter: >-
+      resource.type="cloud_run_revision" AND resource.labels.service_name="didisam-studio"
+      AND httpRequest.status=404 AND jsonPayload.reason="tenant_mismatch"
+    labels: { tid: jsonPayload.tid, uid: jsonPayload.uid }
+
+  - name: didisam_priv_key_change
+    kind: counter
+    description: 권한 · 키 변경(역할 변경 · API 키 발급 · 폐기 · 연결 비밀 변경) — audit_log 사건
+    filter: >-
+      resource.type="cloud_run_revision" AND resource.labels.service_name="didisam-studio"
+      AND jsonPayload.audit=~"^(member\\.role|apikey\\.(create|revoke)|conn\\.secret|security\\.kill)"
+    labels: { tid: jsonPayload.tid, action: jsonPayload.audit }
+
+alerts:
+  - id: AL-01
+    metric: didisam_login_failed
+    condition: 10분 합계가 지난 7일 같은 시간대 기준선의 3배 초과
+    window: 10m
+    threshold: { type: baseline_ratio, ratio: 3, baseline: 7d }
+    severity: high
+    action: 잠금 정책(pwrule.js) 동작 확인 · 출발 IP 대역 확인
+    kill: none
+
+  - id: AL-02
+    metric: didisam_http_429
+    condition: 5분 합계 200건 이상
+    window: 5m
+    threshold: { type: count, value: 200 }
+    severity: high
+    action: LLMjacking 의심 시 사고 대응(IR) 시작 · 해당 키 확인
+    kill: key_disable          # 긴급 차단 ① 후보 — dry-run 2주, 하루 3회 상한, 해제는 사람만
+
+  - id: AL-03
+    metric: didisam_ai_tokens
+    condition: 테넌트 · 사용자별 1시간 합계가 7일 시간 평균의 5배 초과
+    window: 1h
+    threshold: { type: baseline_ratio, ratio: 5, baseline: 7d_hourly_mean }
+    severity: high
+    action: AI 한도 축소 플래그(기능 끄기 범주)
+    kill: feature_off          # 긴급 차단 ② 후보 — TTL 4시간 자동 복구
+
+  - id: AL-04
+    metric: didisam_cross_tenant_404
+    condition: 같은 주체(uid) 10분 10건 이상
+    window: 10m
+    threshold: { type: count, value: 10, groupBy: [uid] }
+    severity: critical
+    action: 세션 폐기 후보 등록 · 원장 finding 생성(교차 테넌트 탐색 의심)
+    kill: none                 # 세션 폐기는 사람 승인
+
+  - id: AL-05
+    metric: didisam_priv_key_change
+    condition: 업무시간(평일 09–19시 KST) 외 1건 이상
+    window: 5m
+    threshold: { type: count, value: 1, outside: "Mon-Fri 09:00-19:00 Asia/Seoul" }
+    severity: critical
+    action: 즉시 보고(#ai-security) · 변경 주체 · audit 해시 체인 확인
+    kill: none
+
+# 남은 연동(대표님 조치 뒤): 위 필터의 jsonPayload.reason="tenant_mismatch" · message="ai.usage" · audit 필드가
+# 서버 구조 로그에 실제로 찍히는지 d2(서버) 작업과 맞춰 확인해야 합니다.

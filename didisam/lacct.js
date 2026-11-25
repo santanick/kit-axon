@@ -131,11 +131,19 @@ const laOtpBox = (pre, label) => { const s = LA[pre] || {}; const on = s.code ||
 /* 운영: POST /api/pub/<tid>/otp { email, purpose } — 서버가 이메일 발송(10분 유효 · 5회 제한). 데모는 화면에 인증번호 표시 */
 
 /* ═════════ 개인정보 처리방침 요약 ═════════ */
-function laPolicyRows(U) { return U ? [['필수', '학번 · 학과 · 닉네임 · 비밀번호(암호화)', '회원 식별 · 로그인 · 학습 서비스 제공', '탈퇴 시 즉시 파기'], ['자동 생성', '학습 기록(진도 · 제출물 · 출결)', '학습 관리 · 수료 판정', '탈퇴 후에는 개인을 알아볼 수 없는 가명 기록으로만 보관']]
-  : [['필수', '로그인 수단 1개 — 이메일 주소 또는 SNS 회원 식별자(복원할 수 없는 값으로 변환) · 닉네임', '회원 식별 · 로그인 · 학습 서비스 제공', '탈퇴 시 즉시 파기'], ['선택', '비밀번호(암호화 · 이메일 가입자가 직접 설정할 때만)', '비밀번호 로그인', '탈퇴 · 삭제 시 즉시 파기'], ['만 14세 미만', '보호자 이메일 또는 휴대폰 번호', '법정대리인 동의 확인', '탈퇴 시 파기 · 7일 안에 동의가 없으면 가입 정보와 함께 자동 파기'], ['필요할 때만', '휴대폰 번호(알림톡 신청 시) · 이름(수료증 발급 · 결제/환불 시)', '알림톡 발송 · 수료증 표기 · 결제/환불 처리', '수신 해제 · 삭제 · 탈퇴 시 파기(결제 기록은 전자상거래법에 따라 5년)'], ...(['public', 'lifelong'].includes(((SITE() && SITE().org) || {}).type) ? [['선택(동의 시)', '휴대폰 번호 — 「예약 · 노쇼 알림을 문자로 받기」를 켠 회원만', '시설 예약 · 강습 확정 · 변경 · 노쇼 안내 문자 발송', '알림을 끄거나 탈퇴하면 즉시 파기 · 동의 일시 기록']] : []), /* v43 K2: 공단 · 평생교육원 휴대폰 선택 수집(대표님 결정 3) */ ['자동 생성', '학습 기록(진도 · 제출물 · 출결) · 동의 기록', '학습 관리 · 수료 판정 · 동의 증빙', '탈퇴 후에는 개인을 알아볼 수 없는 가명 기록으로만 보관']]; }
+function laPolicyRows(U) { return U ? [['필수', '학번 · 학과 · 닉네임 · 비밀번호(암호화)', '회원 식별 · 로그인 · 학습 서비스 제공', '탈퇴 시 즉시 파기'], ['자동 생성', '학습 기록(진도 · 제출물 · 출결)', '학습 관리 · 수료 판정', '탈퇴 후에는 개인을 알아볼 수 없는 가명 기록으로만 보관'], ['자동 생성', '접속 기록(로그인 일시 · 접속 IP · 성공/실패)', '부정 로그인 차단(15분 안 5회 실패 시 잠금) · 보안 사고 조사', '2년 보관 후 파기']] /* 가디언 4차(2026-11-25): 접속 기록 IP · 보관기간 고지 */
+  : [['필수', '로그인 수단 1개 — 이메일 주소 또는 SNS 회원 식별자(복원할 수 없는 값으로 변환) · 닉네임', '회원 식별 · 로그인 · 학습 서비스 제공', '탈퇴 시 즉시 파기'], ['선택', '비밀번호(암호화 · 이메일 가입자가 직접 설정할 때만)', '비밀번호 로그인', '탈퇴 · 삭제 시 즉시 파기'], ['만 14세 미만', '보호자 이메일 또는 휴대폰 번호', '법정대리인 동의 확인', '탈퇴 시 파기 · 7일 안에 동의가 없으면 가입 정보와 함께 자동 파기'], ['필요할 때만', '휴대폰 번호(알림톡 신청 시) · 이름(수료증 발급 · 결제/환불 시)', '알림톡 발송 · 수료증 표기 · 결제/환불 처리', '수신 해제 · 삭제 · 탈퇴 시 파기(결제 기록은 전자상거래법에 따라 5년)'], ...(['public', 'lifelong'].includes(((SITE() && SITE().org) || {}).type) ? [['선택(동의 시)', '휴대폰 번호 — 「예약 · 노쇼 알림을 문자로 받기」를 켠 회원만', '시설 예약 · 강습 확정 · 변경 · 노쇼 안내 문자 발송', '알림을 끄거나 탈퇴하면 즉시 파기 · 동의 일시 기록']] : []), /* v43 K2: 공단 · 평생교육원 휴대폰 선택 수집(대표님 결정 3) */ ['자동 생성', '학습 기록(진도 · 제출물 · 출결) · 동의 기록', '학습 관리 · 수료 판정 · 동의 증빙', '탈퇴 후에는 개인을 알아볼 수 없는 가명 기록으로만 보관'], ['자동 생성', '접속 기록(로그인 일시 · 접속 IP · 성공/실패)', '부정 로그인 차단(15분 안 5회 실패 시 잠금) · 보안 사고 조사', '2년 보관 후 파기']]; }
+/* 보안 점검(체크리스트 04, 2026-11-24): 처리위탁 · 국외이전 고지 — AI 기능은 개인정보를 가린 질문 글만 국외(미국)로 보낸다 */
+function laXferHTML() { return `<details class="la-help la-xfer"><summary>처리위탁 · 국외이전</summary><table class="la-pol"><thead><tr><th>받는 곳</th><th>국가 · 방법</th><th>보내는 정보</th><th>목적 · 보유</th></tr></thead><tbody>
+  <tr><td class="k">Google Cloud(서버 · DB)</td><td>대한민국(서울 리전) · 처리위탁</td><td>서비스 이용 정보 전체</td><td>서비스 운영 · 위탁 계약 종료 시 파기</td></tr>
+  <tr><td class="k">Anthropic, PBC(AI 튜터 · AI 기능)</td><td>미국 · 이용할 때마다 암호화 전송</td><td>AI에게 보낸 질문 · 학습 글(학번 · 연락처 등 개인정보는 가린 뒤 전송)</td><td>AI 답변 생성 · 제공사 정책에 따른 보관 후 삭제, 모델 학습에 쓰지 않음</td></tr>
+  <tr><td class="k">결제대행사(PG · 토스페이먼츠 등)</td><td>대한민국 · 처리위탁(유료 결제 시)</td><td>결제 · 환불 정보(카드번호 등은 결제대행사만 처리하고 디디쌤에 저장하지 않음)</td><td>수강료 · 이용료 결제 처리 · 전자상거래법에 따라 5년 보관</td></tr></tbody></table>
+  <p class="mini">AI 기능을 쓰지 않으면 국외로 보내지 않습니다. 기관이 AI 기능을 끄거나, 학습자가 AI 튜터를 쓰지 않는 방법으로 거부할 수 있으며 이 경우에도 다른 학습 기능은 그대로 이용할 수 있습니다.</p></details>`; }
 function laPolicyHTML(U, short) { const cfg = laCfg(); const rows = laPolicyRows(U);
   return `<table class="la-pol"><thead><tr><th>구분</th><th>수집 항목</th><th>목적</th><th>보유 기간</th></tr></thead><tbody>${rows.map(r => `<tr>${r.map((x, i) => `<td${i === 0 ? ' class="k"' : ''}>${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table>
   <p class="mini">${U ? '이름 · 연락처 · 이메일 · 생년월일은 받지 않습니다. 필요하면 학교 SSO로 연동합니다.' : '가입할 때 실명 · 휴대폰 번호 · 생년월일 · 성별 · 주소는 받지 않습니다.'} 개인정보는 학습 데이터와 분리된 저장소에 암호화해 보관하고, 운영자 화면에는 닉네임과 일부를 가린 이메일만 표시합니다. 운영자가 목적(수료증 · 환불 등)을 밝혀 열람하면 그 기록이 남습니다.</p>
+  ${short ? '' : laXferHTML()}
+  ${short ? '' : `<p class="mini la-cpo">개인정보 보호책임자: ${esc(SITE().org.name)}(개인정보처리자) — <a href="#find/inq">문의</a>로 열람 · 정정 · 삭제 · 처리정지를 요청할 수 있어요. 수탁사 산타(주) 개인정보 보호책임자(대표이사) · nick@didisam.com</p>`}
   ${!short && cfg.privacy ? `<details class="la-help"><summary>${esc(SITE().org.name)} 개인정보 처리방침 전문</summary><pre class="la-pre">${esc(cfg.privacy)}</pre></details>` : ''}`; }
 const laPrivV = () => laSec('개인정보 처리방침 요약', laPolicyHTML(laUniv()) + `<p class="la-links"><a href="#acct">내 개인정보 확인 · 삭제</a> · <a href="#find/inq">문의</a></p>`, `${esc(SITE().org.name)} 학습 사이트가 받는 정보와 목적 · 보유 기간입니다.`);
 
@@ -146,7 +154,7 @@ const laPrivV = () => laSec('개인정보 처리방침 요약', laPolicyHTML(laU
   const form = ((h.match(/<form id="li"[\s\S]*?<\/form>/) || [''])[0]).replace(/(<button[^>]*type="submit")/, m => lKeepHTML() + m); const pwMode = U || LA.lmode === 'pw';
   const lgr = `<div class="lgr"><h2>로그인</h2>
     ${U ? `<p class="mini">학번과 비밀번호로 로그인하세요.</p>` : `${laSoc(cfg, 'soclogin')}${cfg.social.length ? '<p class="la-or"><span>또는 이메일로</span></p>' : ''}`}
-    <form id="laLogin" data-back="${esc(back || 'my')}"><label class="fl">${U ? '학번' : '이메일'}<input name="lid" ${U ? 'inputmode="numeric"' : 'type="email"'} autocomplete="username" required maxlength="80" value="${esc((LA.lv && LA.lv.email) || '')}"></label>
+    <form id="laLogin" data-back="${esc(back || 'home')}"><label class="fl">${U ? '학번' : '이메일'}<input name="lid" ${U ? 'inputmode="numeric"' : 'type="email"'} autocomplete="username" required maxlength="80" value="${esc((LA.lv && LA.lv.email) || '')}"></label>
       ${U ? '' : `<div class="la-seg sm">${[['otp', '인증번호로 로그인'], ['pw', '비밀번호로 로그인']].map(([k, l]) => `<button type="button" class="${(pwMode ? 'pw' : 'otp') === k ? 'on' : ''}" data-ac="lmode" data-v="${k}">${l}</button>`).join('')}</div>`}
       ${pwMode ? '<label class="fl">비밀번호<input name="pw" type="password" autocomplete="current-password" maxlength="20"></label>' : laOtpBox('lv')}
       ${lKeepHTML()}<p class="err" id="laErr" role="alert"></p><button class="lbtn pri blk" type="submit">로그인 ${ico('arrow', 16)}</button></form>
@@ -161,7 +169,7 @@ async function laLogin(f) { laFresh(); const U = laUniv(); const id = String(f.e
     else if (pe) body = { via: 'email', email: id, pw: pe.value };
     else { const s = LA.lv || {}; if (!s.sent) throw new Error('먼저 인증번호를 받으세요.'); if (s.email !== id) throw new Error('인증번호를 받은 이메일과 다릅니다.'); const vc = String(f.elements.vcode && f.elements.vcode.value || '').trim(); if (!/^\d{6}$/.test(vc)) throw new Error('이메일로 받은 인증번호 6자리를 입력하세요.'); body = { via: 'email', email: id, code: vc }; }
     let r; try { r = await api('POST', laP('login'), { ...body, keep: lKeepOn() }); } catch (x) { if (x.code === 'pending') { LA.pend = 'live'; laPendKeep('live'); location.hash = '#pending'; return; } if (x.status === 401 && x.code === 'login' && body.code) throw new Error('가입한 계정이 없습니다. [회원가입]에서 먼저 가입해 주세요.'); throw x; }
-    LA.lv = null; laLiveMe(r); try { localStorage.removeItem('didisam.app.pend.' + (LR.tid || '')); } catch (e) { } toast(`${LR.me.nick || '회원'}님, 반갑습니다.`, 'ok'); location.hash = '#' + (back || 'my'); lrender(); return; }
+    LA.lv = null; laLiveMe(r); try { localStorage.removeItem('didisam.app.pend.' + (LR.tid || '')); } catch (e) { } toast(`${LR.me.nick || '회원'}님, 반갑습니다.`, 'ok'); location.hash = '#' + (back || 'home'); lrender(); return; } /* v47-fix: 첫 로그인은 홈(지금 할 일 · 오늘 익힐 것), 링크로 온 목적지가 있으면 그곳 */
   const bad = U ? '학번 또는 비밀번호가 올바르지 않습니다.' : '이메일 또는 비밀번호가 올바르지 않습니다.';
   const pwEl = f.elements.pw; const acc = laFind(id);
   if (pwEl) { if (!acc || !acc.pw) throw new Error(acc && !acc.pw ? '비밀번호를 설정하지 않은 계정입니다. 이메일 인증번호로 로그인하세요.' : bad); if (acc.pw !== laPw(acc.pwKey, pwEl.value)) throw new Error(bad); const r0 = laAfterAuth(acc, back); laTempPw(); return r0; }

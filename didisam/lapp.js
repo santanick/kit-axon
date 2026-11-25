@@ -381,7 +381,7 @@
     b.disabled = true; msg.className = 'ap-aimsg'; msg.textContent = '연결을 확인하는 중…';
     try { const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: m, max_tokens: 8, messages: [{ role: 'user', content: 'ping' }] }) });
       if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(r.status === 401 ? 'API 키가 올바르지 않습니다.' : r.status === 404 ? '이 키로는 고른 모델을 쓸 수 없습니다.' : r.status === 429 ? '요청이 많습니다. 잠시 후 다시 눌러 주세요.' : ((j.error && j.error.message) || '오류 ' + r.status)); }
-    } catch (e) { b.disabled = false; msg.className = 'ap-aimsg bad'; msg.textContent = e instanceof TypeError ? '네트워크에 연결하지 못했습니다.' : e.message; return; }
+    } catch (e) { b.disabled = false; msg.className = 'ap-aimsg bad'; msg.textContent = e instanceof TypeError ? '네트워크에 연결하지 못했습니다.' : errMsg(e); return; }
     try { localStorage.setItem(KEYK(), JSON.stringify({ ...(c || {}), key, model: m, chat: true, docs: true, site: true })); } catch (e) { }
     f.closest('dialog').close(); lrender(); toast(`Claude 연결 완료 · ${aiSt().t}. 이제 질문해 보세요.`, 'ok'); }
 
@@ -465,6 +465,18 @@
     if (!app.querySelector('.ap-nav') && !needPick) app.insertAdjacentHTML('beforeend', navHTML());
   }
   { const base = lrender; lrender = (...x) => { base(...x); try { apply(); if (document.body.classList.contains('ap-homeon')) ltRender(); } catch (e) { console.error('lapp', e); } }; }
+  /* v47 ds1: 상태 표시줄 색(theme-color) — 파란 고정값(#5C74F6) 대신 지금 화면 맨 위 색(라이트 · 다크 · 기관 테마를 그대로 따름).
+     맨 위 요소부터 부모로 올라가며 반쯤 이상 불투명한 배경색을 찾고, 없으면 body 배경. 앱 화면(body.lapp)에서만 바꾼다. */
+  const tcSync = () => { try { const m = document.querySelector('meta[name="theme-color"]'); if (!m || !document.body || !document.body.classList.contains('lapp')) return;
+    const rgb = v => { const x = /rgba?\(([^)]+)\)/.exec(v || ''); if (!x) return null; const a = x[1].split(/[\s,/]+/).filter(Boolean).map(Number); return (a[3] == null ? 1 : a[3]) >= 0.5 ? '#' + a.slice(0, 3).map(n => Math.round(n).toString(16).padStart(2, '0')).join('') : null; };
+    let e = document.elementFromPoint(Math.round(innerWidth / 2), 1), c = null; while (e && e.nodeType === 1 && !c) { c = rgb(getComputedStyle(e).backgroundColor); e = e.parentElement; }
+    c = c || rgb(getComputedStyle(document.body).backgroundColor) || (document.documentElement.getAttribute('data-theme') === 'dark' ? '#07110c' : '#f3f0ea');
+    if (m.getAttribute('content') !== c) m.setAttribute('content', c); } catch (e) { } };
+  const tcLater = () => { try { requestAnimationFrame(() => requestAnimationFrame(tcSync)); } catch (e) { tcSync(); } };
+  window.addEventListener('hashchange', tcLater); window.addEventListener('scroll', (() => { let t = 0; return () => { clearTimeout(t); t = setTimeout(tcSync, 120); }; })(), { passive: true });
+  try { new MutationObserver(tcLater).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'style'] }); } catch (e) { }
+  { const base = lrender; lrender = (...x) => { base(...x); tcLater(); }; }
+  window.lappThemeColor = tcSync;
   { const base = ltRender; ltRender = (...x) => { const r = base(...x); try { sync(); } catch (e) { } return r; }; }
 
   /* ── 이벤트 ── */

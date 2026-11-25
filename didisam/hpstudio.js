@@ -491,7 +491,7 @@
     let L = null, via = '규칙';
     if (aiOn()) { try { say(`${CL.label ? CL.label() : 'Claude'}가 「${label}」 페이지를 만들고 있습니다…`); const ft = (S.settings && S.settings.footer) || {};
         const r = await CL.call({ system: PB_SYS(label), messages: [{ role: 'user', content: `요청: ${v}\n기관: ${JSON.stringify({ 기관명: S.org.name, 유형: TYPES[S.org.type].name, 강좌: (S.classes || []).filter(c => c.open === '전체').slice(0, 8).map(c => c.name), 주소: ft.addr || '', 연락처: ft.tel || '' })}\n지금 섹션: ${JSON.stringify(pg.sections.map(x => [x.type, (x.data || {}).variant || '', (x.data || {}).title || '']))}` }], max: 3000 });
-        const s = String(r.text || ''); const a = s.indexOf('{'), b = s.lastIndexOf('}'); const j = JSON.parse(s.slice(a, b + 1)); L = A(j.sections).filter(x => x && x.type); via = 'Claude'; } catch (e) { say(`Claude 연결이 원활하지 않아 기본 규칙으로 만듭니다(${e.message}).`, 'warn'); L = null; } }
+        const s = String(r.text || ''); const a = s.indexOf('{'), b = s.lastIndexOf('}'); const j = JSON.parse(s.slice(a, b + 1)); L = A(j.sections).filter(x => x && x.type); via = 'Claude'; } catch (e) { say(`Claude 연결이 원활하지 않아 기본 규칙으로 만듭니다(${errMsg(e)}).`, 'warn'); L = null; } }
     if (!L || !L.length) L = ruleSecs(v, label);
     const secs = mapSecs(L); if (!secs.length) { say('만들 섹션을 찾지 못했습니다. 예: 강사 소개와 오시는 길 넣어줘', 'warn'); return false; }
     return applySecs(secs, fresh ? 'replace' : 'add', `「${label}」 페이지에 ${secs.map(x => SECN(x)).join(' · ')}을(를) ${fresh ? '구성했습니다' : '넣었습니다'}(${via}).`); }
@@ -607,7 +607,7 @@
         const r = await CL.call({ system: LH_SYS, messages: [{ role: 'user', content: `요청: ${v}\n페이지: ${(HS.lv && HS.lv.name) || k}\n기관: ${S.org.name}(${(TYPES[S.org.type] || {}).name || ''})\n지금: ${JSON.stringify(c)}` }], max: 600 });
         const s = String(r.text || ''); const j = JSON.parse(s.slice(s.indexOf('{'), s.lastIndexOf('}') + 1)); const Q = {};
         if (j.t) Q.t = String(j.t).slice(0, 60); if (j.d) Q.d = String(j.d).slice(0, 200); if (/^[lc]$/.test(j.al)) Q.al = j.al === 'c' ? 'c' : ''; if (/^[sml]$/.test(j.h)) Q.h = j.h === 'm' ? '' : j.h;
-        if (/^(plain|soft|brand)$/.test(j.tone)) Q.tone = j.tone === 'soft' ? '' : j.tone; if (j.img === 'none') Q.img = ''; if (j.img === 'stock') { const u = lhStock(v, k); if (u) Q.img = u; } P = Q; via = 'Claude'; } catch (e) { say(`Claude 연결이 원활하지 않아 기본 규칙으로 처리합니다(${e.message}).`, 'warn'); } }
+        if (/^(plain|soft|brand)$/.test(j.tone)) Q.tone = j.tone === 'soft' ? '' : j.tone; if (j.img === 'none') Q.img = ''; if (j.img === 'stock') { const u = lhStock(v, k); if (u) Q.img = u; } P = Q; via = 'Claude'; } catch (e) { say(`Claude 연결이 원활하지 않아 기본 규칙으로 처리합니다(${errMsg(e)}).`, 'warn'); } }
     if (!Object.keys(P).length) { say(`알아듣지 못했습니다. 예: 제목을 "전체 ${lbl()}"으로 · 소개 문구 "…" · 배경 사진 넣어줘 · 가운데 정렬 · 크게 · 대표 색으로`, 'warn'); return false; }
     const W = { t: '제목', d: '소개 문구', img: '배경 사진', al: '정렬', h: '높이', tone: '바탕 색' }; return lhSet(k, P, `「${(HS.lv && HS.lv.name) || '학습 페이지'}」 머리글의 ${Object.keys(P).map(x => W[x]).filter(Boolean).join(' · ')}을(를) 바꿨습니다(${via}).`); }
   window.hpsLhPrompt = lhPrompt;

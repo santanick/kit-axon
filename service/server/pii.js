@@ -9,6 +9,7 @@
    - 탈퇴: pii 행 즉시 완전 삭제(hard delete), 학습 기록은 가명으로 남긴다. pii 열람 · 수정 · 삭제는 pii.access_log에 남는다.
    운영: SNS OAuth 토큰 검증 · 이메일 발송 · 본인확인(PASS) 실제 연동은 아래 '운영:' 주석 지점에서 붙인다. */
 const crypto = require('node:crypto');
+const { gcmDecipher } = require('./gcm');
 
 const PROVIDERS = ['kakao', 'naver', 'google', 'apple'];
 const NICK_RE = /^[가-힣A-Za-z0-9_-]{2,20}$/;
@@ -48,7 +49,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
   const need = () => { if (!K) throw new HttpErr(503, '개인정보 암호화 키(PII_KEY)가 설정되지 않아 가입 · 로그인을 처리할 수 없습니다.', 'pii_key'); return K; };
   const bidx = (tid, kind, v) => crypto.createHmac('sha256', need().idx).update(`${tid}|${kind}|${String(v).trim().toLowerCase()}`).digest('base64url');
   const enc = (v, aad) => { if (v == null || v === '') return null; const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', need().enc, iv); c.setAAD(Buffer.from(aad)); const ct = Buffer.concat([c.update(String(v), 'utf8'), c.final()]); return `v1.${iv.toString('base64url')}.${c.getAuthTag().toString('base64url')}.${ct.toString('base64url')}`; };
-  const dec = (s, aad) => { if (!s) return ''; const [v, iv, tag, ct] = String(s).split('.'); if (v !== 'v1') return ''; const d = crypto.createDecipheriv('aes-256-gcm', need().enc, Buffer.from(iv, 'base64url')); d.setAAD(Buffer.from(aad)); d.setAuthTag(Buffer.from(tag, 'base64url')); return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); };
+  const dec = (s, aad) => { if (!s) return ''; const [v, iv, tag, ct] = String(s).split('.'); if (v !== 'v1') return ''; const d = gcmDecipher(need().enc, Buffer.from(iv || '', 'base64url'), Buffer.from(tag || '', 'base64url')); d.setAAD(Buffer.from(aad)); return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); };
   const aad = (tid, lid, f) => `${tid}|${lid}|${f}`;
   const codeHash = (tid, b, code) => crypto.createHmac('sha256', need().idx).update(`otp|${tid}|${b}|${code}`).digest('base64url');
 
@@ -61,7 +62,8 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
     try { await c.query('begin'); await c.query("select set_config('app.tenant', $1, true)", [tid]); const r = await fn({ L, P }); await c.query('commit'); return r; }
     catch (e) { await c.query('rollback').catch(() => {}); throw e; } finally { c.release(); }
   }
-  const plog = (P, tid, actor, action, lid, purpose, fields) => P('insert into pii.access_log (tid, actor, action, learner_id, purpose, fields) values ($1, $2, $3, $4, $5, $6)', [tid, String(actor).slice(0, 80), action, lid || null, purpose || null, fields || []]);
+  /* 가디언 4차 #5: 접속지(ip) — 요청 범위(records.als)의 원값. 요청 밖(파기 작업 등)은 빈 값 */
+  const plog = (P, tid, actor, action, lid, purpose, fields) => P('insert into pii.access_log (tid, actor, action, learner_id, purpose, fields, ip) values ($1, $2, $3, $4, $5, $6, $7)', [tid, String(actor).slice(0, 80), action, lid || null, purpose || null, fields || [], require('./records').reqIp()]);
   async function orgOf(L, tid) {
     const d = (await L("select doc->'org'->>'type' type, doc->'settings'->'acct' acct, doc->'org'->'cpl' cpl from tenant_state where tenant_id = $1", [tid])).rows[0] || {};
     const a = d.acct || {}; return { parent: d.type === 'k12' && !!a.parent, approve: a.approve === 'manual' || d.type === 'voc' ? 'manual' : 'auto', /* v43 P1-F01: 직업훈련원은 자동 수락 불가(Java PiiServiceImpl과 같음) */ strictPw: !!(d.cpl && d.cpl.on && /^moel-/.test(String(d.cpl.profile || ''))), type: d.type || '', mode: a.mode || 'open', under14: !!a.under14, social: Array.isArray(a.social) ? a.social : PROVIDERS, idv: a.idv && a.idv.on ? { on: true, reason: String(a.idv.reason || '') } : { on: false } };
@@ -183,9 +185,16 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
     });
   }
 
+  /* 가디언 4차 #9: 학습자 이메일 · 학번(간편가입) 로그인도 DB 기준 15분 5회 잠금(학번+접근코드 경로와 같은 규칙 · 문구, Java 동일).
+     계정 유무와 관계없이 식별자 해시(actor lk:e:… · lk:u:…)로 센다 → 계정 열거 방지. 비밀값 · 이메일 원문은 남기지 않는다 */
+  const LK_MSG = '로그인에 5번 실패해 15분 동안 잠겼어요. 잠시 후 다시 시도하거나 선생님께 접근코드를 확인해 주세요.';
+  const lockKey = (tid, via, b) => { if (via === 'email') { const e = String(b.email || '').trim().toLowerCase(); return MAIL_RE.test(e) ? 'lk:e:' + bidx(tid, 'email', e).slice(0, 32) : null; } if (via === 'univ') { const u = String(b.student_no || '').trim(); return STU_RE.test(u) ? 'lk:u:' + bidx(tid, 'univ', u).slice(0, 32) : null; } return null; };
+  const lockLog = (tid, actor, action) => tx(tid, ({ L }) => L('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, null)', [tid, actor, action])).catch(() => {});
   async function login(req, res, tid, b) {
     limit('ll:' + ip(req), 40, 600e3); const via = String(b.via || '');
-    const lid = await tx(tid, async ({ L, P }) => {
+    const lk = lockKey(tid, via, b);
+    if (lk) { const n = await tx(tid, ({ L }) => L(`select count(*)::int n from audit_log where tenant_id = $1 and actor = $2 and action = 'llogin.fail' and at > greatest(now() - interval '15 minutes', coalesce((select max(at) from audit_log where tenant_id = $1 and actor = $2 and action = 'llogin'), 'epoch'::timestamptz))`, [tid, lk])).then(r => r.rows[0].n).catch(() => 0); if (n >= 5) throw new HttpErr(429, LK_MSG, 'locked'); }
+    let lid; try { lid = await tx(tid, async ({ L, P }) => {
       let row = null;
       if (via === 'email') { const email = String(b.email || '').trim().toLowerCase(); if (!MAIL_RE.test(email)) throw new HttpErr(400, '이메일 형식을 확인하세요.', 'email'); const e = bidx(tid, 'email', email); limit(`lle:${tid}:${e}`, 8, 600e3);
         row = (await P('select learner_id, pw_hash from pii.identity where tid = $1 and email_bidx = $2', [tid, e])).rows[0];
@@ -200,7 +209,8 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       if (a.status === 'guardian_pending') throw new HttpErr(403, '보호자 동의를 기다리고 있습니다. 보호자에게 보낸 동의 링크를 확인해 주세요.', 'guardian_pending');
       await approval(L, tid, row.learner_id);
       return row.learner_id;
-    });
+    }); } catch (e) { if (lk && e && (e.status === 401 || e.code === 'otp_bad')) await lockLog(tid, lk, 'llogin.fail'); throw e; }
+    if (lk) await lockLog(tid, lk, 'llogin');
     await newLearnerSession(res, tid, lid);
     return lid;
   }
