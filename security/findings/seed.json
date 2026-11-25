@@ -575,6 +575,36 @@
       "fix": "'//' · 역슬래시 · 공백으로 시작 · 포함하는 경로는 리다이렉트하지 않고, Location은 인코딩된 원래 경로로",
       "status": "fixed",
       "note": "가디언 4차 exp — service/test/ssrf.test.js 6번 시험. Java는 정적 폴더 리다이렉트 경로 없음(Spring 리소스 처리)"
+    },
+    {
+      "id": "SEC-0040",
+      "title": "Java 서버(service-egov) 전이 의존성 알려진 취약점 묶음 — tomcat-embed-core · spring-webmvc/expression · jackson · pgjdbc · log4j-api",
+      "severity": "critical",
+      "priority": "P0",
+      "cwe": "CWE-1395",
+      "owasp": "A06:2021",
+      "area": "공급망(의존성)",
+      "file": "service-egov/pom.xml",
+      "line": 13,
+      "evidence": "가디언 5차 g3 실측(Trivy 0.76.2 fs · OSV-Scanner 2.7.1): CRITICAL 10 · HIGH 18 — tomcat-embed-core 10.1.54(수정 10.1.59) · spring-webmvc/expression 6.2.18(수정 6.2.19) · jackson-databind/core 2.21.2(수정 2.21.7) · postgresql 42.7.10(수정 42.7.12) · log4j-api 2.24.3(MEDIUM, 수정 2.25.5)",
+      "fix": "Spring Boot 3.5.14→3.5.16(spring 6.2.19), BOM 속성 고정 tomcat.version 10.1.62 · jackson-bom.version 2.21.8 · postgresql.version 42.7.14 · log4j2.version 2.25.5(모두 공개 72시간 경과), bcprov 1.85 유지",
+      "status": "fixed",
+      "note": "가디언 5차 h1 — OSV-Scanner 2.7.1(sha256 대조) pom 재스캔: 전 C10 · H17 · M21 · L5 → 후 CRITICAL 2(SEC-0041) · HIGH 0 · MEDIUM 0. war 포함 jar 확인. 대조 시험 contract 2789 · contract-sec 142 · contract-mfa 45 · contract-session 66 전부 통과"
+    },
+    {
+      "id": "SEC-0041",
+      "title": "spring-webmvc 6.2.19 공개 수정본 없는 CRITICAL 2건(CVE-2026-47890 SSE 조각 렌더링 · CVE-2026-47884 XsltView 경로 제한)",
+      "severity": "critical",
+      "priority": "P2",
+      "cwe": "CWE-22",
+      "owasp": "A06:2021",
+      "area": "공급망(의존성)",
+      "file": "service-egov/pom.xml",
+      "line": 13,
+      "evidence": "OSV GHSA-j9f9-w8pj-32f8 · GHSA-pc63-qcmh-9cmg: 6.2.x는 last_affected 6.2.19, 수정은 7.0.9(Boot 4)뿐. 소스에 SseEmitter · FragmentsRendering · XsltView 사용 없음(2026-11-25 grep) → 도달 불가",
+      "fix": "Spring Boot 4 · 표준프레임워크 차기 버전(Spring 7) 전환 시 해소. 그전까지 SSE 조각 렌더링 · XsltView 도입 금지",
+      "status": "accepted",
+      "note": "가디언 5차 h1 — 승인 대상 「대표님 · 부대표」. OSV 잡 실패 기준(CRITICAL)에 걸리므로 g3 워크플로에 이 2건 예외(무시 목록) 등록 필요"
     }
   ]
 }
