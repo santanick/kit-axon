@@ -88,13 +88,16 @@
     return out;
   }
   /* v36 평가 12: 주소(URL)가 그대로 제목이면 사람이 읽는 제목으로 — 파일은 파일 이름, YouTube는 영상 제목(oEmbed로 한 번 받아 기록에 저장, 못 받으면 'YouTube 영상') */
+  /* qa7 d5: 운영 CSP(connect-src 'self')를 넓히지 않고 서버 프록시 GET /api/oembed로 제목을 받는다. 시연판(서버 없음)은 외부 요청을 하지 않는다 */
+  const ytTitleOf = u => (typeof LIVE !== 'undefined' && LIVE && LIVE.user ? fetch('/api/oembed?url=' + encodeURIComponent(u), { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null));
+  window.ytTitleOf = ytTitleOf;
   const YTT = {}; const ytOfU = u => (String(u || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([\w-]{11})/) || [])[1] || '';
   function niceTitle(e) { const t = String(e.title || '').trim(); if (!/^(https?:\/\/|www\.)\S+$/i.test(t) && !(t === 'YouTube 영상' && ytOfU(e.ref && (e.ref.url || e.ref.yt && e.ref.yt.id && 'https://youtu.be/' + e.ref.yt.id)))) return t;
     const r = e.ref || {}; const id = ytOfU(t) || ytOfU(r.url) || (r.yt && r.yt.id) || '';
     if (id) { const k = YTT[id]; if (k && k !== 1) return k; if (r.yt && r.yt.title && !/^https?:/.test(r.yt.title)) return r.yt.title; ytFetch(id, e); return 'YouTube 영상'; }
     try { const u = new URL(/^www\./i.test(t) ? 'https://' + t : t); const seg = decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() || ''); if (seg && /\.[a-z0-9]{2,5}$/i.test(seg)) return seg.slice(0, 80); return `${u.hostname.replace(/^www\./, '')} 링크`; } catch (er) { return t; } }
   function ytFetch(id, e) { if (YTT[id]) return; YTT[id] = 1; if (typeof fetch !== 'function' || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
-    fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id)).then(r => r.ok ? r.json() : null).then(j => { const tt = j && String(j.title || '').trim(); if (!tt) return; YTT[id] = tt.slice(0, 80);
+    ytTitleOf('https://www.youtube.com/watch?v=' + id).then(j => { const tt = j && String(j.title || '').trim(); if (!tt) return; YTT[id] = tt.slice(0, 80);
       try { const r = e.ref; if (e.origin === 'clib' || e.origin === 'course') { if (/^(https?:\/\/|www\.)|^YouTube 영상$/.test(String(r.title || ''))) r.title = YTT[id]; } else if (e.origin === 'lib' && /^(https?:\/\/|www\.)/.test(String(r.name || ''))) r.name = YTT[id]; save(); if (typeof CUR !== 'undefined' && document.querySelector('#main .clb')) render(); } catch (er) { } }).catch(() => { }); }
   const byKey = k => entries().find(e => e.key === k);
   /* CLIB.all(): C3 CT('라이브러리에서 가져오기')가 그대로 쓰는 기록 모양 { id, kind(C3 말), type, title, src, … , usedIn }.
@@ -197,7 +200,7 @@
       inp.addEventListener('change', () => { const F = [...inp.files]; F.forEach(f => { const vid = /^video\//.test(f.type); if (vid && f.size > ((window.HPM && HPM.FMAX && HPM.FMAX.video) || 1024 ** 3)) { toast(`${f.name}: 영상은 ${(window.HPM && HPM.sizeText && HPM.FMAX) ? HPM.sizeText(HPM.FMAX.video) : '1GB'}까지 올릴 수 있습니다.`, 'warn'); return; }
         done({ kind: vid ? 'video' : 'file', src: 'upload', title: f.name.replace(/\.\w+$/, '').slice(0, 80), file: f.name, bytes: f.size, size: typeof a2Size === 'function' ? a2Size(f.size) : `${Math.round(f.size / 1024)}KB`, mime: f.type }); });
         inp.remove(); if (F.length) toast(`${F.length}개를 올렸습니다. (데모: 파일 이름 · 크기만 기록합니다)`, 'ok'); }); inp.click(); return; }
-    if (kind === 'youtube') { const w = modal('YouTube 영상 넣기', `<div class="clb-ask"><label class="fl clb-fl">YouTube 주소<input name="u" inputmode="url" autocomplete="off" value="${esc(ed && ed.url || '')}"></label><p class="clb-ex">예: https://youtu.be/abcdefghijk</p><label class="fl clb-fl">제목 <small class="clb-later">나중에 해도 됩니다</small><input name="t" maxlength="80" value="${esc(ed && ed.title || '')}"></label></div>`,
+    if (kind === 'youtube') { const w = modal('YouTube 영상 넣기', `<div class="clb-ask"><label class="fl clb-fl">YouTube 주소<input name="u" inputmode="url" autocomplete="off" value="${esc(ed && ed.url || '')}"></label><p class="clb-ex">예: https://youtu.be/abcdefghijk</p><label class="fl clb-fl">제목 <small class="clb-later">나중에 해도 됩니다</small><input name="t" maxlength="80" value="${esc(ed && ed.title || '')}"></label><p class="clb-ex" id="clbYtHint" aria-live="polite">${typeof LIVE !== 'undefined' && LIVE && LIVE.user ? '주소를 넣으면 제목을 YouTube에서 가져옵니다.' : '시연판에서는 제목을 직접 입력합니다.'}</p></div>`,
       [{ id: 'c', label: '취소' }, { id: 'ok', label: '넣기', kind: 'pri', run: w => { const u = fv(w, 'u'); if (!/^https:\/\/(www\.|m\.)?(youtube\.com\/(watch\?v=|shorts\/)|youtu\.be\/)[\w-]{11}/.test(u)) { toast('YouTube 주소를 확인해 주세요. 예: https://youtu.be/abcdefghijk', 'warn'); return false; } done({ ...(ed || {}), kind: 'video', src: 'youtube', url: u, title: fv(w, 't') || 'YouTube 영상' }); toast('YouTube 영상을 넣었습니다.', 'ok'); } }]); return w; }
     if (kind === 'aivideo') return preset(ask(ed ? 'AI 강의 영상 고치기' : 'AI 강의 영상 만들기', '무엇을 설명하는 영상인가요?', exTopic(), v => { const sc = AI.lecture(v, 5); S.ai && S.ai.usage++; done({ ...(ed || {}), kind: 'video', src: 'ai', title: `${v} AI 강의 영상`, ai: { scenes: sc, mins: 5, voice: 'f' } }); toast(`AI 강의 영상(장면 ${sc.length}개)을 만들었습니다. [미리보기]로 확인하세요.`, 'ok'); }, '<p class="mini clb-honest">미리보기 품질입니다 — 브라우저 음성 · 슬라이드로 재생합니다.</p>'));
     if (kind === 'doc') return preset(ask(ed ? '교안 고치기' : '교안 만들기', '어떤 내용의 교안인가요?', exTopic(), v => { const d = AI.material(v); S.ai && S.ai.usage++; done({ ...(ed || {}), kind: 'doc', title: `${v} 교안`, topic: v, doc: d }); toast(`교안 ${d.secs.length}절을 만들었습니다.`, 'ok'); }));
@@ -263,7 +266,7 @@
     const st = e.origin === 'book' && r.color ? ` style="--bk:${esc(String(r.color).replace(/[^#\w(),.% ]/g, ''))}"` : '';
     const cvu = !window.V4 || !V4.photo ? '' : e.origin === 'book' && !id ? V4.photo(`${e.title} 도서 책`, e.id) /* v43 D-E: 디지털북은 단색 상자 대신 사진 표지 */
       : ['video', 'doc'].includes(e.kind) ? (() => { /* v43 R6: 이름으로 장면을 못 고르면 교실 사진만 반복 — 카드마다 다른 장면 */ const P = ['IT', '경영', '독서', '외국어', '돌봄', '요리']; const w = window.L43 && L43.wordsOf ? L43.wordsOf(e.title) : []; const hs = String(e.id || e.title).split('').reduce((a, ch) => a + ch.charCodeAt(0), 0); return V4.photo(w[0] && w[0] !== '교실' ? `${w[0]} ${e.title}` : P[hs % P.length], 'clb' + e.id); })() : ''; /* v43 R1: 영상 · 문서도 빗금 아이콘 대신 사진 표지(유튜브 썸네일은 그 위에 덮임) */
-    const inner = (cvu ? `<span class="clb-cov" style="background-image:url('${esc(cvu)}')"></span>` : '') + (id ? `<img class="clb-thimg" src="https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : '') + (e.kind === 'video' ? `<span class="r1-play" aria-hidden="true"></span>` : '');
+    const inner = (cvu ? `<span class="clb-cov" style="background-image:url('${esc(cvu)}')"></span>` : '') + (id ? `<img class="clb-thimg" src="https://i.ytimg.com/vi/${esc(id)}/mqdefault.jpg" alt="" loading="lazy">` : '') + (e.kind === 'video' ? `<span class="r1-play" aria-hidden="true"></span>` : '');
     const cap = e.origin === 'book' ? `<b class="clb-thb">${esc(e.title)}</b>` : e.kind === 'file' && extOf(e) ? `<b class="clb-thx">${esc(extOf(e))}</b>` : '';
     return `<span class="clb-th k-${k}${id ? ' yt' : ''}"${st} aria-hidden="true"><span class="clb-thi">${ic((KIND[e.kind] || KIND.file)[1], 30)}${cap}</span>${inner}<em class="clb-thk">${esc(isLink(e) && e.kind === 'video' ? 'YouTube' : kName(e.kind))}</em>${L ? `<em class="clb-thl">${esc(L)}</em>` : ''}</span>`; }
   const useLine = e => { const U = e.uses; return U.length ? `<span class="clb-use on">${ic('check', 14)} ${esc(useLabel(U[0]))}${U.length > 1 ? ` 외 ${U.length - 1}곳` : ''}</span>` : `<span class="clb-use">아직 사용 안 함</span>`; };
@@ -366,10 +369,15 @@
   };
 
   /* 검색은 다시 그리지 않고 카드만 거른다(입력 중 초점 유지) */
+  /* qa7 d5: YouTube 넣기 창 — 주소를 넣으면 제목 칸이 비어 있을 때 서버 프록시로 제목을 채운다(못 받으면 직접 입력 안내) */
+  { let ytT = 0, ytQ = ''; document.addEventListener('input', ev => { const hint = document.getElementById('clbYtHint'); const t = ev.target; if (!hint || !t || t.name !== 'u' || !hint.parentElement.contains(t)) return;
+    clearTimeout(ytT); const u = t.value.trim(); if (!ytOfU(u) || !(typeof LIVE !== 'undefined' && LIVE && LIVE.user)) return;
+    ytT = setTimeout(() => { ytQ = u; hint.textContent = '제목을 가져오는 중입니다…'; ytTitleOf(u).then(j => { if (ytQ !== u || !document.body.contains(hint)) return; const tt = j && String(j.title || '').trim(); const ti = hint.parentElement.querySelector('input[name=t]');
+      if (tt && ti && !ti.value.trim()) { ti.value = tt.slice(0, 80); hint.textContent = 'YouTube에서 제목을 가져왔습니다. 필요하면 고쳐 주십시오.'; } else if (!tt) hint.textContent = '제목을 가져오지 못했습니다. 제목을 직접 입력해 주십시오.'; else hint.textContent = '입력한 제목을 그대로 씁니다.'; }); }, 350); }); }
   document.addEventListener('input', ev => { if (ev.target.id !== 'clbQ') return; UI.clibQ = ev.target.value; const q = ev.target.value.trim().toLowerCase(); let k = 0;
     document.querySelectorAll('#clbGrid [data-q]').forEach(c => { const on = !q || c.dataset.q.includes(q); c.hidden = !on; if (on) k++; }); const no = document.getElementById('clbNone'); if (no) no.hidden = !!k; });
   /* 썸네일을 못 받으면(오프라인 등) 아이콘 그림으로 둔다 — 인라인 onerror는 CSP로 막혀 있어 여기서 */
-  document.addEventListener('error', ev => { const t = ev.target; if (t && t.classList && t.classList.contains('clb-thimg')) { const p = t.parentElement; t.remove(); if (p) p.classList.remove('yt'); } }, true);
+  (window.IMG_FB || []).push(t => { if (!t.classList.contains('clb-thimg')) return false; const p = t.parentElement; t.remove(); if (p) p.classList.remove('yt'); return true; }); /* qa7 d5: 공통 리스너 1개(errmsg.js)에 등록 */
   document.addEventListener('keydown', ev => { const t = ev.target; if ((ev.key === 'Enter' || ev.key === ' ') && t && t.matches && t.matches('#main article[data-act=clb-sel]')) { ev.preventDefault(); ACT['clb-sel'](t); }
     if (ev.key === 'Escape' && UI.clibSel && document.getElementById('clbPanel') && !document.getElementById('modal')) ACT['clb-close'](); });
 

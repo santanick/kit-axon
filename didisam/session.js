@@ -84,4 +84,34 @@
     ACT['os-save'] = async () => { const v = id => (document.getElementById(id) || {}).value; const idle = v('os-idle');
       try { await call('POST', '/api/org/security', { idleMin: idle ? +idle : null, maxSessions: +v('os-max'), mfa: v('os-mfa') }); tst('기관 보안 설정을 저장했습니다.'); SS.lastTouch = 0; poll(); rerender(); } catch (e) { tst(em(e), 'warn'); } };
   }
+
+  /* ── qa7 d5 · 교수자 「내 계정」 — 설정(기관 설정)은 그대로 막고, 본인 카드(아이디 · 비밀번호 변경 · 로그인 기기 · 2단계 인증 · 로그아웃)만 연다.
+     core.js의 TEACH_NO(settings)는 바꾸지 않는다: 교수자가 설정으로 가면 이 화면만 보이고, 기관 설정 API(/api/org/security · /api/staff 등)는 서버에서 403 그대로. ── */
+  const tch = () => typeof S !== 'undefined' && S && S.me && S.me.role === 'teacher';
+  const MYA = 'myacct';
+  function myAcctView() {
+    if (typeof UI !== 'undefined' && !UI.sxOpen) UI.sxOpen = MYA; /* 설정 머리 카드(l43 기관 현황 · 처리 필요)는 하위 설정을 연 상태처럼 숨긴다 */
+    const L = live(); const id = L ? (LIVE.user.email || '') : ((S.me && S.me.name) || '');
+    const head = `<section class="card mya-id" data-mya="id"><h3>내 계정</h3><p class="muted">교수자는 본인 계정만 관리합니다. 기관 설정(메뉴 · 보안 정책 · 운영자 · 결제)은 운영자에게 요청해 주십시오.</p>
+      <div class="sx-kv"><span>로그인 아이디</span><b>${H(id)}</b></div>
+      ${L ? '<p style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn" data-act="live-pw">비밀번호 변경</button><button type="button" class="btn ghost" data-act="live-logout">로그아웃</button></p>'
+        : '<p class="muted">시연판에는 로그인 계정이 없습니다. 운영 서버에서 비밀번호 변경 · 2단계 인증 · 로그인 기기를 관리합니다.</p>'}</section>`;
+    if (!L) return `<div class="mya">${head}</div>`;
+    fill('mya-sess', sessHTML);
+    return `<div class="mya">${head}<section id="mya-sess" class="card" data-mya="sess">불러오는 중…</section></div>`;
+  }
+  /* 교수자가 설정으로 가면 → 「내 계정」(go를 감싼다 · 다른 역할은 그대로) */
+  if (typeof go === 'function') { const base = go; go = (id, keep) => {
+    if ((id === 'settings' || id === MYA) && tch()) { CUR = { ws: 'settings', tab: '' }; UI.myAcct = true; try { history.replaceState(null, '', '#settings'); } catch (e) { } render(); if (!keep) window.scrollTo(0, 0); document.body.classList.remove('nav-open'); return; }
+    return base(id === MYA ? 'settings' : id, keep); }; }
+  /* 설정 화면: 교수자면 내 계정만(가장 바깥에서 감싸도록 DOMContentLoaded — slim.js 설정 허브보다 늦게) */
+  document.addEventListener('DOMContentLoaded', () => { if (typeof VIEWS === 'undefined' || !VIEWS.settings) return; const base = VIEWS.settings;
+    VIEWS.settings = (...a) => { if (tch()) return myAcctView(); if (typeof UI !== 'undefined' && UI.sxOpen === MYA) UI.sxOpen = ''; return base(...a); }; });
+  /* 교수자 레일 아래 「내 계정」 버튼 · 제목 「내 계정」 */
+  if (typeof AFTER !== 'undefined') AFTER.push(() => { const t = tch(); const ex = document.getElementById('myaBtn');
+    if (!t) { if (ex) ex.remove(); return; }
+    const on = typeof CUR !== 'undefined' && CUR.ws === 'settings';
+    if (!ex) { const foot = document.querySelector('nav.brail') || document.querySelector('.side .rfoot'); if (foot) foot.insertAdjacentHTML('beforeend', `<button type="button" id="myaBtn" class="ri${on ? ' on' : ''}" data-act="go" data-v="${MYA}" title="내 계정"${on ? ' aria-current="page"' : ''}>${typeof ic === 'function' ? ic('users') : ''}<span>내 계정</span></button>`); }
+    else { ex.classList.toggle('on', on); if (on) ex.setAttribute('aria-current', 'page'); else ex.removeAttribute('aria-current'); }
+    if (on) { const h = document.querySelector('#main .wh h1'); if (h) h.textContent = '내 계정'; } });
 })();

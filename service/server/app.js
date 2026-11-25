@@ -22,6 +22,7 @@ const { createPii, piiKeys } = require('./pii');
 const { createCompliance } = require('./compliance');
 const coupon = require('./coupon'); /* v38 A-17 쿠폰 · 할인 코드 */
 const { benchmark } = require('./bench');
+const { createOembed } = require('./oembed');
 const { createMedia } = require('./media');
 const { cleanCal } = require('./lpcal');
 const { cleanNotes, cleanConn } = require('./lpnotes');
@@ -113,6 +114,7 @@ const LP_MAX = 512 * 1024; /* v43.6 셀프러닝 노트(lp.notes)로 256KB → 5
 const TID_RE = /^tn_[a-z0-9]{8,16}$/; const SID_RE = /^[A-Za-z0-9_-]{4,20}$/;
 
 function createApp({ pool, env = process.env, publicDir, log = console, benchOpts = {} }) {
+  const oembed = createOembed({ env, lookup: benchOpts.lookup, get: benchOpts.get }); /* qa7 d5 */
   const secure = env.COOKIE_SECURE !== '0';
   /* v25 운영 필수 비밀값 — 약한 기본값으로 뜨지 않게 운영(NODE_ENV=production)에서는 시작을 막는다 */
   if (env.NODE_ENV === 'production') { const miss = ['SESSION_PEPPER', 'PII_KEY'].filter(k => !String(env[k] || '').trim() || String(env[k]).trim().length < 32); if (miss.length) throw new Error(`운영 필수 비밀값이 없거나 짧습니다(32자 이상): ${miss.join(', ')}`); if (!secure) throw new Error('운영에서는 COOKIE_SECURE=0을 쓸 수 없습니다.'); }
@@ -637,6 +639,12 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       const b = await readBody(req, 4096); if (typeof b.url !== 'string' || !b.url) throw new HttpErr(400, '읽을 주소를 넣어 주세요.', 'bad_url');
       try { const out = await benchmark(b.url, benchOpts); log.info && log.info('bench', a.tid, new URL(out.url).host); return out; }
       catch (e) { if (e && e.status) throw new HttpErr(e.status, e.message, e.code); throw new HttpErr(502, '사이트를 읽지 못했습니다.', 'fetch'); }
+    },
+    /* qa7 d5 YouTube 제목 프록시: 로그인(운영자 · 교수자) · youtube.com/youtu.be만 · SSRF 가드 · title · thumbnail_url만 · 10분 캐시(oembed.js) */
+    'GET /api/oembed': async req => {
+      const a = await need(req); limit(`oembed:${a.uid}`, 60, 60e3);
+      try { return await oembed.lookupTitle(new URL(req.url, 'http://x').searchParams.get('url')); }
+      catch (e) { if (e && e.status) throw new HttpErr(e.status, e.message, e.code); throw new HttpErr(502, 'YouTube에 연결하지 못했습니다. 제목을 직접 입력해 주십시오.', 'fetch'); }
     },
     'GET /api/ai/usage': async req => {
       const a = await need(req);
