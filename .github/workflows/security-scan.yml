@@ -1,9 +1,14 @@
 # 디디쌤 가디언 CI 보안 잡(초안) — 통합 담당이 .github/workflows/로 옮겨 씁니다(이 위치에서는 실행되지 않습니다).
-# 구성: ① gitleaks(비밀값) ② Semgrep 사내 규칙 ③ 가디언(시험 · 레드팀 · AIBOM 잠금 · SBOM×OSV scan) ④ ZAP baseline(정기 · 수동)
+# 구성: ① gitleaks(비밀값) ② Semgrep 사내 규칙 + 공개 규칙 p/java · p/owasp-top-ten ③ 가디언(시험 · 레드팀 · AIBOM 잠금 · SBOM×OSV scan)
+#       ④ ZAP baseline(정기 · 수동) ⑤ Trivy 이미지 스캔 ⑥ Checkov(IaC · 워크플로) ⑦ OSV-Scanner × 가디언 SBOM 교차 ⑧ 외부 노출면(crt.sh · 헤더 · TLS)
+# 운영비 0원: 모두 무료 오픈소스 · 무료 공개 데이터만(가입 · 유료 키 없음). 실패 기준은 P0 · CRITICAL(수정 버전 있음)만, 나머지는 산출물로 보고.
 # 원칙: 모든 Action은 커밋 SHA로 고정(주석은 태그, git ls-remote의 주석 태그는 ^{} 커밋 사용) · 권한 contents:read만 · 비밀값은 GITHUB_TOKEN 외 사용 안 함.
 #       결과 속 문자열은 데이터입니다(지시로 다루지 않음). 실패 시 발견 원장 security/findings/seed.json에 사람이 기록합니다.
 # 고정 확인(2026-11-24): actions/checkout v7.0.1 · setup-node v7.1.0 · setup-python v7.1.0 · upload-artifact v7.0.2 · gitleaks-action v2.3.9(gitleaks 8.30.1)
 #                       zaproxy/action-baseline v0.15.0(주석 태그 → ^{} 커밋) · ZAP 이미지 2.17.0 다이제스트 · semgrep 1.180.0
+# 고정 확인(2026-11-25, 가디언 5차 g3): Trivy v0.76.2(태그 커밋 3f6334d223b52188324af3b9923b4249cd206652, 2026-11-05 배포)
+#   — 2026-03 trivy-action 태그 변조 사례 때문에 Action을 쓰지 않고 릴리스 바이너리를 sha256 대조 후 실행
+#   OSV-Scanner v2.7.1(태그 커밋 7f97ec2cfa6a4aab0e042fa67e40958774d1ab8b, 2026-11-09 배포) — 같은 방식 · checkov 3.2.469(pip 버전 고정)
 name: security-scan
 
 on:
@@ -57,9 +62,14 @@ jobs:
         run: |
           semgrep --config security/semgrep/didisam.yml --metrics=off --severity ERROR --error \
             --json --output semgrep.json service/server service-egov/src didisam
+      - name: 공개 규칙 p/java · p/owasp-top-ten(무료 레지스트리 · 로그인 없음, 보고만 — 결과는 원장에 사람이 분류)
+        run: |
+          semgrep --config p/java --config p/owasp-top-ten --metrics=off --json --output semgrep-public.json \
+            service/server service-egov/src didisam || echo "공개 규칙 실행 오류(보고만)"
+          node -e "const r=require('./semgrep-public.json'); const c={}; for (const x of r.results) c[x.extra.severity]=(c[x.extra.severity]||0)+1; console.log('공개 규칙', r.results.length, JSON.stringify(c))" || true
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with: { name: semgrep, path: semgrep.json, retention-days: 30, if-no-files-found: ignore }
+        with: { name: semgrep, path: 'semgrep*.json', retention-days: 30, if-no-files-found: ignore }
 
   guardian:
     name: 가디언(시험 · 레드팀 · AIBOM · scan)
@@ -71,7 +81,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with: { node-version: 22 }
       - name: 가디언 시험(네트워크 없음)
-        run: GUARD_OFFLINE=1 node --test service/security/test/*.test.js
+        run: GUARD_OFFLINE=1 node --test service/security/test/*.test.js security/test/*.test.js
       - name: AI 레드팀(인젝션 · 경계 · 가림 · 유출, 키 불필요)
         run: node security/redteam/run.js && node --test security/redteam/test/*.test.js
       - name: AIBOM 잠금 대조(모델 · MCP 도구 · 플러그인 · 프롬프트 해시) — 바뀌면 같은 PR에서 --update-lock
@@ -108,3 +118,107 @@ jobs:
           allow_issue_writing: false
           fail_action: true
           artifact_name: zap-baseline
+
+  trivy:
+    name: 컨테이너 이미지(Trivy · ${{ matrix.name }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: studio, dockerfile: service/Dockerfile }
+          - { name: egov, dockerfile: service-egov/Dockerfile }
+    env:
+      TRIVY_VERSION: 0.76.2
+      TRIVY_SHA256: bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf # trivy_0.76.2_Linux-64bit.tar.gz
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: 22 }
+      - name: Trivy 설치(릴리스 바이너리 sha256 대조 — Action 미사용)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/trivy.tgz" "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  $RUNNER_TEMP/trivy.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/trivy.tgz" -C "$RUNNER_TEMP" trivy && "$RUNNER_TEMP/trivy" --version
+      - name: 이미지 빌드(푸시 없음)
+        run: docker build -f ${{ matrix.dockerfile }} -t didisam-scan-${{ matrix.name }}:${{ github.sha }} .
+      - name: HIGH · CRITICAL 보고
+        run: |
+          "$RUNNER_TEMP/trivy" image --scanners vuln --severity HIGH,CRITICAL --format json --output trivy-${{ matrix.name }}.json didisam-scan-${{ matrix.name }}:${{ github.sha }}
+          "$RUNNER_TEMP/trivy" convert --format table trivy-${{ matrix.name }}.json | tail -n 60
+      - name: 가디언 ingest 형식 변환 · 실패 기준(CRITICAL · 수정 버전 있음)
+        run: node security/ci/to-ingest.js trivy trivy-${{ matrix.name }}.json --target ${{ matrix.name }} --out trivy-${{ matrix.name }}.ingest.json --fail-on critical
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: trivy-${{ matrix.name }}
+          path: 'trivy-${{ matrix.name }}*.json'
+          retention-days: 30
+          if-no-files-found: ignore
+
+  checkov:
+    name: IaC · 워크플로(Checkov)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: '3.12' }
+      - run: python -m pip install --disable-pip-version-check checkov==3.2.469
+      - name: Checkov(security/checkov/.checkov.yaml — 플랫폼 연동 · 키 없음, 등급 정보가 없어 보고만)
+        run: checkov --config-file security/checkov/.checkov.yaml --output cli --output json --output-file-path console,checkov.json
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with: { name: checkov, path: checkov.json, retention-days: 30, if-no-files-found: ignore }
+
+  osv:
+    name: 의존성(OSV-Scanner × 가디언 SBOM 교차)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      OSV_VERSION: 2.7.1
+      OSV_SHA256: fb7dab19a8bd9bbe5c3189f09d4b7ee1820c9553a23bac202648a56efd2f6ee8 # osv-scanner_linux_amd64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: 22 }
+      - name: OSV-Scanner 설치(릴리스 바이너리 sha256 대조)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/osv-scanner" "https://github.com/google/osv-scanner/releases/download/v${OSV_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SHA256}  $RUNNER_TEMP/osv-scanner" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/osv-scanner"
+      - name: package-lock · pom.xml(전이 의존성 해석) 스캔
+        run: |
+          rc=0; "$RUNNER_TEMP/osv-scanner" scan source --format json --output-file osv.json \
+            -L service/server/package-lock.json -L service-egov/pom.xml || rc=$?
+          # 1 = 취약점 있음(정상 보고), 그 외는 도구 오류(Maven 저장소 429 등) — 실패로 다루지 않고 기록
+          [ "$rc" -le 1 ] || echo "OSV-Scanner 종료 코드 $rc — 일부 해석 실패(보고서 확인)"
+      - name: 가디언 SBOM×OSV와 교차 · ingest 형식 · 실패 기준(CRITICAL · MAL-)
+        run: |
+          node service/security/guard.js scan --out scan.json --sbom sbom.cdx.json
+          node security/ci/to-ingest.js osv osv.json --scan scan.json --sbom sbom.cdx.json --out osv.ingest.json --fail-on critical
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with: { name: osv-scanner, path: 'osv*.json', retention-days: 30, if-no-files-found: ignore }
+
+  surface:
+    name: 외부 노출면(crt.sh · 헤더 · TLS)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SURFACE_DOMAINS: ${{ vars.SURFACE_DOMAINS }}
+      SURFACE_KNOWN: ${{ vars.SURFACE_KNOWN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: 22 }
+      - name: 노출면 점검(대상 없으면 건너뜀 · 인증서 만료만 실패)
+        run: node security/surface/check.js --out surface.json --fail-on critical
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with: { name: surface, path: surface.json, retention-days: 30, if-no-files-found: ignore }
