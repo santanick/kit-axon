@@ -547,6 +547,20 @@ const MIGRATIONS = [
      end loop;
      perform set_config('app.tenant', '', true);
    end $$;`,
+  /* 가디언 5차 F8 사고 대응 — security.incident 보강: 제목 · 심각도 · 상태 · 긴급 차단 연결. scope는 {tenants[], data, period} JSON.
+     단계 detect · contain · report · notify · recover · prevent, notify_due_at = 생성 + 72시간. 결정(decision_log)은 사람만 — Node security.js · Java SecServiceImpl 같은 규격 */
+  `alter table security.incident add column if not exists title text not null default '';
+   alter table security.incident add column if not exists severity text not null default 'high';
+   alter table security.incident add column if not exists status text not null default 'open';
+   alter table security.incident add column if not exists kill_id text;
+   alter table security.incident add column if not exists created_by text not null default '';
+   alter table security.incident add column if not exists updated_at timestamptz not null default now();
+   alter table security.incident alter column scope drop default;
+   alter table security.incident alter column scope type jsonb using (case when scope = '' then '{}' else json_build_object('data', scope)::text end)::jsonb;
+   alter table security.incident alter column scope set default '{}';
+   create unique index if not exists sec_incident_kill on security.incident (kill_id) where kill_id is not null;
+   create index if not exists sec_incident_st on security.incident (status, created_at desc);
+   revoke all on security.incident from didisam_tenant;`,
 ];
 
 /* v30 학사 LMS 묶음 스키마(lms/sql/NN_*.sql)는 번호가 아니라 파일 이름으로 기록한다(lms_schema).

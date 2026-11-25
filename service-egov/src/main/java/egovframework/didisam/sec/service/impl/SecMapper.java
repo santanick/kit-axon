@@ -61,4 +61,10 @@ public interface SecMapper {
     void insScan(@Param("type") String type, @Param("target") String target, @Param("tool") String tool, @Param("sha") String sha, @Param("n") int n, @Param("raw") String raw);
     Boolean upPr(@Param("id") String id, @Param("num") Integer num, @Param("title") String title, @Param("fids") String fids, @Param("sev") String sev, @Param("ct") String ct, @Param("files") String files, @Param("vr") String vr, @Param("risk") String risk, @Param("rb") String rb, @Param("url") String url);
     Boolean upCard(@Param("id") String id, @Param("threat") String threat, @Param("title") String title, @Param("pattern") String pattern, @Param("controls") String controls, @Param("tests") String tests, @Param("skills") String skills, @Param("playbook") String playbook, @Param("body") String body);
+    void insertIncident(@Param("id") String id, @Param("type") String type, @Param("title") String title, @Param("sev") String sev, @Param("scope") String scope, @Param("phase") String phase, @Param("timeline") String timeline, @Param("hours") int hours, @Param("kill") String kill, @Param("by") String by);
+    String incidentJson(@Param("id") String id);
+    List<String> incidentList();
+    int incidentStep(@Param("id") String id, @Param("entry") String entry, @Param("phase") String phase);
+    int incidentDecision(@Param("id") String id, @Param("entry") String entry);
+    Map<String, Object> incidentDraftRow(@Param("id") String id);
 }

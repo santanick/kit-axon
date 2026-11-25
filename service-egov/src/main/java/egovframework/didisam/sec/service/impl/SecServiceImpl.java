@@ -35,6 +35,38 @@ public class SecServiceImpl implements SecService {
     static final Pattern TID_RE = Pattern.compile("^tn_[a-z0-9]{8,16}$"), ID_RE = Pattern.compile("^[\\w.:-]{1,80}$"), RULE_RE = Pattern.compile("^[\\w.-]{1,60}$"), CARD_RE = Pattern.compile("^CARD-\\d{4,}$"),
         BEARER = Pattern.compile("^Bearer\\s+(\\S{1,200})$", Pattern.CASE_INSENSITIVE), CTL = Pattern.compile("[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]"), FORBID = Pattern.compile("(^|/)\\.github/workflows/|(^|/)CODEOWNERS$", Pattern.CASE_INSENSITIVE);
     static final String GENESIS = "0".repeat(64);
+    /* 사고 대응(F8) — Node security.js INC_TYPES · PHASES · DEC_KINDS · incidentDraft와 같은 값 · 같은 문구 */
+    static final List<String> INC_TYPES = List.of("key_leak", "cross_tenant", "pii_leak", "llmjacking", "other"), PHASES = List.of("detect", "contain", "report", "notify", "recover", "prevent"), DEC_KINDS = List.of("report", "notify", "public", "shutdown"),
+        DRAFT_ITEMS = List.of("유출 항목", "유출 시점", "유출 경위", "피해 최소화 방법", "대응 조치", "피해 구제 절차", "연락처");
+    static final int NOTIFY_H = 72;
+    static final Map<String, String> PHASE_KO = Map.of("detect", "탐지", "contain", "격리", "report", "신고", "notify", "통지", "recover", "복구", "prevent", "재발 방지"),
+        TYPE_KO = Map.of("key_leak", "키 · 비밀값 유출", "cross_tenant", "기관 간 데이터 노출", "pii_leak", "개인정보 유출", "llmjacking", "AI 키 무단 사용(LLMjacking)", "other", "기타 보안 사고"),
+        KILL_INC = Map.of("key_disable", "key_leak", "feature_off", "llmjacking", "egress_block", "other"), KILL_KO = Map.of("key_disable", "키 비활성", "feature_off", "기관 기능 끄기", "egress_block", "외부 전송 차단");
+    static final Pattern SC_MAIL = Pattern.compile("[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+"), SC_NUM = Pattern.compile("\\d{2,6}[- ]?\\d{3,7}[- ]?\\d{4}"), SC_KEY = Pattern.compile("(sk-|ghp_|AKIA|AIza)[\\w-]{8,}|[A-Za-z0-9_-]{32,}");
+    /** 초안에는 개인정보 · 비밀값을 넣지 않는다(Node scrub과 같은 식) */
+    static String scrub(String v) { String x = v == null ? "" : v; x = SC_MAIL.matcher(x).replaceAll("[가림]"); x = SC_NUM.matcher(x).replaceAll("[가림]"); return SC_KEY.matcher(x).replaceAll("[가림]"); }
+    /** 개인정보 보호법 제34조 통지 항목 — 신고 · 정보주체 통지 초안(Node incidentDraft와 같은 문구) */
+    static Map<String, Object> incidentDraft(String type, JsonNode sc, List<String> phases, String createdKst, String dueKst) {
+        String tk = TYPE_KO.getOrDefault(type, TYPE_KO.get("other"));
+        String data = trim(scrub(sc != null && sc.isObject() && !nullish(sc.get("data")) ? str(sc.get("data")) : "")); if (data.isEmpty()) data = "[확인 중 — 유출 항목을 기입합니다]";
+        String period = trim(scrub(sc != null && sc.isObject() && !nullish(sc.get("period")) ? str(sc.get("period")) : "")); if (period.isEmpty()) period = "[확인 중]";
+        int n = sc != null && sc.isObject() && sc.get("tenants") != null && sc.get("tenants").isArray() ? sc.get("tenants").size() : 0;
+        List<String> done = new ArrayList<>(); for (String p : PHASES) if (phases.contains(p)) done.add(PHASE_KO.get(p));
+        String acts = (done.isEmpty() ? "탐지 단계를 진행하고 있습니다." : String.join(" · ", done) + " 단계를 진행했습니다.") + " 원인을 차단하고 재발 방지 조치를 이어 가고 있습니다.";
+        String minimize = "디디쌤 비밀번호를 변경해 주시고, 출처가 불분명한 문자 · 메일 · 링크와 본인을 사칭한 연락에 주의해 주십시오.";
+        String relief = "피해가 발생했거나 의심되면 아래 연락처로 알려 주십시오. 확인 후 안내해 드립니다. 개인정보침해 신고센터(국번 없이 118)와 개인정보 분쟁조정위원회(1833-6972)에서도 상담 · 신청하실 수 있습니다.";
+        String contact = "산타(주) 개인정보 보호 담당 · [대표 연락처 기입]";
+        String notify = String.join("\n", "[정보주체 통지문(초안)] " + tk + " 안내", "",
+            "산타(주)는 디디쌤 서비스에서 발생한 보안 사고로 이용자님의 개인정보가 유출되었을 가능성을 확인하여 「개인정보 보호법」 제34조에 따라 다음과 같이 알려 드립니다.", "",
+            "1. 유출된 개인정보 항목: " + data, "2. 유출된 시점과 그 경위: " + period + " · " + tk + "(사고 인지 " + createdKst + " KST)", "3. 피해를 최소화하기 위하여 이용자님이 할 수 있는 방법: " + minimize,
+            "4. 산타(주)의 대응 조치: " + acts, "5. 피해 구제 절차: " + relief, "6. 담당 부서 및 연락처: " + contact, "",
+            "※ 이 문서는 초안입니다. 대표님 · 부대표 검토 후 발송합니다.");
+        String report = String.join("\n", "[개인정보 유출 등 신고서(초안)] 개인정보보호위원회 · 한국인터넷진흥원 제출용", "",
+            "- 신고 기한: " + dueKst + " KST(사고 인지 후 " + NOTIFY_H + "시간)", "- 사고 유형: " + tk, "- 유출 항목: " + data, "- 유출 시점: " + period, "- 유출 경위: " + tk + " · 사고 인지 " + createdKst + " KST",
+            "- 영향 범위: 기관 " + n + "곳 · 정보주체 수 [확인 중]", "- 피해 최소화 방법: " + minimize, "- 대응 조치: " + acts, "- 피해 구제 절차: " + relief, "- 담당 부서 · 연락처: " + contact, "",
+            "※ 이 문서는 초안입니다. 대표님 · 부대표 검토 후 제출합니다.");
+        return M("notify", notify, "report", report, "items", DRAFT_ITEMS);
+    }
     static final String M_KEY = "보안 점검으로 이 기관의 AI · 외부 연결 키 사용이 일시 중단되었습니다. 운영자에게 문의해 주십시오.", M_EGRESS = "보안 점검으로 이 기관의 외부 전송이 일시 차단되었습니다. 운영자에게 문의해 주십시오.", M_FEATURE = "보안 점검으로 이 기관의 AI 사용 한도가 일시 축소되었습니다. 잠시 후 다시 시도해 주십시오.";
     static final Map<String, List<String>> CTRL = Map.of(
         "injection", List.of("입력 · 출력 가드(aiguard) 규칙 추가", "도구 호출 허용 목록 점검", "회귀 프롬프트 추가"),
@@ -130,7 +162,8 @@ public class SecServiceImpl implements SecService {
 
     /* ── 라우트 ── */
     static final Pattern P_FIND = Pattern.compile("^/api/security/findings/([\\w.:-]{1,80})$"), P_CARDT = Pattern.compile("^/api/security/threats/([\\w.:-]{1,80})/card$"), P_APPR = Pattern.compile("^/api/security/prs/([\\w.:-]{1,80})/approve$"), P_REJ = Pattern.compile("^/api/security/prs/([\\w.:-]{1,80})/reject$"),
-        P_CARD = Pattern.compile("^/api/security/cards/(CARD-\\d{4,})$"), P_REL = Pattern.compile("^/api/security/kill/(ks_[0-9a-f]{16})/release$");
+        P_CARD = Pattern.compile("^/api/security/cards/(CARD-\\d{4,})$"), P_REL = Pattern.compile("^/api/security/kill/(ks_[0-9a-f]{16})/release$"),
+        P_ISTEP = Pattern.compile("^/api/security/incidents/(inc_[0-9a-f]{16})/step$"), P_IDEC = Pattern.compile("^/api/security/incidents/(inc_[0-9a-f]{16})/decision$"), P_IDRAFT = Pattern.compile("^/api/security/incidents/(inc_[0-9a-f]{16})/draft$");
     @Override public Object route(String m, String p, HttpServletRequest req, byte[] body) throws Exception {
         switch (m + " " + p) {
             case "GET /api/security/summary": return summary(req);
@@ -142,6 +175,8 @@ public class SecServiceImpl implements SecService {
             case "POST /api/security/kill": return kill(req, body);
             case "POST /api/security/ingest": return ingest(req, body);
             case "POST /api/security/approve-link": return approveLink(req, body);
+            case "GET /api/security/incidents": owner(req); return M("rows", JL(mapper.incidentList()), "notifyHours", NOTIFY_H, "phases", PHASES, "types", INC_TYPES, "decisionKinds", DEC_KINDS);
+            case "POST /api/security/incidents": return incCreateApi(req, body);
             case "GET /api/security/audit": { owner(req); Map<String, Object> o = verifyChain(); o.put("rows", JL(mapper.auditRows())); return o; }
             default: break;
         }
@@ -152,6 +187,9 @@ public class SecServiceImpl implements SecService {
         if ("POST".equals(m) && (x = P_REJ.matcher(p)).matches()) return reject(req, body, x.group(1));
         if ("GET".equals(m) && (x = P_CARD.matcher(p)).matches()) { owner(req); String c = mapper.cardJson(x.group(1)); if (c == null) throw err(404, "not_found", "대책 카드를 찾지 못했습니다."); return M("card", parse(c)); }
         if ("POST".equals(m) && (x = P_REL.matcher(p)).matches()) return release(req, body, x.group(1));
+        if ("POST".equals(m) && (x = P_ISTEP.matcher(p)).matches()) return incStep(req, body, x.group(1));
+        if ("POST".equals(m) && (x = P_IDEC.matcher(p)).matches()) return incDecision(req, body, x.group(1));
+        if ("GET".equals(m) && (x = P_IDRAFT.matcher(p)).matches()) return incDraft(req, x.group(1));
         throw err(404, "not_found", "없는 주소입니다.");
     }
 
@@ -247,6 +285,7 @@ public class SecServiceImpl implements SecService {
         if ("egress_block".equals(action) && sig.size() < 2) throw err(400, "signals", "egress 차단은 서로 다른 신호 2개 이상이 필요합니다.");
         Integer ttl = null; if ("feature_off".equals(action)) { double t = Math.round(numOr(get(b, "ttlMin"), FEATURE_TTL_MAX)); if (!(t >= 1)) t = 1; ttl = (int) Math.min(FEATURE_TTL_MAX, t); }
         if (mapper.tenantExists(tenant) == null) throw err(404, "not_found", "기관을 찾지 못했습니다.");
+        String[] incInc = { null };
         String mode = live() ? "live" : "dry"; byte[] rb = new byte[8]; DdCrypto.RND.nextBytes(rb); String id = "ks_" + HexFormat.of().formatHex(rb); Integer ttlF = ttl;
         String row = tx.plain(() -> {
             mapper.lock(820823L);
@@ -254,11 +293,15 @@ public class SecServiceImpl implements SecService {
             if ("live".equals(mode) && mapper.killDup(tenant, action) != null) throw err(409, "kill_dup", "같은 차단이 이미 걸려 있습니다.");
             mapper.insertKill(id, action, tenant, mode, agent ? "rule" : "manual", ruleId, reason, stringify(sig), actor, ttlF, kday());
             audit(actor, "kill." + mode, id, O("action", action, "tenant", tenant, "ttlMin", ttlF, "ruleId", ruleId), req);
+            /* F8: 긴급 차단 발동 = 사고 대응 시작(탐지 → 격리) */
+            ArrayNode tl = F.arrayNode(); tl.add(step("detect", reason, actor)); tl.add(step("contain", "live".equals(mode) ? "긴급 차단 적용" : "긴급 차단 dry-run 기록(실제 적용 없음)", actor));
+            ArrayNode tn = F.arrayNode(); tn.add(tenant);
+            incInc[0] = incCreate(KILL_INC.get(action), "긴급 차단 발동: " + KILL_KO.get(action), "high", O("tenants", tn, "data", "", "period", ""), tl, id, actor, req);
             return mapper.killJson(id);
         });
         cache.remove(tenant);
         try { tx.audit(tenant, actor, "security.kill", stringify(O("action", action, "mode", mode))); } catch (Exception ignore) { }
-        return M("ok", true, "dryRun", "dry".equals(mode), "kill", parse(row));
+        return M("ok", true, "dryRun", "dry".equals(mode), "kill", parse(row), "incident", incInc[0]);
     }
     Object release(HttpServletRequest req, byte[] body, String id) throws Exception {
         if (!bearer(req).isEmpty()) throw err(403, "human_only", "긴급 차단 해제는 사람만 할 수 있습니다.");
@@ -270,6 +313,52 @@ public class SecServiceImpl implements SecService {
             return new Object[]{ k.get("tenant_id"), mapper.killJson(id) };
         });
         cache.remove((String) out[0]); return M("ok", true, "kill", parse((String) out[1]));
+    }
+    /* ── 사고 대응(F8) — 단계 기록은 사람 · 가디언, 결정은 사람만 ── */
+    static ObjectNode step(String phase, String note, String by) { return O("phase", phase, "note", cut(CTL.matcher(note == null ? "" : note).replaceAll(""), 500), "by", by, "at", isoNow()); }
+    String incCreate(String type, String title, String sev, ObjectNode scope, ArrayNode timeline, String killId, String by, HttpServletRequest req) {
+        byte[] rb = new byte[8]; DdCrypto.RND.nextBytes(rb); String id = "inc_" + HexFormat.of().formatHex(rb); String phase = timeline.get(timeline.size() - 1).get("phase").asText();
+        mapper.insertIncident(id, type, title, sev, stringify(scope), phase, stringify(timeline), NOTIFY_H, killId, by);
+        audit(by, "incident.create", id, O("type", type, "severity", sev, "kill", killId == null ? "" : killId), req); return id;
+    }
+    Object incCreateApi(HttpServletRequest req, byte[] body) throws Exception {
+        Map<String, Object> a = ownerOrGuard(req); JsonNode b = DdWeb.readBody(body, 8192); String email = (String) a.get("email");
+        String type = nullish(get(b, "type")) ? "" : str(get(b, "type")), title = trim(s(get(b, "title"), 200));
+        if (!INC_TYPES.contains(type)) throw err(400, "type", "사고 유형이 올바르지 않습니다(key_leak · cross_tenant · pii_leak · llmjacking · other).");
+        if (title.isEmpty()) throw err(400, "title", "사고 제목을 입력해 주십시오.");
+        JsonNode sv0 = get(b, "severity"); String sev = nullish(sv0) || (sv0.isTextual() && sv0.textValue().isEmpty()) ? "high" : str(sv0); if (!SEV.contains(sev)) throw err(400, "sev", "심각도 값이 올바르지 않습니다.");
+        JsonNode sc = get(b, "scope"); if (sc == null || !sc.isObject()) sc = F.objectNode();
+        Set<String> ts = new LinkedHashSet<>(); for (JsonNode t : arrS(get(sc, "tenants"), 50, 40)) if (TID_RE.matcher(t.asText()).matches()) ts.add(t.asText());
+        ArrayNode tn = F.arrayNode(); ts.forEach(tn::add); ObjectNode scope = O("tenants", tn, "data", s(get(sc, "data"), 300), "period", s(get(sc, "period"), 100));
+        String note = s(get(b, "note"), 500); ArrayNode tl = F.arrayNode(); tl.add(step("detect", note.isEmpty() ? "사고 등록" : note, email));
+        String id = tx.plain(() -> incCreate(type, title, sev, scope, tl, null, email, req));
+        return M("ok", true, "incident", parse(mapper.incidentJson(id)));
+    }
+    Object incStep(HttpServletRequest req, byte[] body, String id) throws Exception {
+        Map<String, Object> a = ownerOrGuard(req); JsonNode b = DdWeb.readBody(body, 8192); String email = (String) a.get("email"); String phase = nullish(get(b, "phase")) ? "" : str(get(b, "phase"));
+        if (!PHASES.contains(phase)) throw err(400, "phase", "단계 값이 올바르지 않습니다(detect · contain · report · notify · recover · prevent).");
+        ArrayNode e = F.arrayNode(); e.add(step(phase, s(get(b, "note"), 500), email));
+        return tx.plain(() -> {
+            if (mapper.incidentStep(id, stringify(e), phase) == 0) throw err(404, "not_found", "사고 기록을 찾지 못했습니다.");
+            audit(email, "incident.step", id, O("phase", phase), req); return M("ok", true, "incident", parse(mapper.incidentJson(id)));
+        });
+    }
+    Object incDecision(HttpServletRequest req, byte[] body, String id) throws Exception {
+        if (!bearer(req).isEmpty()) throw err(403, "human_only", "신고 · 통지 · 공개 · 중단 결정은 사람만 할 수 있습니다.");
+        Map<String, Object> a = owner(req); JsonNode b = DdWeb.readBody(body, 8192); String email = (String) a.get("email"); String kind = nullish(get(b, "kind")) ? "" : str(get(b, "kind"));
+        if (!DEC_KINDS.contains(kind)) throw err(400, "kind", "결정 종류가 올바르지 않습니다(report · notify · public · shutdown).");
+        JsonNode dv = get(b, "decided"); if (dv == null || !dv.isBoolean()) throw err(400, "decided", "결정 값(decided)은 true 또는 false여야 합니다.");
+        boolean decided = dv.booleanValue(); ArrayNode e = F.arrayNode(); e.add(O("kind", kind, "decided", decided, "note", s(get(b, "note"), 500), "by", email, "at", isoNow()));
+        return tx.plain(() -> {
+            if (mapper.incidentDecision(id, stringify(e)) == 0) throw err(404, "not_found", "사고 기록을 찾지 못했습니다.");
+            audit(email, "incident.decision", id, O("kind", kind, "decided", decided), req); return M("ok", true, "incident", parse(mapper.incidentJson(id)));
+        });
+    }
+    Object incDraft(HttpServletRequest req, String id) throws Exception {
+        owner(req); Map<String, Object> r = mapper.incidentDraftRow(id); if (r == null) throw err(404, "not_found", "사고 기록을 찾지 못했습니다.");
+        List<String> ph = new ArrayList<>(); for (JsonNode x : arr(parse((String) r.get("timeline")))) if (x != null && x.isObject() && x.get("phase") != null) ph.add(x.get("phase").asText());
+        Map<String, Object> D = incidentDraft((String) r.get("type"), parse((String) r.get("scope")), ph, (String) r.get("c"), r.get("d") == null ? "" : (String) r.get("d"));
+        Map<String, Object> o = M("ok", true, "id", id); o.putAll(D); o.put("law", "개인정보 보호법 제34조"); return o;
     }
     Object ingest(HttpServletRequest req, byte[] body) throws Exception {
         Map<String, Object> g = guard(req); JsonNode b = DdWeb.readBody(body, 512 * 1024); String kind = nullish(get(b, "kind")) ? "" : str(get(b, "kind")); JsonNode its = get(b, "items");
