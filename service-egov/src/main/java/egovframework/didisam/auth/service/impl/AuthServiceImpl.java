@@ -167,6 +167,15 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         tx.audit(tid, (String) a.get("email"), "staff.create", DdWeb.JSON.createObjectNode().put("email", email).put("role", role).toString());
         Map<String, Object> o = new LinkedHashMap<>(); o.put("email", email); o.put("role", role); o.put("password", pass); return o;
     }
+    /** qa7 d3: 역할 변경(부운영자 ↔ 교수자) — Node POST /api/staff/role과 같은 규격 */
+    @Override public Map<String, Object> staffRole(Map<String, Object> a, JsonNode b) throws Exception {
+        String tid = (String) a.get("tid"), email = DdWeb.str(b, "email").trim().toLowerCase(), role = DdWeb.str(b, "role");
+        if (!List.of("teacher", "sub").contains(role)) throw processException("dd.400.staff_role");
+        String id = mapper.updateStaffRole(tid, email, role); if (id == null) throw processException("dd.404.staff_missing");
+        mapper.deleteUserSessions(id);
+        tx.audit(tid, (String) a.get("email"), "staff.role", DdWeb.JSON.createObjectNode().put("email", email).put("role", role).toString());
+        Map<String, Object> o = new LinkedHashMap<>(); o.put("email", email); o.put("role", role); return o;
+    }
     @Override public Map<String, Object> staffRemove(Map<String, Object> a, JsonNode b) throws Exception {
         String tid = (String) a.get("tid"), email = DdWeb.str(b, "email").trim().toLowerCase();
         if (mapper.deleteStaff(tid, email) == 0) throw processException("dd.404.staff_missing");

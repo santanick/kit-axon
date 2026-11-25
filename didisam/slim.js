@@ -56,8 +56,10 @@
     S.nav.r36 = 1; }
   if (MENU.community) MENU.community.label = '게시판'; /* v36 R1 '커뮤니티' → 쉬운 말 '게시판'(목적별 게시판 여러 개) */
   const essKey = () => S && S.org ? (S.org.type === 'univ' && S.org.ed === 'lms' ? 'univ_lms' : S.org.type) : '';
-  window.slimEss = () => { const k = essKey(); const E = ESS[k]; if (E) return E.filter(id => MENU[id]); /* 학사 LMS: 지금 켜진 탭 중 앞의 7개 */
-    return Object.values(S.nav.tabs).flat().filter(x => x.on && MENU[x.id]).map(x => x.id).slice(0, 7); };
+  /* qa7 d3: 여러 명이 운영하는 기관 원칙 — 「운영자 · 기록」(admins)은 모든 유형에서 새 기관 정운영자에게 기본으로 켠다(PRESET.on과 같게). 이미 저장된 기관은 upgradeState에서 덮어쓰지 않는다 */
+  const withAdm = E => MENU.admins && !E.includes('admins') ? [...E, 'admins'] : E;
+  window.slimEss = () => { const k = essKey(); const E = ESS[k]; if (E) return withAdm(E.filter(id => MENU[id])); /* 학사 LMS: 지금 켜진 탭 중 앞의 7개 */
+    return withAdm(Object.values(S.nav.tabs).flat().filter(x => x.on && MENU[x.id]).map(x => x.id).slice(0, 7)); };
   function slimApply() { const E = slimEss(); if (!E.length) return;
     E.forEach(id => { if (MENU[id] && typeof navAdd === 'function' && !Object.values(S.nav.tabs).some(A => (A || []).some(x => x.id === id))) { try { navAdd(id, true); } catch (e) { } } }); /* v36 R1 프리셋에 없던 기본 메뉴(docs 등)도 자리를 만든다 */
     Object.keys(S.nav.tabs).forEach(w => { const A = S.nav.tabs[w] || []; A.forEach(x => { x.on = E.includes(x.id); }); A.sort((a, b) => (E.indexOf(a.id) + 1 || 99) - (E.indexOf(b.id) + 1 || 99)); });
@@ -130,39 +132,46 @@
   const slClose = () => { const w = $('#slSheet'); w && w.remove(); };
   window.slClose = slClose;
   ACT['sl-close'] = slClose;
-  addEventListener('keydown', e => { if (e.key === 'Escape' && $('#slSheet')) slClose(); if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.sl-row[role=button]')) { e.preventDefault(); e.target.click(); } });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && $('#slSheet')) slClose(); if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.sl-row[role=button], .sl-row[role=switch]')) { e.preventDefault(); e.target.click(); } });
   ACT['sl-chip'] = el => { UI[el.dataset.k] = el.dataset.v; render(); };
   ACT['sl-q'] = el => { UI[el.dataset.k] = el.value; const p = el.selectionStart; render(); const n = document.querySelector(`[data-chg="sl-q"][data-k="${el.dataset.k}"]`); if (n) { n.focus(); try { n.setSelectionRange(p, p); } catch (e) { } } };
 
   /* ───────── 3. 메뉴 추가(카탈로그) ───────── */
   WS.more = { label: '메뉴 추가', icon: 'grid', desc: '' };
+  /* qa7 d3: 메뉴 카드 전체(행)가 스위치 — 이름 · 설명을 눌러도 켜고 끈다(Enter · Space 포함). 정운영자가 아니면 스위치 없이 상태만 보인다 */
+  const DUP_HINT = { crmcs: '원생 상담', consult: '상담 기록 · 채널톡', crmbill: '학원 수강료 청구', ledger: '통합 수납 원장' }; /* qa7 d3(q1 #11): 같은 이름 메뉴(학원 「수납」 · 「상담」 2개)를 목록에서 구분 */
+  const mname = id => { const l = mlabel(id); const dup = allTabs().some(y => y.id !== id && mlabel(y.id) === l); return dup ? `${l} (${DUP_HINT[id] || lab(WS[MENU[id].ws] || {})})` : l; };
+  window.slMenuRow = (x, E) => { const own = S.me.role === 'owner'; const base = { name: mname(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]) };
+    if (!own) return SL.row({ ...base, right: `<span class="sl-n">${x.on ? '켜짐' : '꺼짐'}</span>` });
+    return SL.row({ ...base, cls: 'sl-mrow', attr: `role="switch" tabindex="0" aria-checked="${x.on}" aria-label="${esc(mname(x.id))} 메뉴 ${x.on ? '켜짐 — 누르면 끕니다' : '꺼짐 — 누르면 켭니다'}" data-act="sl-menu" data-v="${x.id}"`,
+      right: `<span class="sl-sw ${x.on ? 'on' : ''}" aria-hidden="true"><i></i></span>` }); };
+  const slMenuOwnNote = () => S.me.role === 'owner' ? '' : SL.note('🔒', '메뉴 구성은 정운영자만 바꿀 수 있습니다', '켜고 끄기가 필요하면 정운영자에게 요청하세요.');
   const allTabs = () => Object.entries(S.nav.tabs).flatMap(([w, A]) => (A || []).filter(x => MENU[x.id] && !((typeof menuGate === 'function' && menuGate(x.id) || {}).hide && !x.on) && !(/^(lms|sis|rfpmap|grade)/.test(x.id) && S.org.type !== 'univ') && !(MENU[x.id].only && MENU[x.id].only !== S.org.type && !(S.org.type === 'univ' && MENU[x.id].only === 'univ'))).map(x => ({ ...x, w })));
   VIEWS.menus = () => { const f = UI.slMenuF || 'all', q = (UI.slMenuQ || '').trim(); const A = allTabs(); const E = slimEss();
     const wsL = [...new Set(A.map(x => x.w))].filter(w => WS[w]); const L = A.filter(x => (f === 'all' || (f === 'on' ? x.on : x.w === f)) && (!q || (mlabel(x.id) + mdOf(x.id)[0]).includes(q)));
     const on = A.filter(x => x.on);
-    return SL.page('메뉴 추가', `<button class="btn ghost" data-act="sl-menuorder">순서 바꾸기</button><button class="btn" data-act="sl-reset-menu">기본 메뉴로</button>`,
-      
+    return SL.page('메뉴 추가', S.me.role !== 'owner' ? '' : `<button class="btn ghost" data-act="sl-menuorder">순서 바꾸기</button><button class="btn" data-act="sl-reset-menu">기본 메뉴로</button>`,
+      slMenuOwnNote() +
       SL.chips('slMenuF', [['all', '전체'], ['on', `켜짐 ${on.length}`], ...wsL.map(w => [w, lab(WS[w])])], f) +
-      '<div class="sx43-mn">' /* v43 S3A 075: 메뉴 목록 2열 카드 */ + SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
-        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) + '</div>' +
+      '<div class="sx43-mn">' /* v43 S3A 075: 메뉴 목록 2열 카드 */ + SL.list(L.map(x => slMenuRow(x, E))) + '</div>' +
       SL.search('slMenuQ', '메뉴 검색'));
   };
   window.slMenuSet = (id, on) => { const t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (!t) return false; t.on = on; save(); return true; };
   /* qa7 d1: 메뉴 켜기 공통 검사(한 곳) — ① 막는 조건(MENU_GATE: 권한 · 산타 전용 등)을 먼저 보고 ② 켠 뒤 다시 그려서 실제로 왼쪽 메뉴에 나타났는지 확인한다.
      나타나지 않으면 되돌리고 이유를 돌려준다 → 「켰습니다」 안내는 실제로 켜진 경우에만 띄운다(설정 › 메뉴 · 메뉴 찾기 · AI SAM · 꺼진 메뉴 링크 공통) */
   window.MENU_GATE = window.MENU_GATE || [];
-  MENU_GATE.push(id => { const r = S && S.me && S.me.role; if (r === 'teacher') return { why: `${t('teacher')} 권한으로는 메뉴를 바꿀 수 없습니다.`, hide: true }; if (MENU[id] && MENU[id].owner && r !== 'owner') return { why: `'${mlabel(id)}' 메뉴는 정운영자만 켤 수 있습니다.`, hide: true }; return null; });
+  MENU_GATE.push(id => { const r = S && S.me && S.me.role; if (r === 'teacher') return { why: `${t('teacher')} 권한으로는 메뉴를 바꿀 수 없습니다.`, hide: true }; if (r && r !== 'owner') return { why: '메뉴 구성은 정운영자만 바꿀 수 있습니다.', hide: true }; /* qa7 d3: 부운영자 · 기관 담당자는 기관 전체 메뉴 구성을 바꾸지 않는다 */ if (MENU[id] && MENU[id].owner && r !== 'owner') return { why: `'${mlabel(id)}' 메뉴는 정운영자만 켤 수 있습니다.`, hide: true }; return null; });
   window.menuGate = id => { for (const f of MENU_GATE) { try { const g = f(id); if (g) return g; } catch (e) { console.error('menuGate', e); } } return null; };
   const tabOf = id => Object.entries(S.nav.tabs).map(([w, L]) => [w, (L || []).find(x => x.id === id)]).find(([, x]) => x) || [];
   window.menuShown = id => { const [w] = tabOf(id); return !!w && S.nav.ws.includes(w) && wsTabs(w).includes(id); };
   window.slMenuTry = (id, on) => { const [, t0] = tabOf(id); if (!t0) return { ok: false, why: `'${mlabel(id)}' 메뉴는 이 기관 유형에 없습니다.` };
-    if (on) { const g = menuGate(id); if (g) return { ok: false, why: g.why }; }
+    { const g = menuGate(id); if (g && (on || S.me.role !== 'owner')) return { ok: false, why: g.why }; }
     const prev = !!t0.on; slMenuSet(id, on); try { render(); } catch (e) { console.error('slMenuTry', e); }
     const [, t1] = tabOf(id); const real = !!t1 && !!t1.on === !!on && (!on || menuShown(id));
     if (!real) { if (t1) t1.on = prev; save(); try { render(); } catch (e) { } return { ok: false, why: `'${mlabel(id)}' 메뉴를 ${on ? '켜지' : '끄지'} 못했습니다. 이 계정 권한에서는 바꿀 수 없는 메뉴입니다.` }; }
     return { ok: true }; };
   ACT['sl-menu'] = el => { const id = el.dataset.v; const [, t0] = tabOf(id); if (!t0) return; const on = !t0.on; const r = slMenuTry(id, on); if (!r.ok) { toast(r.why, 'warn'); render(); return; } toast(`'${mlabel(id)}' 메뉴를 ${on ? '켰습니다 — 왼쪽 메뉴에 생겼습니다' : '껐습니다'}.`, 'ok'); render(); };
-  ACT['sl-reset-menu'] = () => { slimApply(); save(); render(); toast('기본 메뉴로 되돌렸습니다.', 'ok'); };
+  ACT['sl-reset-menu'] = () => { if (S.me.role !== 'owner') { toast('메뉴 구성은 정운영자만 바꿀 수 있습니다.', 'warn'); return; } slimApply(); save(); render(); toast('기본 메뉴로 되돌렸습니다.', 'ok'); };
 
   /* 사이드바: 켜진 메뉴가 없는 공간은 숨긴다(v37: 아래 [+ 메뉴 추가]는 설정 › 메뉴로) */
   { const base = rail; rail = () => { const keep = S.nav.ws; const vis = keep.filter(w => w === 'home' || w === 'dash' || wsTabs(w).length);
@@ -312,10 +321,9 @@
   const menusBody = () => { const f = UI.slMenuF || 'all', q = (UI.slMenuQ || '').trim(); const A = allTabs(); const E = slimEss();
     const wsL = [...new Set(A.map(x => x.w))].filter(w => WS[w]); const L = A.filter(x => (f === 'all' || (f === 'on' ? x.on : x.w === f)) && (!q || (mlabel(x.id) + mdOf(x.id)[0]).includes(q)));
     const on = A.filter(x => x.on);
-    return SL.chips('slMenuF', [['all', '전체'], ['on', `켜짐 ${on.length}`], ...wsL.map(w => [w, lab(WS[w])])], f) +
-      '<div class="sx43-mn">' /* v43 S3A 075: 메뉴 목록 2열 카드 */ + SL.list(L.map(x => SL.row({ name: mlabel(x.id), sub: mdOf(x.id)[0] + (E.includes(x.id) ? ' · 기본' : ''), col: x.on ? 'var(--s400)' : 'var(--g500)', icon: esc([...mlabel(x.id)][0]),
-        right: `<button type="button" class="sl-sw ${x.on ? 'on' : ''}" role="switch" aria-checked="${x.on}" aria-label="${esc(mlabel(x.id))} ${x.on ? '끄기' : '켜기'}" data-act="sl-menu" data-v="${x.id}"><i></i></button>` }))) + '</div>' +
-      `<div class="sx-acts">${sxBtn('기본 메뉴로', 'sl-reset-menu', '')}</div>` + SL.search('slMenuQ', '메뉴 검색'); };
+    return slMenuOwnNote() + SL.chips('slMenuF', [['all', '전체'], ['on', `켜짐 ${on.length}`], ...wsL.map(w => [w, lab(WS[w])])], f) +
+      '<div class="sx43-mn">' /* v43 S3A 075: 메뉴 목록 2열 카드 */ + SL.list(L.map(x => slMenuRow(x, E))) + '</div>' +
+      (S.me.role === 'owner' ? `<div class="sx-acts">${sxBtn('기본 메뉴로', 'sl-reset-menu', '')}</div>` : '') + SL.search('slMenuQ', '메뉴 검색'); };
   window.slMenusBody = menusBody;
   /* mem2.js가 DOMContentLoaded에 감싸는 층(결제 · 수납 카드)까지 안쪽에 두려고 같은 시점에 가장 바깥에서 감싼다 */
   /* v43 R3 설정 한 화면 재설계(FINAL-AUDIT 073~084 「설정 카드 반복」): 목차(왼쪽) + 지금 연 설정 하나를 크게(가운데) + 보조 열(지금 값 · AI 제안 · 변경 이력).
@@ -383,12 +391,15 @@
   ACT['sl-set'] = el => { const k = el.dataset.v; if (k.startsWith('act:')) { const f = ACT[k.slice(4)]; if (f) f(el); return; } if (k.startsWith('go:')) { const t2 = k.slice(3); if (t2 === 'conn') { ACT['sl-goconn'](); return; } if (t2 === 'more') { slSetOpen('onoff', true); go('settings'); return; } go(t2); return; } slSetOpen(k, true); render(); };
   ACT['sl-setback'] = () => { UI.sxOpen = ''; render(); };
   { const base = go; go = (id, keep) => { if (id === 'more') { slSetOpen('onoff', true); id = 'settings'; }
-      else if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id)) { slSetOpen(id, true); const r = base('settings', keep); return r; }
+      else if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id) && !MENU[id]) { /* qa7 d3: 메뉴 id와 같은 이름(상담 consult)은 메뉴 화면으로 — 설정 카드는 sx-sub · slSetOpen으로 연다 */ slSetOpen(id, true); const r = base('settings', keep); return r; }
       return base(id, keep); }; }
   /* 깊은 링크로 연 카드는 화면에 보이게 */
   /* v43 R3: 연 설정이 늘 맨 위 가운데에 있으므로 카드로 스크롤하지 않는다(예전에는 머리가 잘린 채 열렸다) */
   AFTER.push(() => { if (CUR.ws === 'settings' && UI.sxScroll) UI.sxScroll = ''; });
   ACT['sl-menuorder'] = () => { slSetOpen('menu', true); go('settings'); };
+  /* qa7 d3: 메뉴 구성(켜고 끄기 · 순서 · 추천 구성 되돌리기)은 정운영자만 — 부운영자 · 기관 담당자에게는 이유를 안내한다 */
+  ['ws-mv', 'tab-mv', 'tab-on', 'menu-reset', 'sl-menuorder'].forEach(k => { const b = ACT[k]; if (!b) return; ACT[k] = (...a) => { if (S && S.me && S.me.role !== 'owner') { toast('메뉴 구성은 정운영자만 바꿀 수 있습니다.', 'warn'); render(); return; } return b(...a); }; });
+  if (typeof navEditor === 'function') { const b = navEditor; navEditor = (...a) => S.me.role !== 'owner' ? SL.note('🔒', '메뉴 구성은 정운영자만 바꿀 수 있습니다', '순서나 켜고 끄기가 필요하면 정운영자에게 요청하세요.') : b(...a); }
 
   /* 기관 초기화: 기관 이름을 입력해야 실행(되돌릴 수 없음) */
   if (ACT['reset-all']) { const base = ACT['reset-all']; ACT['reset-all'] = (...a) => modal('기관 초기화', `<p>데모 데이터를 모두 지우고 가입 화면으로 돌아갑니다. 되돌릴 수 없습니다.</p><label class="fl">확인을 위해 기관 이름 「${esc(S.org.name)}」을 입력하세요<input name="nm" autocomplete="off"></label>`,
@@ -411,13 +422,20 @@
       two.replaceWith(box); }
   });
   /* 코드 · AI SAM · 테스트가 부르는 go()로 꺼진 메뉴를 열 때는 메뉴 구성을 바꾸지 않고 그 화면만 연다 */
-  { const base = go; go = (id, keep) => { let t = null; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].only && MENU[id].only !== S.org.type)) { t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (t) t.on = true; } } catch (e) { }
-    try { return base(id, keep); } finally { if (t) t.on = false; } }; }
+  { const base = go; go = (id, keep) => { let t = null; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].only && MENU[id].only !== S.org.type)) { t = Object.values(S.nav.tabs).flat().find(x => x.id === id); if (t) { t.on = true; UI.slOffNote = id; window.__slOffTmp = id; } } } catch (e) { }
+    try { return base(id, keep); } finally { if (t) { t.on = false; window.__slOffTmp = ''; } } }; }
+  /* qa7 d3: 꺼진 메뉴로 들어오면(바로가기 버튼 · 링크 · 직접 이동) 화면 위에 한 번 「이 메뉴는 꺼져 있습니다」 — 정운영자에게만 [켜기], 다른 역할은 이유 안내 */
+  AFTER.push(cur => { const id = UI.slOffNote; if (!id) return; const real = S && S.org && menuOn(id) && window.__slOffTmp !== id; if (!S || !S.org || cur.tab !== id || real) { UI.slOffNote = ''; return; }
+    const m = $('#main'); if (!m || m.querySelector('.sl-offnote')) return; const own = S.me.role === 'owner'; const g = own && menuGate(id);
+    const d = document.createElement('div'); d.className = 'sl-offnote'; d.setAttribute('role', 'status');
+    d.innerHTML = `<span><b>'${esc(mlabel(id))}' 메뉴는 꺼져 있습니다.</b> <small>${own ? (g ? esc(g.why) : '왼쪽 메뉴에 보이지 않습니다. 켜면 왼쪽 메뉴에서 바로 열 수 있습니다.') : '메뉴 구성은 정운영자만 바꿀 수 있습니다. 왼쪽 메뉴에 두려면 정운영자에게 요청하세요.'}</small></span>${own && !g ? `<button type="button" class="btn sm pri" data-act="sl-offon" data-v="${esc(id)}">켜기</button>` : ''}`;
+    m.prepend(d); });
+  ACT['sl-offon'] = el => { const id = el.dataset.v; const r = slMenuTry(id, true); if (!r.ok) { toast(r.why, 'warn'); return; } UI.slOffNote = ''; toast(`'${mlabel(id)}' 메뉴를 켰습니다 — 왼쪽 메뉴에 생겼습니다.`, 'ok'); go(id, true); };
   ACT['sl-guide'] = () => { UI.slGuideOpen = !UI.slGuideOpen; const g = $('#main .aih-guide'); if (g) g.hidden = !UI.slGuideOpen; };
   ACT['sl-goconn'] = () => { if (typeof slMenuSet === 'function') slMenuSet('conn', true); UI.slConnOld = false; go('conn'); };
   ACT['sl-goauto'] = () => { slMenuSet('auto', true); go('auto'); };
-  /* 꺼진 메뉴로 가는 링크(홈 · 가이드 · 안내의 [이동] 버튼)를 사람이 누르면 막지 않고 그 메뉴를 켜서 연다 — 필요할 때 켜진다. 코드에서 부르는 go()는 그대로 */
-  { const base = ACT.go; ACT.go = (el, ...r) => { const id = el && el.dataset && el.dataset.v; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(id)) && (!MENU[id].only || MENU[id].only === S.org.type) && Object.values(S.nav.tabs).flat().some(x => x.id === id)) { const g = menuGate(id); if (g) { toast(g.why, 'warn'); return; } slMenuSet(id, true); toast(`'${mlabel(id)}' 메뉴를 켰습니다. 끄려면 [메뉴 추가]에서 끄세요.`, 'ok'); } } catch (e) { } return base(el, ...r); }; }
+  /* 꺼진 메뉴로 가는 링크(홈 · 가이드 · 안내의 [이동] 버튼): 막지 않고 화면을 열되, 켜기는 위 안내(sl-offnote)에서 고른다(qa7 d3). 코드에서 부르는 go()는 그대로 */
+  { const base = ACT.go; ACT.go = (el, ...r) => { const id = el && el.dataset && el.dataset.v; try { if (S && S.org && MENU[id] && !menuOn(id) && !(MENU[id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(id)) && (!MENU[id].only || MENU[id].only === S.org.type) && Object.values(S.nav.tabs).flat().some(x => x.id === id)) { /* qa7 d3: 예전에는 여기서 말없이 켰다 → 켜고 끄기가 반응 없는 것처럼 보였음. 이제 화면을 열고 위 안내(sl-offnote)에서 켤지 고른다 */ } } catch (e) { } return base(el, ...r); }; }
 
   /* v37 기관 유형을 바꾼 뒤 이름 · 호칭 · 메뉴가 서로 어긋나던 문제(대표님 첨부 '닉 Univ' — 레일 '교육생', 홈 '센터 담당자님', 사이트 '교육신청')
      설정 › 기관 유형 변경(type-chg)은 유형 · 프리셋 메뉴만 바꿨다. 이제 유형이 바뀌면 같은 자리에서: 대학 에디션 정리(대학이면 기본 lite, 아니면 삭제) ·
