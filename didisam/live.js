@@ -138,8 +138,9 @@ const LVMSG = {
 };
 const lvMsg = x => (x && x.status && LVMSG[x.code]) || (x && !x.status ? LVMSG.net : (x && x.message) || LVMSG.net);
 /* v32.4 운영자 소셜 로그인(구글 · 카카오) — 서버가 /api/oauth/<제공자>/start → 콜백을 처리하고 #oauth=… 로 돌려보낸다 */
-const OAUTH_ERR = { geo_blocked: '이 기관은 국내에서만 운영자 로그인을 허용합니다.', state: '로그인 요청이 만료되었습니다. 다시 시도해 주십시오.', denied: '로그인을 취소했습니다. 다른 방법으로 계속할 수 있습니다.', provider: '제공자와 연결하지 못했습니다. 잠시 후 다시 시도해 주십시오.', email: '확인된 이메일이 있어야 합니다. 이메일 제공에 동의한 뒤 다시 시도해 주십시오.', module: '이 주소로 로그인할 수 없는 계정입니다.', signup_off: '지금은 새 기관 가입을 받지 않습니다.', mfa_mail: '인증번호 메일을 보낼 수 없습니다. 관리자에게 문의하십시오.' };
+const OAUTH_ERR = { ms_unlinked: 'Microsoft 계정이 연결된 운영자 계정이 없습니다. 이메일로 로그인한 뒤 외부 연결 › Microsoft Teams › 로그인에서 [내 Microsoft 계정 연결]을 먼저 하십시오.', tenant: '기관에 연결된 Microsoft 조직의 계정이 아니거나, 기관이 Microsoft 로그인을 켜지 않았습니다.', msa: '개인 Microsoft 계정은 쓸 수 없습니다. 학교 · 회사 계정으로 로그인하십시오.', unset: '이 로그인 방식은 아직 준비 중입니다.', taken: '이 Microsoft 계정은 다른 운영자 계정에 이미 연결되어 있습니다.', geo_blocked: '이 기관은 국내에서만 운영자 로그인을 허용합니다.', state: '로그인 요청이 만료되었습니다. 다시 시도해 주십시오.', denied: '로그인을 취소했습니다. 다른 방법으로 계속할 수 있습니다.', provider: '제공자와 연결하지 못했습니다. 잠시 후 다시 시도해 주십시오.', email: '확인된 이메일이 있어야 합니다. 이메일 제공에 동의한 뒤 다시 시도해 주십시오.', module: '이 주소로 로그인할 수 없는 계정입니다.', signup_off: '지금은 새 기관 가입을 받지 않습니다.', mfa_mail: '인증번호 메일을 보낼 수 없습니다. 관리자에게 문의하십시오.' };
 const OAUTH_P = { google: ['Google', '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.3c0-.8-.1-1.5-.2-2.3H12v4.3h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.1-1.9 3.2-4.8 3.2-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1-3.7 1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.8 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2A11 11 0 0 0 2.1 7.1l3.7 2.8C6.7 7.3 9.1 5.4 12 5.4z"/></svg>'],
+  microsoft: ['Microsoft', '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#F25022" d="M1 1h10.4v10.4H1z"/><path fill="#7FBA00" d="M12.6 1H23v10.4H12.6z"/><path fill="#00A4EF" d="M1 12.6h10.4V23H1z"/><path fill="#FFB900" d="M12.6 12.6H23V23H12.6z"/></svg>'],
   kakao: ['카카오', '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#000" d="M12 3C6.5 3 2 6.5 2 10.8c0 2.8 1.9 5.2 4.7 6.6l-1 3.6c-.1.3.3.6.6.4l4.2-2.8c.5.1 1 .1 1.5.1 5.5 0 10-3.5 10-7.8S17.5 3 12 3z"/></svg>'] };
 const MAIL_IC = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg>';
 const lvProv = () => ((LIVE.cfg && LIVE.cfg.oauth) || []).filter(p => OAUTH_P[p]);
@@ -149,7 +150,9 @@ function lvSocBtns() {
   const kakao = P.includes('kakao') ? `<a class="lvsb kakao" href="/api/oauth/kakao/start" rel="nofollow" data-lvp="kakao">${OAUTH_P.kakao[1]}<span>카카오로 계속하기</span></a>`
     : `<button type="button" class="lvsb kakao" data-act="lv-kakao-off" aria-describedby="entryErr">${OAUTH_P.kakao[1]}<span>카카오로 계속하기</span></button>`;
   const google = P.includes('google') ? `<a class="lvsb google" href="/api/oauth/google/start" rel="nofollow" data-lvp="google">${OAUTH_P.google[1]}<span>Google로 계속하기</span></a>` : '';
-  return `<div class="lvsoc">${kakao}${google}</div>`;
+  /* 13차 Microsoft(Entra ID) — 서버에 MS_CLIENT_ID가 있을 때만(/api/config oauth에 microsoft) */
+  const ms = P.includes('microsoft') ? `<a class="lvsb ms" href="/api/oauth/microsoft/start" rel="nofollow" data-lvp="microsoft">${OAUTH_P.microsoft[1]}<span>Microsoft로 계속하기</span></a>` : '';
+  return `<div class="lvsoc">${kakao}${google}${ms}</div>`;
 }
 function lvMailFields() {
   const su = LV.view === 'signup'; const code = su && LIVE.cfg && LIVE.cfg.signupCode;

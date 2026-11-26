@@ -499,7 +499,7 @@ function createTeams(ctx) {
     return status(a);
   }
 
-  /* 회의 */
+  /* 회의 — docLink:false(만들기) · ?doc=0(삭제)이면 기관 문서는 건드리지 않는다: 스튜디오가 편집 중인 항목에 직접 넣고 저장해 rev 충돌(409)을 막는다 */
   const parseT = v => { const d = new Date(String(v || '')); return Number.isFinite(d.getTime()) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(v)) ? d : null; };
   async function createMeeting(req, res) {
     const a = await needAny(req); const b = await readBody(req, 8192);
@@ -517,7 +517,7 @@ function createTeams(ctx) {
     } else joinUrl = '/learner.html#live-demo';
     const linked = await T(a.tid, async c => {
       await c.query('insert into conn_teams_meeting (id, tenant_id, class_id, item_id, account_id, ms_id, join_url, subject, start_at, end_at, demo, created_by) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, a.tid, classId, itemId, acc ? acc.id : '', ms, joinUrl, subject, s, e, demo, a.email]);
-      const ok = classId && itemId ? await docEdit(c, a.tid, doc => { const x = itemOf(doc, classId, itemId); if (!x) return undefined; x.it.url = joinUrl; x.it.teams = { mid: id, joinUrl, accountId: acc ? acc.id : '', ...(demo ? { demo: true } : {}) }; return true; }) : null;
+      const ok = classId && itemId && b.docLink !== false ? await docEdit(c, a.tid, doc => { const x = itemOf(doc, classId, itemId); if (!x) return undefined; x.it.url = joinUrl; x.it.teams = { mid: id, joinUrl, accountId: acc ? acc.id : '', ...(demo ? { demo: true } : {}) }; return true; }) : null;
       await audit(c, a.tid, a.email, 'teams.meeting.create', { id, demo, cls: classId, item: itemId });
       return !!ok;
     });
@@ -539,7 +539,7 @@ function createTeams(ctx) {
     if (acc) await graph(a.tid, acc, 'DELETE', '/me/onlineMeetings/' + encodeURIComponent(m.ms_id)); /* 이미 없으면(404) 그대로 진행 */
     await T(a.tid, async c => {
       await c.query('delete from conn_teams_meeting where tenant_id = $1 and id = $2', [a.tid, id]);
-      if (m.class_id && m.item_id) await docEdit(c, a.tid, doc => { const x = itemOf(doc, m.class_id, m.item_id); if (!x) return undefined; if (x.it.url === m.join_url) x.it.url = ''; delete x.it.teams; return true; });
+      if (m.class_id && m.item_id && new URL(req.url, 'http://x').searchParams.get('doc') !== '0') await docEdit(c, a.tid, doc => { const x = itemOf(doc, m.class_id, m.item_id); if (!x) return undefined; if (x.it.url === m.join_url) x.it.url = ''; delete x.it.teams; return true; });
       await audit(c, a.tid, a.email, 'teams.meeting.delete', { id });
     });
     return { ok: true };
