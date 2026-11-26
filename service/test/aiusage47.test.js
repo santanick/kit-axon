@@ -93,7 +93,7 @@ test('월 한도 · 충전 · 차단 · 권한 · 산타 관리 API', async t =>
   await Promise.all([ai, pg].map(s => new Promise(ok => s.listen(0, ok))));
   const pool = poolFrom(process.env); await migrate(pool);
   const sfx = Date.now().toString(36); const santaMail = `santa${sfx}@santa.kr`;
-  const base = { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', ANTHROPIC_API_KEY: 'sk-ant-test', ANTHROPIC_URL: `http://127.0.0.1:${ai.address().port}/v1/messages`, SANTA_ADMIN_EMAILS: `other@x.kr, ${santaMail.toUpperCase()}` };
+  const base = { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', MFA_OFF: '1', ANTHROPIC_API_KEY: 'sk-ant-test', ANTHROPIC_URL: `http://127.0.0.1:${ai.address().port}/v1/messages`, SANTA_ADMIN_EMAILS: `other@x.kr, ${santaMail.toUpperCase()}` };
   const app = createApp({ pool, env: { ...base, TOSS_SECRET_KEY: 'test_sk_mock', TOSS_CLIENT_KEY: 'test_ck_mock', TOSS_URL: `http://127.0.0.1:${pg.address().port}` }, log: process.env.DBG ? console : {} });
   const app0 = createApp({ pool, env: base, log: {} }); /* 토스 키 없음 */
   await Promise.all([app, app0].map(s => new Promise(ok => s.listen(0, ok))));
