@@ -46,6 +46,19 @@ public final class DdAiGuard {
     public static void addHits(Map<String, Integer> a, Map<String, Integer> b) { b.forEach((k, n) -> a.merge(k, n, Integer::sum)); }
     public static int hitN(Map<String, Integer> h) { return h == null ? 0 : h.values().stream().mapToInt(Integer::intValue).sum(); }
 
+    /** v49 9-2: system(문자열 또는 text 블록 배열)도 가린다 — Node redactSystem · 브라우저 aiguard.js와 같은 규칙 */
+    public static JsonNode redactSystem(JsonNode sys, Map<String, Integer> hits) {
+        if (sys == null) return null;
+        if (sys.isTextual()) { Red r = redact(sys.textValue()); addHits(hits, r.hits()); return Js.F.textNode(r.text()); }
+        if (!sys.isArray()) return sys;
+        ArrayNode out = Js.F.arrayNode();
+        for (JsonNode bl : sys) {
+            if (Js.truthy(bl) && bl.isObject() && Js.strictEq(bl.get("type"), "text") && bl.get("text") != null && bl.get("text").isTextual()) {
+                Red r = redact(bl.get("text").textValue()); addHits(hits, r.hits()); ObjectNode nb = bl.deepCopy(); nb.put("text", r.text()); out.add(nb);
+            } else out.add(bl);
+        }
+        return out;
+    }
     /** Claude messages 배열 안의 사용자 글만 가린다. 도구 결과 · 이미지는 그대로 */
     public static ArrayNode redactMessages(JsonNode msgs, Map<String, Integer> hits) {
         ArrayNode out = Js.F.arrayNode();

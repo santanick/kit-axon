@@ -95,7 +95,7 @@ public class AiServiceImpl extends EgovAbstractServiceImpl implements AiService 
         }
         if (injN > 0) { ObjectNode d = F.objectNode(); d.put("n", injN); d.put("route", "studio"); try { tx.audit(tid, email, "ai.injection_suspect", stringify(d)); } catch (Exception ignore) { } }
         ObjectNode rq = F.objectNode(); rq.put("model", model); rq.set("max_tokens", numNode(mx));
-        JsonNode sys = get(b, "system"); if (sys != null && sys.isTextual()) sys = t(sys.textValue() + SEC_RULE);
+        JsonNode sys = DdAiGuard.redactSystem(get(b, "system"), redacted); /* v49 9-2: system도 가림(Node redactSystem) */ if (sys != null && sys.isTextual()) sys = t(sys.textValue() + SEC_RULE);
         aiCache(rq, sys, rm, get(b, "tools"));
         DdAiClient.Res r;
         try { r = ai.post(DdWeb.JSON.writeValueAsString(rq), props.getLong("ai.studioTimeoutMs")); }

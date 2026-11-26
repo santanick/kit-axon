@@ -463,8 +463,31 @@
     if (!hm && !needPick) { const ob = app.querySelector('.ap-bar'); if (!ob) app.insertAdjacentHTML('afterbegin', barHTML()); else if (ob.dataset.a !== a) ob.outerHTML = barHTML(); }
     if (LR.me && !needPick && !isPar()) dailyNudge();
     if (!app.querySelector('.ap-nav') && !needPick) app.insertAdjacentHTML('beforeend', navHTML());
+    gateNav(app);
   }
+  /* v49 9-5: 동의(#consent) · 승인 대기(#pending) 화면의 아래 탭 — 게이트가 허용하는 탭(동의: 나 · 처리방침 / 대기: 로그인)만 열고, 나머지는 흐리게(aria-disabled) + 탭 위 안내 한 줄.
+     허용 목록은 게이트 자신의 목록(lconsent.js lcFree · lacct.js LA_FREE)을 그대로 읽어 우회 경로를 새로 만들지 않는다 */
+  function gateNav(app) {
+    const nav = app.querySelector('.ap-nav'); const old = app.querySelector('.ap-gnote');
+    let free = null, note = '';
+    try { if (LR.me && typeof lcNeedConsent === 'function' && lcNeedConsent() && window.lcFree) { free = window.lcFree; note = '약관 동의를 마치면 모든 메뉴를 쓸 수 있어요.'; }
+      else if (!LR.me && route().a === 'pending' && typeof LA_FREE === 'object') { free = [...LA_FREE]; note = '가입이 승인되면 모든 메뉴를 쓸 수 있어요.'; } } catch (e) { free = null; }
+    if (!nav) { if (old) old.remove(); return; }
+    nav.querySelectorAll('a').forEach(x => { const r = (x.getAttribute('href') || '').replace(/^#/, '').split('/')[0] || 'home'; const off = !!free && !free.includes(r);
+      x.classList.toggle('ap-off', off); if (off) { x.setAttribute('aria-disabled', 'true'); x.tabIndex = -1; } else { x.removeAttribute('aria-disabled'); x.removeAttribute('tabindex'); } });
+    if (!free) { if (old) old.remove(); return; }
+    if (old) { if (old.textContent !== note) old.textContent = note; return; }
+    nav.insertAdjacentHTML('beforebegin', `<p class="ap-gnote" role="note">${esc(note)}</p>`);
+  }
+  /* 디디쌤 튜브(ltube.js)가 아래 탭을 다시 그려도 막힘 표시가 유지되게: #lapp 자식 변경 뒤 한 번 더(속성만 바꾸므로 되먹임 없음) */
+  { let q = 0; const mo = new MutationObserver(() => { if (q) return; q = 1; Promise.resolve().then(() => { q = 0; const app = document.getElementById('lapp'); if (app && document.body.classList.contains('lapp')) gateNav(app); }); });
+    const hook = () => { const app = document.getElementById('lapp'); if (app) mo.observe(app, { childList: true, subtree: true }); }; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook(); }
+  document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('.ap-nav a[aria-disabled="true"]'); if (!a) return; e.preventDefault(); e.stopImmediatePropagation(); const n = document.querySelector('.ap-gnote'); toast(n ? n.textContent : '지금은 이 메뉴를 쓸 수 없어요.', 'warn'); }, true);
   { const base = lrender; lrender = (...x) => { base(...x); try { apply(); if (document.body.classList.contains('ap-homeon')) ltRender(); } catch (e) { console.error('lapp', e); } }; }
+  /* v49 9-6: 과정 종료일(학습자별 ends[sid] 우선)이 지난 과정의 강좌 · 차시 화면 위에 종료 안내 한 줄 — 웹 · 앱 공통. 진도 · 제출을 막는 기존 동작(expCls · 서버 판정)은 그대로 */
+  const endOf = cid => { try { if (!LR.me || !SITE()) return ''; const c = (SITE().classes || []).find(x => x.id === cid); if (!c) return ''; const e = String((c.ends && c.ends[LR.me.sid]) || c.end || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(e) && e < ymdL(new Date()) ? e : ''; } catch (e) { return ''; } };
+  { const base = lrender; lrender = (...x) => { const r = base(...x); try { const m = /^#c\/([^/?]+)/.exec(location.hash); const lm = document.getElementById('lm'); if (m && lm && !lm.querySelector('.lexp-note')) { const e = endOf(decodeURIComponent(m[1]));
+      if (e) lm.insertAdjacentHTML('afterbegin', `<p class="lexp-note" role="status">${ico('lock', 16)}<span>수강 기간이 끝난 과정이에요(종료일 ${esc(e)}). 기록은 볼 수 있지만 새 진도 · 제출은 저장되지 않아요.</span></p>`); } } catch (e) { console.error('lapp exp', e); } return r; }; }
   /* v47 ds1: 상태 표시줄 색(theme-color) — 파란 고정값(#5C74F6) 대신 지금 화면 맨 위 색(라이트 · 다크 · 기관 테마를 그대로 따름).
      맨 위 요소부터 부모로 올라가며 반쯤 이상 불투명한 배경색을 찾고, 없으면 body 배경. 앱 화면(body.lapp)에서만 바꾼다. */
   const tcSync = () => { try { const m = document.querySelector('meta[name="theme-color"]'); if (!m || !document.body || !document.body.classList.contains('lapp')) return;
