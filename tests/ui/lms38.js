@@ -188,7 +188,7 @@ const go = async (p, h, w = 1000) => { await p.evaluate(h => { location.hash = h
     ok(/성적 없음/.test(T2) && !/등급 F/.test(T2), `2차 R1 채점 전 학생 성적: 「성적 없음」(총점 0 · F 아님)`); await g2.close(); }
   /* 3차 #7 운영 서버 모드: 학습자 API(/api/lms/a/my → e/my · f/my)로 받은 과제 마감 · 시험을 캘린더에 넣는다(응답은 고정값으로 대신) */
   { const g3 = await learner(ctx, op, '20261101', codes['20261101']); const calls = [];
-    const due = new Date(Date.now() + 2 * 864e5).toISOString(), op3 = new Date(Date.now() + 4 * 864e5).toISOString();
+    const inMon = n => { const t = new Date(), last = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate(); return new Date(t.getFullYear(), t.getMonth(), Math.min(t.getDate() + n, last), 12).toISOString(); }; /* 월말에도 이번 달 캘린더에 보이도록 이번 달 안의 날짜로(QA10: 11-27 +4일이 12월로 넘어가 실패) */ const due = inMon(2), op3 = inMon(4);
     await g3.route('**/api/**', r => { const u = r.request().url(); calls.push(u.replace(/^https?:\/\/[^/]+/, '')); const J = /\/api\/lms\/a\/my/.test(u) ? { me: { member_no: '20261101' }, sections: [{ section_id: 's-live-1', course_name: '운영 교과목', section_no: '01', kind: 'regular' }], requests: [], open: [] }
       : /\/api\/lms\/e\/my/.test(u) ? { now: new Date().toISOString(), assignments: [{ asg_id: 'a1', title: '운영 과제', due_at: due, status: 'published' }] } : /\/api\/lms\/f\/my/.test(u) ? { now: new Date().toISOString(), exams: [{ exam_id: 'x1', title: '운영 중간고사', open_at: op3, close_at: op3, status: 'published' }] }
         : /\/api\/lms\/l\/cal\/list\?scope=academic/.test(u) ? { items: [{ id: 'ev1', scope: 'academic', kind: 'event', title: '운영 수강 정정 마감', starts_at: due, all_day: true }] } : {};
