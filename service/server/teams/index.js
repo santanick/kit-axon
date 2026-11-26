@@ -13,6 +13,7 @@ const net = require('node:net');
 const dnsP = require('node:dns').promises;
 const { isPrivate } = require('../bench');
 const G = require('../aiguard');
+const MODS = require('../modules');
 const SQL = path.join(__dirname, 'sql');
 
 function sqlMigrations() {
@@ -43,10 +44,12 @@ const MSG = {
   teams_input: [400, '입력값을 확인하세요.'],
   teams_none: [404, '없는 Teams 항목입니다.'],
   teams_item: [409, '반의 라이브 항목에 연결된 회의가 아닙니다.'],
+  teams_class: [403, '담당한 반의 수업만 만들고 출석을 반영할 수 있습니다.'],
 };
 const EVENTS = ['notice', 'due', 'approval', 'report', 'signup', 'pay'];
 const EV_KO = { notice: '공지', due: '마감 임박', approval: '승인 요청', report: '주간 리포트', signup: '가입', pay: '결제', test: '연결 시험' };
 const ATT = ['출석', '지각', '결석'];
+const TEACHER_EV = ['notice', 'due'];
 const SSO_TYPES = ['univ', 'corp', 'public']; /* 학습자 Entra 로그인을 켤 수 있는 기관 유형(학원 · 평생 · 직훈 제외) */
 const MSA_TID = '9188040d-6c67-4c5b-b112-36a304b66dad'; /* 개인 Microsoft 계정 — 받지 않는다 */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -111,11 +114,16 @@ function card(event, p) {
 function createTeams(ctx) {
   const { pool, inTenant, need, readBody, HttpErr, audit, limit, ip, cookies, secure, env, pepper, keys, crypt, send, newSession, mfa, geoCheck, pii, log = console } = ctx;
   const cfg = teamsConfig(env);
+  const MOD = MODS.moduleOf(env); /* QA4 #3: 모듈 배포(관리자 전용 등)에서 허용되지 않은 역할은 Microsoft 로그인도 막는다(oauth.js와 같음) */
   const E = (code, extra) => { const [st, m] = MSG[code] || [400, '요청을 처리할 수 없습니다.']; const e = new HttpErr(st, m, code); if (extra) e.extra = extra; return e; };
   const isAdmin = a => a.role === 'owner' || a.role === 'sub';
   const needAdmin = async req => { const a = await need(req); if (!isAdmin(a)) throw E('teams_role'); limit('teams:' + a.tid, 120, 60e3); return a; };
   const needOwner = async req => { const a = await need(req); if (a.role !== 'owner') throw E('teams_role'); limit('teams:' + a.tid, 120, 60e3); return a; };
   const needAny = async req => { const a = await need(req); limit('teams:' + a.tid, 120, 60e3); return a; };
+  /* QA4 #1: 교수자는 담당 반(doc.admins[].classes — modules.scope와 같은 기준)의 회의 · 출석만. 반 없는 회의도 운영자만 */
+  const docOf = async tid => { const r = (await T(tid, c => c.query('select doc from tenant_state where tenant_id = $1', [tid]))).rows[0]; return r ? crypt.open(r.doc, tid) || {} : {}; };
+  const myClasses = (doc, email) => { const me = (Array.isArray(doc && doc.admins) ? doc.admins : []).find(x => x && String(x.email || '').toLowerCase() === String(email || '').toLowerCase()); return new Set(me && Array.isArray(me.classes) ? me.classes.map(String) : []); };
+  const needClass = async (a, classId) => { if (isAdmin(a)) return; if (!classId || !myClasses(await docOf(a.tid), a.email).has(String(classId))) throw E('teams_class'); };
   const T = (tid, fn) => inTenant(pool, tid, fn);
   /* 출석 매칭용 블라인드 인덱스 조회 — pii.identity는 didisam_pii 역할 + app.tenant로만(pii.js tx와 같은 방식) */
   const piiTx = async (tid, fn) => { const c = await pool.connect(); try { await c.query('begin'); await c.query('set local role didisam_pii'); await c.query("select set_config('app.tenant', $1, true)", [tid]); const r = await fn(c); await c.query('commit'); return r.rows; } catch (e) { await c.query('rollback').catch(() => {}); throw e; } finally { c.release(); } };
@@ -360,6 +368,7 @@ function createTeams(ctx) {
     }
     const u = (await pool.query("select u.id, u.tenant_id, u.role, u.email from user_oauth o join users u on u.id = o.user_id where o.provider = 'microsoft' and o.sub = $1", [sub])).rows[0];
     if (!u) return oaGo(res, 'err:ms_unlinked');
+    if (MOD && !MODS.roleAllowed(MOD, u.role)) return oaGo(res, 'err:module');
     const o = await orgTid(u.tenant_id); if (!o || String(o.ms_tid).toLowerCase() !== c.tid || !o.sso.operator) return oaGo(res, 'err:tenant');
     if (geoCheck) { try { await geoCheck(req, u.tenant_id, u.email); } catch (e) { return oaGo(res, 'err:geo_blocked'); } }
     if (mfa && !mfa.off) { let m; try { m = await mfa.start(res, { id: u.id, tenant_id: u.tenant_id, email: u.email }, 'microsoft'); } catch (e) { return oaGo(res, 'err:' + (e.code === 'mfa_mail' ? 'mfa_mail' : 'provider')); } return oaGo(res, 'mfa-' + m.mfa); }
@@ -505,7 +514,7 @@ function createTeams(ctx) {
     const a = await needAny(req); const b = await readBody(req, 8192);
     const subject = str(b.subject, 200).trim(); if (!subject || subject.length > 120) throw E('teams_input', { field: 'subject' });
     const s = parseT(b.start), e = parseT(b.end); if (!s || !e || e <= s || e - s > 24 * 3600e3) throw E('teams_time');
-    const classId = str(b.classId, 60), itemId = str(b.itemId, 60);
+    const classId = str(b.classId, 60), itemId = str(b.itemId, 60); await needClass(a, classId);
     const { cf } = await T(a.tid, c => load(c, a.tid)); const md = (cf.cfg || {}).meetingDefaults || {};
     const lobby = (b.lobby || md.lobby) === 'everyone' ? 'everyone' : 'organization';
     let id = rid('tm_'), ms = '', joinUrl, demo = !cfg.live, acc = null;
@@ -526,7 +535,7 @@ function createTeams(ctx) {
   const meetingOf = async (a, id) => { const m = (await T(a.tid, c => c.query('select * from conn_teams_meeting where tenant_id = $1 and id = $2', [a.tid, id]))).rows[0]; if (!m) throw E('teams_none'); return m; };
   const accOfMeeting = async (a, m) => { if (m.demo) return null; return pickAccount(a, m.account_id); };
   async function patchMeeting(req, id) {
-    const a = await needAny(req); const b = await readBody(req, 4096); const m = await meetingOf(a, id);
+    const a = await needAny(req); const b = await readBody(req, 4096); const m = await meetingOf(a, id); await needClass(a, m.class_id);
     const subject = b.subject !== undefined ? str(b.subject, 200).trim() : m.subject; if (!subject || subject.length > 120) throw E('teams_input', { field: 'subject' });
     const s = b.start !== undefined ? parseT(b.start) : new Date(m.start_at), e = b.end !== undefined ? parseT(b.end) : new Date(m.end_at); if (!s || !e || e <= s || e - s > 24 * 3600e3) throw E('teams_time');
     const acc = await accOfMeeting(a, m);
@@ -535,7 +544,7 @@ function createTeams(ctx) {
     return { ok: true, id, start: s.toISOString(), end: e.toISOString() };
   }
   async function delMeeting(req, id) {
-    const a = await needAny(req); const m = await meetingOf(a, id); const acc = await accOfMeeting(a, m);
+    const a = await needAny(req); const m = await meetingOf(a, id); await needClass(a, m.class_id); const acc = await accOfMeeting(a, m);
     if (acc) await graph(a.tid, acc, 'DELETE', '/me/onlineMeetings/' + encodeURIComponent(m.ms_id)); /* 이미 없으면(404) 그대로 진행 */
     await T(a.tid, async c => {
       await c.query('delete from conn_teams_meeting where tenant_id = $1 and id = $2', [a.tid, id]);
@@ -548,7 +557,7 @@ function createTeams(ctx) {
   const label = (tid, mid) => 'L-' + crypto.createHash('sha256').update(`${tid}|${mid}`).digest('hex').slice(0, 4); /* 가명 표시(이름 없이) */
   const hm = d => new Date(new Date(d).getTime() + 9 * 3600e3).toISOString().slice(11, 16);
   async function syncAttendance(req, id) {
-    const a = await needAny(req); const m = await meetingOf(a, id);
+    const a = await needAny(req); const m = await meetingOf(a, id); await needClass(a, m.class_id);
     const r0 = (await T(a.tid, c => c.query('select doc from tenant_state where tenant_id = $1', [a.tid]))).rows[0]; const doc = r0 ? crypt.open(r0.doc, a.tid) : {};
     const x = m.class_id && m.item_id ? itemOf(doc, m.class_id, m.item_id) : null;
     const { cf } = await T(a.tid, c => load(c, a.tid));
@@ -581,7 +590,7 @@ function createTeams(ctx) {
     return { reportId: str(reps[0].id, 200), meetingStart: rep.meetingStartDateTime || new Date(m.start_at).toISOString(), meetingEnd: rep.meetingEndDateTime || new Date(m.end_at).toISOString(), matched, unmatched: recs.length - matched.length, mode: 'live' };
   }
   async function applyAttendance(req, id) {
-    const a = await needAny(req); const b = await readBody(req, 65536); const m = await meetingOf(a, id);
+    const a = await needAny(req); const b = await readBody(req, 65536); const m = await meetingOf(a, id); await needClass(a, m.class_id);
     if (!m.class_id || !m.item_id) throw E('teams_item');
     const rows = Array.isArray(b.rows) ? b.rows.slice(0, 1000) : []; if (rows.some(r => !r || !ATT.includes(r.value) || typeof r.lid !== 'string')) throw E('teams_input', { field: 'rows' });
     const n = await T(a.tid, async c => {
@@ -594,11 +603,13 @@ function createTeams(ctx) {
   async function listMeetings(req) {
     const a = await needAny(req);
     const L = (await T(a.tid, c => c.query('select id, class_id, item_id, account_id, join_url, subject, start_at, end_at, demo from conn_teams_meeting where tenant_id = $1 order by start_at desc limit 100', [a.tid]))).rows;
-    return { meetings: L.map(m => ({ id: m.id, classId: m.class_id, itemId: m.item_id, accountId: m.account_id, joinUrl: m.join_url, subject: m.subject, start: m.start_at, end: m.end_at, mode: m.demo ? 'demo' : 'live' })) };
+    const mine = isAdmin(a) ? null : myClasses(await docOf(a.tid), a.email);
+    return { meetings: L.filter(m => !mine || mine.has(String(m.class_id))).map(m => ({ id: m.id, classId: m.class_id, itemId: m.item_id, accountId: m.account_id, joinUrl: m.join_url, subject: m.subject, start: m.start_at, end: m.end_at, mode: m.demo ? 'demo' : 'live' })) };
   }
   async function notifyRoute(req) {
     const a = await needAny(req); const b = await readBody(req, 8192);
     const event = String(b.event || ''); if (!EVENTS.includes(event)) throw E('teams_bad_event');
+    if (!isAdmin(a) && !TEACHER_EV.includes(event)) throw E('teams_role'); /* QA4 #2: 교수자는 공지 · 마감 알림만 */
     const queued = await notify(a.tid, event, { title: b.title, text: b.text, link: b.link });
     if (queued) await T(a.tid, c => audit(c, a.tid, a.email, 'teams.notify', { event, n: queued })).catch(() => {});
     return { ok: true, queued };

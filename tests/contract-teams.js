@@ -50,6 +50,18 @@ async function scenario(base, tag) {
   R.applyBad = await call('POST', `/api/conn/teams/meetings/${mt}/attendance/apply`, { rows: [{ lid: 'm1', value: '조퇴' }] });
   R.apply = await call('POST', `/api/conn/teams/meetings/${mt}/attendance/apply`, { rows: [{ lid: 'm1', value: '출석' }, { lid: 'm2', value: '지각' }, { lid: 'zz', value: '출석' }] });
   R.doc = await call('GET', '/api/state');
+  /* QA4 #1 · #2: 교수자는 담당 반 회의 · 출석만, 알림은 공지 · 마감만 */
+  const tem = `ct_tm_t_${tag}_${Date.now()}@example.com`; R.staff = await call('POST', '/api/staff', { email: tem, role: 'teacher' });
+  const tc = client(base); R.tLogin = await tc('POST', '/api/login', { email: tem, password: R.staff.j && R.staff.j.password });
+  R.tPw = await tc('POST', '/api/password', { current: R.staff.j && R.staff.j.password, next: 'Teacher2026xyz' });
+  R.tMt = await tc('POST', '/api/conn/teams/meetings', { classId: 'c1', itemId: 'it1', subject: 'x', start: '2026-12-02T19:00:00+09:00', end: '2026-12-02T20:00:00+09:00' });
+  R.tMtNo = await tc('POST', '/api/conn/teams/meetings', { subject: 'x', start: '2026-12-02T19:00:00+09:00', end: '2026-12-02T20:00:00+09:00' });
+  R.tPatch = await tc('PATCH', `/api/conn/teams/meetings/${mt}`, { subject: '교수자' });
+  R.tApply = await tc('POST', `/api/conn/teams/meetings/${mt}/attendance/apply`, { rows: [{ lid: 'm1', value: '결석' }] });
+  R.tDel = await tc('DELETE', `/api/conn/teams/meetings/${mt}`);
+  R.tList = await tc('GET', '/api/conn/teams/meetings');
+  R.tNotify = await tc('POST', '/api/conn/teams/notify', { event: 'report', title: 'x' });
+  R.tNotice = await tc('POST', '/api/conn/teams/notify', { event: 'notice', title: 'x' });
   R.mtNone = await call('DELETE', '/api/conn/teams/meetings/tm_zzzzzzzzzz');
   R.mtDel = await call('DELETE', `/api/conn/teams/meetings/${mt}`);
   R.sso = await call('PUT', '/api/conn/teams/sso', { operator: true });
@@ -72,6 +84,7 @@ const FIX = {
   notifyBad: j => [j.error], notify: j => [j.queued], mtTime: j => [j.error], mtLong: j => [j.error], mt: j => [j.mode, j.joinUrl, j.linked],
   sync: j => [j.mode, j.matched.length, j.unmatched], applyBad: j => [j.error], apply: j => [j.applied],
   doc: j => { const c = j.doc.classes[0]; return [c.curriculum[0].url, JSON.stringify(c.att.it1 || {})]; },
+  tMt: j => [j.error], tMtNo: j => [j.error], tPatch: j => [j.error], tApply: j => [j.error], tDel: j => [j.error], tList: j => [j.meetings.length], tNotify: j => [j.error], tNotice: j => [j.ok],
   mtNone: j => [j.error], mtDel: j => [j.ok], sso: j => [j.error], learner: j => [j.error], acNone: j => [j.error], unknown: j => [j.error],
   get1: j => [j.st, j.channels.length, j.channels[0] && j.channels[0].events.join()], off: j => [j.ok, j.removed.channels, j.removed.accounts], get2: j => [j.st, j.channels.length],
 };
@@ -91,6 +104,7 @@ const FIX = {
   ok(ra.get0.j.mode === 'demo' && ra.get0.j.st === '미연결', 'Node 기준: 키 없음 → demo · 미연결');
   ok(/#conn=teams:err-unset$/.test(ra.consent.loc) && /#oauth=err:unset$/.test(ra.opStart.loc), 'Node 기준: 키 없음 리다이렉트');
   ok(ra.chDemo.st === 201 && ra.mt.st === 201, 'Node 기준: 만들기 201');
+  ok(['tMt', 'tMtNo', 'tPatch', 'tApply', 'tDel'].every(k => ra[k].j && ra[k].j.error === 'teams_class') && ra.tList.j.meetings.length === 0 && ra.tNotify.j.error === 'teams_role' && ra.tNotice.st === 200, 'Node 기준: QA4 교수자 담당 반 · 알림 종류 제한');
   ok(ra.sso.j.error === 'teams_unset' && ra.learner.j.error === 'teams_phase2', 'Node 기준: SSO 503 · 학습자 알림 501');
   console.log(`contract-teams: ${pass} 통과 · ${fail} 실패`); errs.forEach(e => console.log(' ✗', e)); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
