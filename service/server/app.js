@@ -305,6 +305,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (act.startsWith('fac-')) return fac.pub(req, res, tid, act); /* v40 */
     if (act.startsWith('ledger-')) return ledger.pub(req, res, tid, act); /* v41 통합 수납 원장 */
     if (act.startsWith('mile-')) return mileage.pub(req, res, tid, act); /* v42 학습 마일리지 */
+    if (act.startsWith('mk-')) return market.pub(req, res, tid, act); /* 콘텐츠 마켓 학습자 진열대 · 시작(차감) */
     if (pii.pubOpen[key]) return pii.pubOpen[key](req, res, tid);
     if (key === 'GET loauth') return { ready: loauth.ready }; /* QA7 키가 설정된 학습자 소셜 제공자(나머지는 화면에서 「준비 중」) */
     if (key === 'GET events' || key === 'POST events') return eventsRoute(req, res, tid, key);
@@ -741,6 +742,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   const fac = require('./fac').createFac({ exportGate: (...x) => rec.exportGate(...x), mail: pii.mailTo, pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log });
   /* v41 통합 수납 원장(ledger/): 공개 ledger-* 와 운영자 /api/ledger/* */
   const ledger = require('./ledger').createLedger({ exportGate: (...x) => rec.exportGate(...x), pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log, mileage });
+  const market = require('./market').createMarket({ pool, inTenant, need, needStaff, needOwner, isSanta, readBody, HttpErr, audit, limit, ip, lauth, env, log }); /* 콘텐츠 마켓 v1.1 /api/market/* · /api/pub/<tid>/mk-* (시범 기관 플래그) */
   const rec = REC.createRecords({ pool, inTenant, need, needOwner, readBody, HttpErr, audit, ip, env }); for (const [k, fn] of Object.entries(rec.routes)) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
 
   /* ── 정적 파일 ── */
@@ -795,9 +797,9 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname.startsWith('/api/')) {
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
         if (url.pathname.includes('/loauth/') && url.pathname.startsWith('/api/pub/') && await loauth.handle(req, res, url)) return;
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?)$/);
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?|mk-[a-z]{2,6})$/);
         const sp = req.method === 'PUT' && url.pathname.match(/^\/api\/santa\/orgs\/(tn_[a-z0-9]{8,16})\/plan$/);
-        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname) || sec.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
+        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname) || market.match(req.method, url.pathname) || sec.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처
           if (req.headers['x-didisam'] !== '1') throw new HttpErr(403, '허용되지 않은 요청입니다.', 'csrf');
@@ -816,7 +818,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       return send(res, 500, { error: 'server', message: '서버 오류가 발생했습니다.' });
     }
   });
-  srv.piiPurge = pii.purge; srv.recTick = rec.tick; srv.geoCheck = rec.geoCheck; srv.exportGate = rec.exportGate; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; srv.secTick = sec.tick; /* 가디언 기능 끄기 TTL 자동 복구 기록 */ /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
+  srv.piiPurge = pii.purge; srv.recTick = rec.tick; srv.geoCheck = rec.geoCheck; srv.exportGate = rec.exportGate; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; srv.marketTick = market.tick; srv.secTick = sec.tick; /* 가디언 기능 끄기 TTL 자동 복구 기록 */ /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
   return srv;
 }
 
