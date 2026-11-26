@@ -2,7 +2,7 @@
 /* 콘텐츠 마켓 v1.1 /api/market/* · /api/pub/<tid>/mk-* 계약 시나리오 — Node · Java 공용(spec v1.1 8장 · dev-addendum 3장).
    사용: 서버를 SIGNUP_CODE=C0DE PII_DEV_OTP=1 PII_KEY=<hex64> SANTA_ADMIN_EMAILS=mk-santa1@example.com,mk-santa2@example.com 로 띄운 뒤
      BASE=http://127.0.0.1:9611 node tests/contract-market.js
-   가입은 IP당 시간 10회 제한(이 시나리오 5회)이므로 다른 대조 테스트를 돌린 서버는 다시 띄운 뒤 실행합니다. 산타 계정은 있으면 로그인합니다(비밀번호 MK_SANTA_PW).
+   가입은 IP당 시간 10회 제한(이 시나리오 6회)이므로 다른 대조 테스트를 돌린 서버는 다시 띄운 뒤 실행합니다. 산타 계정은 있으면 로그인합니다(비밀번호 MK_SANTA_PW).
    Node 단위 테스트(service/test/market.test.js)는 run()을 같은 서버 안에서 부릅니다. 결과는 상태 코드 · 오류 코드 · 금액 · 크레딧으로만 비교합니다(날짜에 따라 바뀌는 값은 관계식으로). */
 const SANTA = ['mk-santa1@example.com', 'mk-santa2@example.com'];
 const PW = process.env.MK_SANTA_PW || 'Contract2026x';
@@ -145,8 +145,15 @@ async function run(U, tag) {
   const pdf = await call('C', 'GET', `/api/market/cp/statements/${cst.id}/pdf`); R.stmtPdf = [pdf.st, pdf.ct.startsWith('text/html'), (pdf.j._text || '').includes('월 소진 정산서')];
 
   // 기관 격리
-  const D = await join('D', `mkd_${sfx}@example.com`, '다른 대학', 'univ'); void D;
+  const D = await join('D', `mkd_${sfx}@example.com`, '다른 대학', 'univ');
   R.isolation = [(await call('D', 'GET', '/api/market/home')).j.error, (await call('D', 'GET', `/api/market/contracts/${kid}`)).st, (await call('D', 'GET', '/api/market/cp/statements')).j.error];
+  /* C1 교차 테넌트 차단: 시범 기관 D(구매) · 다른 CP E가 B의 지갑 · 견적 · 차감, C의 정산서를 보면 404 또는 0행 */
+  await call('S1', 'PUT', `/api/market/ops/orgs/${D}/pilot`, { on: true }); const E2 = await join('E', `mke_${sfx}@example.com`, 'CP에듀온', 'corp'); await call('S1', 'PUT', `/api/market/ops/parties/${E2}`, { kind: 'cp', cpName: 'CP에듀온' });
+  R.rls = [(await call('D', 'GET', `/api/market/contracts/${kid}`)).st, (await call('D', 'GET', `/api/market/contracts/${kid}/uses`)).st, (await call('D', 'GET', `/api/market/quotes/${qid}`)).st, ((await call('D', 'GET', '/api/market/quotes')).j.items || []).length,
+    (await call('D', 'POST', `/api/market/contracts/${kid}/restore`, { useId: u4.id, progPct: 0, idem: 'x1' })).st, ((await call('D', 'GET', '/api/market/home')).j.myCredit || null),
+    (await call('E', 'GET', `/api/market/cp/statements/${cst.id}`)).st, ((await call('E', 'GET', '/api/market/cp/statements')).j.items || []).length, (await call('E', 'GET', `/api/market/cp/statements/${cst.id}/pdf`)).st,
+    (await call('E', 'PUT', `/api/market/cp/products/${pa}/price`, { listPrice: 1000 })).st, ((await call('E', 'GET', '/api/market/cp/requests')).j.items || []).length, ((await call('E', 'GET', '/api/market/cp/promos')).j.items || []).length];
+  R.tids = { B, C, D, E: E2 };
   return R;
 }
 
@@ -165,7 +172,7 @@ const EXPECT = {
   refund: [29890, 0, 29890000, 'requested'], topup: [5000, 'merged', true, 36990],
   rateBad: ['mk_cp_rate', 'mk_cp_rate'], rate: [6000, true], cpRate: [6500, 6000], promoMonths: 'mk_promo_months', promoTarget: 'mk_promo_target', promo: [200, 500000, 'asked'], promoOk: 'ok', promoCancel: 'mk_promo_state',
   month: [200, 183, 88, 95, 6500, 61750, 15000], stmtLines: [2, true, false], stmtDispute: 'disputed', closeChecks: false, closeSame: 'mk_close_same_user', close: [200, 'confirmed', 61750, true, 15000],
-  export: [200, true, true], revenue: [200, true, 0], recognized: 103774, closes: true, stmtPdf: [200, true, true], isolation: ['mk_off', 404, 'mk_cp']
+  export: [200, true, true], revenue: [200, true, 0], recognized: 103774, closes: true, stmtPdf: [200, true, true], isolation: ['mk_off', 404, 'mk_cp'], rls: [404, 404, 404, 0, 404, null, 404, 0, 404, 404, 0, 0]
 };
 function check(R) { const bad = []; for (const k of Object.keys(EXPECT)) { if (EXPECT[k] === null) continue; const e = JSON.stringify(EXPECT[k]); const g = JSON.stringify(Array.isArray(EXPECT[k]) && Array.isArray(R[k]) ? R[k].map((v, i) => EXPECT[k][i] === null ? null : v) : R[k]); if (e !== g) bad.push(`${k}: 기대 ${e} · 실제 ${g}`); } return bad; }
 
