@@ -118,6 +118,11 @@
     for (const x of L) if (b <= t * x) return 'r' + (x / 100); return '';
   }
 
+  /* 화면 공용 이름(개발자 3 market.js와 같은 규칙) — 위 함수의 별칭 · 다른 반환형 */
+  const alertLevel = (total, bal, bps) => { if (!(int(total) > 0)) return 0; const r = alertOf(bal, total, bps); return r ? int(r.slice(1)) : 0; }; /* 잔액 ≤ 10% → 10, ≤ 20% → 20, 그 밖 0 */
+  const preNeeded = (preFrom, course) => needApproval(course, preFrom);
+  const validity = start => expiry(start); /* { validTo: 시작 + 1년 − 1일, carryTo: + 1년 } */
+
   /* 10) 단가 변경: 신청일 다음 달 1일부터(소급 없음) */
   function effectiveFrom(asked) { const p = pd(asked); if (!p) return null; return p[1] === 12 ? fmt(U(p[0] + 1, 1, 1)) : fmt(U(p[0], p[1] + 1, 1)); }
   /* history [{effectiveFrom, listPrice, ...}] → day에 쓰는 행(effectiveFrom ≤ day 중 가장 늦은 것) */
@@ -187,6 +192,6 @@
 
   const api = { WON, CP_BP, SANTA_BP, BONUS_MAX_BP, GUARD_BP, rules, credits, bonusBp, wallet, estimate, guard, partial, plan, discCredits, useCredits, deductMany, restorable, hoursBetween, cpOf, settle, sum,
     RATE, SLOT, ORIG_CAP_BP, PROMO_MAX_MONTHS, rateKindOf, rateCheck, rateAt, cpBpOf, settleLine, promoFee, promoCheck, promoDeduct, origCapOk, recognized, santaMix, nextMonth1: d => effectiveFrom(d),
-    expiry, addDays, addMonths, lotOrder, useLots, capOk, needApproval, alertOf, effectiveFrom, priceAt, eligibleFrom, optinMinEnd, optinMode, singleCand, singleAuto, singleMin, singleGuard, broker, b2c, path };
+    expiry, validity, addDays, addMonths, lotOrder, useLots, capOk, needApproval, preNeeded, alertOf, alertLevel, effectiveFrom, priceAt, eligibleFrom, optinMinEnd, optinMode, singleCand, singleAuto, singleMin, singleGuard, broker, b2c, path };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.marketCalc = api;
 })(typeof window !== 'undefined' ? window : globalThis);

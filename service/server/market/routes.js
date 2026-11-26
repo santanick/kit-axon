@@ -137,8 +137,8 @@ module.exports = (ctx, S) => {
     const ctl = await q1(c, 'select * from mk_control where contract_id = $1', [k.id]);
     const had = await q1(c, "select * from mk_credit_use where contract_id = $1 and product_id = $2 and sid_hash = $3 and kind = 'use' and not restored", [k.id, pid, sh]);
     if (had) return { access: 'started', k, r, had };
-    if (modeOf(r, day) !== 'credit') { /* 철회 보호: 이 계약에서 이미 열린 상품은 계약 끝까지 */
-      if (!(await c.query("select 1 from mk_credit_use where contract_id = $1 and product_id = $2 and kind = 'use' limit 1", [k.id, pid])).rowCount) return { access: 'out', k, r }; }
+    if (modeOf(r, day) !== 'credit') { /* 철회 보호: 이 계약에서 이미 열린 상품은 계약 끝까지. 그 밖 개별 판매 전용은 「따로 구매」 */
+      if (!(await c.query("select 1 from mk_credit_use where contract_id = $1 and product_id = $2 and kind = 'use' limit 1", [k.id, pid])).rowCount) return { access: 'buy', k, r }; }
     const cols = (await c.query('select collection_id from mk_collection_item where product_id = $1', [pid])).rows.map(x => x.collection_id);
     const scope = [k.collections && k.collections.length ? k.collections : null, ctl && ctl.allow_cols && ctl.allow_cols.length ? ctl.allow_cols : null].filter(Boolean);
     if (scope.some(S0 => !cols.some(x => S0.includes(x)))) return { access: 'out', k, r };
@@ -156,7 +156,9 @@ module.exports = (ctx, S) => {
     await c.query("insert into mk_entry (kind, contract_id, party_tid, credits, ref) values ('credit_use', $1, $2, $3, $4)", [k.id, tid, cr, u.id]);
     return { access: 'charged', k, r, cr, u };
   }
-  const ACCESS_ERR = { cap: [409, 'mk_cap'], balance: [409, 'mk_balance'], pre: [409, 'mk_pre'], pre_asked: [409, 'mk_pre'], out: [403, 'mk_scope'], empty: [409, 'mk_balance'], none: [404, 'product'] };
+  const ACCESS_ERR = { buy: [403, 'mk_scope'], cap: [409, 'mk_cap'], balance: [409, 'mk_balance'], pre: [409, 'mk_pre'], pre_asked: [409, 'mk_pre'], out: [403, 'mk_scope'], empty: [409, 'mk_balance'], none: [404, 'product'] };
+  /* L3 항목 상태(해요체 라벨) — started 시작함 · credit 시작 가능 · pre 승인 필요 · pre_asked 승인 요청 중 · cap 상한 초과 · empty 잔액 부족 · out 패스 밖 · buy 따로 구매 · none 없음 */
+  const ACCESS_LABEL = { started: '이어서 학습해요', credit: '크레딧으로 바로 시작할 수 있어요', pre: '담당 선생님 승인 후 시작할 수 있어요', pre_asked: '승인을 요청했어요', cap: '이번 달 사용할 수 있는 크레딧을 모두 썼어요', empty: '지금은 시작할 수 없어요. 담당 선생님께 알려 주세요', out: '우리 기관 패스에 포함되지 않은 과정이에요', buy: '패스 밖 과정이라 따로 구매해야 해요', none: '찾을 수 없는 과정이에요' };
   const who = async (req, tid) => { const s = await lauth(req, tid); if (!s) throw E(401, 'auth', '로그인이 필요해요.'); S.scopeSet(tid, false); return s; };
   async function pubGate(c, tid) { const p = await party(c, tid); return !!p.pilot; }
 
@@ -172,7 +174,8 @@ module.exports = (ctx, S) => {
       return { on: true, items: (await listed(c, day)).filter(r => modeOf(r, day) === 'credit' && r.credits).map(r => ({ id: r.id, title: r.title, hours: r.hours_x10 / 10, credits: r.credits, ...(r.owner_kind === 'santa' ? { orig: true } : {}) })) }; }); },
     'GET mk-item': async (req, res, tid) => { const s = await who(req, tid); const pid = str(Q(req).get('id'), 20); if (!PID_RE.test(pid)) throw E(404, 'product', '과정을 찾지 못했어요.');
       return tx(async c => { if (!(await pubGate(c, tid))) throw E(403, 'mk_learner_off'); const X = await startOf(c, tid, sidHash(tid, s.sid), pid, 'check'); if (!X.r) throw E(404, 'product', '과정을 찾지 못했어요.');
-        return { item: { id: X.r.id, title: X.r.title, hours: X.r.hours_x10 / 10, credits: X.cr || X.r.credits, access: X.access === 'balance' ? 'empty' : X.access, ...(X.r.owner_kind === 'santa' ? { orig: true } : {}) } }; }); },
+        const acc = X.access === 'balance' ? 'empty' : X.access;
+        return { item: { id: X.r.id, title: X.r.title, hours: X.r.hours_x10 / 10, credits: X.cr || X.r.credits, access: acc, accessLabel: ACCESS_LABEL[acc] || '', ...(X.r.owner_kind === 'santa' ? { orig: true } : {}) } }; }); },
     'POST mk-start': async (req, res, tid) => { const s = await who(req, tid); limit(`mk-start:${tid}:${s.sid}`, 30, 60e3); const b = await body(req); const pid = str(b.productId, 20); if (!PID_RE.test(pid)) throw E(404, 'product', '과정을 찾지 못했어요.');
       const sh = sidHash(tid, s.sid);
       const X = await tx(async c => { if (!(await pubGate(c, tid))) throw E(403, 'mk_learner_off'); const k0 = await liveContract(c, tid, today()); if (k0) await c.query('select id from mk_contract where id = $1 for update', [k0.id]);
@@ -407,6 +410,17 @@ module.exports = (ctx, S) => {
     ['POST', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})\/dispute$/, async (req, id) => { const a = await needStaff(req); const b = await body(req); return T(async c => { const k = await contractOf(c, a, id); if (k.buyer_tid !== a.tid) throw E(404, 'contract', '없는 계약입니다.');
       const u = await q1(c, "select id from mk_credit_use where id = $1 and contract_id = $2 and kind = 'use' and not restored", [str(b.useId, 20), k.id]); if (!u) throw E(404, 'use', '없는 차감 기록입니다.');
       const d = await q1(c, "insert into mk_dispute (id, kind, ref, from_tid, body) values ($1,'restore',$2,$3,$4) returning *", [rid('md_'), u.id, a.tid, str(b.reason, 500)]); return { ok: true, dispute: d }; }); }],
+    /* 구매 기관 이의 신청(정운영자만, RLS로 자기 계약만): kind restore(useId 필수) · contract(계약 · 정산 이의) */
+    ['POST', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})\/disputes$/, async (req, id) => { const a = await needOwner(req); const b = await body(req); return T(async c => { const k = await contractOf(c, a, id); if (k.buyer_tid !== a.tid) throw E(404, 'contract', '없는 계약입니다.');
+      const kind = b.kind === 'contract' ? 'contract' : 'restore'; const reason = str(b.reason, 500).trim(); if (!reason) throw E(400, 'reason', '이의 사유를 입력하십시오.');
+      return idem(c, a.tid, 'disputes:' + id, b.idem, async () => { let ref = k.id;
+        if (kind === 'restore') { const u = await q1(c, "select id from mk_credit_use where id = $1 and contract_id = $2 and kind = 'use' and not restored", [str(b.useId, 20), k.id]); if (!u) throw E(404, 'use', '없는 차감 기록입니다.'); ref = u.id;
+          if (await q1(c, "select 1 from mk_dispute where ref = $1 and status = 'open'", [ref])) throw E(409, 'mk_dispute_open', '이미 처리 중인 이의 신청이 있습니다.'); }
+        const d = await q1(c, "insert into mk_dispute (id, kind, ref, from_tid, body) values ($1,$2,$3,$4,$5) returning *", [rid('md_'), kind, ref, a.tid, reason]);
+        await log(a.tid, a.email, 'market.dispute', { contract: k.id, kind, ref }); return { ok: true, dispute: { id: d.id, kind, ref, status: d.status, at: d.at } }; }); }); }],
+    ['GET', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})\/disputes$/, async (req, id) => { const a = await needStaff(req); return T(async c => { const k = await contractOf(c, a, id);
+      const uses = (await c.query('select id from mk_credit_use where contract_id = $1', [k.id])).rows.map(r => r.id);
+      return { items: (await c.query('select id, kind, ref, status, memo, at, decided_at from mk_dispute where from_tid = $1 and (ref = $2 or ref = any($3)) order by at desc', [k.buyer_tid, k.id, uses])).rows }; }); }],
     ['POST', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})\/topup$/, async (req, id) => { const a = await needOwner(req); const b = await body(req); await needPaid(a.tid);
       return T(async c => { await needPilot(c, a.tid); const k = await contractOf(c, a, id); if (k.buyer_tid !== a.tid || !['active', 'carry'].includes(k.status)) throw E(409, 'mk_contract_state', '이용 중인 계약만 추가 구매할 수 있습니다.');
         return idem(c, a.tid, 'topup', b.idem, async () => ({ ok: true, quote: quoteOut(await creditQuote(c, a.tid, { input: { budget: b.amount, collections: k.collections, topupOf: k.id } }, a.email, false), false) })); }); }],

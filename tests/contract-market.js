@@ -94,7 +94,7 @@ async function run(U, tag) {
   const pre = (await call('B', 'GET', `/api/market/contracts/${kid}/preapprovals`)).j.items[0]; R.preDecide = (await call('B', 'POST', `/api/market/contracts/${kid}/preapprovals/${pre.id}/decide`, { ok: true })).j.preapproval.status;
   const s1 = await st(pa); R.start = [s1.st, s1.j.charged, s1.j.credits]; R.startAgain = (await st(pa)).j.charged;
   const s2 = await st(pb); R.start2 = [s2.j.charged, s2.j.credits];
-  R.cap = (await st(po)).j.error; R.scope = [(await st(px)).j.error, (await call('L1', 'GET', P(`mk-item?id=${px}`))).j.item.access];
+  R.cap = (await st(po)).j.error; const ix = (await call('L1', 'GET', P(`mk-item?id=${px}`))).j.item; R.scope = [(await st(px)).j.error, ix.access, ix.credits, ix.accessLabel];
   const s3 = await call('L2', 'POST', P('mk-start'), { productId: pa, idem: 'l2a' }); R.vol = [s3.j.charged, s3.j.credits];
   R.guest = (await call('G', 'POST', P('mk-start'), { productId: pa })).st;
 
@@ -112,6 +112,11 @@ async function run(U, tag) {
   const dp = await call('B', 'POST', `/api/market/contracts/${kid}/dispute`, { useId: u1b.id, reason: '오개설' }); const dsp = (await call('S1', 'GET', '/api/market/ops/disputes')).j.items.find(d => d.ref === u1b.id);
   const dd = await call('S1', 'POST', `/api/market/ops/disputes/${dsp.id}/decide`, { accept: true, memo: '수강 취소 확인' }); R.dispute = [dp.st, dd.j.dispute && dd.j.dispute.status, (await call('B', 'GET', `/api/market/contracts/${kid}`)).j.balance];
 
+  const ds1 = await call('B', 'POST', `/api/market/contracts/${kid}/disputes`, { kind: 'restore', useId: u4.id, reason: '오수강 신고', idem: 'ds1' });
+  const ds2 = await call('B', 'POST', `/api/market/contracts/${kid}/disputes`, { kind: 'restore', useId: u4.id, reason: '중복', idem: 'ds2' });
+  const ds3 = await call('B', 'POST', `/api/market/contracts/${kid}/disputes`, { kind: 'contract', reason: '보너스 기준 확인', idem: 'ds3' });
+  R.disputes = [ds1.st, ds1.j.dispute && ds1.j.dispute.status, ds2.j.error, ds3.j.dispute && ds3.j.dispute.kind, (await call('B', 'POST', `/api/market/contracts/${kid}/disputes`, { reason: '' , idem: 'ds4' })).j.error, ((await call('B', 'GET', `/api/market/contracts/${kid}/disputes`)).j.items || []).length];
+  const it1 = (await call('L1', 'GET', P(`mk-item?id=${pa}`))).j.item; R.item = [it1.access, it1.credits, !!it1.accessLabel];
   // 환불 요청 · 추가 구매
   const rf = await call('B', 'POST', `/api/market/contracts/${kid}/refund`, { reason: '예산 반납', idem: 'rf1' }); R.refund = [rf.j.refund && rf.j.refund.paidUnused, rf.j.refund && rf.j.refund.bonusUsed, rf.j.refund && rf.j.refund.amount, rf.j.status];
   const tq = await call('B', 'POST', `/api/market/contracts/${kid}/topup`, { amount: 5000000, idem: 't1' }); const tk = await call('B', 'POST', '/api/market/contracts', { quoteId: tq.j.quote.id, idem: 'tk1' });
@@ -149,7 +154,7 @@ async function run(U, tag) {
   R.isolation = [(await call('D', 'GET', '/api/market/home')).j.error, (await call('D', 'GET', `/api/market/contracts/${kid}`)).st, (await call('D', 'GET', '/api/market/cp/statements')).j.error];
   /* C1 교차 테넌트 차단: 시범 기관 D(구매) · 다른 CP E가 B의 지갑 · 견적 · 차감, C의 정산서를 보면 404 또는 0행 */
   await call('S1', 'PUT', `/api/market/ops/orgs/${D}/pilot`, { on: true }); const E2 = await join('E', `mke_${sfx}@example.com`, 'CP에듀온', 'corp'); await call('S1', 'PUT', `/api/market/ops/parties/${E2}`, { kind: 'cp', cpName: 'CP에듀온' });
-  R.rls = [(await call('D', 'GET', `/api/market/contracts/${kid}`)).st, (await call('D', 'GET', `/api/market/contracts/${kid}/uses`)).st, (await call('D', 'GET', `/api/market/quotes/${qid}`)).st, ((await call('D', 'GET', '/api/market/quotes')).j.items || []).length,
+  R.rls = [(await call('D', 'POST', `/api/market/contracts/${kid}/disputes`, { kind: 'contract', reason: '남의 계약', idem: 'x0' })).st, (await call('D', 'GET', `/api/market/contracts/${kid}`)).st, (await call('D', 'GET', `/api/market/contracts/${kid}/uses`)).st, (await call('D', 'GET', `/api/market/quotes/${qid}`)).st, ((await call('D', 'GET', '/api/market/quotes')).j.items || []).length,
     (await call('D', 'POST', `/api/market/contracts/${kid}/restore`, { useId: u4.id, progPct: 0, idem: 'x1' })).st, ((await call('D', 'GET', '/api/market/home')).j.myCredit || null),
     (await call('E', 'GET', `/api/market/cp/statements/${cst.id}`)).st, ((await call('E', 'GET', '/api/market/cp/statements')).j.items || []).length, (await call('E', 'GET', `/api/market/cp/statements/${cst.id}/pdf`)).st,
     (await call('E', 'PUT', `/api/market/cp/products/${pa}/price`, { listPrice: 1000 })).st, ((await call('E', 'GET', '/api/market/cp/requests')).j.items || []).length, ((await call('E', 'GET', '/api/market/cp/promos')).j.items || []).length];
@@ -166,13 +171,13 @@ const EXPECT = {
   noPlan: 'mk_plan', bonusMax: 'mk_bonus_max', noIdem: 'idem', quote: [200, 30000, 700, 2100, true], opsQuote: [3045, 20865000], quoteIdem: true, single: ['cp_wait', true, false], singleOps: [25000000, 35714286], cpReq: [21000000, 25000000], cpReqOk: 'ready', send: 'sent', adjust: ['ready', 28000000, true], autoQuote: [true, 3000], import: [1, 1, 'done'], opsOrgs: [true, false],
   contract: [200, 'pending_pay'], contractAgain: 'mk_quote_state', activateBuyer: 403, activate: [200, 'active', 'waiting', 'paid:30000,bonus:2100', 32100], controls: [200, 100, 46],
   shelf: [200, true, 2, 100, false], pre: 'mk_pre', preAsk: 'asked', preAsked: ['mk_pre', 'pre_asked'], preDecide: 'ok', start: [200, true, 50], startAgain: false, start2: [true, 43],
-  cap: 'mk_cap', scope: ['mk_scope', 'out'], vol: [true, 45], guest: 401,
+  cap: 'mk_cap', scope: ['mk_scope', 'buy', 30, '패스 밖 과정이라 따로 구매해야 해요'], vol: [true, 45], guest: 401,
   balance: [31962, 32100, 138, 0], usesPii: [3, false, 10], restore: [200, -45, 32007], restoreAgain: 'mk_restore_state', restoreWindow: 'mk_restore_window', restart: [true, 45], restoreOnce: 'mk_restore_once', origUse: [true, 15],
   dispute: [200, 'accepted', 31990],
   refund: [29890, 0, 29890000, 'requested'], topup: [5000, 'merged', true, 36990],
   rateBad: ['mk_cp_rate', 'mk_cp_rate'], rate: [6000, true], cpRate: [6500, 6000], promoMonths: 'mk_promo_months', promoTarget: 'mk_promo_target', promo: [200, 500000, 'asked'], promoOk: 'ok', promoCancel: 'mk_promo_state',
   month: [200, 183, 88, 95, 6500, 61750, 15000], stmtLines: [2, true, false], stmtDispute: 'disputed', closeChecks: false, closeSame: 'mk_close_same_user', close: [200, 'confirmed', 61750, true, 15000],
-  export: [200, true, true], revenue: [200, true, 0], recognized: 103774, closes: true, stmtPdf: [200, true, true], isolation: ['mk_off', 404, 'mk_cp'], rls: [404, 404, 404, 0, 404, null, 404, 0, 404, 404, 0, 0]
+  export: [200, true, true], revenue: [200, true, 0], recognized: 103774, closes: true, stmtPdf: [200, true, true], isolation: ['mk_off', 404, 'mk_cp'], disputes: [200, 'open', 'mk_dispute_open', 'contract', 'reason', 3], item: ['started', 50, true], rls: [404, 404, 404, 404, 0, 404, null, 404, 0, 404, 404, 0, 0]
 };
 function check(R) { const bad = []; for (const k of Object.keys(EXPECT)) { if (EXPECT[k] === null) continue; const e = JSON.stringify(EXPECT[k]); const g = JSON.stringify(Array.isArray(EXPECT[k]) && Array.isArray(R[k]) ? R[k].map((v, i) => EXPECT[k][i] === null ? null : v) : R[k]); if (e !== g) bad.push(`${k}: 기대 ${e} · 실제 ${g}`); } return bad; }
 
