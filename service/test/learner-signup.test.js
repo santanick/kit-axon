@@ -53,6 +53,11 @@ test('QA7 학습자 가입 · 소셜 로그인 · 승인', { skip: !process.env.
     assert.equal((await call('E1', 'GET', `/api/pub/${OPEN.tid}/me`)).status, 200);
     const l = await call('E1b', 'POST', `/api/pub/${OPEN.tid}/login`, { via: 'email', email: `e1${sfx}@ex.com`, pw: 'Learn!ng123' }); assert.equal(l.status, 200);
   });
+  await t.test('v49 9-3 닉네임 개인정보 형태(주민번호 · 휴대폰 · 유선 번호) 거절 → 400 nickname_pii(Java dd.400.nickname_pii와 같은 문구)', async () => {
+    for (const [i, nk] of ['900101-1234567', '010-1234-5678', '01012345678', '02-123-4567', '반가워_010-1234-5678'].entries()) {
+      const s = await emailJoin('NP' + i, OPEN.tid, `np${i}${sfx}@ex.com`, nk); assert.equal(s.status, 400, nk + ' ' + JSON.stringify(s.j)); assert.equal(s.j.error, 'nickname_pii'); assert.match(s.j.message || s.j.msg || JSON.stringify(s.j), /개인정보를 쓸 수 없어요/); }
+    const ok = await emailJoin('NPok', OPEN.tid, `npok${sfx}@ex.com`, '큐에이2026'); assert.equal(ok.status, 200, JSON.stringify(ok.j));
+  });
   await t.test('소셜(open): 카카오 · 구글 · 네이버 가입 → 다시 로그인 · 식별자는 해시로만', async () => {
     for (const [p, code] of [['kakao', 'k1' + sfx], ['google', 'g1' + sfx], ['naver', 'n1' + sfx]]) {
       assert.equal(await social('S' + p, OPEN.tid, p, code), 'join-' + p);

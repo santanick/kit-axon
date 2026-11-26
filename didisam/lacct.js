@@ -18,6 +18,10 @@ const laRand = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); re
 const laNewSid = kind => (kind === 'parent' ? 'p' : 'u') + laRand(11); /* 가명 식별자: 이메일 · 전화번호에서 만들지 않는다(역추적 불가) */
 const LA_PW_RE = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[~!@#$%^&*])[A-Za-z\d~!@#$%^&*]{8,20}$/;
 const LA_NICK_RE = /^[가-힣A-Za-z0-9_-]{2,20}$/;
+/* v49 9-3 개인정보 최소 수집: 닉네임의 주민번호 · 휴대폰 · 유선 번호 형태(- · _ 무시)는 거절 — 서버 Node pii.js · Java PiiServiceImpl과 같은 규칙 · 코드(nickname_pii) · 문구 */
+const LA_NICK_PII = /(?<!\d)(?:\d{6}[1-8]\d{6}|01[016789]\d{7,8}|0(?:2|[3-6][1-5]|70)\d{7,8})(?!\d)/;
+const LA_NICK_PII_MSG = '닉네임에는 주민등록번호 · 휴대폰 · 전화번호 같은 개인정보를 쓸 수 없어요. 다른 닉네임을 정해 주세요.';
+const laNickPii = n => LA_NICK_PII.test(String(n || '').replace(/[-_]/g, ''));
 const LA_PHONE_RE = /^01\d-?\d{3,4}-?\d{4}$/;
 const LA_MAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const laPhone = p => { const d = String(p || '').replace(/\D/g, ''); return d.length === 11 ? `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}` : d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : String(p || ''); };
@@ -282,12 +286,12 @@ function laCreate(o) { const cfg = laCfg(); const J = LA.j; const U = laUniv(); 
 function laJoinSubmit(f) { const J = LA.j; const U = laUniv(); const err = m => { const e = $('#laJErr'); if (e) e.textContent = m; return false; }; const fd = n => (f.elements[n] && f.elements[n].value || '').trim();
   laJoinKeep(f); const c = laJoinCheck(f, err); if (!c) return; const X = () => laExtra(f, err); let extra;
   try {
-    if (U) { const stu = fd('sid'), dept = fd('dept'); let nick = fd('nick'); if (!/^\d{6,10}$/.test(stu)) return err('학번은 숫자 6~10자리입니다.'); if (!dept) return err('학과를 입력하세요.'); if (!nick) nick = stu.slice(-4) + '학번'; if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.');
+    if (U) { const stu = fd('sid'), dept = fd('dept'); let nick = fd('nick'); if (!/^\d{6,10}$/.test(stu)) return err('학번은 숫자 6~10자리입니다.'); if (!dept) return err('학과를 입력하세요.'); if (!nick) nick = stu.slice(-4) + '학번'; if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'); if (laNickPii(nick)) return err(LA_NICK_PII_MSG);
       const r = laRoom() || {}; if ((r.members || []).some(m => m.sid === stu && m.acct)) return err('이미 가입한 학번입니다. 로그인하거나 문의하세요.');
       if (J.sns && J.sns.oauth) { if (!(extra = X())) return; return laJoinLive(f, { via: 'sns', oauth: true, student_no: stu, dept, nickname: nick, consent: c.consent, age14: true, extra }, err); } /* QA7 대학 소셜 가입: 학번 · 학과만 */
       const p1 = f.elements.pw.value; if (!LA_PW_RE.test(p1)) return err('비밀번호는 영문 · 숫자 · 특수문자(~!@#$%^&*) 조합 8~20자입니다.'); if (p1 !== f.elements.pw2.value) return err('비밀번호가 서로 다릅니다.');
       if (!(extra = X())) return; if (laLive()) return laJoinLive(f, { via: 'univ', student_no: stu, dept, nickname: nick, pw: p1, consent: c.consent, age14: true, extra }, err); return laCreate({ stu, dept, nick, pw: p1, consent: c.consent, extra, age14: true }); }
-    const nick = fd('nick').replace(/(.{2,})님$/, '$1'); /* v32.9: 호칭 '님'은 화면이 붙임 */ if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.');
+    const nick = fd('nick').replace(/(.{2,})님$/, '$1'); /* v32.9: 호칭 '님'은 화면이 붙임 */ if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'); if (laNickPii(nick)) return err(LA_NICK_PII_MSG);
     if (J.sns) { if (!(extra = X())) return; if (J.sns.oauth) return laJoinLive(f, { via: 'sns', oauth: true, nickname: nick, consent: c.consent, age14: c.age14, ...(c.gcontact ? { guardian: { contact: c.gcontact } } : {}), extra }, err); return laCreate({ login: J.sns.prov, sub: J.sns.sub, nick, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact, gmatch: fd('gmatch') }); }
     const email = fd('email').toLowerCase(); if (!LA_MAIL_RE.test(email)) return err('이메일을 입력하세요. SNS로 가입하려면 위의 SNS 버튼을 누르세요.'); const s = LA.jv || {};
     const LV = laLive(); if (LV ? (!s.sent || s.email !== email) : (!s.code || s.email !== email)) return err('이메일 인증번호를 먼저 받으세요.'); if (LV ? !/^\d{6}$/.test(fd('vcode')) : fd('vcode') !== s.code) return err(LV ? '이메일로 받은 인증번호 6자리를 입력하세요.' : '인증번호가 올바르지 않습니다.');
@@ -394,7 +398,7 @@ async function laAcctSubmit(f) { const acc = laFind(LR.me.sid); if (!acc) return
   const err = (id, m) => { const e = $('#' + id); if (e) e.textContent = m; return false; };
   if (f.id === 'laProf') { const nick = fd('nick'); const ph = f.elements.photo && f.elements.photo.files[0]; let photo;
     if (ph) { if (!/^image\/(png|jpeg|webp)$/.test(ph.type) || ph.size > 200 * 1024) return err('laPErr', '사진은 PNG · JPG · WEBP, 200KB 이하만 올릴 수 있습니다.'); photo = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => ok(''); r.readAsDataURL(ph); }); }
-    const data = { sid: acc.sid }; if (nick && nick !== acc.nick) { if (!LA_NICK_RE.test(nick)) return err('laPErr', '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'); const mon = ymdL(new Date()).slice(0, 7); const log = [...(acc.nickLog || []), ...((laCache()[acc.sid] || {}).nickLog || [])].filter((x, i, A) => String(x).startsWith(mon) && A.indexOf(x) === i); if (log.length >= 5) return err('laPErr', '닉네임은 한 달에 5회까지 바꿀 수 있습니다.'); data.nick = nick; laCacheSet(acc.sid, { nick, nickAt: Date.now(), nickLog: [...((laCache()[acc.sid] || {}).nickLog || []), new Date().toISOString()] }); LR.me.nick = nick; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { } }
+    const data = { sid: acc.sid }; if (nick && nick !== acc.nick) { if (!LA_NICK_RE.test(nick)) return err('laPErr', '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'); if (laNickPii(nick)) return err('laPErr', LA_NICK_PII_MSG); const mon = ymdL(new Date()).slice(0, 7); const log = [...(acc.nickLog || []), ...((laCache()[acc.sid] || {}).nickLog || [])].filter((x, i, A) => String(x).startsWith(mon) && A.indexOf(x) === i); if (log.length >= 5) return err('laPErr', '닉네임은 한 달에 5회까지 바꿀 수 있습니다.'); data.nick = nick; laCacheSet(acc.sid, { nick, nickAt: Date.now(), nickLog: [...((laCache()[acc.sid] || {}).nickLog || []), new Date().toISOString()] }); LR.me.nick = nick; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { } }
     if (photo !== undefined) { data.photo = photo; laCacheSet(acc.sid, { photo }); }
     if (Object.keys(data).length < 2) { toast('바뀐 내용이 없습니다.'); return; } lpxPush('acct-profile', data); toast('저장했습니다.', 'ok'); lrender(); return; }
   if (f.id === 'laName') { const name = fd('name'); const purpose = fd('purpose'); if (!name || name.length > 30) return err('laNErr', '이름을 30자 이내로 입력하세요.'); const V = laV(); if (!V.ids[acc.sid]) return err('laNErr', '이 계정은 운영자가 관리합니다. 운영자에게 문의하세요.');
@@ -560,7 +564,7 @@ document.addEventListener('submit', async e => { const f = e.target; if (!f || !
     if (f.id === 'laLogin') { const b = f.querySelector('button[type=submit]'); b.disabled = true; $('#laErr').textContent = ''; try { await laLogin(f); } catch (x) { $('#laErr').textContent = x.message; b.disabled = false; } return; }
     if (f.id === 'laSoc') { const prov = f.dataset.v; const sub = f.elements.sub.value.trim(); const er = $('#laSocErr'); if (!/^[\w.-]{3,60}$/.test(sub)) { er.textContent = '계정 ID를 확인하세요.'; return; }
       const acc = laFind(`sns:${prov}:${sub}`);
-      if (f.dataset.mode === 'join') { if (acc) { er.textContent = `이미 가입한 ${LA_SN[prov]} 계정입니다. 로그인하세요.`; return; } const nick = f.elements.nick.value.trim().replace(/(.{2,})님$/, '$1'); if (!LA_NICK_RE.test(nick)) { er.textContent = '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'; return; }
+      if (f.dataset.mode === 'join') { if (acc) { er.textContent = `이미 가입한 ${LA_SN[prov]} 계정입니다. 로그인하세요.`; return; } const nick = f.elements.nick.value.trim().replace(/(.{2,})님$/, '$1'); if (!LA_NICK_RE.test(nick)) { er.textContent = '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'; return; } if (laNickPii(nick)) { er.textContent = LA_NICK_PII_MSG; return; }
         const J = LA.j; const fj = $('#laJoin'); laJoinKeep(fj); const c = laJoinCheck(fj, m => { er.textContent = m; return false; }); if (!c) return; const extra = laExtra(fj, m => { er.textContent = m; return false; }); if (!extra) return;
         laDlgX(); J.sns = { prov, sub, nick }; try { laCreate({ login: prov, sub, nick, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact }); } catch (x) { J.sns = null; toast(x.message, 'warn'); lrender(); } return; }
       if (acc) { laDlgX(); try { laAfterAuth(acc, lLoginBack() || 'my'); /* v43.8 SNS 로그인도 #login/<경로>로 돌아감 */ } catch (x) { toast(x.message, 'warn'); } return; }

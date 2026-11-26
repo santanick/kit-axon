@@ -40,6 +40,14 @@ function redactMessages(msgs) {
   return { messages: out, hits };
 }
 
+/* v49 9-2: system(문자열 또는 text 블록 배열)도 가린다 — 스튜디오 화면이 지시문에 붙여 보내는 학습자 · 회원 정보가 외부 AI로 그대로 나가지 않게(브라우저 aiguard.js · Java DdAiGuard.redactSystem과 같은 규칙) */
+function redactSystem(sys) {
+  const hits = {};
+  if (typeof sys === 'string') { const r = redact(sys); addHits(hits, r.hits); return { system: r.text, hits }; }
+  if (Array.isArray(sys)) return { system: sys.map(b => { if (b && b.type === 'text' && typeof b.text === 'string') { const r = redact(b.text); addHits(hits, r.hits); return { ...b, text: r.text }; } return b; }), hits };
+  return { system: sys, hits };
+}
+
 /* 프롬프트 인젝션 · 탈옥 신호(한국어 · 영어) */
 const INJ = [
   /ignore\s+(?:all\s+|any\s+|the\s+)?(?:previous|prior|above|earlier|system)\s+(?:instructions?|prompts?|rules?|messages?)/i,
@@ -143,4 +151,4 @@ function leakCheck(text, markers = []) {
 }
 const SAFE_REPLY = '그 요청은 안내해 드릴 수 없어요. 지금 공부하는 내용이나 과정에 대해 물어봐 주세요.';
 
-module.exports = { variants, normText, redact, redactMessages, addHits, hitN, hitText, injectScore, fence, GUARD_RULE, leakCheck, SAFE_REPLY, PII_KINDS: PII.map(([k, l]) => [k, l]) };
+module.exports = { variants, normText, redact, redactMessages, redactSystem, addHits, hitN, hitText, injectScore, fence, GUARD_RULE, leakCheck, SAFE_REPLY, PII_KINDS: PII.map(([k, l]) => [k, l]) };
