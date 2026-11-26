@@ -89,7 +89,21 @@ const FIX = {
   get1: j => [j.st, j.channels.length, j.channels[0] && j.channels[0].events.join()], off: j => [j.ok, j.removed.channels, j.removed.accounts], get2: j => [j.st, j.channels.length],
 };
 
-(async () => {
+/* QA4 #5: CT_PILOT_OFF=1 — 두 서버를 TEAMS_PILOT 없이 띄웠을 때(시범 플래그 꺼짐) 같은 응답인지 */
+async function offScenario(base, tag) { const R = {}; const call = client(base); const em = `ct_tmo_${tag}_${Date.now()}@example.com`;
+  R.signup = await call('POST', '/api/signup', { email: em, password: 'Contract2026x', orgName: '대조', type: 'univ', ...(process.env.SIGNUP_CODE ? { code: process.env.SIGNUP_CODE } : {}) });
+  R.get = await call('GET', '/api/conn/teams'); R.demo = await call('PUT', '/api/conn/teams/demo', { on: true }); R.ch = await call('POST', '/api/conn/teams/channels', { name: 'x' });
+  R.mt = await call('POST', '/api/conn/teams/meetings', { subject: 'x', start: '2026-12-02T19:00:00+09:00', end: '2026-12-02T20:00:00+09:00' }); R.consent = await call('GET', '/api/conn/teams/consent/start'); R.cfg = await call('GET', '/api/config');
+  return R; }
+if (process.env.CT_PILOT_OFF === '1') (async () => {
+  const ra = await offScenario(A, 'a'), rb = await offScenario(B, 'b');
+  for (const k of Object.keys(ra)) { ok(ra[k].st === rb[k].st, `${k}: 상태 ${ra[k].st} ≠ ${rb[k].st}`); if (k !== 'signup' && k !== 'cfg') ok(JSON.stringify(ra[k].j) === JSON.stringify(rb[k].j), `${k}: ${JSON.stringify(ra[k].j)} ≠ ${JSON.stringify(rb[k].j)}`); }
+  ok(JSON.stringify(ra.cfg.j.oauth) === JSON.stringify(rb.cfg.j.oauth), 'config oauth');
+  ok(ra.get.j.pilot === false && ra.demo.j.error === 'teams_off' && ra.mt.j.error === 'teams_off' && /err-off$/.test(ra.consent.loc), 'Node 기준: 시범 플래그 꺼짐');
+  ok(ra.consent.loc.replace(/^.*#/, '') === rb.consent.loc.replace(/^.*#/, ''), 'consent 리다이렉트');
+  console.log(`contract-teams(시범 꺼짐): ${pass} 통과 · ${fail} 실패`); errs.forEach(e => console.log(' ✗', e)); process.exit(fail ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });
+else (async () => {
   const ra = await scenario(A, 'a');
   if (!B) { for (const [k, v] of Object.entries(ra)) console.log(k.padEnd(10), v.st, v.j ? shape(v.j).slice(0, 160) : v.loc); return; }
   const rb = await scenario(B, 'b');

@@ -33,7 +33,7 @@ test('MS Teams 연동 — 시연 · 웹훅 · 조직 연결 · 회의 · 출석 
     out(404, {}); }); }).listen(0, '127.0.0.1');
   await new Promise(ok => mock.once('listening', ok)); const MU = `http://127.0.0.1:${mock.address().port}`;
   const pool = poolFrom(process.env); await migrate(pool);
-  const base = { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', MFA_OFF: '1', PII_KEY: crypto.randomBytes(32).toString('hex'), OAUTH_MOCK_URL: MU, TEAMS_WEBHOOK_TEST: '1', TEAMS_GAP_MS: '20', NEW_DEVICE_MAIL: 'off' };
+  const base = { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', MFA_OFF: '1', PII_KEY: crypto.randomBytes(32).toString('hex'), OAUTH_MOCK_URL: MU, TEAMS_WEBHOOK_TEST: '1', TEAMS_GAP_MS: '20', NEW_DEVICE_MAIL: 'off', TEAMS_PILOT: 'all' };
   const appL = createApp({ pool, env: { ...base, MS_CLIENT_ID: MS_ID, MS_CLIENT_SECRET: 'ms-sec' }, log: {} });
   const appD = createApp({ pool, env: base, log: {} });
   await new Promise(ok => appL.listen(0, ok)); await new Promise(ok => appD.listen(0, ok));
@@ -255,6 +255,21 @@ test('MS Teams 연동 — 시연 · 웹훅 · 조직 연결 · 회의 · 출석 
     const d = await call(UL, 'A', 'DELETE', '/api/conn/teams'); assert.equal(d.j.ok, true); assert.ok(d.j.removed.channels >= 1); assert.equal(d.j.removed.accounts, 1);
     assert.equal((await q(A.tid, 'select count(*)::int n from conn_secret where tenant_id = $1', [A.tid])).rows[0].n, 0);
     assert.equal((await getDoc(UL, 'A')).classes[0].curriculum[0].url, url0); assert.equal((await hashOf('A')).st, '미연결');
+  });
+  await t.test('T21 시범 플래그(QA4 #5): TEAMS_PILOT 없음 → 상태 pilot:false · 변경 403 teams_off · 알림 0 · 로그인 버튼 없음', async () => {
+    const appP = createApp({ pool, env: { ...base, TEAMS_PILOT: '', MS_CLIENT_ID: MS_ID, MS_CLIENT_SECRET: 'ms-sec' }, log: {} }); await new Promise(ok => appP.listen(0, ok));
+    try { const UP = `http://127.0.0.1:${appP.address().port}`; const P = await org(UP, 'PL', 'univ');
+      const g = await call(UP, 'PL', 'GET', '/api/conn/teams'); assert.equal(g.status, 200); assert.equal(g.j.pilot, false); assert.ok(!g.j.channels, '상태 외 정보 없음');
+      assert.equal((await call(UP, 'PL', 'PUT', '/api/conn/teams/demo', { on: true })).j.error, 'teams_off');
+      assert.equal((await call(UP, 'PL', 'POST', '/api/conn/teams/channels', { name: 'x', demo: true })).j.error, 'teams_off');
+      assert.equal((await call(UP, 'PL', 'POST', '/api/conn/teams/meetings', { subject: 'x', start: '2026-12-02T19:00:00+09:00', end: '2026-12-02T20:00:00+09:00' })).j.error, 'teams_off');
+      assert.match((await call(UP, 'PL', 'GET', '/api/conn/teams/consent/start')).loc, /#conn=teams:err-off$/);
+      assert.ok(!(await call(UP, 'X', 'GET', '/api/config')).j.oauth.includes('microsoft'), '시범 기관 설정 전에는 Microsoft 로그인 버튼 없음');
+      assert.ok(!(await call(UP, 'X', 'GET', `/api/pub/${P.tid}/loauth`)).j.ready.includes('microsoft'));
+      assert.equal((await call(UP, 'PL', 'POST', '/api/conn/teams/notify', { event: 'notice' })).j.error, 'teams_off');
+    } finally { appP.close(); }
+    const appQ = createApp({ pool, env: { ...base, TEAMS_PILOT: A.tid }, log: {} }); await new Promise(ok => appQ.listen(0, ok));
+    try { const UQ = `http://127.0.0.1:${appQ.address().port}`; await org(UQ, 'QL', 'univ'); assert.equal((await call(UQ, 'QL', 'GET', '/api/conn/teams')).j.pilot, false, '목록에 없는 기관은 꺼짐'); } finally { appQ.close(); }
   });
   await t.test('RLS: 기관 역할로 다른 기관 행이 보이지 않음', async () => {
     const c = await pool.connect(); try { await c.query('begin'); await c.query('set local role didisam_tenant'); await c.query("select set_config('app.tenant', $1, true)", [B.tid]);

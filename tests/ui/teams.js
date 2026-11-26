@@ -82,7 +82,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
     await new Promise(o => mock.once('listening', o)); const MU = `http://127.0.0.1:${mock.address().port}`;
     const { poolFrom, migrate } = require(path.join(SVC, 'server/db')); const { createApp } = require(path.join(SVC, 'server/app'));
     const pool = poolFrom(process.env); await migrate(pool);
-    const app = createApp({ pool, publicDir: PUB, env: { COOKIE_SECURE: '0', MFA_OFF: '1', PII_KEY: crypto.randomBytes(32).toString('hex'), OAUTH_MOCK_URL: MU, TEAMS_WEBHOOK_TEST: '1', TEAMS_GAP_MS: '10', MS_CLIENT_ID: 'ms-ui', MS_CLIENT_SECRET: 's', NEW_DEVICE_MAIL: 'off' }, log: {} });
+    const app = createApp({ pool, publicDir: PUB, env: { COOKIE_SECURE: '0', MFA_OFF: '1', PII_KEY: crypto.randomBytes(32).toString('hex'), OAUTH_MOCK_URL: MU, TEAMS_WEBHOOK_TEST: '1', TEAMS_GAP_MS: '10', TEAMS_PILOT: 'all', MS_CLIENT_ID: 'ms-ui', MS_CLIENT_SECRET: 's', NEW_DEVICE_MAIL: 'off' }, log: {} });
     await new Promise(o => app.listen(0, '127.0.0.1', o)); const U = `http://127.0.0.1:${app.address().port}`;
     const ctx = await br.newContext({ viewport: { width: 1440, height: 1000 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
     await p.goto(U + '/index.html'); await p.waitForTimeout(1500);
@@ -101,7 +101,22 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
     await p.evaluate(() => ACT['tm-tab']({ dataset: { v: 'org' } })); await p.waitForTimeout(100);
     ok(await p.evaluate(() => !!document.querySelector('#cnCard-teams [data-act=tm-consent]')), '운영: 조직 연결(관리자 동의) 버튼');
     ok(!errs.length, '운영 오류 없음 ' + errs.join(' | '));
-    await ctx.close(); app.close(); mock.close(); await pool.end(); fs.rmSync(PUB, { recursive: true, force: true });
+    await ctx.close(); app.close();
+    /* QA4 #5 T21: 시범 플래그 꺼진 운영 서버(TEAMS_PILOT 없음) — 카탈로그에 Teams 없음 · 로그인 버튼 없음 · 오류 0 */
+    { const app2 = createApp({ pool, publicDir: PUB, env: { COOKIE_SECURE: '0', MFA_OFF: '1', PII_KEY: crypto.randomBytes(32).toString('hex'), OAUTH_MOCK_URL: MU, MS_CLIENT_ID: 'ms-ui', MS_CLIENT_SECRET: 's', NEW_DEVICE_MAIL: 'off' }, log: {} });
+      await new Promise(o => app2.listen(0, '127.0.0.1', o)); const U2 = `http://127.0.0.1:${app2.address().port}`;
+      const c2 = await br.newContext({ viewport: { width: 1440, height: 1000 } }); const p2 = await c2.newPage(); const e2 = []; p2.on('pageerror', e => e2.push(e.message));
+      await p2.goto(U2 + '/index.html'); await p2.waitForTimeout(1500);
+      ok(await p2.evaluate(() => !document.querySelector('a.lvsb.ms')), '시범 꺼짐: 운영자 Microsoft 로그인 버튼 없음');
+      const em2 = `tmoff${Date.now().toString(36)}@a.kr`;
+      await p2.evaluate(async em => { await fetch('/api/signup', { method: 'POST', headers: { 'content-type': 'application/json', 'x-didisam': '1' }, body: JSON.stringify({ email: em, password: 'Passw0rd-aaa', orgName: '시범 꺼짐 대학', type: 'univ' }) }); }, em2);
+      await p2.goto(U2 + '/index.html'); await p2.waitForFunction(() => typeof S === 'object' && S && S.me, null, { timeout: 15000 }).catch(() => { });
+      if (!(await p2.evaluate(() => typeof S === 'object' && !!S))) { await p2.evaluate(async () => { await createOrg('univ', '시범 꺼짐 대학'); }); await p2.waitForFunction(() => typeof S === 'object' && S && S.me, null, { timeout: 15000 }).catch(() => { }); }
+      await p2.evaluate(() => { if (typeof slMenuSet === 'function') slMenuSet('conn', true); go('conn'); render(); }); await p2.waitForTimeout(1500); await p2.evaluate(() => render()); await p2.waitForTimeout(300);
+      ok(await p2.evaluate(() => !document.querySelector('.cx-row[data-v=teams]') && !CN_IDS.includes('teams')), '시범 꺼짐: 카탈로그에 Teams 줄 없음');
+      ok(!e2.length, '시범 꺼짐 오류 없음 ' + e2.join(' | '));
+      await c2.close(); app2.close(); }
+    mock.close(); await pool.end(); fs.rmSync(PUB, { recursive: true, force: true });
   } else console.log('- 운영 모드 건너뜀(DATABASE_URL 없음)');
   await br.close(); srv.close();
   console.log(`\n${pass} 통과 · ${fail} 실패`); process.exit(fail ? 1 : 0);
