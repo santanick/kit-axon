@@ -4,7 +4,7 @@
 -- ② 양쪽 표(상품 · 단가 · opt-in · 견적 · 계약 · 정산서 · 분쟁 · 프로모션 · 요율): 당사자 열(buyer_tid · owner_tid · cp_tid · from_tid) 기준 + 산타.
 do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'didisam_market') then create role didisam_market nologin nobypassrls; end if;
-  if not exists (select 1 from pg_auth_members m join pg_roles r on r.oid = m.roleid join pg_roles u on u.oid = m.member where r.rolname = 'didisam_market' and u.rolname = current_user) then
+  if not exists (select 1 from pg_auth_members m join pg_roles r on r.oid = m.roleid join pg_roles u on u.oid = m.member where r.rolname = 'didisam_market' and u.rolname = current_user and m.set_option) then
     execute format('grant didisam_market to %I with set true, inherit false', current_user);
   end if; end $$;
 grant usage on schema public to didisam_market;

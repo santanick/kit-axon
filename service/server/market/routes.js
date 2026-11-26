@@ -294,9 +294,12 @@ module.exports = (ctx, S) => {
     'GET /api/market/ops/promos': async req => { await needSanta(req); const st = str(Q(req).get('status'), 10); return T(async c => ({ items: (await c.query('select * from mk_promo' + (st ? ' where status = $1' : '') + ' order by ym, at', st ? [st] : [])).rows.map(promoOut) })); },
     'GET /api/market/ops/revenue': async req => { await needSanta(req); return T(async c => revenue(c, Q(req))); },
     'GET /api/market/ops/orgs': async req => { await needSanta(req); const q = Q(req); const t = str(q.get('q'), 60).trim();
-      const rows = (await pool.query(`select t.id, t.name, t.type, coalesce(p.kind, 'buyer') kind, coalesce(p.pilot, false) pilot, p.cp_name, p.pilot_by, p.pilot_at from tenants t left join mk_party p on p.tid = t.id
-        where ($1 = '' or t.name ilike '%' || $1 || '%' or t.id = $1) ${q.get('pilot') === '1' ? 'and p.pilot' : ''} ${q.get('kind') ? 'and coalesce(p.kind, \'buyer\') = $2' : ''} order by p.pilot desc nulls last, t.created_at desc limit 500`, q.get('kind') ? [t, str(q.get('kind'), 10)] : [t])).rows;
-      return pageOf(q, rows.map(r => ({ tid: r.id, name: r.name, type: r.type, kind: r.kind, cpName: r.cp_name, mk: { pilot: r.pilot, by: r.pilot_by, at: r.pilot_at } }))); },
+      /* tenants는 마켓 역할 밖(로그인 계정), mk_party는 산타 범위(RLS)에서 따로 읽어 합친다(Java와 같음) */
+      const ts = (await pool.query("select id, name, type from tenants where ($1 = '' or name ilike '%' || $1 || '%' or id = $1) order by created_at desc limit 2000", [t])).rows;
+      const P = new Map((await T(c => c.query('select tid, kind, pilot, cp_name, pilot_by, pilot_at from mk_party where tid = any($1)', [ts.map(x => x.id)]))).rows.map(r => [r.tid, r]));
+      let rows = ts.map(x => { const p = P.get(x.id) || {}; return { tid: x.id, name: x.name, type: x.type, kind: p.kind || 'buyer', cpName: p.cp_name || null, mk: { pilot: !!p.pilot, by: p.pilot_by || null, at: p.pilot_at || null } }; });
+      if (q.get('pilot') === '1') rows = rows.filter(r => r.mk.pilot); if (q.get('kind')) rows = rows.filter(r => r.kind === q.get('kind'));
+      rows.sort((a, b) => (b.mk.pilot ? 1 : 0) - (a.mk.pilot ? 1 : 0)); return pageOf(q, rows.slice(0, 500)); },
     'GET /api/market/settle/closes': async req => { await needSanta(req); return T(async c => ({ items: (await c.query('select * from mk_close order by quarter desc, at desc limit 40')).rows.map(z => ({ id: z.id, quarter: z.quarter, runBy: z.run_by, confirmBy: z.confirm_by, checks: z.checks, totals: z.totals, status: z.status, at: z.at, confirmedAt: z.confirmed_at })) })); },
     'GET /api/market/ops/quotes': async req => { await needSanta(req); const q = Q(req); const st = str(q.get('status'), 10);
       return T(async c => pageOf(q, (await c.query('select * from mk_quote' + (st ? ' where status = $1' : '') + ' order by at desc limit 1000', st ? [st] : [])).rows.map(x => quoteOut(x, true)))); },
