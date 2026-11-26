@@ -52,6 +52,7 @@ const AP = require('./aiprice'); /* v47 AI 월 포함량 · 추가 충전 요금
 const { createPay } = require('./fac/pay');
 const LEV = require('./lev'); /* v46 Ver2 학습 이벤트 */
 const { createOAuth } = require('./oauth');
+const { createTeams } = require('./teams'); /* 13차 MS Teams 연동(/api/conn/teams/* · Entra SSO microsoft) */
 const { createLearnerOAuth, createTickets } = require('./loauth'); /* QA7 학습자 소셜 가입 · 로그인(구글 · 카카오 · 네이버) */
 const REC = require('./records'); /* 가디언 4차 기록 · 데이터(접근권한 검토 · 내려받기 통제 · 국외 차단 · 보관 파기) */
 const { createMfa } = require('./mfa'); /* 보안 4차 #1 관리자 추가 인증 */
@@ -307,7 +308,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (act.startsWith('mile-')) return mileage.pub(req, res, tid, act); /* v42 학습 마일리지 */
     if (act.startsWith('mk-')) return market.pub(req, res, tid, act); /* 콘텐츠 마켓 학습자 진열대 · 시작(차감) */
     if (pii.pubOpen[key]) return pii.pubOpen[key](req, res, tid);
-    if (key === 'GET loauth') return { ready: loauth.ready }; /* QA7 키가 설정된 학습자 소셜 제공자(나머지는 화면에서 「준비 중」) */
+    if (key === 'GET loauth') return { ready: [...loauth.ready, ...(await teams.learnerReady(tid) ? ['microsoft'] : [])] }; /* QA7 키가 설정된 학습자 소셜 제공자(나머지는 화면에서 「준비 중」) */
     if (key === 'GET events' || key === 'POST events') return eventsRoute(req, res, tid, key);
     if (key === 'GET site') {
       const site = await inTenant(pool, tid, async c => { const r = (await c.query(`select doc->'lsite'->'pub' pub, doc->'aipol' aipol, coalesce(doc->'ledger'->>'on', doc->'org'->>'ledger_on') = 'true' led, ${SEQ_SQL} seq from tenant_state where tenant_id = $1`, [tid])).rows[0]; if (r && r.pub && r.pub.comm) r.live = (await c.query(COMM_LIVE_Q, [tid, r.seq])).rows.map(x => x.cm); return r; });
@@ -440,6 +441,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
 
   /* ── 운영자 소셜 로그인(v32.4) ── */
   const oauth = createOAuth({ geoCheck: (...a) => rec.geoCheck(...a), mfa, env, pool, HttpErr, readBody, limit, ip, cookies, secure, newSession, inTenant, audit, hashPw, newTid, sha, safeEq, pepper, mod, M, TYPES, emailOk, allowSignup, signupCode });
+  const teams = createTeams({ pool, inTenant, need, readBody, HttpErr, audit, limit, ip, cookies, secure, env, pepper, keys: piiKeys(env), crypt, send, newSession, mfa, geoCheck: (...x) => rec.geoCheck(...x), pii, log });
 
   /* ── 외부 AI 연결(MCP) · API 키(v16) ── */
   const mcp = createMcp({ pool, HttpErr, readBody, limit, audit, pepper, crypt, blocked: sec.keyBlocked, onDrift: d => { log.error && log.error('mcp tools hash drift', d.want, d.got); sec.signal('feature_off', 'mcp:' + d.id, { reason: 'mcp_tools_changed', want: d.want, got: d.got }); } }); /* 가디언 키 비활성 · egress 차단이면 키 인증 실패(401) */
@@ -457,7 +459,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
     'POST /api/keys': async req => mcp.createKey(await needStaff(req), req),
     'POST /api/keys/revoke': async req => mcp.revokeKey(await needStaff(req), req),
     'GET /api/health': async () => { await pool.query('select 1'); return { ok: true }; },
-    'GET /api/config': async () => ({ live: true, ...(mod ? { module: mod } : {}), signup: allowSignup && (!mod || mod === 'admin'), signupCode: !!signupCode, oauth: (!mod || mod === 'admin') ? oauth.providers : [], ai: !!aiKey, models: MODELS, aiDaily, ...fac.config() }),
+    'GET /api/config': async () => ({ live: true, ...(mod ? { module: mod } : {}), signup: allowSignup && (!mod || mod === 'admin'), signupCode: !!signupCode, oauth: (!mod || mod === 'admin') ? [...oauth.providers, ...(teams.live ? ['microsoft'] : [])] : [], ai: !!aiKey, models: MODELS, aiDaily, ...fac.config() }),
 
     'POST /api/signup': async (req, res) => {
       if (!allowSignup) throw new HttpErr(403, '지금은 새 기관 가입을 받지 않습니다.', 'signup_off');
@@ -796,11 +798,12 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       if (url.pathname === '/mcp') { if (!M.mcpAllowed(mod)) return send(res, 404, { error: 'not_found', message: '없는 주소입니다.' }); return await mcp.handle(req, res, send); }
       if (url.pathname.startsWith('/api/') && !M.apiAllowed(mod, req.method, url.pathname)) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
       if (url.pathname.startsWith('/api/')) {
+        if ((url.pathname.startsWith('/api/conn/teams/') || url.pathname.includes('/microsoft/')) && await teams.handle(req, res, url)) return; /* 13차 Teams 리다이렉트(조직 연결 · 회의 계정 · Entra SSO) */
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
         if (url.pathname.includes('/loauth/') && url.pathname.startsWith('/api/pub/') && await loauth.handle(req, res, url)) return;
         const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?|mk-[a-z]{2,6})$/);
         const sp = req.method === 'PUT' && url.pathname.match(/^\/api\/santa\/orgs\/(tn_[a-z0-9]{8,16})\/plan$/);
-        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname) || market.match(req.method, url.pathname) || group.match(req.method, url.pathname) || sec.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
+        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname) || market.match(req.method, url.pathname) || group.match(req.method, url.pathname) || teams.match(req.method, url.pathname) || sec.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처
           if (req.headers['x-didisam'] !== '1') throw new HttpErr(403, '허용되지 않은 요청입니다.', 'csrf');
@@ -819,7 +822,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       return send(res, 500, { error: 'server', message: '서버 오류가 발생했습니다.' });
     }
   });
-  srv.piiPurge = pii.purge; srv.recTick = rec.tick; srv.geoCheck = rec.geoCheck; srv.exportGate = rec.exportGate; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; srv.marketTick = market.tick; srv.groupTick = group.tick; srv.secTick = sec.tick; /* 가디언 기능 끄기 TTL 자동 복구 기록 */ /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
+  srv.piiPurge = pii.purge; srv.recTick = rec.tick; srv.geoCheck = rec.geoCheck; srv.exportGate = rec.exportGate; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; srv.marketTick = market.tick; srv.groupTick = group.tick; srv.secTick = sec.tick; /* 가디언 기능 끄기 TTL 자동 복구 기록 */ /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출) srv.teams = teams;
   return srv;
 }
 

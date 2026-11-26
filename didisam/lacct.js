@@ -9,6 +9,7 @@
    운영: /api/pub/<tid>/otp · signup · login{via} · me · pii · withdraw · guardian · verify (service/server/pii.js). SNS OAuth · 이메일 발송 · 본인확인은 '운영:' 지점에서 연동. */
 'use strict';
 const LA_SOC = [['kakao', '카카오'], ['naver', '네이버'], ['google', '구글'], ['apple', '애플']];
+const LA_MS = ['microsoft', '학교(회사) Microsoft']; /* 13차 Entra 학습자 로그인 — 운영 서버가 ready에 microsoft를 줄 때만(대학 · 기업 · 공공 + 기관이 켬) */
 const LA_SN = Object.fromEntries([['email', '이메일'], ['univ', '학번'], ['facebook', '페이스북'], ...LA_SOC]);
 const LA = { j: null, f: null, dlg: null };
 const laHash = s => { let a = 0x811c9dc5, b = 0x9e3779b1; for (const ch of String(s)) { const c = ch.codePointAt(0); a = Math.imul(a ^ c, 16777619) >>> 0; b = Math.imul(b ^ (c + a), 2654435761) >>> 0; } return a.toString(36) + b.toString(36); };
@@ -588,6 +589,8 @@ addEventListener('message', e => { try { if (!laPvJoin() || e.source !== window.
 LA.ready = null;
 function laReadyLoad() { if (!laLive() || LA.ready) return; LA.ready = []; api('GET', laP('loauth')).then(r => { LA.ready = (r && r.ready) || []; if (['login', 'join', 'find'].includes(route().a)) lrender(); }).catch(() => { }); }
 { const base = laCfg; laCfg = () => { const c = base(); if (laLive()) { const a = (SITE() && SITE().acct) || {}; c.social = (Array.isArray(a.social) ? a.social : []).filter(k => ['kakao', 'naver', 'google'].includes(k)); } return c; }; }
+{ if (!LA_SOC.some(x => x[0] === 'microsoft')) LA_SOC.push(LA_MS); LA_SN.microsoft = 'Microsoft';
+  const base = laCfg; laCfg = () => { const c = base(); c.social = (c.social || []).filter(k => k !== 'microsoft'); if (laLive() && (LA.ready || []).includes('microsoft')) c.social.push('microsoft'); return c; }; }
 const laPendOn = () => { try { return !!localStorage.getItem('didisam.app.pend.' + (LR.tid || '')); } catch (e) { return !!LA.pend; } };
 const laPendOff = () => { LA.pend = ''; LA.pinfo = null; try { localStorage.removeItem('didisam.app.pend.' + (LR.tid || '')); } catch (e) { } };
 function laNewHTML(cfg) { const can = cfg.mode === 'open' || (laUniv() && cfg.mode === 'open');
@@ -597,12 +600,12 @@ function laNewHTML(cfg) { const can = cfg.mode === 'open' || (laUniv() && cfg.mo
 { const base = laJoin; laJoin = r => { laReadyLoad(); if (LA.oj && laLive()) { LA.j = { tok: '', inv: null, kind: 'learner', sns: { prov: LA.oj, nick: '', oauth: true }, done: null, keep: {} }; LA.oj = ''; } return base(r); }; }
 LA_R.join = laJoin; /* 위 감싸기를 화면 표에도 */
 /* 소셜 로그인에서 돌아왔을 때 */
-const LA_OERR = { 'err-unset': '이 로그인 방식은 아직 준비 중이에요. 이메일로 가입 · 로그인해 주세요.', 'err-provider_off': '이 기관에서 쓰지 않는 로그인 방식이에요.', 'err-denied': '로그인을 취소했어요.', 'err-state': '로그인 시간이 지났어요. 다시 시도해 주세요.', 'err-provider': '로그인 서비스에서 정보를 받지 못했어요. 잠시 후 다시 시도해 주세요.', 'err-guardian_pending': '보호자 동의를 기다리고 있어요. 보호자에게 보낸 동의 링크를 확인해 주세요.' };
+const LA_OERR = { 'err-tenant': '기관에 연결된 Microsoft 조직 계정이 아니에요. 학교(회사) 계정으로 다시 로그인해 주세요.', 'err-msa': '개인 Microsoft 계정은 쓸 수 없어요. 학교(회사) 계정으로 로그인해 주세요.', 'err-unset': '이 로그인 방식은 아직 준비 중이에요. 이메일로 가입 · 로그인해 주세요.', 'err-provider_off': '이 기관에서 쓰지 않는 로그인 방식이에요.', 'err-denied': '로그인을 취소했어요.', 'err-state': '로그인 시간이 지났어요. 다시 시도해 주세요.', 'err-provider': '로그인 서비스에서 정보를 받지 못했어요. 잠시 후 다시 시도해 주세요.', 'err-guardian_pending': '보호자 동의를 기다리고 있어요. 보호자에게 보낸 동의 링크를 확인해 주세요.' };
 /* 다른 화면 코드가 결과(?oa=…)를 스크립트를 읽을 때 바로 걷어 둔다(운영 모드 판단 뒤 처리) */
 LA.oback = ''; { const m = /[?&]oa=([\w-]{1,40})/.exec(location.search); if (m) { LA.oback = m[1]; try { history.replaceState(null, '', location.pathname + location.search.replace(/([?&])oa=[\w-]+&?/, '$1').replace(/[?&]$/, '') + location.hash); } catch (e) { } } }
 function laOauthBack() { const v = LA.oback; if (!v) return false; LA.oback = ''; const go = h => { try { history.replaceState(null, '', h); } catch (e) { location.hash = h; } };
   if (v === 'ok') { go('#home'); laPendOff(); api('GET', laP('me')).then(r => { laLiveMe(r); toast(`${(LR.me && LR.me.nick) || '회원'}님, 반갑습니다.`, 'ok'); lrender(); }).catch(x => toast(typeof errMsg === 'function' ? errMsg(x) : '로그인하지 못했어요.', 'bad')); return true; }
-  const j = /^join-(kakao|google|naver)$/.exec(v); if (j) { LA.oj = j[1]; go('#join'); return true; }
+  const j = /^join-(kakao|google|naver|microsoft)$/.exec(v); if (j) { LA.oj = j[1]; go('#join'); return true; }
   if (v === 'pending' || v === 'rejected') { LA.pend = 'live'; LA.pinfo = null; laPendKeep('live'); go('#pending'); return true; }
   go('#login'); setTimeout(() => toast(LA_OERR[v] || '로그인하지 못했어요. 다시 시도해 주세요.', 'warn'), 0); return true; }
 /* 승인 대기 화면(운영) — 신청 정보 · 예상 안내 · 문의 · 승인 확인 */
