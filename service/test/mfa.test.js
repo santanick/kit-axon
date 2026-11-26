@@ -2,7 +2,7 @@
 /* 보안 4차 #1 관리자 추가 인증(이메일 인증번호 · 인증 앱 TOTP · 기관 정책 · MFA_OFF 시험 예외)
    DATABASE_URL=postgresql://… node --test service/test/mfa.test.js */
 const test = require('node:test'); const assert = require('node:assert/strict'); const http = require('node:http');
-const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app'); const { hotp, totpCheck, b32, unb32, maskEmail } = require('../server/mfa');
+const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app'); const { hotp, totpCheck, b32, unb32, maskEmail, createMfa } = require('../server/mfa');
 
 test('TOTP RFC 6238 시험 벡터 · base32 · 재사용 방지', () => {
   const key = Buffer.from('12345678901234567890');
@@ -47,6 +47,19 @@ test('운영자 2단계 인증', async t => {
     const again = await call('C', 'POST', '/api/login/mfa', { ticket: l.j.ticket, code }); assert.equal(again.status, 401); assert.equal(again.j.error, 'mfa_expired', '1회용');
     const au = (await pool.query("select action, detail::text d from audit_log where actor = $1 and action in ('login', 'mfa.fail') order by id", [OW])).rows;
     assert.deepEqual(au.map(r => r.action), ['mfa.fail', 'login']); assert.ok(!au.some(r => r.d && r.d.includes(code)), '인증번호는 기록에 없음');
+  });
+
+  await t.test('freshWithin(user, seconds) — 최근 2단계 통과 여부(통합 관리 서버용 공개 함수)', async () => {
+    const m = createMfa({ pool, env: { MFA_OFF: '0' }, log: {} }); const mOff = createMfa({ pool, env: { MFA_OFF: '1' }, log: {} });
+    const uid = (await pool.query('select id::text id from users where email = $1', [OW])).rows[0].id;
+    assert.equal(await m.freshWithin(uid, 60), true, '방금 통과 → 60초 안'); assert.equal(await m.freshWithin({ uid }, 60), true, '{ uid }'); assert.equal(await m.freshWithin({ id: uid }, 60), true, '{ id }');
+    await pool.query("update mfa_fresh set at = now() - interval '120 seconds' where user_id = $1", [uid]);
+    assert.equal(await m.freshWithin(uid, 60), false, '120초 전 통과 → 60초 기준 아님'); assert.equal(await m.freshWithin(uid, 300), true, '300초 기준은 통과');
+    for (const bad of [0, -5, NaN, 'x', null]) assert.equal(await m.freshWithin(uid, bad), false, `seconds ${bad}`);
+    for (const bad of ['', 'not-a-uuid', null, {}, { uid: "1' or '1'='1" }]) assert.equal(await m.freshWithin(bad, 60), false, `user ${JSON.stringify(bad)}`);
+    const other = '00000000-0000-4000-8000-000000000000'; assert.equal(await m.freshWithin(other, 3600), false, '2단계를 한 적 없는 사용자');
+    assert.equal(await mOff.freshWithin(uid, 1), true, 'MFA_OFF=1(시험 · 데모)은 true'); assert.equal(await mOff.freshWithin('bad', 1), false, 'MFA_OFF여도 잘못된 user는 false');
+    await pool.query("update mfa_fresh set at = now() where user_id = $1", [uid]);
   });
   await t.test('5번 틀리면 무효 · 재발송 30초 간격', async () => {
     const l = await login('D', OW, PW); const rs = await call('D', 'POST', '/api/login/mfa/resend', { ticket: l.j.ticket }); assert.equal(rs.status, 429); assert.equal(rs.j.error, 'mfa_wait');
