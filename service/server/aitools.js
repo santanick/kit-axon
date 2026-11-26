@@ -10,6 +10,7 @@ const crypto = require('node:crypto');
 
 const TIER = Object.freeze({
   get_overview: 0, list_courses: 0, list_learners_at_risk: 0, list_open_questions: 0, open_screen: 0, download_report: 0, start_guide: 0, connect_guide: 0, web_search: 0,
+  quote_content_pass: 0, open_pass_builder: 0, /* v48 콘텐츠 마켓(mksam.js): 견적 계산(저장 안 함) · 패스 구성 화면 열기 — 조회형 */
   create_courses: 1, add_learners: 1, enroll_learners: 1, update_course: 1, build_homepage: 1, edit_homepage: 1,
   run_studio_command: 2, studio_action: 2, run_intent: 2, run_screen_action: 2, create_automation: 2, /* 계획 카드로 메시지 · 메일 · Slack 발송까지 이어질 수 있음 */
 });
