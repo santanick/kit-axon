@@ -137,3 +137,7 @@
   .k-date>button:first-child,.k-date>.k-days+button{width:44px;min-width:44px;height:44px;padding:0;justify-content:center}
   .k-date>.mini{grid-area:sum;text-align:center;min-width:0}
 }
+/* QA49-7 다크: 원생 목록 상태 칩이 --card 미정의로 흰 바탕 + 밝은 글자(대비 1.1)이던 문제 · 휴대폰 44px */
+html[data-theme="dark"] .k-chip{background:var(--surface)}
+html[data-theme="dark"] .k-chip.on{background:var(--ink);color:var(--surface)}
+@media (max-width:760px){.k-chip,.k-chips2 .k-chip{min-height:44px}}

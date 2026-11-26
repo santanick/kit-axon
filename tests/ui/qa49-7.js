@@ -120,7 +120,7 @@ const FOCUS_PROBE = () => { const el = document.activeElement; if (!el || el ===
       await p.addInitScript(t => { try { localStorage.setItem('didisam.theme', t); sessionStorage.setItem('didisam.learner.sample', JSON.stringify({ sid: '20269000', dept: '26년 10월 기수', id: '20269000' })); localStorage.setItem('didisam.app.instx', '1'); } catch (e) { } }, th);
       await p.goto(`${base}/learner.html?demo=adult${app ? '&app=1' : ''}&mk=1#home`, { waitUntil: 'load' }); await p.waitForTimeout(900);
       const pre = app ? 'app' : 'web';
-      for (const h of ['#home', '#shop', '#my', '#cal', '#notes', '#ledger', '#connect', '#mk']) { await p.evaluate(x => { location.hash = x; scrollTo(0, 0); }, h); await p.waitForTimeout(420); await check(p, `${pre}-${h.slice(1)}`, w, th, '#lm, main, #app', 'lr', h === '#home'); }
+      for (const h of ['#home', '#shop', '#my', '#cal', '#notes', '#ledger', '#connect', '#mk']) { await p.evaluate(x => { location.hash = x; scrollTo(0, 0); }, h); await p.waitForTimeout(420); await p.evaluate(() => document.querySelectorAll('#lm details.lhb-more').forEach(d => { d.open = true; })); await check(p, `${pre}-${h.slice(1)}`, w, th, '#lm, main, #app', 'lr', h === '#home'); }
       /* 튜터 창: 화면 맥락 줄 · 칩 */
       for (const h of ['#cal', '#ledger']) { await p.evaluate(x => { location.hash = x; }, h); await p.waitForTimeout(400); await p.evaluate(() => { if (typeof ltOpen === 'function' && !LT.open) ltOpen(); try { ltRender(); } catch (e) { } }); await p.waitForTimeout(250);
         await check(p, `${pre}-tutor-${h.slice(1)}`, w, th, '#ltPanel', 'lr', h === '#cal'); await p.evaluate(() => { try { if (LT.open && typeof ltClose === 'function') ltClose(); } catch (e) { } }); }

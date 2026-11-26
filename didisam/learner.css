@@ -661,3 +661,5 @@ html[data-theme="dark"] body:not(.lapp) :is(.hero,.sec.dark,.myh,.cp.big,.lgl,.l
 html body .myh .myp.myp43{color:var(--ink)}
 html body .myh .myp.myp43 .mpi :is(small,span:not(.tg)),html body .myh .myp.myp43 .myp43s dt{color:var(--mute)}
 html body .myh .myp.myp43 .myp43s dd,html body .myh .myp.myp43 .myp43s dd b{color:var(--ink)}
+/* QA49-7 다크: 학습자 화면 일부 조각(연결 목록 lcx 등)이 쓰는 --muted가 정의되지 않아 라이트 회색(#736B5F, 다크 바탕 대비 3.7)으로 떨어지던 문제 — 다크 보조 글자색으로 */
+html[data-theme="dark"]{--muted:var(--mute,#A7B8AD)}
