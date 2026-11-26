@@ -152,11 +152,11 @@ final class MkRoutes {
                 ObjectNode o = O().put("ok", true); o.putObject("collection").put("id", id).put("kind", kind).put("title", title).put("count", ok.size()); o.set("skipped", an(skipped)); return o; }); });
 
         S.r("GET /api/market/ops/orgs", (req, res, raw, p) -> { S.needSanta(req); String tq = trim(str(qp(req, "q"), 60)); String kd = str(qp(req, "kind"), 10); boolean pil = "1".equals(qp(req, "pilot"));
-            /* tenants는 마켓 역할 밖, mk_party는 산타 범위(RLS FORCE) — 두 번 읽어 합친다(Node는 pool.query 한 번이라 RLS에 막혀 pilot이 비어 보임: 개발자 1 보고) */
-            List<ObjectNode> T0 = db.raw(() -> db.q("select t.id, t.name, t.type, t.created_at from tenants t where ($1 = '' or t.name ilike '%' || $1 || '%' or t.id = $1) order by t.created_at desc limit 5000", tq));
+            /* tenants는 마켓 역할 밖, mk_party는 산타 범위(RLS FORCE) — 두 번 읽어 합친다(Node d31581a와 같음) */
+            List<ObjectNode> T0 = db.raw(() -> db.q("select t.id, t.name, t.type, t.created_at from tenants t where ($1 = '' or t.name ilike '%' || $1 || '%' or t.id = $1) order by t.created_at desc limit 2000", tq));
             Map<String, ObjectNode> PA = new LinkedHashMap<>(); for (ObjectNode x : S.T(() -> db.q("select tid, kind, pilot, cp_name, pilot_by, pilot_at from mk_party"))) PA.put(s(x, "tid"), x);
             List<ObjectNode> rows = new ArrayList<>(); for (ObjectNode t0 : T0) { ObjectNode pa = PA.get(s(t0, "id")); String kind = pa == null ? "buyer" : s(pa, "kind"); boolean pv = pa != null && B(pa, "pilot");
-                if (pil && !pv) continue; if (!kd.isEmpty() && !kd.equals(kind)) continue; ObjectNode r = t0.deepCopy(); r.put("kind", kind).put("pilot", pv); r.set("cp_name", g(pa, "cp_name")); r.set("pilot_by", g(pa, "pilot_by")); r.set("pilot_at", g(pa, "pilot_at")); r.put("_p", pa == null ? 2 : pv ? 0 : 1); rows.add(r); }
+                if (pil && !pv) continue; if (!kd.isEmpty() && !kd.equals(kind)) continue; ObjectNode r = t0.deepCopy(); r.put("kind", kind).put("pilot", pv); r.set("cp_name", g(pa, "cp_name")); r.set("pilot_by", g(pa, "pilot_by")); r.set("pilot_at", g(pa, "pilot_at")); r.put("_p", pv ? 0 : 1); rows.add(r); }
             rows.sort((x, y) -> Long.compare(n(x, "_p"), n(y, "_p"))); if (rows.size() > 500) rows = rows.subList(0, 500); List<ObjectNode> L = new ArrayList<>();
             for (ObjectNode r : rows) { ObjectNode o = cp(r, "tid", "id", "name", "name", "type", "type", "kind", "kind", "cpName", "cp_name"); ObjectNode mk = o.putObject("mk"); mk.set("pilot", g(r, "pilot")); mk.set("by", g(r, "pilot_by")); mk.set("at", g(r, "pilot_at")); L.add(o); }
             return pageOf(req, L); });
