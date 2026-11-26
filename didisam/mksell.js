@@ -103,7 +103,7 @@
   /* ── 메뉴 · 프리셋 · 기존 저장 사용자(공급 · 운영 메뉴 3개) ── */
   MENU.mksell = { label: '마켓 판매', ws: 'ops', mk: true, gate: () => window.mkGate('mksell') };
   MENU.mkcp = { label: 'CP 파트너 포털', ws: 'ops', mk: true, gate: () => window.mkGate('mkcp') };
-  MENU.mkops = { label: '마켓 운영(산타)', ws: 'ops', mk: true, santa: true, gate: () => window.mkGate('mkops') }; /* 통합: core.js menuHid가 gate로 사이드바 노출 판정 */
+  MENU.mkops = { label: '마켓 운영', ws: 'ops', mk: true, santa: true, gate: () => window.mkGate('mkops') }; /* 통합: core.js menuHid가 gate로 사이드바 노출 판정 */
   if (typeof TEACH_NO !== 'undefined' && Array.isArray(TEACH_NO)) ['mksell', 'mkcp', 'mkops'].forEach(id => { if (!TEACH_NO.includes(id)) TEACH_NO.push(id); }); /* C5 — core.js 수정 전에도 교수자 직접 이동 차단 */
   Object.keys(PRESET).forEach(k => { const P = PRESET[k]; ['mksell', 'mkcp', 'mkops'].forEach(id => { if (!P.on.includes(id) && !P.off.includes(id)) P.off.push(id); }); });
   if (typeof MENU_ALIAS !== 'undefined') { MENU_ALIAS.mkreview = () => { UI.mkops = 'review'; return 'mkops'; }; MENU_ALIAS.mkoptin = () => { UI.mkcp = 'optin'; return 'mkcp'; }; MENU_ALIAS.mkpilot = () => { UI.mkops = 'pilot'; return 'mkops'; }; MENU_ALIAS.mkpromo = () => { UI.mkcp = 'promo'; return 'mkcp'; }; MENU_ALIAS.mkrev = () => { UI.mkops = 'rev'; return 'mkops'; }; MENU_ALIAS.mkorig = () => { UI.mkops = 'orig'; return 'mkops'; }; }
@@ -117,7 +117,11 @@
   if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { const E = base(...a) || []; try { if (S && S.org && Array.isArray(E) && !E.includes('mkops') && window.mkGate('mkops')) return [...E, 'mkops']; } catch (e) { } return E; }; }
   if (typeof upgradeState === 'function') { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { mkNav(); } catch (e) { console.error('mk nav', e); } return r; }; } /* eslint-disable-line no-global-assign */
   if (typeof postSeed === 'function') { const base = postSeed; postSeed = (...a) => { const r = base(...a); try { mkNav(); } catch (e) { console.error('mk nav', e); } return r; }; } /* eslint-disable-line no-global-assign */
-  if (typeof DICT !== 'undefined') Object.assign(DICT, { '마켓 판매': 'Market sales|マーケット販売|市场销售|Ventas|Ventes|Verkauf|Bán hàng|การขาย|Продажи', 'CP 파트너 포털': 'CP partner portal|CPパートナー|CP 合作门户|Portal CP|Portail CP|CP-Portal|Cổng CP|พอร์ทัล CP|Портал CP', '마켓 운영(산타)': 'Market ops (Santa)|マーケット運営|市场运营|Operación|Opérations|Betrieb|Vận hành|การดำเนินงาน|Операции' });
+  /* 통합: AI SAM 화면 칩 「○○ 알려줘」(마켓 메뉴 4개) — 규칙 엔진이 메뉴 설명과 [열기] 버튼으로 답합니다 */
+  { const MKD = { market: '크레딧 패스 · CP 과정을 둘러보고, 잔액 · 사용 현황과 기관 통제를 봅니다.', mksell: '기관이 만든 상품을 마켓에 등록하고 판매 정산 · 가명 분석을 봅니다.', mkcp: 'CP 단가표 · 참여 설정 · 개별 임대 승인 요청 · 월 소진 정산서를 관리합니다.', mkops: '산타 운영 — 심사 대기열 · 견적 · 크레딧 계약 · 분기 지급 마감 · 시범 기관을 관리합니다.' };
+    if (typeof answer === 'function') { const base = answer; answer = (q, ...r) => { try { const s0 = String(q || '').trim(); if (S && S.org) for (const id of Object.keys(MKD)) { if (!MENU[id]) continue; const l = mlabel(id); if (s0.startsWith(l) && /(알려줘|현황|상태|보여줘|뭐야|설명)/.test(s0) && (typeof menuHid !== 'function' || !menuHid(id))) return { text: `「${l}」 화면에서는 ${MKD[id]}`, btn: { act: 'go', v: id, label: `${l} 열기` } }; } } catch (e) { console.error('mk answer', e); } return base(q, ...r); }; } /* eslint-disable-line no-global-assign */
+    if (typeof window.slimMD === 'function') { const base = window.slimMD; window.slimMD = id => ['mksell', 'mkcp', 'mkops'].includes(id) ? [MKD[id], `${mlabel(id)} 알려줘`] : base(id); } }
+  if (typeof DICT !== 'undefined') Object.assign(DICT, { '마켓 판매': 'Market sales|マーケット販売|市场销售|Ventas|Ventes|Verkauf|Bán hàng|การขาย|Продажи', 'CP 파트너 포털': 'CP partner portal|CPパートナー|CP 合作门户|Portal CP|Portail CP|CP-Portal|Cổng CP|พอร์ทัล CP|Портал CP', '마켓 운영': 'Market ops (Santa)|マーケット運営|市场运营|Operación|Opérations|Betrieb|Vận hành|การดำเนินงาน|Операции' });
 
   /* ── A5 · A6 판매 기관(최소) ── */
   const DS = () => { if (!S) return null; const td = today(), pm = addMonths(td, -1).slice(0, 7); if (!S.mksellD || !Array.isArray(S.mksellD.items)) S.mksellD = { v: 1, items: [

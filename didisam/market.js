@@ -105,10 +105,12 @@
     S.nav.mk1 = 1; }
   /* 간편 메뉴(slimEss): 시범 기관 · 기본 켬 유형이면 「콘텐츠 마켓」을 보관함(clib) 바로 뒤에 둡니다(spec 4-3 · 4-4) */
   if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { let E = base(...a) || []; try { if (S && S.org && pilot() && ON_TYPES.includes(S.org.type) && Array.isArray(E) && !E.includes('market')) { const at = E.findIndex(id => id === 'clib' || id === 'library'); E = [...E]; E.splice(at < 0 ? E.length : at + 1, 0, 'market'); } } catch (e) { console.error('market slim', e); } return E; }; }
+  /* 보관함(clib)이 나중에 다시 붙으면(기존 저장 사용자 이전) 마켓 뒤로 밀려 탭 줄 끝에 가려지므로, 마켓을 늘 clib 바로 뒤에 둡니다 */
+  function mkAfterClib() { const T = S && S.nav && S.nav.tabs && S.nav.tabs.learn; if (!T) return; const m = T.findIndex(x => x.id === 'market'), c = T.findIndex(x => x.id === 'clib'); if (m < 0 || c < 0 || m > c) return; const [row] = T.splice(m, 1); T.splice(T.findIndex(x => x.id === 'clib') + 1, 0, row); }
   if (typeof window.slimMD === 'function') { const base = window.slimMD; window.slimMD = id => id === 'market' ? ['콘텐츠 패스 · 마켓을 둘러봅니다', '예산 3,000만 원으로 비교과 패스 구성해 줘'] : base(id); }
   if (typeof DICT !== 'undefined') Object.assign(DICT, { '콘텐츠 마켓': 'Content Market|コンテンツマーケット|内容市场|Mercado de contenidos|Marché de contenus|Content-Markt|Chợ nội dung|ตลาดคอนเทนต์|Маркет контента', '콘텐츠 패스': 'Content Pass|コンテンツパス|内容通行证|Pase de contenidos|Pass contenus|Content-Pass|Gói nội dung|พาสคอนเทนต์|Контент-пасс' });
   if (typeof postSeed === 'function') { const base = postSeed; postSeed = (...a) => { const r = base(...a); try { ensure(); } catch (e) { console.error('market', e); } return r; }; } /* eslint-disable-line no-global-assign */
-  if (typeof upgradeState === 'function') { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org) { ensure(); mk1Migrate(); } } catch (e) { console.error('market', e); } return r; }; } /* eslint-disable-line no-global-assign */
+  if (typeof upgradeState === 'function') { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { if (S && S.org) { ensure(); mk1Migrate(); mkAfterClib(); } } catch (e) { console.error('market', e); } return r; }; } /* eslint-disable-line no-global-assign */
   /* 학습자 게시본: 진열대 · 기관 통제 규칙만(학습자 개인정보 · 금액 · 계약 정보 없음, spec 4-4) */
   const shelfOf = c => COLS.filter(x => (c.ctrl.allowCols || c.cols || []).includes(x.id)).map(x => ({ colId: x.id, title: x.title, items: PRODS.filter(p => p.optin === 'credit' && p.cols.includes(x.id)).map(p => ({ id: p.id, title: p.title, cp: p.cp, lessons: p.lessons, hours: p.hours, credits: MC('courseCredits')(p.listPrice), img: p.img })) }));
   if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const pub = base(...a); try { if (pub && S && S.market && pilot()) { const c = con(); pub.mk = c && !S.market.live ? { on: true, passName: `${S.org.name || ''} 패스`, validTo: c.validTo, chargeRule: 'first_play', shelf: shelfOf(c), rule: { monthCap: c.ctrl.monthCap || 0, allowGroups: c.ctrl.allowGroups || [], preFrom: c.ctrl.preFrom || 0, avg: 45 }, b2c: false } : { on: !!c || !!S.market.live }; } } catch (e) { console.error('market pub', e); } return pub; }; } /* eslint-disable-line no-global-assign */
@@ -124,7 +126,7 @@
   /* ── 운영 서버(/api/market/*) ── */
   const LV = { key: '', d: {}, busy: false, err: '', errAt: 0 };
   const ERRN = { mk_plan: '디디쌤 유료 구독 기관만 구매 · 판매할 수 있습니다.', mk_margin: '보너스를 포함한 산타 몫이 30% 미만이라 계약 · 견적을 만들 수 없습니다. 아래 대안 중 하나를 고르십시오.', mk_bonus_max: '보너스 크레딧은 구매 크레딧의 7%까지만 줄 수 있습니다.', mk_quote_state: '이 견적은 만료되었거나 CP 승인을 기다리고 있습니다.', mk_restore_window: '복원은 차감 후 7일 이내, 진도 10% 미만일 때만 할 수 있습니다. 그 밖의 경우 [이의 신청]으로 산타에 요청하십시오.', forbidden: '권한이 없습니다.', mk_off: '이 기관은 콘텐츠 마켓 시범 대상이 아닙니다.' };
-  const errOf = e => { const c = e && (e.code || e.error || (e.body && e.body.error)); return ERRN[c] || (e && e.message && /[가-힣]/.test(e.message) ? e.message : `운영 서버의 콘텐츠 마켓 기능에 연결하지 못했습니다${e && e.status ? `(${e.status})` : ''}. 잠시 뒤 다시 시도하십시오.`); };
+  const errOf = e => { const c = e && (e.code || e.error || (e.body && e.body.error)); return ERRN[c] || errMsg(e, `운영 서버의 콘텐츠 마켓 기능에 연결하지 못했습니다${e && e.status ? `(${e.status})` : ''}. 잠시 뒤 다시 시도하십시오.`); };
   const qs = o => Object.entries(o).filter(([, v]) => v != null && v !== '').map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
   function livePull(tab) { const need = { home: ['GET', '/api/market/home'] };
     if (tab === 'home' || tab === 'build') need.prods = ['GET', '/api/market/products?' + qs({ q: UI.mkQ || '', optin: UI.mkSingle ? '' : 'credit', size: 12 })];
@@ -270,7 +272,7 @@
     if (!pilot()) return '<div class="empty">이 기관은 콘텐츠 마켓 시범 대상이 아닙니다.</div>';
     const warn = LIVEON() && LV.err ? `<div class="mk-guard" role="alert"><div><b>${esc(LV.err)}</b></div></div>` : '';
     const ro = teacher() ? '<p class="mk-sub">교수자 권한에서는 크레딧 · 가격 · 계약 정보를 보여 주지 않습니다.</p>' : '';
-    let body = ''; try { body = ({ home: vHome, item: vItem, build: vBuild, credit: vCredit, ctrl: vCtrl, approve: vApprove, cart: vCart })[tab](); } catch (e) { console.error('market view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(typeof errMsg === 'function' ? errMsg(e) : e.message)}</div>`; }
+    let body = ''; try { body = ({ home: vHome, item: vItem, build: vBuild, credit: vCredit, ctrl: vCtrl, approve: vApprove, cart: vCart })[tab](); } catch (e) { console.error('market view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(errMsg(e, '잠시 뒤 다시 시도하십시오.'))}</div>`; }
     const right = teacher() ? '' : tab === 'build' ? '' : '<button class="btn pri" data-act="tab" data-key="market" data-v="build">크레딧 패스 구성하기</button>';
     return `${head('콘텐츠 마켓', teacher() ? '우리 기관 패스에 들어 있는 검수된 CP 과정을 둘러보고 과정에 넣습니다.' : '크레딧형 콘텐츠 패스로 검수된 CP 과정을 이용합니다. 1크레딧 = 1,000원(부가세 별도).', right)}${subtabs(tab === 'item' ? 'home' : tab)}<div class="mk" data-mk-tab="${tab}">${warn}${ro}${body}</div>`; }
   VIEWS.market = viewMarket;
