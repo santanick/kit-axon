@@ -7,7 +7,9 @@ cd "$(dirname "$0")/.."
 PB=/usr/lib/postgresql/16/bin; PGP=${PGP:-5620}
 for d in tln tlj; do su postgres -c "$PB/psql -h /tmp -p $PGP -U postgres -qc 'drop database if exists $d' -c 'create database $d owner didisam'"; done
 . test/env.sh
-node test/contract-teams-live.js serve 9603 & MP=$!
+K=$(mktemp -d); openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out $K/k.pem 2>/dev/null; openssl pkey -in $K/k.pem -pubout -out $K/pub.pem 2>/dev/null
+THUMB=$(openssl rand -hex 20)   # 시험용 지문(가짜 서버가 x5t로 대조)
+MOCK_CERT_PUB=$K/pub.pem MOCK_CERT_THUMB=$THUMB node test/contract-teams-live.js serve 9603 & MP=$!
 export OAUTH_MOCK_URL=http://127.0.0.1:9603 MS_CLIENT_ID=ms-app-contract MS_CLIENT_SECRET=ms-sec-contract TEAMS_WEBHOOK_TEST=1 TEAMS_GAP_MS=20 NEW_DEVICE_MAIL=off
 export SIGNUP_CODE=C0DE SANTA_ADMIN_EMAILS=grp-santa@example.com PII_KEY=$(printf 'a%.0s' {1..64}) MFA_OFF=1
 N=${N:-$(cd .. && pwd)}
@@ -17,5 +19,12 @@ mig tln 9601; mig tlj 9602
 DATABASE_URL=postgres://didisam:x@127.0.0.1:$PGP/tln PORT=9625 PUBLIC_DIR=$N/service/public node $N/service/server/index.js > /tmp/tl2-node.log 2>&1 & NP=$!
 JDBC_URL=jdbc:postgresql://127.0.0.1:$PGP/tlj JDBC_USER=didisam JDBC_PASSWORD=x PORT=9620 PUBLIC_DIR=$N/service/public java -jar target/didisam-egov.war > /tmp/tl2-java.log 2>&1 & JP=$!
 for i in $(seq 1 120); do curl -s 127.0.0.1:9620/api/health >/dev/null && curl -s 127.0.0.1:9625/api/health >/dev/null && break; sleep 1; done
+start() { DATABASE_URL=postgres://didisam:x@127.0.0.1:$PGP/tln PORT=9625 PUBLIC_DIR=$N/service/public node $N/service/server/index.js >> /tmp/tl2-node.log 2>&1 & NP=$!
+  JDBC_URL=jdbc:postgresql://127.0.0.1:$PGP/tlj JDBC_USER=didisam JDBC_PASSWORD=x PORT=9620 PUBLIC_DIR=$N/service/public java -jar target/didisam-egov.war >> /tmp/tl2-java.log 2>&1 & JP=$!
+  for i in $(seq 1 120); do curl -s 127.0.0.1:9620/api/health >/dev/null && curl -s 127.0.0.1:9625/api/health >/dev/null && break; sleep 1; done; }
 node test/contract-teams-live.js http://127.0.0.1:9625 http://127.0.0.1:9620 http://127.0.0.1:9603; RC=$?
-kill $NP $JP $MP; wait 2>/dev/null; exit $RC
+# 2단계: 인증서 자격 증명(비밀값 없음) · 갱신 토큰 만료 — 서버를 새로 띄워 토큰 캐시를 비운다
+kill $NP $JP; wait $NP $JP 2>/dev/null
+unset MS_CLIENT_SECRET; export MS_CLIENT_CERT_PEM="$(awk '{printf "%s\\n", $0}' $K/k.pem)" MS_CLIENT_CERT_THUMB=$THUMB
+start; node test/contract-teams-live.js http://127.0.0.1:9625 http://127.0.0.1:9620 http://127.0.0.1:9603 cert; RC2=$?
+kill $NP $JP $MP; wait 2>/dev/null; rm -rf $K; [ $RC = 0 ] && [ $RC2 = 0 ]
