@@ -13,7 +13,7 @@ public class TeamsController {
     @GetMapping({ "/api/conn/teams/consent/start", "/api/conn/teams/consent/whoami", "/api/conn/teams/consent/callback", "/api/conn/teams/account/start", "/api/conn/teams/account/callback",
         "/api/oauth/microsoft/start", "/api/oauth/microsoft/callback", "/api/pub/loauth/microsoft/callback", "/api/pub/{tid}/loauth/microsoft/start" })
     public void redirect(HttpServletRequest q, HttpServletResponse r) throws Exception { svc.redirectRoute(q.getRequestURI(), q, r); }
-    @PostMapping("/api/oauth/microsoft/link-start") public Object linkStart(HttpServletRequest q) throws Exception { return svc.opLinkStart(q); }
+    @PostMapping("/api/oauth/microsoft/link-start") public Object linkStart(HttpServletRequest q, HttpServletResponse r) throws Exception { return svc.opLinkStart(q, r); }
     @RequestMapping(value = { "/api/conn/teams", "/api/conn/teams/**" }, method = { RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH, RequestMethod.DELETE })
     public Object any(@RequestBody(required = false) byte[] b, HttpServletRequest q, HttpServletResponse r) throws Exception { return svc.route(q, r, b); }
 }

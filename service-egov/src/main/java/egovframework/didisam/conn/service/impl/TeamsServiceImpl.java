@@ -77,7 +77,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     static JsonNode g(JsonNode r, String k) { JsonNode v = r == null ? null : r.get(k); return v == null ? F.nullNode() : v; }
     static String s(JsonNode r, String k) { JsonNode v = g(r, k); return v.isNull() ? null : v.asText(); }
 
-    final MkDb db; final TenantTx ttx; final AuthService auth; final DdRateLimiter rl; final DdStateCrypto crypt; final boolean live, testHook; final List<String> extraHosts; final byte[] KEY; final long gap;
+    final MkDb db; final TenantTx ttx; final AuthService auth; final DdRateLimiter rl; final DdStateCrypto crypt; final boolean live, testHook; final List<String> extraHosts; final byte[] KEY, IDX; final long gap;
     public TeamsServiceImpl(MkDb db, TenantTx ttx, AuthService auth, DdRateLimiter rl, DdStateCrypto crypt, @Value("${MS_CLIENT_ID:}") String msId, @Value("${NODE_ENV:}") String nodeEnv,
                             @Value("${TEAMS_WEBHOOK_HOSTS:}") String hosts, @Value("${TEAMS_WEBHOOK_TEST:}") String th, @Value("${TEAMS_GAP_MS:1000}") String gapMs,
                             @Value("${PII_KEY:}") String piiKey, @Value("${SESSION_PEPPER:}") String pepper) {
@@ -86,6 +86,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         long gp; try { gp = Math.max(0, Long.parseLong(gapMs.trim())); } catch (Exception e) { gp = 1000; } this.gap = gp;
         byte[] k = null; String raw = piiKey == null ? "" : piiKey.trim();
         if (!raw.isEmpty()) { try { k = raw.matches("(?i)^[0-9a-f]{64}$") ? hexBytes(raw) : Base64.getDecoder().decode(raw); } catch (Exception e) { k = null; } if (k != null && k.length != 32) k = null; }
+        this.IDX = k != null ? hkdf(k, "didisam-pii-bidx-v1") : null;
         this.KEY = k != null ? hkdf(hkdf(k, "didisam-pii-enc-v1"), "didisam-conn-teams-v1") : hkdf((pepper == null ? "" : pepper).getBytes(StandardCharsets.UTF_8), "didisam-conn-teams-dev");
     }
     static byte[] hexBytes(String h) { byte[] o = new byte[h.length() / 2]; for (int i = 0; i < o.length; i++) o[i] = (byte) Integer.parseInt(h.substring(2 * i, 2 * i + 2), 16); return o; }
@@ -288,26 +289,31 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         String subject = trim(str(get(b, "subject"), 200)); if (subject.isEmpty() || subject.length() > 120) throw E("teams_input", map("field", "subject"));
         Instant s0 = parseT(get(b, "start")), e0 = parseT(get(b, "end")); if (s0 == null || e0 == null || !e0.isAfter(s0) || e0.toEpochMilli() - s0.toEpochMilli() > 24 * 3600e3) throw E("teams_time");
         String classId = str(get(b, "classId"), 60), itemId = str(get(b, "itemId"), 60);
-        if (live) throw E("teams_unset"); /* Java 1차: Graph 회의 만들기는 Node 서버(키 설정 시) — 남은 항목 */
-        String id = rid("tm_"), joinUrl = "/learner.html#live-demo";
-        boolean linked = T(t0, () -> { db.x("insert into conn_teams_meeting (id, tenant_id, class_id, item_id, account_id, ms_id, join_url, subject, start_at, end_at, demo, created_by) values ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10::timestamptz,$11,$12)", id, t0, classId, itemId, "", "", joinUrl, subject, iso(s0), iso(e0), true, email(a));
-            JsonNode ok = !classId.isEmpty() && !itemId.isEmpty() && !(get(b, "docLink") != null && get(b, "docLink").isBoolean() && !get(b, "docLink").asBoolean()) ? docEdit(t0, doc -> { ObjectNode[] x = itemOf(doc, classId, itemId); if (x == null) return null; x[1].put("url", joinUrl); x[1].putObject("teams").put("mid", id).put("joinUrl", joinUrl).put("accountId", "").put("demo", true); return F.booleanNode(true); }) : null;
+        Object[] L0 = T(t0, () -> load(t0)); JsonNode md = get(get(g((JsonNode) L0[1], "cfg"), "meetingDefaults"), "lobby"); String lb = truthy(get(b, "lobby")) ? S(get(b, "lobby")) : S(md); String lobby = "everyone".equals(lb) ? "everyone" : "organization";
+        String id = rid("tm_"), joinUrl, ms = ""; boolean demo = !live; ObjectNode acc = null;
+        if (!demo) { acc = pickAccount(a, str(get(b, "accountId"), 40)); ObjectNode gb = O().put("subject", subject).put("startDateTime", iso(s0)).put("endDateTime", iso(e0)); gb.putObject("lobbyBypassSettings").put("scope", lobby); gb.put("allowRecording", get(b, "allowRecord") != null && get(b, "allowRecord").isBoolean() && get(b, "allowRecord").asBoolean()).put("recordAutomatically", false);
+            JsonNode gj = (JsonNode) graph(t0, acc, "POST", "/me/onlineMeetings", gb)[1]; if (!truthy(get(gj, "id")) || !S(get(gj, "joinWebUrl")).startsWith("https://")) throw E("teams_provider"); ms = str(get(gj, "id"), 400); joinUrl = str(get(gj, "joinWebUrl"), 2000); }
+        else joinUrl = "/learner.html#live-demo";
+        final String jU = joinUrl, msId0 = ms, accId = acc == null ? "" : s(acc, "id"); final boolean dm = demo;
+        boolean linked = T(t0, () -> { db.x("insert into conn_teams_meeting (id, tenant_id, class_id, item_id, account_id, ms_id, join_url, subject, start_at, end_at, demo, created_by) values ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz,$10::timestamptz,$11,$12)", id, t0, classId, itemId, accId, msId0, jU, subject, iso(s0), iso(e0), dm, email(a));
+            JsonNode ok = !classId.isEmpty() && !itemId.isEmpty() && !(get(b, "docLink") != null && get(b, "docLink").isBoolean() && !get(b, "docLink").asBoolean()) ? docEdit(t0, doc -> { ObjectNode[] x = itemOf(doc, classId, itemId); if (x == null) return null; x[1].put("url", jU); ObjectNode tm = x[1].putObject("teams").put("mid", id).put("joinUrl", jU).put("accountId", accId); if (dm) tm.put("demo", true); return F.booleanNode(true); }) : null;
             return ok != null; });
-        audit(t0, email(a), "teams.meeting.create", map("id", id, "demo", true, "cls", classId, "item", itemId));
-        res.setStatus(201); return O().put("id", id).put("joinUrl", joinUrl).put("start", iso(s0)).put("end", iso(e0)).put("mode", "demo").put("linked", linked);
+        audit(t0, email(a), "teams.meeting.create", map("id", id, "demo", demo, "cls", classId, "item", itemId));
+        res.setStatus(201); return O().put("id", id).put("joinUrl", joinUrl).put("start", iso(s0)).put("end", iso(e0)).put("mode", demo ? "demo" : "live").put("linked", linked);
     }
     ObjectNode meetingOf(String t0, String id) throws Exception { ObjectNode m = T(t0, () -> db.q1("select * from conn_teams_meeting where tenant_id = $1 and id = $2", t0, id)); if (m == null) throw E("teams_none"); return m; }
-    void liveMeeting(ObjectNode m) { if (!truthy(g(m, "demo"))) throw E("teams_unset"); }
     Object patchMeeting(HttpServletRequest req, byte[] raw, String id) throws Exception {
         Map<String, Object> a = needAny(req); JsonNode b = body(raw, 4096); String t0 = tid(a); ObjectNode m = meetingOf(t0, id);
         String subject = !undef(get(b, "subject")) ? trim(str(get(b, "subject"), 200)) : s(m, "subject"); if (subject.isEmpty() || subject.length() > 120) throw E("teams_input", map("field", "subject"));
         Instant s0 = !undef(get(b, "start")) ? parseT(get(b, "start")) : Instant.parse(s(m, "start_at")), e0 = !undef(get(b, "end")) ? parseT(get(b, "end")) : Instant.parse(s(m, "end_at"));
-        if (s0 == null || e0 == null || !e0.isAfter(s0) || e0.toEpochMilli() - s0.toEpochMilli() > 24 * 3600e3) throw E("teams_time"); liveMeeting(m);
+        if (s0 == null || e0 == null || !e0.isAfter(s0) || e0.toEpochMilli() - s0.toEpochMilli() > 24 * 3600e3) throw E("teams_time");
+        ObjectNode acc = accOfMeeting(a, m); if (acc != null) { Object[] gr = graph(t0, acc, "PATCH", "/me/onlineMeetings/" + enc(s(m, "ms_id")).replace("+", "%20"), O().put("subject", subject).put("startDateTime", iso(s0)).put("endDateTime", iso(e0))); if ((Integer) gr[0] == 404) throw E("teams_none"); }
         T(t0, () -> db.x("update conn_teams_meeting set subject = $3, start_at = $4::timestamptz, end_at = $5::timestamptz where tenant_id = $1 and id = $2", t0, id, subject, iso(s0), iso(e0))); audit(t0, email(a), "teams.meeting.edit", map("id", id));
         return O().put("ok", true).put("id", id).put("start", iso(s0)).put("end", iso(e0));
     }
     Object delMeeting(HttpServletRequest req, String id) throws Exception {
-        Map<String, Object> a = needAny(req); String t0 = tid(a); ObjectNode m = meetingOf(t0, id); liveMeeting(m);
+        Map<String, Object> a = needAny(req); String t0 = tid(a); ObjectNode m = meetingOf(t0, id); ObjectNode acc = accOfMeeting(a, m);
+        if (acc != null) graph(t0, acc, "DELETE", "/me/onlineMeetings/" + enc(s(m, "ms_id")).replace("+", "%20"), null); /* 이미 없으면(404) 그대로 진행 */
         T(t0, () -> { db.x("delete from conn_teams_meeting where tenant_id = $1 and id = $2", t0, id);
             if (truthy(g(m, "class_id")) && truthy(g(m, "item_id")) && !"0".equals(req.getParameter("doc"))) docEdit(t0, doc -> { ObjectNode[] x = itemOf(doc, s(m, "class_id"), s(m, "item_id")); if (x == null) return null; if (s(m, "join_url").equals(S(x[1].get("url")))) x[1].put("url", ""); x[1].remove("teams"); return F.booleanNode(true); });
             return null; }); audit(t0, email(a), "teams.meeting.delete", map("id", id)); return O().put("ok", true);
@@ -322,11 +328,31 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         ObjectNode[] x = truthy(g(m, "class_id")) && truthy(g(m, "item_id")) ? itemOf(doc, s(m, "class_id"), s(m, "item_id")) : null;
         Object[] L0 = T(t0, () -> load(t0)); JsonNode ia = x == null ? null : x[1].get("attMin");
         double attMin; if (ia != null && !ia.isNull() && !(ia.isTextual() && ia.textValue().isEmpty()) && Double.isFinite(num(ia))) attMin = num(ia); else { JsonNode d0 = get(get(g((JsonNode) L0[1], "cfg"), "meetingDefaults"), "attMin"); attMin = nullish(d0) ? 10 : num(d0); }
-        long start = Instant.parse(s(m, "start_at")).toEpochMilli(); liveMeeting(m);
+        long start = Instant.parse(s(m, "start_at")).toEpochMilli(); final double aM = attMin;
+        if (!truthy(g(m, "demo"))) return syncLive(a, m, doc, x, start, aM);
         List<JsonNode> L = x != null ? arr(x[0].get("learners")) : new ArrayList<>(); if (L.size() > 300) L = L.subList(0, 300); double dur = (Instant.parse(s(m, "end_at")).toEpochMilli() - start) / 1000.0; ArrayNode matched = F.arrayNode();
         for (JsonNode mn : L) { String mid = key(mn); double h = hash01(s(m, "id") + mid); long sec = Math.round(dur * (h < 0.12 ? 0.05 : 0.6 + h * 0.4)); long first = start + Math.round((h < 0.25 ? h * 60 : h * 4) * 60e3);
             String sug = sec < attMin * 60 ? "결석" : first > start + 10 * 60e3 ? "지각" : "출석"; matched.addObject().put("lid", mid).put("label", label(t0, mid)).put("suggest", sug).put("minutes", Math.round(sec / 60.0)).put("firstJoin", hm(first)); }
         ObjectNode o = O().put("reportId", "demo-" + s(m, "id")).put("meetingStart", iso(Instant.parse(s(m, "start_at")))).put("meetingEnd", iso(Instant.parse(s(m, "end_at")))); o.set("matched", matched); o.put("unmatched", 0).put("mode", "demo").put("note", "시연 데이터"); return o;
+    }
+    Object syncLive(Map<String, Object> a, ObjectNode m, JsonNode doc, ObjectNode[] x, long start, double attMin) throws Exception {
+        String t0 = tid(a); ObjectNode acc = accOfMeeting(a, m); String mid = enc(s(m, "ms_id")).replace("+", "%20");
+        Object[] list = graph(t0, acc, "GET", "/me/onlineMeetings/" + mid + "/attendanceReports", null); List<JsonNode> reps = new ArrayList<>(); for (JsonNode v : arr(get((JsonNode) list[1], "value"))) if (truthy(v) && truthy(get(v, "id"))) reps.add(v);
+        reps.sort((p, q) -> S(get(q, "meetingEndDateTime")).compareTo(S(get(p, "meetingEndDateTime")))); if ((Integer) list[0] == 404 || reps.isEmpty()) throw E("teams_report_none");
+        JsonNode rep = (JsonNode) graph(t0, acc, "GET", "/me/onlineMeetings/" + mid + "/attendanceReports/" + enc(S(get(reps.get(0), "id"))).replace("+", "%20") + "?$expand=attendanceRecords", null)[1];
+        ObjectNode org = T(t0, () -> db.q1("select ms_tid::text ms_tid from conn_ms_org where tenant_id = $1", t0)); String mst = org == null ? "null" : s(org, "ms_tid").toLowerCase(java.util.Locale.ROOT);
+        List<JsonNode> recs = new ArrayList<>(); for (JsonNode r : arr(get(rep, "attendanceRecords"))) if (truthy(r) && !"organizer".equals(S(get(r, "role")).toLowerCase(java.util.Locale.ROOT))) recs.add(r); if (recs.size() > 1000) recs = recs.subList(0, 1000);
+        Map<String, JsonNode> byHash = new LinkedHashMap<>(); for (JsonNode r : recs) { String oid = S(get(get(r, "identity"), "id")).toLowerCase(java.util.Locale.ROOT); if (UUID_RE.matcher(oid).matches() && IDX != null) byHash.put(bidx(t0, "sub:microsoft", mst + ":" + oid), r); }
+        List<ObjectNode> rows = byHash.isEmpty() ? new ArrayList<>() : ttx.plain(() -> { db.x("set local role didisam_pii"); db.q("select set_config('app.tenant', $1, true)", t0); return db.q("select learner_id::text lid, provider_sub_hash h from pii.identity where tid = $1 and provider = 'microsoft' and provider_sub_hash = any($2)", t0, new ArrayList<>(byHash.keySet())); });
+        List<JsonNode> members = arr(get(doc, "members")); ArrayNode matched = F.arrayNode(); java.util.Set<String> seen = new java.util.HashSet<>();
+        for (ObjectNode row : rows) { JsonNode mem = null; for (JsonNode z : members) if (truthy(z) && s(row, "lid").equals(S(get(z, "sid"))) && get(z, "sid").isTextual()) { mem = z; break; } JsonNode r = byHash.get(s(row, "h")); if (mem == null || r == null) continue; String mi = key(get(mem, "id"));
+            if (x != null && !(x[0].get("learners") != null && x[0].get("learners").isArray() && arr(x[0].get("learners")).stream().anyMatch(q -> key(q).equals(mi)))) continue; if (seen.contains(mi)) continue; seen.add(mi);
+            long first = start; List<Long> js = new ArrayList<>(); for (JsonNode iv : arr(get(r, "attendanceIntervals"))) { try { js.add(Instant.parse(S(get(iv, "joinDateTime"))).toEpochMilli()); } catch (Exception e) { try { js.add(OffsetDateTime.parse(S(get(iv, "joinDateTime"))).toInstant().toEpochMilli()); } catch (Exception e2) { /* 건너뜀 */ } } }
+            if (!js.isEmpty()) { java.util.Collections.sort(js, (p, q) -> String.valueOf(p).compareTo(String.valueOf(q))); first = js.get(0) == 0 ? start : js.get(0); }
+            double sec = Math.max(0, Double.isFinite(num(get(r, "totalAttendanceInSeconds") == null ? F.missingNode() : get(r, "totalAttendanceInSeconds"))) ? num(get(r, "totalAttendanceInSeconds")) : 0);
+            String sug = sec < attMin * 60 ? "결석" : first > start + 10 * 60e3 ? "지각" : "출석"; matched.addObject().put("lid", mi).put("label", label(t0, mi)).put("suggest", sug).put("minutes", Math.round(sec / 60)).put("firstJoin", hm(first)); }
+        ObjectNode o = O().put("reportId", str(get(reps.get(0), "id"), 200)); o.put("meetingStart", truthy(get(rep, "meetingStartDateTime")) ? S(get(rep, "meetingStartDateTime")) : iso(Instant.parse(s(m, "start_at")))); o.put("meetingEnd", truthy(get(rep, "meetingEndDateTime")) ? S(get(rep, "meetingEndDateTime")) : iso(Instant.parse(s(m, "end_at"))));
+        o.set("matched", matched); o.put("unmatched", recs.size() - matched.size()).put("mode", "live"); return o;
     }
     Object applyAttendance(HttpServletRequest req, byte[] raw, String id) throws Exception {
         Map<String, Object> a = needAny(req); JsonNode b = body(raw, 65536); String t0 = tid(a); ObjectNode m = meetingOf(t0, id);
@@ -351,20 +377,191 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         int q = notify(tid(a), event, p); if (q > 0) audit(tid(a), email(a), "teams.notify", map("event", event, "n", q)); return O().put("ok", true).put("queued", q);
     }
 
-    // ── 리다이렉트(조직 연결 · 회의 계정 · SSO) — Java 1차는 키 없음(err-unset)만, 키가 있으면 Node 서버 경로 사용 ──
-    static void redirect(HttpServletResponse res, String loc) { res.setStatus(302); res.setHeader("location", loc); res.setHeader("cache-control", "no-store"); res.setHeader("referrer-policy", "no-referrer"); }
-    static final Pattern TID_RE = Pattern.compile("^tn_[a-z0-9]{8,16}$");
-    public void redirectRoute(String path, HttpServletRequest req, HttpServletResponse res) throws Exception {
-        if (path.startsWith("/api/conn/teams/")) { Map<String, Object> a = null; try { a = auth.need(req); } catch (Exception e) { a = null; }
-            if (path.endsWith("/consent/start")) { if (a == null) { redirect(res, "/#conn=teams:err-auth"); return; } if (!"owner".equals(a.get("role"))) { redirect(res, "/#conn=teams:err-role"); return; } }
-            else if (path.endsWith("/account/start") && a == null) { redirect(res, "/#conn=teams:err-auth"); return; }
-            redirect(res, "/#conn=teams:" + (path.endsWith("/start") ? "err-unset" : "err-state")); return; }
-        if (path.startsWith("/api/oauth/microsoft/")) { redirect(res, "/#oauth=" + (path.endsWith("/start") ? "err:unset" : "err:state")); return; }
-        Matcher m = Pattern.compile("^/api/pub/([^/]+)/loauth/microsoft/start$").matcher(path);
-        if (m.matches()) { String t0 = m.group(1); if (!TID_RE.matcher(t0).matches()) throw new DdException(404, "없는 기관입니다.", "tenant"); redirect(res, "/learner.html?t=" + java.net.URLEncoder.encode(t0, StandardCharsets.UTF_8) + "&oa=err-unset#login"); return; }
-        redirect(res, "/learner.html?oa=err-state#login");
+    // ── 실제 경로(MS_CLIENT_ID 설정 시) — Node teams/index.js 서명 봉투 · PKCE · 토큰 끝점 · id_token · Graph와 같은 동작 ──
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy egovframework.didisam.auth.service.impl.OAuthServiceImpl oauth;
+    @org.springframework.beans.factory.annotation.Autowired @org.springframework.context.annotation.Lazy egovframework.didisam.pii.service.PiiService pii;
+    @org.springframework.beans.factory.annotation.Autowired egovframework.didisam.cmm.DdProps props;
+    @org.springframework.beans.factory.annotation.Autowired egovframework.didisam.cmm.DdWeb web;
+    @Value("${MS_CLIENT_ID:}") String msIdRaw; @Value("${MS_CLIENT_SECRET:}") String msSecret; @Value("${MS_AUTHORITY:organizations}") String msAuth;
+    @Value("${MS_CLIENT_CERT_PEM:}") String certPem; @Value("${MS_CLIENT_CERT_THUMB:}") String certThumb; @Value("${OAUTH_MOCK_URL:}") String mockRaw; @Value("${NODE_ENV:}") String nodeEnv2; @Value("${PUBLIC_URL:}") String publicUrl;
+    static final String MSA_TID = "9188040d-6c67-4c5b-b112-36a304b66dad", SCOPE_ACCT = "openid offline_access OnlineMeetings.ReadWrite OnlineMeetingArtifact.Read.All";
+    static final Pattern UUID_RE = Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", Pattern.CASE_INSENSITIVE);
+    String msId() { return msIdRaw == null ? "" : msIdRaw.trim(); }
+    String mock() { return "production".equals(nodeEnv2) ? "" : (mockRaw == null ? "" : mockRaw.trim().replaceAll("/+$", "")); }
+    String authority() { String a = msAuth == null ? "" : msAuth.trim(); return a.isEmpty() ? "organizations" : a; }
+    String L() { return mock().isEmpty() ? "https://login.microsoftonline.com" : mock() + "/microsoft"; }
+    String authUrl(String t) { return mock().isEmpty() ? L() + "/" + t + "/oauth2/v2.0/authorize" : L() + "/" + t + "/auth"; }
+    String tokenUrl(String t) { return mock().isEmpty() ? L() + "/" + t + "/oauth2/v2.0/token" : L() + "/" + t + "/token"; }
+    String consentUrl(String t) { return mock().isEmpty() ? L() + "/" + t + "/v2.0/adminconsent" : L() + "/" + t + "/adminconsent"; }
+    static String issuer(String t) { return "https://login.microsoftonline.com/" + t + "/v2.0"; }
+    String graphBase() { return mock().isEmpty() ? "https://graph.microsoft.com/v1.0" : mock() + "/graph/v1.0"; }
+    static final java.net.http.HttpClient MS = java.net.http.HttpClient.newBuilder().proxy(java.net.http.HttpClient.Builder.NO_PROXY).version(java.net.http.HttpClient.Version.HTTP_1_1).followRedirects(java.net.http.HttpClient.Redirect.NEVER).connectTimeout(java.time.Duration.ofSeconds(10)).build();
+    static final Base64.Encoder B64 = Base64.getUrlEncoder().withoutPadding();
+    static String b64(byte[] b) { return B64.encodeToString(b); }
+    static String enc(String s0) { return java.net.URLEncoder.encode(s0, StandardCharsets.UTF_8); }
+    static String form(Map<String, String> m) { java.util.StringJoiner j = new java.util.StringJoiner("&"); m.forEach((k, v) -> j.add(enc(k) + "=" + enc(v))); return j.toString(); }
+    String sign(String s0) { try { Mac m = Mac.getInstance("HmacSHA256"); m.init(new SecretKeySpec(props.pepper.getBytes(StandardCharsets.UTF_8), "HmacSHA256")); return b64(m.doFinal(("msteams|" + s0).getBytes(StandardCharsets.UTF_8))); } catch (Exception e) { throw new IllegalStateException(e); } }
+    String seal(ObjectNode o) { String s0 = b64(o.toString().getBytes(StandardCharsets.UTF_8)); return s0 + "." + sign(s0); }
+    JsonNode unseal(String v) { if (v == null) return null; String[] p = v.split("\\.", -1); if (p.length < 2 || p[0].isEmpty() || p[1].isEmpty()) return null;
+        if (!MessageDigest.isEqual(p[1].getBytes(StandardCharsets.UTF_8), sign(p[0]).getBytes(StandardCharsets.UTF_8))) return null;
+        try { JsonNode o = parse(new String(Base64.getUrlDecoder().decode(p[0]), StandardCharsets.UTF_8)); return o != null && o.path("x").asDouble() > System.currentTimeMillis() ? o : null; } catch (Exception e) { return null; } }
+    String NC() { return props.secure ? "__Host-dd_msc" : "dd_msc"; }
+    String nck(String v, int age) { return NC() + "=" + v + "; Path=/; HttpOnly; SameSite=Lax; Max-Age=" + age + (props.secure ? "; Secure" : ""); }
+    String base(HttpServletRequest req) { String p0 = publicUrl == null ? "" : publicUrl.trim().replaceAll("/+$", ""); return !p0.isEmpty() ? p0 : (props.secure ? "https" : "http") + "://" + req.getHeader("host"); }
+    static String rnd(int n) { byte[] b = new byte[n]; RND.nextBytes(b); return b64(b); }
+    /** begin: 논스 쿠키(n.v) + 서명 봉투 state + PKCE challenge → [state, n, challenge] */
+    String[] begin(HttpServletResponse res, String k, ObjectNode o) { String n = rnd(18), v = rnd(32); res.addHeader("set-cookie", nck(n + "." + v, 600)); ObjectNode st = O().put("k", k).put("n", n); st.setAll(o); st.put("x", System.currentTimeMillis() + 600000L);
+        return new String[]{ seal(st), n, b64(sha(v)) }; }
+    /** resume: [st, verifier] 또는 null */
+    Object[] resume(HttpServletRequest req, HttpServletResponse res, String k) { JsonNode st = unseal(req.getParameter("state")); String[] nv = egovframework.didisam.cmm.DdLTickets.cookie(req, NC()).split("\\.", -1); res.addHeader("set-cookie", nck("", 0));
+        String n = nv.length > 0 ? nv[0] : "", v = nv.length > 1 ? nv[1] : null; if (st == null || !k.equals(st.path("k").asText()) || n.isEmpty() || !n.equals(st.path("n").asText())) return null; return new Object[]{ st, v }; }
+    String authorize(String tenant, HttpServletRequest req, String cb, String scope, String[] s0) {
+        Map<String, String> q = new LinkedHashMap<>(); q.put("client_id", msId()); q.put("response_type", "code"); q.put("redirect_uri", base(req) + cb); q.put("response_mode", "query"); q.put("scope", scope); q.put("state", s0[0]); q.put("nonce", s0[1]); q.put("code_challenge", s0[2]); q.put("code_challenge_method", "S256"); q.put("prompt", "select_account");
+        return authUrl(tenant) + "?" + form(q).replace("%20", "+"); }
+    static final class Grant extends Exception { final String grant; final boolean msa; Grant(String g, boolean m) { super(g); grant = g; msa = m; } }
+    Map<String, String> clientAuth(Map<String, String> f, String tenant) throws Exception {
+        String pem = certPem == null ? "" : certPem.replace("\\n", "\n").trim(), th = certThumb == null ? "" : certThumb.trim();
+        if (!pem.isEmpty() && !th.isEmpty()) { String hdr = b64(O().put("alg", "RS256").put("typ", "JWT").put("x5t", b64(hexBytes(th.replace(":", "")))).toString().getBytes(StandardCharsets.UTF_8)); long now = System.currentTimeMillis() / 1000;
+            String pl = b64(O().put("aud", tokenUrl(tenant)).put("iss", msId()).put("sub", msId()).put("jti", java.util.UUID.randomUUID().toString()).put("nbf", now).put("exp", now + 300).toString().getBytes(StandardCharsets.UTF_8));
+            String der = pem.replaceAll("-----[A-Z ]+-----", "").replaceAll("\\s", ""); java.security.PrivateKey pk = java.security.KeyFactory.getInstance("RSA").generatePrivate(new java.security.spec.PKCS8EncodedKeySpec(Base64.getDecoder().decode(der)));
+            java.security.Signature sg = java.security.Signature.getInstance("SHA256withRSA"); sg.initSign(pk); sg.update((hdr + "." + pl).getBytes(StandardCharsets.UTF_8));
+            f.put("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"); f.put("client_assertion", hdr + "." + pl + "." + b64(sg.sign())); }
+        else if (msSecret != null && !msSecret.trim().isEmpty()) f.put("client_secret", msSecret.trim());
+        return f; }
+    JsonNode token(String tenant, Map<String, String> f0) throws Exception {
+        Map<String, String> f = new LinkedHashMap<>(); f.put("client_id", msId()); f.putAll(f0); clientAuth(f, tenant); java.net.http.HttpResponse<String> r;
+        try { r = MS.send(java.net.http.HttpRequest.newBuilder(URI.create(tokenUrl(tenant))).timeout(java.time.Duration.ofSeconds(10)).header("content-type", "application/x-www-form-urlencoded;charset=utf-8").header("accept", "application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString(form(f))).build(), java.net.http.HttpResponse.BodyHandlers.ofString()); }
+        catch (Exception e) { throw new Grant(null, false); }
+        JsonNode j; try { j = parse(r.body()); } catch (Exception e) { j = O(); } if (j == null || !j.isObject()) j = O();
+        if (r.statusCode() < 200 || r.statusCode() >= 300) throw new Grant(j.path("error").isTextual() ? j.path("error").asText() : null, false); return j; }
+    JsonNode exchange(String tenant, HttpServletRequest req, String cb, String code, String verifier, String scope) throws Exception {
+        Map<String, String> f = new LinkedHashMap<>(); f.put("grant_type", "authorization_code"); f.put("code", code); f.put("redirect_uri", base(req) + cb); f.put("code_verifier", verifier == null ? "" : verifier); if (scope != null) f.put("scope", scope); return token(tenant, f); }
+    /** id_token(토큰 끝점 직접 응답) — aud · iss · exp · nonce · tid/oid 형식. [tid, oid, upn] */
+    String[] claims(JsonNode t, String nonce) throws Grant {
+        String[] p = (t != null && t.isTextual() ? t.asText() : "").split("\\.", -1); if (p.length != 3) throw new Grant("id_token", false); JsonNode c;
+        try { c = parse(new String(Base64.getUrlDecoder().decode(p[1]), StandardCharsets.UTF_8)); } catch (Exception e) { throw new Grant("id_token", false); }
+        String tid = c.path("tid").isValueNode() ? c.path("tid").asText() : "", oid = c.path("oid").isValueNode() ? c.path("oid").asText() : "";
+        if (!msId().equals(c.path("aud").asText(null)) || !UUID_RE.matcher(tid).matches() || !UUID_RE.matcher(oid).matches() || !issuer(tid).equals(c.path("iss").asText(null)) || !(c.path("exp").asDouble(0) * 1000 > System.currentTimeMillis()) || (nonce != null && !nonce.isEmpty() && !nonce.equals(c.path("nonce").asText(null)))) throw new Grant("id_token", false);
+        if (MSA_TID.equals(tid.toLowerCase(java.util.Locale.ROOT))) throw new Grant("msa", true);
+        String upn = c.path("preferred_username").isTextual() && !c.path("preferred_username").asText().isEmpty() ? c.path("preferred_username").asText() : c.path("email").isTextual() ? c.path("email").asText() : "";
+        return new String[]{ tid.toLowerCase(java.util.Locale.ROOT), oid.toLowerCase(java.util.Locale.ROOT), cut(upn, 200) }; }
+    static String maskUpn(String e) { String s0 = e == null ? "" : e; int i = s0.indexOf('@'); if (i < 0) return s0.isEmpty() ? "" : (s0.length() > 2 ? s0.substring(0, 2) : s0) + "••••"; String a = s0.substring(0, i), d = s0.substring(i + 1); int j = d.indexOf('@'); if (j >= 0) d = d.substring(0, j); return d.isEmpty() ? (a.isEmpty() ? "" : (a.length() > 2 ? a.substring(0, 2) : a) + "••••") : (a.length() > 3 ? a.substring(0, 3) : a) + "••••@" + d; }
+
+    final Map<String, Object[]> atCache = new ConcurrentHashMap<>();
+    String accessToken(String t0, JsonNode acc) throws Exception {
+        Object[] hit = atCache.get(s(acc, "id")); if (hit != null && (Long) hit[1] > System.currentTimeMillis() + 300000L) return (String) hit[0];
+        ObjectNode org = T(t0, () -> db.q1("select ms_tid::text ms_tid from conn_ms_org where tenant_id = $1", t0)); if (org == null) throw E("teams_consent");
+        JsonNode j; try { Map<String, String> f = new LinkedHashMap<>(); f.put("grant_type", "refresh_token"); f.put("refresh_token", dec(s(acc, "enc"), aad(t0, "teams_refresh", s(acc, "id")))); f.put("scope", SCOPE_ACCT); j = token(s(org, "ms_tid"), f); }
+        catch (Grant e) { if ("invalid_grant".equals(e.grant) || "interaction_required".equals(e.grant)) { T(t0, () -> db.x("update conn_secret set meta = meta || '{\"exp\":\"reauth\"}' where tenant_id = $1 and id = $2", t0, s(acc, "id"))); audit(t0, "system", "teams.account.reauth", map("id", s(acc, "id"))); atCache.remove(s(acc, "id")); throw E("teams_account"); } throw E("teams_provider"); }
+        if (j.path("refresh_token").isTextual() && !j.path("refresh_token").asText().isEmpty()) { String rt = j.path("refresh_token").asText(); T(t0, () -> db.x("update conn_secret set enc = $3 where tenant_id = $1 and id = $2", t0, s(acc, "id"), enc(rt, aad(t0, "teams_refresh", s(acc, "id"))))); }
+        double ex = j.path("expires_in").asDouble(0); atCache.put(s(acc, "id"), new Object[]{ j.path("access_token").asText(), System.currentTimeMillis() + (long) ((ex > 0 ? ex : 3600) * 1000) }); return j.path("access_token").asText();
     }
-    public Object opLinkStart(HttpServletRequest req) throws Exception { auth.need(req); throw E("teams_unset"); }
+    /** Graph 호출 → [status, json] (404는 그대로, 429 · 401 · 403 · 3xx+는 오류 코드) */
+    Object[] graph(String t0, JsonNode acc, String method, String p, JsonNode body) throws Exception {
+        String tok = accessToken(t0, acc);
+        for (int i = 0; i < 2; i++) { java.net.http.HttpResponse<String> r;
+            try { java.net.http.HttpRequest.Builder b = java.net.http.HttpRequest.newBuilder(URI.create(graphBase() + p)).timeout(java.time.Duration.ofSeconds(15)).header("authorization", "Bearer " + tok).header("accept", "application/json");
+                if (body != null) b.header("content-type", "application/json"); b.method(method, body != null ? java.net.http.HttpRequest.BodyPublishers.ofString(body.toString()) : java.net.http.HttpRequest.BodyPublishers.noBody()); r = MS.send(b.build(), java.net.http.HttpResponse.BodyHandlers.ofString()); }
+            catch (Exception e) { throw E("teams_provider"); }
+            int st = r.statusCode();
+            if (st == 429 && i == 0) { long ra = r.headers().firstValueAsLong("retry-after").orElse(0); Thread.sleep(Math.min(3000, ra > 0 ? ra * 1000 : 500)); continue; }
+            if (st == 429) throw E("teams_rate"); if (st == 401) { atCache.remove(s(acc, "id")); throw E("teams_account"); } if (st == 403) throw E("teams_scope");
+            if (st == 404) return new Object[]{ 404, O() }; if (st >= 300) throw E("teams_provider");
+            JsonNode j; try { j = st == 204 ? O() : parse(r.body()); } catch (Exception e) { j = O(); } return new Object[]{ st, j == null ? O() : j }; }
+        throw E("teams_provider");
+    }
+    ObjectNode pickAccount(Map<String, Object> a, String accountId) throws Exception {
+        String t0 = tid(a); List<ObjectNode> rows = T(t0, () -> db.q("select id, owner_user::text owner_user, meta, enc from conn_secret where tenant_id = $1 and kind = 'teams_refresh'", t0)); ObjectNode acc = null; String uid = String.valueOf(a.get("uid"));
+        for (ObjectNode x : rows) if (accountId != null && !accountId.isEmpty() ? accountId.equals(s(x, "id")) : uid.equals(s(x, "owner_user"))) { acc = x; break; }
+        if (acc == null || "reauth".equals(S(get(g(acc, "meta"), "exp")))) throw E("teams_account"); if (!uid.equals(s(acc, "owner_user")) && !isAdmin(a)) throw E("teams_role"); return acc;
+    }
+    ObjectNode accOfMeeting(Map<String, Object> a, ObjectNode m) throws Exception { if (truthy(g(m, "demo"))) return null; return pickAccount(a, s(m, "account_id")); }
+
+    // ── 리다이렉트(조직 연결 · 회의 계정 · SSO) ──
+    static void redirect(HttpServletResponse res, String loc) { res.setStatus(302); res.setHeader("location", loc); res.setHeader("cache-control", "no-store"); res.setHeader("referrer-policy", "no-referrer"); }
+    static void hashGo(HttpServletResponse res, String h) { redirect(res, "/#conn=teams:" + h); }
+    static void oaGo(HttpServletResponse res, String h) { redirect(res, "/#oauth=" + h); }
+    static void lGo(HttpServletResponse res, String tid, String h, boolean app) { redirect(res, "/learner.html?" + (tid != null && !tid.isEmpty() ? "t=" + enc(tid) + "&" : "") + (app ? "app=1&" : "") + "oa=" + h + "#" + (h.startsWith("join-") ? "join" : h.matches("^(pending|rejected)$") ? "pending" : "ok".equals(h) ? "home" : "login")); }
+    static final Pattern TID_RE = Pattern.compile("^tn_[a-z0-9]{8,16}$");
+    Map<String, Object> needOrNull(HttpServletRequest req) { try { return auth.need(req); } catch (Exception e) { return null; } }
+    String ip(HttpServletRequest req) { try { return web.ip(req); } catch (Exception e) { return ""; } }
+    public void redirectRoute(String path, HttpServletRequest req, HttpServletResponse res) throws Exception {
+        switch (path) {
+            case "/api/conn/teams/consent/start": { Map<String, Object> a = needOrNull(req); if (a == null) { hashGo(res, "err-auth"); return; } if (!"owner".equals(a.get("role"))) { hashGo(res, "err-role"); return; } if (!live) { hashGo(res, "err-unset"); return; }
+                rl.limit("teams:" + tid(a), 120, 60000L); String f0 = cut(req.getParameter("f") == null || req.getParameter("f").isEmpty() ? "meeting,sso" : req.getParameter("f"), 40); List<String> fl = new ArrayList<>(); for (String x : f0.split(",", -1)) if (x.equals("meeting") || x.equals("sso")) fl.add(x);
+                String[] s0 = begin(res, "c1", O().put("t", tid(a)).put("u", String.valueOf(a.get("uid"))).put("f", String.join(",", fl))); redirect(res, authorize(authority(), req, "/api/conn/teams/consent/whoami", "openid profile", s0)); return; }
+            case "/api/conn/teams/consent/whoami": { Object[] r = resume(req, res, "c1"); if (r == null) { hashGo(res, "err-state"); return; } JsonNode st = (JsonNode) r[0];
+                if (has(req, "error") || !has(req, "code")) { hashGo(res, "err-denied"); return; } String[] c;
+                try { JsonNode j = exchange(authority(), req, "/api/conn/teams/consent/whoami", req.getParameter("code"), (String) r[1], "openid profile"); c = claims(j.get("id_token"), st.path("n").asText()); } catch (Grant e) { hashGo(res, e.msa ? "err-msa" : "err-provider"); return; }
+                int at = c[2].indexOf('@'); String[] s0 = begin(res, "c2", O().put("t", st.path("t").asText()).put("u", st.path("u").asText()).put("f", st.path("f").asText()).put("m", c[0]).put("b", maskUpn(c[2])).put("d", cut(at >= 0 ? c[2].substring(at + 1).split("@", -1)[0] : "", 120)));
+                Map<String, String> q = new LinkedHashMap<>(); q.put("client_id", msId()); q.put("scope", "https://graph.microsoft.com/.default"); q.put("redirect_uri", base(req) + "/api/conn/teams/consent/callback"); q.put("state", s0[0]); redirect(res, consentUrl(c[0]) + "?" + form(q)); return; }
+            case "/api/conn/teams/consent/callback": { Object[] r = resume(req, res, "c2"); if (r == null) { hashGo(res, "err-state"); return; } JsonNode st = (JsonNode) r[0]; String t0 = st.path("t").asText();
+                if (has(req, "error") || !"true".equals(String.valueOf(req.getParameter("admin_consent")).toLowerCase(java.util.Locale.ROOT))) { hashGo(res, "err-denied"); return; }
+                if (!(req.getParameter("tenant") == null ? "" : req.getParameter("tenant")).toLowerCase(java.util.Locale.ROOT).equals(st.path("m").asText())) { audit(t0, "system", "teams.consent.mismatch", map()); hashGo(res, "err-tenant_mismatch"); return; }
+                try { T(t0, () -> { String d = st.path("d").asText(""); db.x("insert into conn_ms_org (tenant_id, ms_tid, domain, consent_by) values ($1, $2::uuid, $3, $4) on conflict (tenant_id) do update set ms_tid = excluded.ms_tid, domain = excluded.domain, consent_by = excluded.consent_by, consent_at = now()", t0, st.path("m").asText(), d.isEmpty() ? null : d, st.path("b").asText(""));
+                    db.x("insert into conn_teams_cfg (tenant_id, demo) values ($1, false) on conflict (tenant_id) do update set demo = false, updated_at = now()", t0); return null; }); }
+                catch (org.springframework.dao.DuplicateKeyException e) { hashGo(res, "err-tenant_taken"); return; }
+                audit(t0, "user:" + st.path("u").asText(), "teams.connect", map("f", st.path("f").asText())); hashGo(res, "ok"); return; }
+            case "/api/conn/teams/account/start": { Map<String, Object> a = needOrNull(req); if (a == null) { hashGo(res, "err-auth"); return; } if (!live) { hashGo(res, "err-unset"); return; } String t0 = tid(a);
+                ObjectNode org = T(t0, () -> db.q1("select ms_tid::text ms_tid from conn_ms_org where tenant_id = $1", t0)); if (org == null) { hashGo(res, "err-consent"); return; } rl.limit("teams:" + t0, 120, 60000L);
+                String[] s0 = begin(res, "a", O().put("t", t0).put("u", String.valueOf(a.get("uid"))).put("r", String.valueOf(a.get("role")))); redirect(res, authorize(s(org, "ms_tid"), req, "/api/conn/teams/account/callback", SCOPE_ACCT, s0)); return; }
+            case "/api/conn/teams/account/callback": { Object[] r = resume(req, res, "a"); if (r == null) { hashGo(res, "err-state"); return; } JsonNode st = (JsonNode) r[0];
+                if (has(req, "error") || !has(req, "code")) { hashGo(res, "err-denied"); return; } String t0 = st.path("t").asText();
+                ObjectNode org = T(t0, () -> db.q1("select ms_tid::text ms_tid from conn_ms_org where tenant_id = $1", t0)); if (org == null) { hashGo(res, "err-consent"); return; } JsonNode j; String[] c;
+                try { j = exchange(s(org, "ms_tid"), req, "/api/conn/teams/account/callback", req.getParameter("code"), (String) r[1], SCOPE_ACCT); c = claims(j.get("id_token"), st.path("n").asText()); } catch (Grant e) { hashGo(res, e.msa ? "err-msa" : "err-provider"); return; }
+                if (!c[0].equals(s(org, "ms_tid").toLowerCase(java.util.Locale.ROOT))) { hashGo(res, "err-tenant_mismatch"); return; }
+                if (!j.path("refresh_token").isTextual() || j.path("refresh_token").asText().isEmpty()) { hashGo(res, "err-provider"); return; }
+                String id = rid("ac_"); ArrayNode scopes = F.arrayNode(); for (String x : j.path("scope").asText("").split("\\s+")) if (x.toLowerCase(java.util.Locale.ROOT).startsWith("onlinemeeting")) scopes.add(x);
+                ObjectNode meta = O().put("upn", maskUpn(c[2])); meta.set("scopes", scopes); meta.put("exp", "ok"); String rt = j.path("refresh_token").asText(), uu = st.path("u").asText();
+                T(t0, () -> { db.x("delete from conn_secret where tenant_id = $1 and kind = 'teams_refresh' and owner_user = $2::uuid", t0, uu);
+                    db.x("insert into conn_secret (id, tenant_id, kind, owner_user, label, mask, meta, enc) values ($1, $2, $3, $4::uuid, $5, $6, $7, $8)", id, t0, "teams_refresh", uu, "teacher".equals(st.path("r").asText()) ? "교수자" : "운영자", maskUpn(c[2]), meta, enc(rt, aad(t0, "teams_refresh", id))); return null; });
+                audit(t0, "user:" + uu, "teams.account.link", map("id", id));
+                if (j.path("access_token").isTextual()) { double ex = j.path("expires_in").asDouble(0); atCache.put(id, new Object[]{ j.path("access_token").asText(), System.currentTimeMillis() + (long) ((ex > 0 ? ex : 3600) * 1000) }); }
+                hashGo(res, "acct-ok"); return; }
+            case "/api/oauth/microsoft/start": { if (!live) { oaGo(res, "err:unset"); return; } rl.limit("oa:" + ip(req), 30, 600000L); String[] s0 = begin(res, "o", O()); redirect(res, authorize(authority(), req, "/api/oauth/microsoft/callback", "openid profile email", s0)); return; }
+            case "/api/oauth/microsoft/callback": opCallback(req, res); return;
+            case "/api/pub/loauth/microsoft/callback": lCallback(req, res); return;
+            default: break;
+        }
+        Matcher m = Pattern.compile("^/api/pub/([^/]+)/loauth/microsoft/start$").matcher(path);
+        if (m.matches()) { String t0 = m.group(1); if (!TID_RE.matcher(t0).matches()) throw new DdException(404, "없는 기관입니다.", "tenant"); if (!live) { lGo(res, t0, "err-unset", false); return; }
+            rl.limit("loa:" + ip(req), 30, 600000L); if (!learnerReady(t0)) { lGo(res, t0, "err-provider_off", false); return; }
+            ObjectNode o = O().put("t", t0).put("m", "login".equals(req.getParameter("m")) ? "login" : "join"); if ("1".equals(req.getParameter("app"))) o.put("a", 1);
+            String[] s0 = begin(res, "l", o); redirect(res, authorize(authority(), req, "/api/pub/loauth/microsoft/callback", "openid", s0)); return; }
+        throw new DdException(404, "없는 주소입니다.", "not_found");
+    }
+    static boolean has(HttpServletRequest req, String k) { String v = req.getParameter(k); return v != null && !v.isEmpty(); }
+    ObjectNode orgTid(String t0) throws Exception { return T(t0, () -> db.q1("select ms_tid::text ms_tid, sso from conn_ms_org where tenant_id = $1", t0)); }
+    void opCallback(HttpServletRequest req, HttpServletResponse res) throws Exception {
+        if (!live) { oaGo(res, "err:unset"); return; } rl.limit("oa:" + ip(req), 30, 600000L);
+        Object[] r = resume(req, res, "o"); if (r == null) { oaGo(res, "err:state"); return; } JsonNode st = (JsonNode) r[0];
+        if (has(req, "error") || !has(req, "code")) { oaGo(res, "err:denied"); return; } String[] c;
+        try { JsonNode j = exchange(authority(), req, "/api/oauth/microsoft/callback", req.getParameter("code"), (String) r[1], "openid profile email"); c = claims(j.get("id_token"), st.path("n").asText()); } catch (Grant e) { oaGo(res, e.msa ? "err:msa" : "err:provider"); return; }
+        String sub = c[0] + ":" + c[1];
+        if (st.hasNonNull("l") && !st.path("l").asText().isEmpty()) { String t0 = st.path("t").asText(); ObjectNode o = orgTid(t0); if (o == null || !s(o, "ms_tid").toLowerCase(java.util.Locale.ROOT).equals(c[0])) { oaGo(res, "err:tenant"); return; }
+            if (!ttx.plain(() -> oauth.msLink(sub, st.path("l").asText()))) { oaGo(res, "err:taken"); return; } audit(t0, "user:" + st.path("l").asText(), "oauth.link", map("provider", "microsoft")); oaGo(res, "linked"); return; }
+        Map<String, Object> u = ttx.plain(() -> oauth.msUser(sub)); if (u == null) { oaGo(res, "err:ms_unlinked"); return; }
+        String t0 = String.valueOf(u.get("tenant_id")); ObjectNode o = orgTid(t0); if (o == null || !s(o, "ms_tid").toLowerCase(java.util.Locale.ROOT).equals(c[0]) || !truthy(get(g(o, "sso"), "operator"))) { oaGo(res, "err:tenant"); return; }
+        oaGo(res, oauth.msFinish(req, res, String.valueOf(u.get("id")), t0, String.valueOf(u.get("email"))));
+    }
+    public Object opLinkStart(HttpServletRequest req, HttpServletResponse res) throws Exception { Map<String, Object> a = auth.need(req); if (!live) throw E("teams_unset"); rl.limit("oa:" + ip(req), 30, 600000L);
+        String[] s0 = begin(res, "o", O().put("l", String.valueOf(a.get("uid"))).put("t", tid(a))); return O().put("url", authorize(authority(), req, "/api/oauth/microsoft/callback", "openid profile email", s0)); }
+    ObjectNode learnerOrg(String t0) throws Exception { if (!TID_RE.matcher(t0).matches()) return null; ObjectNode t = ttx.plain(() -> db.q1("select type from tenants where id = $1", t0)); if (t == null) return null; ObjectNode o = orgTid(t0); if (o == null) return null; o.set("type", g(t, "type")); return o; }
+    public boolean learnerReady(String t0) { if (!live) return false; try { ObjectNode o = learnerOrg(t0); return o != null && truthy(get(g(o, "sso"), "learner")) && SSO_TYPES.contains(s(o, "type")); } catch (Exception e) { return false; } }
+    void lCallback(HttpServletRequest req, HttpServletResponse res) throws Exception {
+        Object[] r = resume(req, res, "l"); if (r == null) { lGo(res, "", "err-state", false); return; } JsonNode st = (JsonNode) r[0]; String t0 = st.path("t").asText(); boolean A = truthy(st.get("a")); rl.limit("loa:" + ip(req), 30, 600000L);
+        if (has(req, "error") || !has(req, "code")) { lGo(res, t0, "err-denied", A); return; } String[] c;
+        try { JsonNode j = exchange(authority(), req, "/api/pub/loauth/microsoft/callback", req.getParameter("code"), (String) r[1], "openid"); c = claims(j.get("id_token"), st.path("n").asText()); } catch (Grant e) { lGo(res, t0, e.msa ? "err-msa" : "err-provider", A); return; }
+        ObjectNode o = learnerOrg(t0); if (o == null || !truthy(get(g(o, "sso"), "learner")) || !SSO_TYPES.contains(s(o, "type"))) { lGo(res, t0, "err-provider_off", A); return; }
+        if (!s(o, "ms_tid").toLowerCase(java.util.Locale.ROOT).equals(c[0])) { lGo(res, t0, "err-tenant", A); return; }
+        String out; try { out = pii.oauthLogin(req, res, t0, "microsoft", c[0] + ":" + c[1]); }
+        catch (DdException e) { lGo(res, t0, "err-" + cut(String.valueOf(e.getCode()).replaceAll("[^\\w]", ""), 30), A); return; }
+        catch (org.egovframe.rte.fdl.cmmn.exception.EgovBizException e) { String[] k = String.valueOf(e.getMessageKey()).split("\\."); lGo(res, t0, "err-" + cut((k.length >= 3 ? k[2] : "server").replaceAll("[^\\w]", ""), 30), A); return; }
+        catch (Exception e) { lGo(res, t0, "err-server", A); return; }
+        lGo(res, t0, "join".equals(out) ? "join-microsoft" : out, A);
+    }
+    /** 출석 매칭 블라인드 인덱스(Node bidx: keys.idx HMAC(tid|kind|v 소문자) base64url) */
+    String bidx(String t0, String kind, String v) { if (IDX == null) return ""; try { Mac m = Mac.getInstance("HmacSHA256"); m.init(new SecretKeySpec(IDX, "HmacSHA256")); return b64(m.doFinal((t0 + "|" + kind + "|" + v.trim().toLowerCase(java.util.Locale.ROOT)).getBytes(StandardCharsets.UTF_8))); } catch (Exception e) { throw new IllegalStateException(e); } }
 
     // ── 경로 표 ──
     static final Pattern P_CH = Pattern.compile("^/api/conn/teams/channels/(ch_[a-z0-9]{10})$"), P_AC = Pattern.compile("^/api/conn/teams/account/(ac_[a-z0-9]{10})$"), P_MT = Pattern.compile("^/api/conn/teams/meetings/(tm_[a-z0-9]{10})(/attendance/(sync|apply))?$");

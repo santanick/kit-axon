@@ -37,6 +37,7 @@ import static egovframework.didisam.cmm.Js.*;
  *  시범 플래그: grp_group.pilot(산타 관리자가 켬). 꺼진 상위 기관 경로는 403 grp_off. */
 @Service("groupService")
 public class GroupServiceImpl extends EgovAbstractServiceImpl implements GroupService {
+    static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger("grp");
     static final Pattern DAY_RE = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$"), TID_RE = Pattern.compile("^tn_[a-z0-9]{8,16}$");
     static final String AZ = "abcdefghijklmnopqrstuvwxyz0123456789"; static final SecureRandom RND = new SecureRandom();
     /* ── 계약 service/server/group/contract.json(version grp-api-1) 사본 — 계약이 바뀌면 같이 고친다(test/contract-group.sh가 대조) ── */
@@ -188,7 +189,7 @@ public class GroupServiceImpl extends EgovAbstractServiceImpl implements GroupSe
         ObjectNode doc = docOf(child); ObjectNode v = GrpKpi.fromDoc(doc, day);
         if (B(share, "ai")) { Map<String, Object> r = null; try { r = ttx.inTenant(child, () -> mapper.selectAiDay(child, day)); } catch (Exception e) { r = null; }
             v.put("aiCalls", r == null ? 0 : ((Number) r.get("calls")).longValue()); v.put("aiTok", r == null ? 0 : ((Number) r.get("tok")).longValue()); }
-        if (B(share, "revenue")) { Long r = null; try { r = ttx.inTenant(child, () -> mapper.selectRevDay(child, day)); } catch (Exception e) { r = null; } v.put("rev", r == null ? 0 : r); }
+        if (B(share, "revenue")) { Long r = null; try { r = ttx.inTenant(child, () -> mapper.selectRevDay(child, day)); } catch (Exception e) { LOG.warn("grp.rev {} {}", child, e.getMessage()); r = null; } v.put("rev", r == null ? 0 : r); }
         return new Object[]{ v, wantLx ? GrpKpi.lxRows(doc) : null };
     }
     /** ② 소속 기관 범위로 집계 표에 쓰기(RLS: child_tid = app.tenant · active 연결) — Node snap.store */

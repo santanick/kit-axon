@@ -42,7 +42,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
     @Override public Map<String, Object> config() throws Exception {
         mapper.ping();
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("live", true); if (!p.module.isEmpty()) m.put("module", p.module); m.put("signup", p.allowSignup && (p.module.isEmpty() || "admin".equals(p.module))); m.put("signupCode", !p.signupCode.isEmpty()); m.put("oauth", p.module.isEmpty() || "admin".equals(p.module) ? oa.names() : List.of());
+        m.put("live", true); if (!p.module.isEmpty()) m.put("module", p.module); m.put("signup", p.allowSignup && (p.module.isEmpty() || "admin".equals(p.module))); m.put("signupCode", !p.signupCode.isEmpty()); { List<String> op = new java.util.ArrayList<>(oa.names()); if (teamsLive) op.add("microsoft"); m.put("oauth", p.module.isEmpty() || "admin".equals(p.module) ? op : List.of()); } /* 13차 Entra SSO(MS_CLIENT_ID) — Node /api/config와 같음 */
         m.put("ai", p.ai); m.put("models", MODELS); m.put("aiDaily", p.aiDaily); m.put("payOnline", !tossKey.trim().isEmpty()); /* v40 시설 예약 온라인 결제(Node fac.config) */
         return m;
     }
@@ -140,6 +140,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         if (a != null && !p.module.isEmpty() && !DdModule.roleAllowed(p.module, a.get("role"))) return null;
         return a;
     }
+    @org.springframework.beans.factory.annotation.Value("#{'${MS_CLIENT_ID:}'.trim().length() > 0}") private boolean teamsLive;
     @Override public Map<String, Object> need(HttpServletRequest req) throws Exception {
         Map<String, Object> a = auth(req); if (a == null) throw processException("dd.401.auth"); String up = req.getRequestURI(); if (Boolean.TRUE.equals(a.get("pw_temp")) && !"/api/me".equals(up) && !"/api/password".equals(up)) throw processException("dd.403.pw_temp"); return a;
     }
