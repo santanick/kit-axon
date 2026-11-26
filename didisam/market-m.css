@@ -1,0 +1,40 @@
+/* 디디쌤 콘텐츠 마켓 — 마진 1차 추가 스타일(디자이너 ②, 2026-11-26)
+   h/market.css 다음에 불러옵니다. mk- 접두사 · 토큰만(하드코딩 색 없음). 개발자 4는 이 내용을 didisam/market.css 끝에 옮깁니다. */
+
+/* 배지: 산타 오리지널(스튜디오) — 크레딧 배지(채움)와 구별되는 테두리형 + 반짝 아이콘 */
+.mk-bd.orig{background:var(--surface);color:var(--t-mag);box-shadow:inset 0 0 0 1.5px var(--pr)}
+.mk-bd.orig .ic{width:13px;height:13px}
+/* 「광고」 표시: 유료 노출 구별(빼지 않음). 사진 위는 오른쪽 위 고정, 표 · 줄 안은 .in */
+.mk-ad{position:absolute;right:10px;top:10px;z-index:1;display:inline-flex;align-items:center;height:22px;padding:0 7px;border-radius:6px;background:var(--surface);color:var(--n700);font-size:12px;font-weight:700;line-height:1;box-shadow:inset 0 0 0 1px var(--n300)}
+.mk-ad.in{position:static;vertical-align:middle}
+
+/* 추천 슬롯 카드(A7-P): mk-tier 변형 — 남은 자리 막대 */
+.mk-slot{gap:8px}
+.mk-slot .mk-fee{font-size:24px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--n900)}
+.mk-slot .mk-fee small{font-size:13px;font-weight:700;color:var(--t-sub);margin-left:2px}
+.mk-cap{display:flex;gap:4px}
+.mk-cap i{flex:1;height:8px;border-radius:99px;background:var(--c-track)}
+.mk-cap i.on{background:var(--c-data)}
+.mk-mon{display:flex;flex-wrap:wrap;gap:6px;font-size:12.5px;color:var(--t-sub)}
+.mk-mon span{padding:2px 8px;border-radius:99px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--n200);font-variant-numeric:tabular-nums}
+.mk-mon span.full{color:var(--t-bad);background:var(--badl);box-shadow:none}
+
+/* 정원표 칸(A8-P) */
+.mk-capc{display:flex;flex-direction:column;gap:6px;min-width:120px}
+.mk-capc b{font-size:14px;font-variant-numeric:tabular-nums}
+
+/* 선택 불가 옵션(비중 초과 등) */
+.mk-opt.off{opacity:1;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--n200);color:var(--t-sub)}
+.mk-opt.off .mk-ck{background:var(--n100);box-shadow:inset 0 0 0 1.5px var(--n300)}
+
+/* 매출 대시보드 차트(A9-V): 한 차트 한 축 — 금액 막대와 비율 선은 따로 그립니다 */
+.mk-chart text{font-size:12px;fill:var(--t-sub);font-variant-numeric:tabular-nums}
+.mk-chart .gr{stroke:var(--c-grid,var(--n200));stroke-width:1}
+.mk-chart .ax{stroke:var(--n300);stroke-width:1}
+.mk-chart .bar{fill:var(--c-data)}
+.mk-chart .bar:hover{fill:var(--gr700)}
+.mk-chart .ln{fill:none;stroke:var(--c-data);stroke-width:2}
+.mk-chart .dot{fill:var(--c-data);stroke:var(--surface);stroke-width:2}
+.mk-chart .ref{stroke:var(--t-bad);stroke-width:1.5;stroke-dasharray:4 4}
+.mk-chart text.v{fill:var(--n900);font-weight:700}
+.mk-chart .hit{fill:transparent}

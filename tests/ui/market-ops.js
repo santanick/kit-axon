@@ -75,11 +75,14 @@ function indexHtml() { let h = fs.readFileSync(path.join(ROOT, 'index.html'), 'u
   await tab('mkops', 'mkops', 'rate'); await p.click('[data-act="mk-rate-set"][data-v="cp_lw"]'); await mok(); ok(await p.evaluate(() => !!document.getElementById('modal')), '동의 번호 없으면 요율 변경 불가(mk_cp_rate)');
   await p.selectOption('#modal [name=k]', 'agency'); await p.fill('#modal [name=a]', 'AG-TEST-1'); await mok(); await p.waitForTimeout(50); ok(/부터 적용.*월 소진분은 기존 요율/.test(await p.innerText('#modal')), '요율 변경 확인 카드(다음 달 1일 · 소급 없음)'); await mok();
   ok(await p.evaluate(() => S.mkopsD.rates.some(r => r.cpTid === 'cp_lw' && r.cpBp === 5500 && r.effectiveFrom === MKX.calc('nextMonth1', today()))), '요율 행 추가(다음 달 1일)');
-  await tab('mkops', 'mkops', 'rev'); const RV = await p.evaluate(() => { const r = window.mkopsRev(); return { cp: r.cpCredit, src: r.bySource.map(s => s.source) }; });
-  ok(RV.cp === CL.cp && RV.src.includes('credit_orig') && RV.src.includes('promo'), 'A9-V 매출 대시보드 크레딧 CP 지급 = 분기 마감 CP 몫 ' + JSON.stringify(RV));
-  t = await main(); ok(/수익원별 산타 몫/.test(t) && /요율별 소진/.test(t) && /산타 오리지널\(100%\)/.test(t), '대시보드 표 3종');
-  await tab('mkops', 'mkops', 'orig'); await p.click('[data-act="mk-orig-new"]'); await p.selectOption('#modal [name=col]', 'col_job'); await mok(); ok(await p.evaluate(() => !!document.getElementById('modal')), 'O2 오리지널 비중 30% 초과 → 막힘(mk_orig_cap)');
-  await p.selectOption('#modal [name=col]', 'col_basic'); await mok(); ok(await p.evaluate(() => S.mkopsD.originals.length === 2), 'O1 · O3 오리지널 등록');
+  await tab('mkops', 'mkops', 'rev'); const RV = await p.evaluate(() => { const r = window.mkopsRev(); return { cp: r.cpCredit, src: r.bySource.map(s => s.source), rec: r.rec, face: window.mkopsMonthLines(window.mkopsLastQ().months).reduce((a, l) => a + l.net * 1000, 0) }; });
+  ok(RV.cp === CL.cp && RV.src.includes('credit_orig') && RV.src.includes('promo') && RV.rec > 0 && RV.rec < RV.face, 'A9-V 매출 대시보드 크레딧 CP 지급 = 분기 마감 CP 몫 ' + JSON.stringify(RV));
+  t = await main(); ok(/인식 매출/.test(t) && /수익원별 산타 몫/.test(t) && /요율별 소진/.test(t) && /산타 오리지널\(100%\)/.test(t) && await p.$$eval('svg.mk-chart', x => x.length) === 2, '대시보드: 인식 매출 주 숫자 · 표 · 차트 2개(금액 · 비율)');
+  await tab('mkops', 'mkops', 'orig'); await p.click('.ph [data-act="mk-orig-new"]'); await p.click('[data-act="mk-orig-f"][data-k="src"][data-ai="1"]');
+  ok(await p.$eval('[data-act="mk-orig-f"][data-v="col_job"]', b => b.classList.contains('off')) && /33\.3%/.test(await main()), 'O2 비중 30% 초과 컬렉션은 선택 불가(7/21 33.3%)');
+  await p.click('[data-act="mk-orig-f"][data-v="col_basic"]'); ok(await p.$eval('[data-act="mk-orig-save"]', b => b.disabled) && /사실 확인 경고가 남아/.test(await main()), 'AI 생성: 사실 확인 경고가 남으면 [등록] 비활성');
+  await p.check('[data-chg="mk-orig-f"][data-k="ack"]'); ok(/= 15크레딧/.test(await main()) && !(await p.$eval('[data-act="mk-orig-save"]', b => b.disabled)), '「확인함」 체크 후 등록 가능 · O1 15,000원 = 15크레딧');
+  await p.click('[data-act="mk-orig-save"]'); ok(await p.evaluate(() => S.mkopsD.originals.length === 2 && S.mkopsD.originals[0].srcKind === 'ai'), 'O1 · O3 오리지널 등록');
 
   /* ⑨ 시범 기관 켜기 */
   await tab('mkops', 'mkops', 'pilot'); await p.click('[data-act="mk-pilot-set"][data-v="self"][data-k="pilot"]'); ok(/마켓 메뉴가.*학습자 화면에 크레딧 진열대/.test(await p.innerText('#modal')), '시범 기관 켜기 확인 카드'); await mok();
