@@ -10,7 +10,7 @@ public interface GroupMapper {
     Map<String, Object> selectDoc(@Param("tid") String tid);
     Map<String, Object> selectAiDay(@Param("tid") String tid, @Param("day") String day);
     Long selectRevDay(@Param("tid") String tid, @Param("day") String day);
-    Integer selectMfaFresh(@Param("uid") String uid);
-    int updateDocPath(@Param("tid") String tid, @Param("key") String key, @Param("value") String valueJson);
-    int updateDoc(@Param("tid") String tid, @Param("doc") String docJson);
+    Map<String, Object> selectDocLock(@Param("tid") String tid);
+    Integer selectFresh(@Param("sid") String sid);
+    int updateDoc(@Param("tid") String tid, @Param("doc") String docJson, @Param("bytes") int bytes);
 }

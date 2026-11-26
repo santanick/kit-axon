@@ -4,12 +4,12 @@
      grp_* 교차 표는 MkDb가 Node와 같은 SQL 문장으로 다룬다(didisam_group 역할). 여기에는 소속 기관 자기 범위(inTenant) 질의만 둔다. -->
 <mapper namespace="egovframework.didisam.group.service.impl.GroupMapper">
   <select id="selectDoc" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select doc::text as doc from tenant_state where tenant_id = #{tid}</select>
-  <select id="selectAiDay" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select calls::bigint as calls, (tin + tout)::bigint as tok from ai_usage where tenant_id = #{tid} and day = #{day}::date</select>
+  <select id="selectAiDay" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select coalesce(sum(calls), 0)::bigint as calls, coalesce(sum(tin + tout), 0)::bigint as tok from ai_usage where tenant_id = #{tid} and day = #{day}::date</select>
   <select id="selectRevDay" resultType="java.lang.Long" flushCache="true" useCache="false">
-    select coalesce((select sum(amount) from led_receipt where tenant_id = #{tid} and status = 'paid' and (paid_at at time zone 'Asia/Seoul')::date = #{day}::date), 0)
-         - coalesce((select sum(amount) from led_refund where tenant_id = #{tid} and status = 'done' and (coalesce(done_at, at) at time zone 'Asia/Seoul')::date = #{day}::date), 0)
+    <!-- Node snap.measure와 같음: 그날 수납 합계(환불 차감 질의는 Node에서 led_refund.created_at 열이 없어 0으로 처리됨 — 개발 1에 전달) -->
+    select coalesce(sum(amount), 0)::bigint from led_receipt where tenant_id = #{tid} and status = 'paid' and (paid_at at time zone 'Asia/Seoul')::date = #{day}::date
   </select>
-  <select id="selectMfaFresh" resultType="java.lang.Integer" flushCache="true" useCache="false">select 1 from user_totp where user_id = #{uid}::uuid and on_at is not null and updated_at &gt; now() - interval '10 minutes'</select>
-  <update id="updateDocPath">update tenant_state set doc = jsonb_set(jsonb_set(doc, '{org}', coalesce(doc->'org', '{}'::jsonb)), '{org,grp}', coalesce(doc->'org'->'grp', '{}'::jsonb) || jsonb_build_object(#{key}, #{value}::jsonb)), rev = rev + 1, updated_at = now() where tenant_id = #{tid}</update>
-  <update id="updateDoc">update tenant_state set doc = #{doc}::jsonb, rev = rev + 1, bytes = octet_length(#{doc}), updated_at = now() where tenant_id = #{tid}</update>
+  <select id="selectDocLock" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select doc::text as doc from tenant_state where tenant_id = #{tid} for update</select>
+  <select id="selectFresh" resultType="java.lang.Integer" flushCache="true" useCache="false">select case when created_at &gt; now() - interval '10 minutes' then 1 else 0 end from sessions where id = #{sid}</select>
+  <update id="updateDoc">update tenant_state set doc = #{doc}::jsonb, rev = rev + 1, bytes = #{bytes}, updated_at = now() where tenant_id = #{tid}</update>
 </mapper>
