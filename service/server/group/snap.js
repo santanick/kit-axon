@@ -11,7 +11,8 @@ module.exports = (ctx, S) => {
       v.aiCalls = r ? +r.calls : 0; v.aiTok = r ? +r.tok : 0; }
     if (share.revenue) { /* 통합 수납 원장 합계만(개인 기록 아님): 그날 수납 − 그날 환불 */
       const r = await inTenant(pool, childTid, async c => { const p = (await c.query("select coalesce(sum(amount),0)::bigint n from led_receipt where tenant_id = $1 and status = 'paid' and (paid_at at time zone 'Asia/Seoul')::date = $2::date", [childTid, day])).rows[0].n;
-        const f = (await c.query("select coalesce(sum(amount),0)::bigint n from led_refund where tenant_id = $1 and status = 'done' and (created_at at time zone 'Asia/Seoul')::date = $2::date", [childTid, day]).catch(() => ({ rows: [{ n: 0 }] }))).rows[0].n; return +p - +f; }).catch(() => null);
+        /* 환불: 완료(status='done')된 건을 완료 시각 coalesce(done_at, at)의 KST 날짜로(ledger/index.js 마감과 같은 기준). led_refund에는 created_at이 없다 */
+        const f = (await c.query("select coalesce(sum(amount),0)::bigint n from led_refund where tenant_id = $1 and status = 'done' and (coalesce(done_at, at) at time zone 'Asia/Seoul')::date = $2::date", [childTid, day])).rows[0].n; return +p - +f; }).catch(e => { if (log && log.warn) log.warn('grp.rev', childTid, e.message); return null; });
       v.rev = r == null ? 0 : r; }
     return { v, lx: wantLx ? K.lxRows(doc) : null };
   }

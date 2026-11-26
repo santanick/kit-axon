@@ -62,6 +62,7 @@ function createGroup(ctx) {
   return {
     match: (method, p) => { const fn = R.match(method, p); return fn && ((req, res) => als.run({}, () => fn(req, res))); },
     tick: () => shared.snap.tick(),
+    snap: shared.snap, /* 시험용(집계 계산 단계 직접 확인) */
     MSG
   };
 }

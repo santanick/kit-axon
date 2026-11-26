@@ -34,6 +34,21 @@ test('운영 서버: 통합 센터', { skip: !process.env.DATABASE_URL }, async 
     if (process.env.DBG) { const x = { ...R }; delete x._t; console.log(JSON.stringify(x)); }
     const bad = C.check(R); assert.deepEqual(bad, [], bad.join('\n'));
   });
+  await t.test('수납액 KPI: 그날 수납 − 그날 완료 환불(coalesce(done_at, at) KST 날짜, status=done만)', async () => {
+    const { inTenant } = require('../server/db'); const tid = R.tids.X; const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+    const G = require('../server/group').createGroup({ pool, inTenant, HttpErr: class extends Error {}, audit: async () => {}, env: {}, log: {} });
+    await inTenant(pool, tid, async c => {
+      await c.query("insert into led_receipt (tenant_id, id, unit_id, method, channel, amount, paid_at, status) values ($1, 'lp_grptest00001', 'u1', 'cash', 'desk', 50000, now(), 'paid')", [tid]);
+      const rf = (id, amt, st, at, done) => c.query(`insert into led_refund (tenant_id, id, receipt_id, amount, rule_type, auto_amount, status, at, done_at) values ($1, $2, 'lp_grptest00001', $3, 'manual', $3, $4, ${at}, ${done})`, [tid, id, amt, st]);
+      await rf('lr_grptest00001', 12000, 'done', 'now()', 'now()');                                   /* 오늘 완료 → 차감 */
+      await rf('lr_grptest00002', 1000, 'done', 'now()', 'null');                                     /* 완료 시각 없음 → at 기준 오늘 → 차감 */
+      await rf('lr_grptest00003', 7000, 'done', "now() - interval '3 days'", "now() - interval '3 days'"); /* 다른 날 → 제외 */
+      await rf('lr_grptest00004', 9999, 'pending', 'now()', 'null');                                  /* 대기 → 제외 */
+      await rf('lr_grptest00005', 3000, 'done', "now() - interval '3 days'", 'now()');                /* 신청은 3일 전 · 완료는 오늘 → 차감 */
+    });
+    const m = await G.snap.measure(tid, day, { revenue: true }, false); assert.equal(m.v.rev, 50000 - 12000 - 1000 - 3000);
+    assert.equal((await G.snap.measure(tid, day, {}, false)).v.rev, undefined, '동의 없으면 값 없음');
+  });
   await t.test('T-ISO-1 통합 센터 역할은 기관 표 권한 없음 · 모든 grp 표 RLS FORCE · 앱 계정도 직접 못 읽음', async () => {
     for (const x of ['tenant_state', 'learner_accounts', 'learners', 'users', 'audit_log', 'ai_usage', 'led_receipt']) await assert.rejects(as({ tid: R.tids.F }, `select 1 from ${x} limit 1`), /permission denied/, x);
     await assert.rejects(as({ tid: R.tids.F }, 'select 1 from grp_lkey'), /permission denied/);
