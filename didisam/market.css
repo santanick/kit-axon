@@ -1,5 +1,7 @@
 /* 디디쌤 콘텐츠 마켓 · 패스 — 공통 추가 스타일 (mk- 접두사, 토큰만 사용)
    소유: 수석 디자이너(h). Ver2 dds.css · app.css 다음에 불러옵니다. */
+/* 그림 · 영상 위 고정 색(라이트 · 다크 공통) — 하드코딩 색은 이 줄에만 둡니다(v48.1 다크 점검) */
+:root{--mk-on-img:#fff;--mk-img-track:rgba(255,255,255,.3)}
 .mk{display:flex;flex-direction:column;gap:20px;min-width:0}
 .mk *{min-width:0}
 .mk-g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -32,7 +34,7 @@
 .mk-pc:hover,.mk-pc.hov{box-shadow:var(--sh2);transform:translateY(-2px)}
 .mk-pc .mk-im{position:relative;aspect-ratio:16/9;background:var(--n100) center/cover no-repeat}
 .mk-pc .mk-im .mk-bds{position:absolute;left:12px;top:12px}
-.mk-pc .mk-im .mk-dur{position:absolute;right:10px;bottom:10px;background:var(--scrim);color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px}
+.mk-pc .mk-im .mk-dur{position:absolute;right:10px;bottom:10px;background:var(--scrim);color:var(--mk-on-img);font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px}
 .mk-pc .mk-bo{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
 .mk-pc .mk-t{font-size:15.5px;font-weight:700;line-height:1.4;color:var(--n900);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:0}
 .mk-pc .mk-m{font-size:13px;color:var(--t-sub);margin:0}
@@ -56,7 +58,7 @@
 .mk-search span{flex:1}
 
 /* 컬렉션 타일 */
-.mk-col{position:relative;border-radius:var(--r-card);overflow:hidden;min-height:168px;background:var(--n900) center/cover no-repeat;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;color:#fff;box-shadow:var(--sh1)}
+.mk-col{position:relative;border-radius:var(--r-card);overflow:hidden;min-height:168px;background:var(--night) center/cover no-repeat;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;color:var(--mk-on-img);box-shadow:var(--sh1)}
 .mk-col::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.72))}
 .mk-col>*{position:relative}
 .mk-col b{font-size:17px;font-weight:800}
@@ -137,12 +139,13 @@
 .mk-player{position:relative;border-radius:var(--r-card);overflow:hidden;aspect-ratio:16/9;background:var(--n900) center/cover}
 .mk-player::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.6))}
 .mk-play{position:absolute;inset:0;margin:auto;width:72px;height:72px;border-radius:50%;background:var(--glass);display:grid;place-items:center;z-index:1;box-shadow:var(--sh3);color:var(--n900)}
-.mk-pbar{position:absolute;left:20px;right:20px;bottom:18px;z-index:1;display:flex;align-items:center;gap:12px;color:#fff;font-size:13px;font-weight:700}
-.mk-pbar .mk-bar{flex:1;height:5px;background:rgba(255,255,255,.3)}
+.mk-pbar{position:absolute;left:20px;right:20px;bottom:18px;z-index:1;display:flex;align-items:center;gap:12px;color:var(--mk-on-img);font-size:13px;font-weight:700}
+.mk-pbar .mk-bar{flex:1;height:5px;background:var(--mk-img-track)}
 
 /* 대기열 · 상세 분할 */
 .mk-q{display:grid;grid-template-columns:420px minmax(0,1fr);gap:20px;align-items:start}
-.mk-qi{display:flex;gap:12px;padding:14px;border-radius:14px;align-items:flex-start;cursor:pointer}
+.mk-qi{display:flex;gap:12px;padding:14px;border-radius:14px;align-items:flex-start;cursor:pointer;background:transparent;color:inherit;border:0;font:inherit;text-align:left;width:100%}
+.mk-qi:hover:not(.on){background:var(--surface2)}
 .mk-qi.on{background:var(--surface);box-shadow:inset 0 0 0 2px var(--pr),var(--sh1)}
 .mk-qi+.mk-qi{margin-top:4px}
 .mk-chk{display:flex;flex-direction:column;gap:2px}
@@ -177,7 +180,7 @@
 }
 /* 헤더: g2-dom(임시 주소 칩)을 쓰지 않는 기관에서 오른쪽 정렬 유지 */
 header.top .mk-sp{flex:1}
-.mk-col b,.mk-col small{color:#fff}
+.mk-col b,.mk-col small{color:var(--mk-on-img)}
 .mk-subtabs{align-self:flex-start;margin:4px 0 0}
 
 /* v1.1 크레딧 */
