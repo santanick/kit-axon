@@ -23,8 +23,8 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
     await p.evaluate(() => ACT['sl-cn']({ dataset: { v: 'teams' } })); await p.waitForTimeout(150);
     ok(await p.evaluate(() => { const c = document.getElementById('cnCard-teams'); return !!c && !!c.querySelector('.cx-steps') && c.querySelectorAll('.tm-tabs [role=tab]').length === 4 && /받는 사람이 보는 모습/.test(c.textContent) && !!c.querySelector('details.cn-guide'); }), '카드: 3단계 · 탭 4개 · 단계 안내 · 미리보기');
     ok(await p.evaluate(() => cnStatus('teams').st) === '미연결', '처음 상태 = 미연결');
-    await p.fill('#tmChName', '교육운영'); await p.click('#cnCard-teams [data-act=tm-chadd]'); await p.waitForTimeout(150);
-    ok(await p.evaluate(() => cnStatus('teams').st) === '연결됨', '시연 채널 추가 → 연결됨');
+    await p.waitForTimeout(700); await p.fill('#tmChName', '교육운영'); await p.click('#cnCard-teams [data-act=tm-chadd]'); await p.waitForSelector('#cnCard-teams [data-act=tm-chtest]', { timeout: 5000 }).catch(() => { });
+    ok(await p.evaluate(() => cnStatus('teams').st) === '연결됨', '시연 채널 추가 → 연결됨 ' + await p.evaluate(() => [(document.querySelector('#toasts') || {}).textContent, document.querySelectorAll('#tmChName').length, (document.getElementById('tmChName') || {}).value].join(' | ')));
     await p.click('#cnCard-teams [data-act=tm-chtest]'); await p.waitForTimeout(100);
     ok(await p.evaluate(() => /연결 시험/.test(document.getElementById('cnCard-teams').textContent)), '시험 → 최근 실행 기록(시연)');
     await p.evaluate(() => ACT['tm-tab']({ dataset: { v: 'org' } })); await p.waitForTimeout(80);
@@ -48,25 +48,25 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
     ok(await p.evaluate(() => { const b = document.querySelector('#edBody .tm-mk'); return !!b && !!b.querySelector('[data-act=tm-zoom]') && !!b.querySelector('[data-act=tm-meet]'); }), '라이브 편집기: Zoom · Teams 회의 버튼 나란히');
     await p.click('#edBody [data-act=tm-meet]'); await p.waitForTimeout(120);
     ok(await p.evaluate(() => document.querySelector('#edBody [data-ed=url]').value === '/learner.html#live-demo' && !!ED.it.teams), 'Teams 시연 회의 → 라이브 주소 자동 입력');
-    await p.evaluate(() => { const b = [...document.querySelectorAll('.modal button, [role=dialog] button')].find(x => /^저장/.test(x.textContent.trim())); if (b) b.click(); }); await p.waitForTimeout(150);
+    await p.click('#modal [data-mact=ok]'); await p.waitForTimeout(150);
     ok(await p.evaluate(([c0, i]) => !!(C(c0).curriculum[i].teams), [cid, idx]), '저장하면 반 항목에 Teams 회의 기록');
-    await p.evaluate(c0 => { closeModal && closeModal(); UI.cls = c0; go('class'); render(); }, cid); await p.waitForTimeout(250);
+    await p.evaluate(c0 => { closeModal && closeModal(); UI.cls = c0; UI.clsT = 'curriculum'; go('class'); render(); }, cid); await p.waitForTimeout(250);
     const hasBtn = await p.evaluate(() => !!document.querySelector('[data-act=tm-att]'));
     ok(hasBtn, '반 화면: [Teams 출석 가져오기] 버튼');
     if (hasBtn) { await p.evaluate(() => document.querySelector('[data-act=tm-att]').click()); await p.waitForTimeout(150);
       ok(await p.evaluate(() => /제안/.test(document.body.textContent) && document.querySelectorAll('select[name^=tma-]').length >= 2), '출석 제안 표(시연 데이터)');
       const before = await p.evaluate(([c0, i]) => Object.keys((C(c0).att || {})[C(c0).curriculum[i].id] || {}).length, [cid, idx]);
-      await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /명 반영$/.test(x.textContent.trim())); b && b.click(); }); await p.waitForTimeout(150);
+      await p.click('#modal [data-mact=ok]'); await p.waitForTimeout(150);
       const after = await p.evaluate(([c0, i]) => Object.keys((C(c0).att || {})[C(c0).curriculum[i].id] || {}).length, [cid, idx]);
       ok(after > before || after >= 2, `[반영] → 출석부 저장(${before} → ${after})`); }
     /* 해제 */
     await p.evaluate(() => { go('conn'); render(); ACT['sl-cn']({ dataset: { v: 'teams' } }); }); await p.waitForTimeout(120);
-    await p.evaluate(() => cnOff('teams')); await p.waitForTimeout(80); await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '연결 해제' && x.closest('.modal, [role=dialog], .mdl')); b && b.click(); }); await p.waitForTimeout(120);
+    await p.evaluate(() => cnOff('teams')); await p.waitForTimeout(80); await p.click('#modal [data-mact=ok]'); await p.waitForTimeout(120);
     ok(await p.evaluate(() => cnStatus('teams').st) === '미연결', '연결 해제 → 미연결');
     ok(!errs.length, 'univ 오류 없음 ' + errs.join(' | ')); await p.close(); }
-  { const { p, errs } = await studio('adult');
-    ok(await p.evaluate(() => !/Microsoft Teams/.test(document.querySelector('.cx-hero h2').textContent) && !!document.querySelector('.cx-row[data-v=teams]')), '학원: 추천에는 없고 목록에는 있음');
-    ok(!errs.length, 'adult 오류 없음'); await p.close(); }
+  { const { p, errs } = await studio('k12');
+    ok(await p.evaluate(() => { const h = !/Microsoft Teams/.test(document.querySelector('.cx-hero h2').textContent); UI.cxCat = 'msg'; render(); return h && !!document.querySelector('.cx-row[data-v=teams]'); }), '학원(k12): 추천에는 없고 메시지 묶음 목록에는 있음');
+    ok(!errs.length, 'k12 오류 없음'); await p.close(); }
   { const { p, errs } = await studio('corp', 390);
     await p.evaluate(() => ACT['sl-cn']({ dataset: { v: 'teams' } })); await p.waitForTimeout(200);
     ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '390px: Teams 시트 가로 넘침 없음');
@@ -91,9 +91,11 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
     const su = await p.evaluate(async em => { const r = await fetch('/api/signup', { method: 'POST', headers: { 'content-type': 'application/json', 'x-didisam': '1' }, body: JSON.stringify({ email: em, password: 'Passw0rd-aaa', orgName: '운영 점검 대학', type: 'univ' }) }); return r.status; }, em);
     ok(su === 200, '운영: 가입 ' + su);
     await p.goto(U + '/index.html'); await p.waitForFunction(() => typeof S === 'object' && S && S.me, null, { timeout: 15000 }).catch(() => { });
+    if (!(await p.evaluate(() => typeof S === 'object' && !!S))) { await p.evaluate(async () => { await createOrg('univ', '운영 점검 대학'); }); await p.waitForFunction(() => typeof S === 'object' && S && S.me, null, { timeout: 15000 }).catch(() => { }); }
+    ok(await p.evaluate(() => typeof S === 'object' && !!S && S.org.type === 'univ'), '운영: ① 기관 만들기 → 스튜디오');
     await p.evaluate(() => { if (typeof slMenuSet === 'function') slMenuSet('conn', true); go('conn'); render(); ACT['sl-cn']({ dataset: { v: 'teams' } }); }); await p.waitForTimeout(800);
     ok(await p.evaluate(() => !!document.querySelector('#cnCard-teams .tm-tabs') && !/시연/.test(document.querySelector('#cnCard-teams .cn-h').textContent)), '운영: 서버 상태(mode live)로 카드');
-    await p.fill('#tmChName', '교무팀'); await p.fill('#tmChUrl', `${MU}/hook/workflows/abc?sig=UISECRET42`); await p.click('#cnCard-teams [data-act=tm-chadd]'); await p.waitForTimeout(800);
+    await p.waitForTimeout(700); await p.fill('#tmChName', '교무팀'); await p.fill('#tmChUrl', `${MU}/hook/workflows/abc?sig=UISECRET42`); await p.click('#cnCard-teams [data-act=tm-chadd]'); await p.waitForTimeout(800);
     ok(hooks.length === 1 && hooks[0].attachments && hooks[0].attachments[0].contentType === 'application/vnd.microsoft.card.adaptive', '운영: 채널 저장 → 시험 카드 1건 발송');
     ok(await p.evaluate(() => cnStatus('teams').st === '연결됨' && !document.body.innerHTML.includes('UISECRET42') && !JSON.stringify(S).includes('UISECRET42')), '운영: 연결됨 · 화면 · S에 워크플로 주소 원문 없음');
     await p.evaluate(() => ACT['tm-tab']({ dataset: { v: 'org' } })); await p.waitForTimeout(100);
