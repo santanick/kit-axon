@@ -272,7 +272,8 @@ module.exports = (ctx, S) => {
         const fail = [...(!title ? ['title'] : []), ...(!(lp > 0) ? ['listPrice'] : []), ...(!(hx > 0) ? ['hours'] : [])]; if (fail.length) throw E(422, 'mk_check', null, { failed: fail });
         const cols = arr(b.collections, 10, COL_RE);
         for (const cid of cols) { const n = (await q1(c, "select count(*)::int col, count(*) filter (where p.owner_kind = 'santa')::int orig from mk_collection_item i join mk_product p on p.id = i.product_id where i.collection_id = $1", [cid]));
-          if (!calc.origCapOk(n.col, n.orig)) throw E(409, 'mk_orig_cap', MSG2.mk_orig_cap, { collection: cid }); }
+          const ck = await q1(c, 'select kind from mk_collection where id = $1', [cid]); if (!ck) throw E(404, 'collection', '없는 컬렉션입니다.');
+          if (ck.kind !== 'original' && !calc.origCapOk(n.col, n.orig)) throw E(409, 'mk_orig_cap', MSG2.mk_orig_cap, { collection: cid }); }
         const day = today(); const id = rid('mp_');
         await c.query("insert into mk_product (id, owner_tid, owner_kind, kind, title, hours_x10, status, launched_at, src_kind, clib_ref) values ($1,$2,'santa','course',$3,$4,'listed',$5,$6,$7)", [id, a.tid, title, hx, day, b.srcKind === 'ai' ? 'ai' : 'self', str(b.clibRef, 80) || null]);
         await c.query('insert into mk_price (product_id, list_price, credits, effective_from, by_email) values ($1,$2,$3,$4,$5)', [id, lp, calc.credits(lp), day, a.email]);
@@ -291,7 +292,7 @@ module.exports = (ctx, S) => {
         const day = today(); const want = arr(b.items, 500, PID_RE); const ok = [], skipped = [];
         for (const pid of want) { const r = await prod(c, pid, day); (r && r.status === 'listed' && modeOf(r, day) === 'credit' ? ok : skipped).push(pid); } /* 크레딧 참여 상품만 */
         const orig = []; for (const pid of ok) { const r = await prod(c, pid, day); if (r.owner_kind === 'santa') orig.push(pid); }
-        if (orig.length && !calc.origCapOk(ok.length - 1, orig.length - 1)) throw E(409, 'mk_orig_cap', MSG2.mk_orig_cap);
+        if (kind !== 'original' && orig.length && !calc.origCapOk(ok.length - 1, orig.length - 1)) /* 「산타 오리지널」 컬렉션은 상한 밖 */ throw E(409, 'mk_orig_cap', MSG2.mk_orig_cap);
         await c.query('delete from mk_collection_item where collection_id = $1', [id]); let i = 0; for (const pid of ok) await c.query('insert into mk_collection_item (collection_id, product_id, sort) values ($1,$2,$3)', [id, pid, i++]);
         return { ok: true, collection: { id, kind, title, count: ok.length }, skipped }; }); }
   };

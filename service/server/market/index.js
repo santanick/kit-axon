@@ -72,7 +72,7 @@ function createMarket(ctx) {
   /* 기관 문서 값(plan · 이름 · 유형) — RLS 범위 안에서 읽는다 */
   async function orgOf(tid) {
     return inTenant(pool, tid, async c => { const r = (await c.query("select doc->'plan' plan, doc->'org'->>'name' name, doc->'org'->>'type' type, doc->'org'->'mk' mk from tenant_state where tenant_id = $1", [tid])).rows[0];
-      const t = (await c.query('select name, type from tenants where id = $1', [tid])).rows[0] || {}; return { plan: r && r.plan, name: (r && r.name) || t.name || '', type: (r && r.type) || t.type || '', mk: r && r.mk }; });
+      const t = (await pool.query('select name, type from tenants where id = $1', [tid])).rows[0] || {}; return { plan: r && r.plan, name: (r && r.name) || t.name || '', type: (r && r.type) || t.type || '', mk: r && r.mk }; });
   }
   async function party(c, tid) { return (await q1(c, 'select * from mk_party where tid = $1', [tid])) || { tid, kind: 'buyer', pilot: false, active: true }; }
   /* 유료 구독: doc.plan.code가 있고 TRIAL이 아니다 */
@@ -91,7 +91,7 @@ function createMarket(ctx) {
   }
 
   /* 계약 지갑 · 잔액 */
-  async function lotsOf(c, cid) { return (await c.query("select *, to_char(valid_to, 'YYYY-MM-DD') vt, to_char(carry_to, 'YYYY-MM-DD') ct from mk_credit_wallet where contract_id = $1 order by carry_to, lot, id", [cid])).rows; }
+  async function lotsOf(c, cid) { return (await c.query("select *, to_char(valid_to, 'YYYY-MM-DD') vt, to_char(carry_to, 'YYYY-MM-DD') ct from mk_credit_wallet where contract_id = $1 order by carry_to, (lot = 'bonus'), id", [cid])).rows; }
   const lotOut = l => ({ id: l.id, lot: l.lot, credits: l.credits, remain: l.remain, validTo: l.vt, carryTo: l.ct });
   const liveLots = (L, day) => L.filter(l => l.ct >= day);
   /* 기관의 지금 쓰는 크레딧 계약(활성 · 이월, 이월 만료 전) */
