@@ -1,11 +1,12 @@
 'use strict';
+const { adminPool, closeAdmin, NEED } = require('./_admin'); // QA8: 비슈퍼유저 DB에서는 직접 조회만 슈퍼유저 연결로(서버는 RLS 아래 그대로)
 /* 가디언 4차(인증 크로스체크 #2 · #3 · #4 · #8 · #9) — 운영자 유휴 차단 · 최대 수명 · 세션 쿠키 · 동시 접속 · 작업 모드 · 기관 보안 설정 · 학습자 세션 · 잠금
    DATABASE_URL=postgresql://… node --test service/test/session.test.js */
 const test = require('node:test'); const assert = require('node:assert/strict'); const crypto = require('node:crypto');
 const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app');
 
 test('세션 정책', async t => {
-  const pool = poolFrom(process.env); await migrate(pool);
+  const pool = poolFrom(process.env); await migrate(pool); const adm = await adminPool(pool); if (!adm) { await pool.end(); t.skip(NEED); return; }
   const app = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', PII_KEY: crypto.randomBytes(32).toString('hex'), PII_DEV_OTP: '1', MFA_OFF: '1' }, log: {} });
   await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
   const jars = {}; const raw = {}; const call = async (who, method, path, body) => {
@@ -15,8 +16,8 @@ test('세션 정책', async t => {
     return { status: r.status, j: await r.json().catch(() => ({})) };
   };
   const sha = s => crypto.createHash('sha256').update(s).digest('hex'); const sidOf = who => sha(jars[who].dd_sid);
-  const left = async who => (await pool.query('select extract(epoch from expires_at - now())::int s from sessions where id = $1', [sidOf(who)])).rows[0];
-  const acts = async (actor, act) => (await pool.query('select detail from audit_log where actor = $1 and action = $2 order by id', [actor, act])).rows.map(r => r.detail);
+  const left = async who => (await adm.query('select extract(epoch from expires_at - now())::int s from sessions where id = $1', [sidOf(who)])).rows[0];
+  const acts = async (actor, act) => (await adm.query('select detail from audit_log where actor = $1 and action = $2 order by id', [actor, act])).rows.map(r => r.detail);
   const sfx = Date.now().toString(36); const OW = `ss${sfx}@d.kr`, PW = 'Passw0rd-ses'; let tid;
 
   await t.test('세션 쿠키 · 기본 유휴 60분 · 같은 브라우저 재로그인은 교체', async () => {
@@ -26,7 +27,7 @@ test('세션 정책', async t => {
     assert.ok(Date.parse(i.j.maxAt) - Date.now() > 11.9 * 3600e3 && Date.parse(i.j.maxAt) - Date.now() <= 12 * 3600e3);
     const old = sidOf('A'); const l = await call('A', 'POST', '/api/login', { email: OW, password: PW }); assert.equal(l.status, 200);
     assert.deepEqual(Object.keys(l.j).sort(), ['tenant', 'user'], '다른 세션 없으면 others 생략');
-    assert.equal((await pool.query('select 1 from sessions where id = $1', [old])).rowCount, 0, '이전 세션 삭제');
+    assert.equal((await adm.query('select 1 from sessions where id = $1', [old])).rowCount, 0, '이전 세션 삭제');
     assert.equal((await call('X', 'GET', '/api/session')).status, 401);
   });
   await t.test('동시 접속 알림 · 로그인 기기 목록', async () => {
@@ -35,20 +36,20 @@ test('세션 정책', async t => {
     assert.deepEqual(Object.keys(m.j.rows[0]).sort(), ['agent', 'band', 'createdAt', 'current', 'expiresAt', 'id', 'lastAt']); assert.equal(m.j.rows[0].id.length, 12);
   });
   await t.test('쓰는 동안 연장 · 조회는 연장 안 함 · 유휴 만료 · 최대 12시간', async () => {
-    await pool.query("update sessions set expires_at = now() + interval '10 minutes' where id = $1", [sidOf('A')]);
+    await adm.query("update sessions set expires_at = now() + interval '10 minutes' where id = $1", [sidOf('A')]);
     await call('A', 'GET', '/api/session'); assert.ok((await left('A')).s <= 600, '조회(peek)는 연장 안 함');
     await call('A', 'GET', '/api/me'); assert.ok((await left('A')).s > 3500, '사용하면 60분으로 연장');
-    await pool.query("update sessions set expires_at = now() + interval '40 minutes' where id = $1", [sidOf('A')]);
+    await adm.query("update sessions set expires_at = now() + interval '40 minutes' where id = $1", [sidOf('A')]);
     await call('A', 'GET', '/api/me'); assert.ok((await left('A')).s <= 2400, '절반 이상 남으면 쓰기 없음');
     const t1 = await call('A', 'POST', '/api/session/touch'); assert.ok(t1.j.remain > 3500, '계속 사용');
-    await pool.query("update sessions set expires_at = now() - interval '1 second' where id = $1", [sidOf('B')]);
+    await adm.query("update sessions set expires_at = now() - interval '1 second' where id = $1", [sidOf('B')]);
     assert.equal((await call('B', 'GET', '/api/me')).status, 401, '유휴 만료');
     await call('B', 'POST', '/api/login', { email: OW, password: PW });
-    await pool.query("update sessions set created_at = now() - interval '12 hours 1 minute' where id = $1", [sidOf('B')]);
+    await adm.query("update sessions set created_at = now() - interval '12 hours 1 minute' where id = $1", [sidOf('B')]);
     assert.equal((await call('B', 'GET', '/api/me')).status, 401, '최대 수명 12시간');
-    await pool.query("update sessions set created_at = now() - interval '11 hours 50 minutes' where id = $1", [sidOf('A')]);
+    await adm.query("update sessions set created_at = now() - interval '11 hours 50 minutes' where id = $1", [sidOf('A')]);
     await call('A', 'POST', '/api/session/touch'); const r = await left('A'); assert.ok(r.s <= 600 && r.s > 500, '연장도 최대 수명을 넘지 않음: ' + r.s);
-    await pool.query("update sessions set created_at = now() where id = $1", [sidOf('A')]);
+    await adm.query("update sessions set created_at = now() where id = $1", [sidOf('A')]);
   });
   await t.test('작업 모드', async () => {
     assert.equal((await call('A', 'POST', '/api/session/work', { minutes: 300, reason: '성적 입력' })).j.error, 'work_minutes');
@@ -88,18 +89,18 @@ test('세션 정책', async t => {
     const st = await call('B', 'GET', '/api/state'); const doc = st.j.doc; doc.codes = [{ sid: '20261234', dept: '컴공', code: 'ABC234' }];
     assert.equal((await call('B', 'PUT', '/api/state', { doc, rev: st.j.rev })).status, 200);
     const l1 = await call('L1', 'POST', `/api/pub/${tid}/login`, { sid: '20261234', code: 'ABC234', keep: false }); assert.equal(l1.status, 200);
-    assert.ok(!/Max-Age/i.test(raw['L1:dd_lsid'])); const r1 = (await pool.query('select keep, extract(epoch from expires_at - now())::int s from learner_sessions where id = $1', [sha(jars.L1.dd_lsid)])).rows[0];
+    assert.ok(!/Max-Age/i.test(raw['L1:dd_lsid'])); const r1 = (await adm.query('select keep, extract(epoch from expires_at - now())::int s from learner_sessions where id = $1', [sha(jars.L1.dd_lsid)])).rows[0];
     assert.equal(r1.keep, false); assert.ok(r1.s <= 12 * 3600 && r1.s > 11 * 3600);
     const l2 = await call('L2', 'POST', `/api/pub/${tid}/login`, { sid: '20261234', code: 'ABC234' }); assert.equal(l2.status, 200); assert.match(raw['L2:dd_lsid'], /Max-Age=2592000/);
-    const id2 = sha(jars.L2.dd_lsid); await pool.query("update learner_sessions set last_at = now() - interval '2 minutes', expires_at = now() + interval '1 day' where id = $1", [id2]);
-    await call('L2', 'GET', `/api/pub/${tid}/me`); const r2 = (await pool.query('select extract(epoch from expires_at - now())::int s from learner_sessions where id = $1', [id2])).rows[0]; assert.ok(r2.s > 29 * 86400, '마지막 사용 기준 30일');
-    await pool.query("update learner_sessions set last_at = now() - interval '2 minutes', created_at = now() - interval '89 days' where id = $1", [id2]);
-    await call('L2', 'GET', `/api/pub/${tid}/me`); const r3 = (await pool.query('select extract(epoch from expires_at - now())::int s from learner_sessions where id = $1', [id2])).rows[0]; assert.ok(r3.s <= 86400, '최대 90일');
+    const id2 = sha(jars.L2.dd_lsid); await adm.query("update learner_sessions set last_at = now() - interval '2 minutes', expires_at = now() + interval '1 day' where id = $1", [id2]);
+    await call('L2', 'GET', `/api/pub/${tid}/me`); const r2 = (await adm.query('select extract(epoch from expires_at - now())::int s from learner_sessions where id = $1', [id2])).rows[0]; assert.ok(r2.s > 29 * 86400, '마지막 사용 기준 30일');
+    await adm.query("update learner_sessions set last_at = now() - interval '2 minutes', created_at = now() - interval '89 days' where id = $1", [id2]);
+    await call('L2', 'GET', `/api/pub/${tid}/me`); const r3 = (await adm.query('select extract(epoch from expires_at - now())::int s from learner_sessions where id = $1', [id2])).rows[0]; assert.ok(r3.s <= 86400, '최대 90일');
   });
   await t.test('학습자 이메일 로그인도 DB 기준 15분 5회 잠금', async () => {
     for (let i = 0; i < 5; i++) assert.equal((await call('E', 'POST', `/api/pub/${tid}/login`, { via: 'email', email: `nobody${sfx}@x.kr`, pw: 'Wrong-pass1' })).status, 401);
     const z = await call('E', 'POST', `/api/pub/${tid}/login`, { via: 'email', email: `nobody${sfx}@x.kr`, pw: 'Wrong-pass1' }); assert.equal(z.status, 429); assert.equal(z.j.error, 'locked');
-    const rows = (await pool.query("select actor from audit_log where tenant_id = $1 and action = 'llogin.fail' and actor like 'lk:e:%'", [tid])).rows; assert.equal(rows.length, 5); assert.ok(!rows[0].actor.includes('nobody'), '이메일 원문 없음');
+    const rows = (await adm.query("select actor from audit_log where tenant_id = $1 and action = 'llogin.fail' and actor like 'lk:e:%'", [tid])).rows; assert.equal(rows.length, 5); assert.ok(!rows[0].actor.includes('nobody'), '이메일 원문 없음');
   });
-  app.close(); await pool.end();
+  app.close(); await Promise.all([closeAdmin(adm, pool), pool.end()]);
 });
