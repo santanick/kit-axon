@@ -22,7 +22,7 @@ async function run(U, tag = 'g', hooks = {}) {
   R.tids = { F, A, B, U: Un, X, Y };
   const mem = (k, extra) => Array.from({ length: k }, (_, i) => ({ id: `m${i}`, name: `학습자${i}`, ...(extra ? extra(i) : {}) }));
   const cls = (id, ids, p, extra) => ({ id, name: `과정 ${id}`, status: '운영중', learners: ids, prog: Object.fromEntries(ids.map((x, i) => [x, { p: p(i), at: kst() }])), ...(extra || {}) });
-  await put('F', { org: { name: '디디 영어 본사', type: 'k12' }, classes: [cls('fc1', [], () => 0, { items: [{ id: 'it1', type: 'video', title: '1차시', seen: { fz1: 1 } }], learners: ['fz1'], prog: { fz1: { p: 10 } }, enr: { fz1: { at: '2026-11-01' } }, attT: { fz1: 3 }, ask: { fz1: '질문' }, desc: '신규 강사 OT' }), cls('fmk', [], () => 0, { mk: { productId: 'mp_x' } })] });
+  await put('F', { org: { name: '디디 영어 본사', type: 'k12' }, classes: [cls('fc1', [], () => 0, { items: [{ id: 'it1', type: 'video', title: '1차시', seen: { fz1: 1 } }], learners: ['fz1'], prog: { fz1: { p: 10 } }, enr: { fz1: { at: '2026-11-01' } }, attT: { fz1: 3 }, ask: { fz1: '질문' }, desc: '신규 강사 OT' }), cls('fmk', [], () => 0, { mk: { productId: 'mp_x' } })], lsite: { pub: { pages: [{ id: 'fp1', name: '가맹 안내', access: 'all', sections: [{ type: 'text', data: { t: '안내' } }] }] } } });
   await put('A', { org: { name: '해운대점', type: 'k12' }, members: mem(3), classes: [cls('a1', ['m0', 'm1', 'm2'], i => [100, 50, 20][i])] });
   await put('B', { org: { name: '기장점', type: 'k12' }, members: mem(20), classes: [cls('b1', mem(20).map(m => m.id), i => (i < 5 ? 100 : 40))], notices: [{ id: 'bn1', title: '기장점 공지', body: '알림' }] });
   await put('X', { org: { name: '평생교육원', type: 'univ' }, members: mem(6, i => ({ sid: `2023${String(1234 + i)}`, dept: i < 5 ? '기계공학과' : '경영학과' })), classes: [cls('x1', ['m0', 'm1', 'm2', 'm3', 'm4', 'm5'], i => i * 20, { term: '2026-2' })] });
@@ -116,6 +116,10 @@ async function run(U, tag = 'g', hooks = {}) {
   R.reqDecline = err(await call('A', 'POST', `/api/group/my/inbox/${SID}/decline`, { idem: I() }));
   const ad = await call('A', 'POST', `/api/group/my/inbox/${SID}/adopt`, { idem: I(), asDraft: true }); R.adopt = [ad.st, ad.j.ver];
   const aDoc = (await call('A', 'GET', '/api/state')).j.doc || {}; const lc = (aDoc.classes || []).find(c => c.id === ad.j.localId) || {}; R.adoptDoc = [lc.status, (lc.learners || []).length, !!lc.grpFrom, !JSON.stringify(lc).includes('fz1'), (lc.items || []).length]; /* QA49-3 #3 학습자별 기록 빠짐 */
+  { const d0 = (await call('A', 'GET', '/api/state')).j.doc || {}; d0.lsite = { pub: { classes: [{ id: ad.j.localId, name: lc.name }, { id: 'a1', name: '과정 a1' }], pages: [], notices: [] } }; await put('A', d0); } /* 해운대점이 가져온 과정을 학습자 사이트에 게시 */
+  const shp = await call('F', 'POST', '/api/group/shares', { idem: I(), kind: 'page', source: { pageId: 'fp1' }, required: false, targets: 'all' }); await call('F', 'POST', `/api/group/shares/${shp.j.share.sid}/publish`, { idem: I() });
+  const adp = await call('B', 'POST', `/api/group/my/inbox/${shp.j.share.sid}/adopt`, { idem: I(), asDraft: true }); const bDoc = (await call('B', 'GET', '/api/state')).j.doc || {};
+  const bp = ((bDoc.grpPending || {}).pages || []).find(x => x.id === adp.j.localId) || {}; R.pageDraft = [adp.st, bp.on, !!bp.draft, ((bDoc.lsite || {}).pub || {}).pages ? bDoc.lsite.pub.pages.length : 0, ((bp.sections || [])[0] || {}).on]; /* QA49-3 #5 페이지 가져오기 = 꺼진 초안 */
   R.version = (await call('F', 'POST', `/api/group/shares/${SID}/version`, { idem: I(), note: '2판' })).j.share.ver;
   R.outdated = ((await call('A', 'GET', '/api/group/my/inbox')).j.items || []).find(x => x.sid === SID).outdated;
   R.update = (await call('A', 'POST', `/api/group/my/inbox/${SID}/update`, { idem: I() })).j.ver;
@@ -124,7 +128,7 @@ async function run(U, tag = 'g', hooks = {}) {
   R.redist = ((await call('A', 'GET', '/api/group/my/inbox')).j.items || []).some(x => apv.j.redistributed && x.sid === apv.j.redistributed.sid);
   R.recallShort = err(await call('F', 'POST', `/api/group/shares/${SID}/recall`, { idem: I(), reason: 'x', mode: 'hide' }));
   R.recall = (await call('F', 'POST', `/api/group/shares/${SID}/recall`, { idem: I(), reason: '내용 오류로 회수합니다', mode: 'hide' })).j.share.status;
-  R.recallDoc = !!(((await call('A', 'GET', '/api/state')).j.doc.classes || []).find(c => c.id === ad.j.localId) || {}).grpRecalled;
+  { const d1 = (await call('A', 'GET', '/api/state')).j.doc; R.recallDoc = !!((d1.classes || []).find(c => c.id === ad.j.localId) || {}).grpRecalled; R.recallPub = ((d1.lsite || {}).pub || {}).classes.map(c => c.id).join(',') === 'a1'; } /* QA49-3 #4 게시본에서도 빠짐 */
 
   // 공통 설정(T-FN-8 · 9)
   R.polKey = err(await call('F', 'PUT', '/api/group/policies/color', { idem: I(), value: {}, lock: 'default', baseVer: 0 }));
@@ -160,7 +164,7 @@ const WANT = {
   lsFr: '403:grp_consent', lsShort: '400:grp_range', ls: [200, 'studentNo', 6, 5, 2, '기계공학과:5|(5명 미만 학과 묶음):5명 미만'],
   lkRole: '403:grp_role', lkMfa: ['403:grp_mfa', 'required'], lkPurpose: '400:grp_purpose', lookup: [200, 1, 2, 'courses,dept,studentNo', false], myAudit: [true, true], santaLookup: '403:grp_off',
   license: '409:grp_license', source: '404:grp_source', share: [200, 'draft'], publish: 2, inbox: 'offered', reqDecline: '409:grp_required', adopt: [200, 1], adoptDoc: ['준비중', 0, true, true, 1],
-  version: 2, outdated: true, update: 2, up: 'requested', approve: ['approved', 'published'], redist: true, recallShort: '400:grp_reason', recall: 'recalled', recallDoc: true,
+  version: 2, outdated: true, update: 2, up: 'requested', approve: ['approved', 'published'], redist: true, recallShort: '400:grp_reason', recall: 'recalled', recallDoc: true, recallPub: true, pageDraft: [200, false, true, 0, true],
   polKey: '400:grp_policy_key', polPut: 1, polVer: '409:grp_ver', polApply: 2, locked: '409:grp_locked', skipped: 'overridden', bPol: 'brand:applied,notice:overridden', audit: true, auditViewer: '403:grp_role',
   leaveShort: '400:grp_reason', leave: 'left', afterLeave: [false, 1], remove: 'removed', unauth: 401, nf: 404
 };

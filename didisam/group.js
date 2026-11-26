@@ -391,4 +391,11 @@
   /* 시연판 역할 보기(시험 · 시연용): grpAs('grp_viewer') 등 */
   window.grpAs = r => { UI.grpAs = r || ''; navSync(); render(); };
   window.GRP_DEMO = DEMO; window.GRP_KIND = KIND;
+
+  /* QA49-3 #4 · #5: 회수된 배포 콘텐츠는 학습자 사이트 게시본에 다시 들어가지 않게, 사이트 편집본이 없을 때 가져온 페이지(grpPending)는 편집본이 생길 때 꺼진 초안으로 옮깁니다 */
+  if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const o = base(...a); try {
+    const gone = new Set([...(S.classes || []), ...(S.notices || [])].filter(x => x && x.grpRecalled).map(x => x.id)); const nm = new Set((S.classes || []).filter(x => x && x.grpRecalled).map(x => x.name)); const nt = new Set((S.notices || []).filter(x => x && x.grpRecalled).map(x => `${x.title || ''}|${x.at || ''}`));
+    if (o && gone.size) { o.classes = (o.classes || []).filter(c => !gone.has(c.id)); o.notices = (o.notices || []).filter(n => !nt.has(`${n.title || ''}|${n.at || ''}`) && !(n.cls && nm.has(n.cls))); }
+    if (o && Array.isArray(o.pages)) { const off = new Set(((S.lsite && S.lsite.pages) || []).filter(p => p && p.grpRecalled).map(p => p.id)); if (off.size) o.pages = o.pages.filter(p => !off.has(p.id)); } } catch (e) { } return o; }; }
+  if (typeof lsEnsure === 'function') { const base = lsEnsure; lsEnsure = (...a) => { const r = base(...a); try { const P = S && S.grpPending && S.grpPending.pages; if (Array.isArray(P) && P.length && S.lsite && Array.isArray(S.lsite.pages)) { P.forEach(p => { if (p && !S.lsite.pages.some(x => x.id === p.id)) S.lsite.pages.push({ ...p, on: false }); }); delete S.grpPending.pages; } } catch (e) { } return r; }; }
 })();

@@ -59,8 +59,14 @@ module.exports = (ctx, S) => {
     const ids = T.filter(x => x.local_id).map(x => x.local_id); if (ids.length) await docEdit(link.child_tid, d => hideLocal(d, ids)).catch(() => {});
     return T.length;
   }
-  function hideLocal(d, ids) { for (const k of ['classes', 'notices']) (Array.isArray(d[k]) ? d[k] : []).forEach(x => { if (x && ids.includes(x.id)) { x.grpRecalled = true; x.hidden = true; } });
-    const P = d.lsite && d.lsite.pub && Array.isArray(d.lsite.pub.pages) ? d.lsite.pub.pages : []; P.forEach(x => { if (x && ids.includes(x.id)) { x.grpRecalled = true; x.hidden = true; } }); }
+  /* QA49-3 #4: 회수(숨김)는 편집본 표시만이 아니라 학습자 사이트 게시본(lsite.pub)에서도 바로 빼야 학습자 화면에서 사라진다 */
+  function hideLocal(d, ids) { const gone = []; for (const k of ['classes', 'notices']) (Array.isArray(d[k]) ? d[k] : []).forEach(x => { if (x && ids.includes(x.id)) { x.grpRecalled = true; x.hidden = true; gone.push(x); } });
+    const ls = d.lsite || {}; for (const P of [ls.pages, d.grpPending && d.grpPending.pages]) (Array.isArray(P) ? P : []).forEach(x => { if (x && ids.includes(x.id)) { x.grpRecalled = true; x.hidden = true; x.on = false; } });
+    const pub = ls.pub; if (!pub || typeof pub !== 'object') return;
+    if (Array.isArray(pub.pages)) pub.pages = pub.pages.filter(x => !(x && ids.includes(x.id)));
+    if (Array.isArray(pub.classes)) pub.classes = pub.classes.filter(x => !(x && ids.includes(x.id)));
+    const nt = new Set(gone.filter(x => !x.curriculum).map(x => `${x.title || ''}|${x.at || ''}`)); const ct = new Set(gone.filter(x => x.curriculum || x.learners).map(x => x.name));
+    if (Array.isArray(pub.notices)) pub.notices = pub.notices.filter(x => !(x && (nt.has(`${x.title || ''}|${x.at || ''}`) || (x.cls && ct.has(x.cls))))); }
 
   /* ── 콘텐츠 사본(spec 5-3): 학습자 · 성적 · 수납 데이터를 뺀다. 마켓 콘텐츠는 409 grp_license ── */
   const DROP = ['learners', 'prog', 'grades', 'scores', 'subs', 'submissions', 'board', 'posts', 'consults', 'pays', 'coupons', 'teachers', 'teacher', 'owner', 'att', 'attendance', 'crmDay', 'k12Exams', 'makeups', 'done', 'waits', 'apply', 'applicants', 'reviews', 'qna', 'logs'];
@@ -93,7 +99,10 @@ module.exports = (ctx, S) => {
     for (const t of set) { const r = rows.find(x => x.child_tid === t); if (!r || r.status === 'offered') st.pending++; else st[r.status]++; if (r && r.status === 'adopted' && r.ver < s.ver) st.outdated++; } return st;
   }
   const docItem = (d, kind) => { if (kind === 'course') return (d.classes = Array.isArray(d.classes) ? d.classes : []); if (kind === 'notice') return (d.notices = Array.isArray(d.notices) ? d.notices : []);
-    d.lsite = d.lsite || {}; d.lsite.pub = d.lsite.pub || {}; return (d.lsite.pub.pages = Array.isArray(d.lsite.pub.pages) ? d.lsite.pub.pages : []); };
+    /* QA49-3 #5: 페이지는 게시본(pub)이 아니라 편집본(lsite.pages, 꺼짐)에 넣는다 — 게시본에 넣으면 「비공개 초안」이 학습자 사이트에 바로 보인다.
+       사이트 편집본이 아직 없으면 grpPending.pages에 두고, 화면(group.js)이 사이트 편집본을 만들 때 옮긴다 */
+    d.lsite = d.lsite || {}; if (Array.isArray(d.lsite.pages)) return d.lsite.pages; d.grpPending = d.grpPending || {}; return (d.grpPending.pages = Array.isArray(d.grpPending.pages) ? d.grpPending.pages : []); };
+  const pageDraft = item => { item.on = false; item.draft = true; item.sections = (Array.isArray(item.sections) ? item.sections : []).map(x => ({ ...(x || {}), on: true })); return item; };
 
   /* ── 대시보드 계산(1-7) ── */
   const DEF_KPI = { franchise: ['lrn', 'act', 'cmpRateBp', 'rev', 'aiCalls', 'new'], univ: ['lrn', 'cmpRateBp', 'progBp', 'aiCalls', 'crs', 'act'], region: ['lrn', 'crs', 'cmpRateBp', 'new', 'aiCalls', 'act'] };
@@ -352,6 +361,7 @@ module.exports = (ctx, S) => {
       if (out._s && !out.again) { const { kind, snap, gid, ver } = out._s; await docEdit(a.tid, d => { const L = docItem(d, kind); const i = L.findIndex(x => x && x.id === out.localId);
         const keep = i >= 0 ? L[i] : null; const item = { ...JSON.parse(JSON.stringify(snap)), id: out.localId, grpFrom: { gid, sid, ver } };
         if (kind === 'course') { item.learners = keep ? keep.learners || [] : []; item.prog = keep ? keep.prog || {} : {}; if (!keep) item.status = '준비중'; else item.status = keep.status; }
+        else if (kind === 'page') { pageDraft(item); if (keep && keep.on) { item.on = true; item.draft = false; } }
         else if (!keep) item.draft = true; else item.draft = keep.draft;
         if (i >= 0) L[i] = item; else L.push(item); }); }
       delete out._s; return out; }],

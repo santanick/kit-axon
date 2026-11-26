@@ -81,9 +81,15 @@ final class GrpRoutes {
         if (!ids.isEmpty()) try { S.docEdit(s(link, "child_tid"), d -> { hideLocal(d, ids); return null; }); } catch (Exception e) { /* Node catch */ }
         return T0.size();
     }
+    /** QA49-3 #4: 회수(숨김) — 편집본 표시 + 학습자 사이트 게시본(lsite.pub)에서 바로 뺀다(Node hideLocal과 같음) */
     static void hideLocal(ObjectNode d, List<String> ids) {
-        for (String k : new String[]{ "classes", "notices" }) for (JsonNode x : arr(get(d, k))) if (x != null && x.isObject() && ids.contains(key(get(x, "id")))) ((ObjectNode) x).put("grpRecalled", true).put("hidden", true);
-        JsonNode P = get(get(get(d, "lsite"), "pub"), "pages"); for (JsonNode x : arr(P)) if (x != null && x.isObject() && ids.contains(key(get(x, "id")))) ((ObjectNode) x).put("grpRecalled", true).put("hidden", true);
+        java.util.Set<String> nt = new java.util.HashSet<>(), ct = new java.util.HashSet<>();
+        for (String k : new String[]{ "classes", "notices" }) for (JsonNode x : arr(get(d, k))) if (x != null && x.isObject() && ids.contains(key(get(x, "id")))) { ((ObjectNode) x).put("grpRecalled", true).put("hidden", true);
+            if (truthy(get(x, "curriculum")) || truthy(get(x, "learners"))) ct.add(S(get(x, "name"))); if (!truthy(get(x, "curriculum"))) nt.add(S(get(x, "title")) + "|" + S(get(x, "at"))); }
+        for (JsonNode P : new JsonNode[]{ get(get(d, "lsite"), "pages"), get(get(d, "grpPending"), "pages") }) for (JsonNode x : arr(P)) if (x != null && x.isObject() && ids.contains(key(get(x, "id")))) ((ObjectNode) x).put("grpRecalled", true).put("hidden", true).put("on", false);
+        JsonNode pub = get(get(d, "lsite"), "pub"); if (pub == null || !pub.isObject()) return; ObjectNode pb = (ObjectNode) pub;
+        for (String k : new String[]{ "pages", "classes" }) if (pb.get(k) instanceof ArrayNode) { ArrayNode out = F.arrayNode(); for (JsonNode x : pb.get(k)) if (!(x != null && x.isObject() && ids.contains(key(get(x, "id"))))) out.add(x); pb.set(k, out); }
+        if (pb.get("notices") instanceof ArrayNode) { ArrayNode out = F.arrayNode(); for (JsonNode x : pb.get("notices")) { boolean drop = x != null && x.isObject() && (nt.contains(S(get(x, "title")) + "|" + S(get(x, "at"))) || (truthy(get(x, "cls")) && ct.contains(S(get(x, "cls"))))); if (!drop) out.add(x); } pb.set("notices", out); }
     }
 
     // ── 콘텐츠 사본(spec 5-3) ──
@@ -133,8 +139,10 @@ final class GrpRoutes {
     static ArrayNode docItem(ObjectNode d, String kind) {
         if ("course".equals(kind)) { if (!(d.get("classes") instanceof ArrayNode)) d.putArray("classes"); return (ArrayNode) d.get("classes"); }
         if ("notice".equals(kind)) { if (!(d.get("notices") instanceof ArrayNode)) d.putArray("notices"); return (ArrayNode) d.get("notices"); }
-        if (!truthy(d.get("lsite")) || !d.get("lsite").isObject()) d.putObject("lsite"); ObjectNode ls = (ObjectNode) d.get("lsite"); if (!truthy(ls.get("pub")) || !ls.get("pub").isObject()) ls.putObject("pub"); ObjectNode pb = (ObjectNode) ls.get("pub");
-        if (!(pb.get("pages") instanceof ArrayNode)) pb.putArray("pages"); return (ArrayNode) pb.get("pages");
+        /* QA49-3 #5: 페이지는 편집본(lsite.pages, 꺼짐) — 없으면 grpPending.pages(Node docItem과 같음) */
+        if (!truthy(d.get("lsite")) || !d.get("lsite").isObject()) d.putObject("lsite"); ObjectNode ls = (ObjectNode) d.get("lsite"); if (ls.get("pages") instanceof ArrayNode) return (ArrayNode) ls.get("pages");
+        if (!truthy(d.get("grpPending")) || !d.get("grpPending").isObject()) d.putObject("grpPending"); ObjectNode gp = (ObjectNode) d.get("grpPending");
+        if (!(gp.get("pages") instanceof ArrayNode)) gp.putArray("pages"); return (ArrayNode) gp.get("pages");
     }
 
     // ── 대시보드(1-7) ──
@@ -485,6 +493,8 @@ final class GrpRoutes {
                 S.docEdit(tid(a), d -> { ArrayNode L = docItem(d, kind); int i = -1; for (int k = 0; k < L.size(); k++) if (truthy(L.get(k)) && localId.equals(key(get(L.get(k), "id")))) { i = k; break; }
                     JsonNode keep = i >= 0 ? L.get(i) : null; ObjectNode item = g(s0, "snap").isObject() ? ((ObjectNode) g(s0, "snap")).deepCopy() : O(); item.put("id", localId); ObjectNode gf = item.putObject("grpFrom"); gf.set("gid", g(s0, "group_id")); gf.put("sid", sid); gf.set("ver", g(s0, "ver"));
                     if ("course".equals(kind)) { item.set("learners", keep != null && truthy(get(keep, "learners")) ? get(keep, "learners") : F.arrayNode()); item.set("prog", keep != null && truthy(get(keep, "prog")) ? get(keep, "prog") : O()); if (keep == null) item.put("status", "준비중"); else if (undef(get(keep, "status"))) item.remove("status"); else item.set("status", get(keep, "status")); }
+                    else if ("page".equals(kind)) { item.put("on", false).put("draft", true); ArrayNode secs = F.arrayNode(); for (JsonNode x : arr(get(item, "sections"))) { ObjectNode o = x != null && x.isObject() ? ((ObjectNode) x).deepCopy() : O(); o.put("on", true); secs.add(o); } item.set("sections", secs);
+                        if (keep != null && truthy(get(keep, "on"))) item.put("on", true).put("draft", false); }
                     else if (keep == null) item.put("draft", true); else { if (undef(get(keep, "draft"))) item.remove("draft"); else item.set("draft", get(keep, "draft")); }
                     if (i >= 0) L.set(i, item); else L.add(item); return null; }); }
             return out; });
