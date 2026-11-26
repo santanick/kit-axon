@@ -23,6 +23,7 @@ async function run(U, tag) {
   R.badFmt = await call('B', 'POST', '/api/login/mfa', { ticket: l.j.ticket, code: 'abc' });
   R.wait = await call('B', 'POST', '/api/login/mfa/resend', { ticket: l.j.ticket });
   R.good = await call('B', 'POST', '/api/login/mfa', { ticket: l.j.ticket, code: l.j.devCode }); R.goodSid = !!jars.B.dd_sid;
+  R.fresh = (await pool.query("select count(*)::int n from mfa_fresh f join users u on u.id = f.user_id where u.email = $1 and f.at > now() - interval '60 seconds'", [OW])).rows[0].n; /* freshWithin 기준 시각(성공 때만 기록) */
   R.replay = await call('C', 'POST', '/api/login/mfa', { ticket: l.j.ticket, code: l.j.devCode });
   R.noTicket = await call('C', 'POST', '/api/login/mfa', { code: '123456' });
   /* 5회 */
@@ -73,6 +74,7 @@ async function run(U, tag) {
   ok(a.login.mfa === 'email' && !a.login.sid && a.login.keys === 'devCode,mfa,ticket,to', 'login → 티켓');
   ok(a.meBefore.st === 401 && a.bad.err === 'mfa_code' && a.badFmt.err === 'mfa_code' && a.wait.err === 'mfa_wait', '틀림 · 재발송 대기');
   ok(a.good.st === 200 && a.goodSid && a.replay.err === 'mfa_expired' && a.noTicket.err === 'mfa_expired', '성공 · 1회용');
+  ok(a.fresh === 1 && b.fresh === 1, `2단계 통과 → mfa_fresh 기록(freshWithin) Node ${a.fresh} · Java ${b.fresh}`);
   ok(a.five.join() === 'mfa_code,mfa_code,mfa_code,mfa_code,mfa_expired', '5회 무효');
   ok(a.resend.st === 200 && a.newCode === 200, '재발송');
   ok(a.enrollBadPw.st === 401 && a.enroll.st === 200 && a.confirmBad.err === 'mfa_code' && a.confirm.st === 200, '인증 앱 등록');

@@ -4,7 +4,7 @@ import java.util.Map;
 import org.apache.ibatis.annotations.Param;
 import org.egovframe.rte.psl.dataaccess.mapper.EgovMapper;
 
-/** 보안 4차 #1 관리자 추가 인증(mfa_tickets · user_totp) — Node mfa.js와 같은 SQL */
+/** 보안 4차 #1 관리자 추가 인증(mfa_tickets · user_totp · mfa_fresh) — Node mfa.js와 같은 SQL */
 @EgovMapper
 public interface MfaMapper {
     void deleteOld(@Param("uid") String uid);
@@ -22,4 +22,6 @@ public interface MfaMapper {
     String selectPolicy(@Param("tid") String tid);
     String selectTenantName(@Param("tid") String tid);
     String selectPw(@Param("uid") String uid);
+    void upsertFresh(@Param("uid") String uid);
+    Integer selectFresh(@Param("uid") String uid, @Param("s") long s);
 }
