@@ -305,7 +305,7 @@ VIEWS.conn = () => {
 };
 /* 업무 자동화 화면: 템플릿 · 연결 필요 표시 · 단계별 실행 기록 */
 { const base = VIEWS.auto; VIEWS.auto = () => { let h = base(); cnEnsure();
-  const strip = `<div class="cn-astrip">${['slack', 'google'].map(id => { const s = cnStatus(id); return `<button class="cn-chip ${cnTone(s.st)}" data-act="cn-open" data-v="${id}">${typeof brandLogo === 'function' ? brandLogo(id, 22, CN[id].name) : `<i style="background:${CN[id].col}">${CN[id].logo}</i>`}${esc(CN[id].name)} ${esc(s.st)}</button>`; }).join('')}<span class="sp"></span><button class="btn sm" data-act="cn-build">+ 연결 자동화 만들기</button><button class="btn sm ghost" data-act="go" data-v="conn">외부 연결 관리</button></div>`;
+  const strip = `<div class="cn-astrip">${['slack', 'google'].map(id => { const s = cnStatus(id); return `<button class="cn-chip ${cnTone(s.st)}" data-act="cn-open" data-v="${id}">${typeof brandLogo === 'function' ? brandLogo(id, 22, CN[id].name) : `<i style="background:${CN[id].col}">${CN[id].logo}</i>`}${esc(CN[id].name)} ${esc(s.st)}</button>`; }).join('')}<span class="sp"></span><button class="btn sm" data-act="cn-build">+ 연결 자동화 만들기</button>${S.me && S.me.role === 'owner' ? '<button class="btn sm ghost" data-act="go" data-v="conn">외부 연결 관리</button>' : ''}</div>`;
   const gal = `<details class="cn-agal" ${UI.cnGal === false ? '' : 'open'}><summary data-act="cn-gal"><b>Slack · Google 연결 자동화 템플릿</b><small>원클릭으로 만들고, 연결이 없으면 안내로 바로 이동합니다</small></summary>${cnTplHTML()}</details>`;
   const i = h.indexOf('<div class="autos">'); h = i >= 0 ? h.slice(0, i) + strip + gal + h.slice(i) : h + strip + gal;
   return h + `<h2 class="h2">연결 자동화 단계별 실행 기록</h2>${cnRunsHTML(10)}`; }; }
