@@ -30,3 +30,19 @@ module.exports = function run(calc, c) {
     default: throw new Error('알 수 없는 fn: ' + c.fn);
   }
 };
+const base = module.exports;
+/* margin 묶음(dev-addendum 5장) */
+module.exports = function run(calc, c) {
+  const i = c.in;
+  switch (c.fn) {
+    case 'settleLine': return calc.settleLine(i.net, i.cpBp);
+    case 'rateCheck': return calc.rateCheck(i.cpBp, i.agreeRef);
+    case 'rateAt': { const rows = [{ effectiveFrom: '0000-01-01', cpBp: 6500 }, { effectiveFrom: calc.nextMonth1(i.asked), cpBp: i.cpBp }]; return { effectiveFrom: rows[1].effectiveFrom, cp: i.days.map(d => calc.settleLine(i.net, calc.rateAt(rows, d)).cp) }; }
+    case 'santaMix': return calc.santaMix(i.lines);
+    case 'recognized': { const rec = calc.recognized(i.credits, i.amount, i.totalCredits); const s = rec - i.cp, t = rec - i.cpStd; return { rec, santa: s, santaBp: Math.floor(s * 10000 / rec), santaStd: t, santaStdBp: Math.floor(t * 10000 / rec) }; }
+    case 'promoCheck': return calc.promoCheck(i.slot, i.months, i.o);
+    case 'promoDeduct': return calc.promoDeduct(i.total, i.fee, i.carryIn);
+    case 'origCapOk': return calc.origCapOk(i.colCount, i.origCount);
+    default: return base(calc, c);
+  }
+};

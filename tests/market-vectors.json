@@ -4,6 +4,7 @@
   "디디쌤 콘텐츠 마켓 v1.1(크레딧형 패스) 계산 기준값 — 화면 didisam/marketcalc.js(window.marketCalc) · Node service/server/market/calc.js(같은 파일) · Java DdMarketCalc가 모두 같은 out을 내야 합니다(깊은 비교).",
   "키(name)는 서비스 기획서 v1.1 10장 · f/vec.py와 같습니다(42개). 호출 방법은 tests/market-vectors-run.js(fn · in 키 이름 그대로).",
   "원 · 크레딧 정수, 나눗셈 내림, 과정 크레딧 환산(정가 → 크레딧)만 올림. 비율 bp 정수. 1크레딧 = 1,000원, CP 65 · 산타 35, 보너스 상한 700bp, 마진 가드 3000bp.",
+  "margin 묶음: dev-addendum 5장(r/margin.py 검산 25건 — 차등 요율 · 오리지널 · 프로모션 공제 · 오리지널 비중 상한).",
   "날짜는 YYYY-MM-DD. 2/29 시작 계약의 1년 뒤는 3/1. 출시 + N개월이 없는 날이면 그 달 말일."
  ],
  "rules": {
@@ -662,6 +663,399 @@
     "cp": 30000,
     "curator": 7500,
     "santa": 12500
+   }
+  }
+ ],
+ "margin": [
+  {
+   "name": "R1",
+   "fn": "settleLine",
+   "in": {
+    "net": 1000,
+    "cpBp": 6500
+   },
+   "out": {
+    "cp": 650000,
+    "santa": 350000
+   }
+  },
+  {
+   "name": "R2",
+   "fn": "settleLine",
+   "in": {
+    "net": 1000,
+    "cpBp": 6000
+   },
+   "out": {
+    "cp": 600000,
+    "santa": 400000
+   }
+  },
+  {
+   "name": "R3",
+   "fn": "settleLine",
+   "in": {
+    "net": 1000,
+    "cpBp": 5500
+   },
+   "out": {
+    "cp": 550000,
+    "santa": 450000
+   }
+  },
+  {
+   "name": "R4",
+   "fn": "settleLine",
+   "in": {
+    "net": 1000,
+    "cpBp": 5000
+   },
+   "out": {
+    "cp": 500000,
+    "santa": 500000
+   }
+  },
+  {
+   "name": "R5a",
+   "fn": "rateCheck",
+   "in": {
+    "cpBp": 7000,
+    "agreeRef": "AG-1"
+   },
+   "out": "mk_cp_rate"
+  },
+  {
+   "name": "R5b",
+   "fn": "rateCheck",
+   "in": {
+    "cpBp": 6000,
+    "agreeRef": ""
+   },
+   "out": "mk_cp_rate"
+  },
+  {
+   "name": "R6",
+   "fn": "rateAt",
+   "in": {
+    "asked": "2027-03-15",
+    "cpBp": 6000,
+    "net": 1000,
+    "days": [
+     "2027-03-31",
+     "2027-04-10"
+    ]
+   },
+   "out": {
+    "effectiveFrom": "2027-04-01",
+    "cp": [
+     650000,
+     600000
+    ]
+   }
+  },
+  {
+   "name": "R7",
+   "fn": "settleLine",
+   "in": {
+    "net": 1000,
+    "cpBp": 0
+   },
+   "out": {
+    "cp": 0,
+    "santa": 1000000
+   }
+  },
+  {
+   "name": "R8",
+   "fn": "santaMix",
+   "in": {
+    "lines": [
+     {
+      "source": "credit_cp",
+      "credits": 300,
+      "cpBp": 6500
+     },
+     {
+      "source": "credit_cp_x",
+      "credits": 200,
+      "cpBp": 6000
+     },
+     {
+      "source": "credit_orig",
+      "credits": 100,
+      "cpBp": 0
+     }
+    ]
+   },
+   "out": {
+    "bySource": [
+     {
+      "source": "credit_cp",
+      "credits": 300,
+      "gross": 300000,
+      "cp": 195000,
+      "santa": 105000,
+      "santaBp": 3500
+     },
+     {
+      "source": "credit_cp_x",
+      "credits": 200,
+      "gross": 200000,
+      "cp": 120000,
+      "santa": 80000,
+      "santaBp": 4000
+     },
+     {
+      "source": "credit_orig",
+      "credits": 100,
+      "gross": 100000,
+      "cp": 0,
+      "santa": 100000,
+      "santaBp": 10000
+     }
+    ],
+    "gross": 600000,
+    "cp": 315000,
+    "santa": 285000,
+    "santaBp": 4750
+   }
+  },
+  {
+   "name": "R9",
+   "fn": "recognized",
+   "in": {
+    "credits": 600,
+    "amount": 30000000,
+    "totalCredits": 32100,
+    "cp": 315000,
+    "cpStd": 390000
+   },
+   "out": {
+    "rec": 560748,
+    "santa": 245748,
+    "santaBp": 4382,
+    "santaStd": 170748,
+    "santaStdBp": 3045
+   }
+  },
+  {
+   "name": "P1",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-03",
+     "2027-04"
+    ],
+    "o": {
+     "approvedInMonth": 0,
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "fee": 1000000
+   }
+  },
+  {
+   "name": "P2",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-03"
+    ],
+    "o": {
+     "approvedInMonth": 3,
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_full"
+   }
+  },
+  {
+   "name": "P3",
+   "fn": "promoDeduct",
+   "in": {
+    "total": 3000000,
+    "fee": 1000000,
+    "carryIn": 0
+   },
+   "out": {
+    "deduct": 1000000,
+    "pay": 2000000,
+    "carryOut": 0
+   }
+  },
+  {
+   "name": "P4",
+   "fn": "promoDeduct",
+   "in": {
+    "total": 600000,
+    "fee": 1000000,
+    "carryIn": 0
+   },
+   "out": {
+    "deduct": 600000,
+    "pay": 0,
+    "carryOut": 400000
+   }
+  },
+  {
+   "name": "P5",
+   "fn": "promoDeduct",
+   "in": {
+    "total": 2000000,
+    "fee": 0,
+    "carryIn": 400000
+   },
+   "out": {
+    "deduct": 400000,
+    "pay": 1600000,
+    "carryOut": 0
+   }
+  },
+  {
+   "name": "P6a",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-03"
+    ],
+    "o": {
+     "optin": "single",
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_target"
+   }
+  },
+  {
+   "name": "P6b",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-03"
+    ],
+    "o": {
+     "orig": true,
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_target"
+   }
+  },
+  {
+   "name": "P6c",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "new_launch",
+    "months": [
+     "2027-03"
+    ],
+    "o": {
+     "launchDays": 120,
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_target"
+   }
+  },
+  {
+   "name": "P7a",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-03",
+     "2027-04",
+     "2027-05",
+     "2027-06"
+    ],
+    "o": {
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_months"
+   }
+  },
+  {
+   "name": "P7b",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "new_launch",
+    "months": [
+     "2027-03",
+     "2027-04"
+    ],
+    "o": {
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_months"
+   }
+  },
+  {
+   "name": "P7c",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-02"
+    ],
+    "o": {
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_months"
+   }
+  },
+  {
+   "name": "O1",
+   "fn": "credits",
+   "in": {
+    "price": 15000
+   },
+   "out": 15
+  },
+  {
+   "name": "O2",
+   "fn": "origCapOk",
+   "in": {
+    "colCount": 20,
+    "origCount": 6
+   },
+   "out": false
+  },
+  {
+   "name": "O3",
+   "fn": "origCapOk",
+   "in": {
+    "colCount": 20,
+    "origCount": 5
+   },
+   "out": true
+  },
+  {
+   "name": "G0",
+   "fn": "guard",
+   "in": {
+    "amount": 30000000,
+    "bonusBp": 700
+   },
+   "out": {
+    "credits": 32100,
+    "cpMax": 20865000,
+    "santaBp": 3045,
+    "ok": true
    }
   }
  ]

@@ -78,8 +78,9 @@
   /* 7) 월 소진 정산: CP별 순소진 = 차감 − 복원, CP 지급 = ⌊순소진 × 1,000 × 65%⌋, 산타 = 총 소진액 − CP 합 */
   const cpOf = cr => fdiv(int(cr) * WON * CP_BP, 10000);
   function settle(rows) {
-    const by = {}; for (const r of rows || []) { if (!r) continue; const k = String(r.cp); const x = by[k] || (by[k] = { cp: k, used: 0, restored: 0 }); x.used += int(r.used); x.restored += int(r.restored); }
-    const lines = Object.keys(by).sort().map(k => { const x = by[k]; const net = x.used - x.restored; return { cp: k, used: x.used, restored: x.restored, net, cpAmount: cpOf(net) }; });
+    /* rows [{cp, used, restored, cpBp?}] — cpBp(차등 요율 · 오리지널 0)가 있으면 그 요율, 없으면 6500 */
+    const by = {}; for (const r of rows || []) { if (!r) continue; const k = String(r.cp); const x = by[k] || (by[k] = { cp: k, used: 0, restored: 0 }); x.used += int(r.used); x.restored += int(r.restored); if (r.cpBp != null) x.cpBp = int(r.cpBp); }
+    const lines = Object.keys(by).sort().map(k => { const x = by[k]; const net = x.used - x.restored; const l = { cp: k, used: x.used, restored: x.restored, net, cpAmount: x.cpBp == null ? cpOf(net) : fdiv(net * x.cpBp, 10) }; if (x.cpBp != null) l.cpBp = x.cpBp; return l; });
     const net = lines.reduce((s, l) => s + l.net, 0); const cp = lines.reduce((s, l) => s + l.cpAmount, 0); const gross = net * WON;
     return { lines, net, gross, cp, santa: gross - cp };
   }
@@ -145,9 +146,44 @@
   function b2c(vatPrice) { const sup = fdiv(int(vatPrice) * 10, 11); return { supply: sup, market: { cp: pct(sup, 70), santa: pct(sup, 30) }, self: { seller: pct(sup, 90), santa: sup - pct(sup, 90) } }; }
   function path(vatPrice) { const sup = fdiv(int(vatPrice) * 10, 11); return { supply: sup, cp: pct(sup, 60), curator: pct(sup, 15), santa: pct(sup, 25) }; }
 
+  /* ── 마진 개선 1차(dev-addendum): M1 산타 오리지널 · M2 CP 프로모션 진열 · M3 CP별 차등 요율 ── */
+  const RATE = { standard: 6500, exclusive: 6000, agency: 5500, overseas: 5000 }; /* CP 몫 bp, 6500 초과 금지 */
+  const SLOT = { home_top: { cap: 3, fee: 500000, label: '마켓 홈 추천' }, shelf_top: { cap: 3, fee: 300000, label: '학습자 진열대 첫 줄' }, new_launch: { cap: 10, fee: 200000, label: '신규 출시', launchDays: 90 } };
+  const ORIG_CAP_BP = 3000, PROMO_MAX_MONTHS = 3;
+  const RATE_BPS = [6500, 6000, 5500, 5000];
+  const rateKindOf = bp => Object.keys(RATE).find(k => RATE[k] === int(bp)) || null;
+  /* 요율 지정 검사: 네 값 중 하나 + CP 서면 동의 번호 → null(통과) | 'mk_cp_rate' */
+  const rateCheck = (bp, agreeRef) => RATE_BPS.includes(int(bp)) && String(agreeRef || '').trim() ? null : 'mk_cp_rate';
+  /* rows [{effectiveFrom, cpBp}] 중 effectiveFrom ≤ day 최신(없으면 6500) */
+  function rateAt(rows, day) { let b = null; for (const r of rows || []) if (r && r.effectiveFrom <= day && (!b || r.effectiveFrom >= b.effectiveFrom)) b = r; return b ? int(b.cpBp) : CP_BP; }
+  const cpBpOf = (product, cpBp) => product && (product.ownerKind === 'santa' || product.owner_kind === 'santa') ? 0 : cpBp == null ? CP_BP : int(cpBp);
+  /* 순소진 한 줄: cp = net × cpBp ÷ 10(1크레딧 1,000원), santa = net × 1,000 − cp */
+  function settleLine(net, cpBp) { const b = int(cpBp); if (b !== 0 && !RATE_BPS.includes(b)) return { error: 'mk_cp_rate' }; const cp = fdiv(int(net) * b, 10); return { cp, santa: int(net) * WON - cp }; }
+  const promoFee = (slot, months) => SLOT[slot] ? SLOT[slot].fee * int(months) : 0;
+  /* 신청 검사 → { fee } | { error }. o: {approvedInMonth(달별 최대), optin, reviewed, orig, launchDays, thisYm} */
+  function promoCheck(slot, months, o) {
+    o = o || {}; const S = SLOT[slot]; const M = Array.isArray(months) ? months.map(String) : [];
+    if (!S || o.orig || (o.optin || 'credit') !== 'credit' || o.reviewed === false || (slot === 'new_launch' && int(o.launchDays) > S.launchDays)) return { error: 'mk_promo_target' };
+    if (!M.length || M.length > (slot === 'new_launch' ? 1 : PROMO_MAX_MONTHS) || M.some(m => !/^\d{4}-\d{2}$/.test(m) || m <= String(o.thisYm || '')) || new Set(M).size !== M.length) return { error: 'mk_promo_months' };
+    if (int(o.approvedInMonth) >= S.cap) return { error: 'mk_promo_full' };
+    return { fee: S.fee * M.length };
+  }
+  function promoDeduct(total, fee, carryIn) { const t = int(total), f = int(fee) + int(carryIn); const d = Math.min(t, f); return { deduct: d, pay: t - d, carryOut: f - d }; }
+  const origCapOk = (colCount, origCount) => (int(origCount) + 1) * 10000 <= ORIG_CAP_BP * (int(colCount) + 1);
+  /* 인식 매출: 소진 크레딧 × 계약 구매액 ÷ 계약 총크레딧(반올림) */
+  const recognized = (credits, amount, totalCredits) => int(totalCredits) > 0 ? fdiv(2 * int(credits) * int(amount) + int(totalCredits), 2 * int(totalCredits)) : 0;
+  /* lines [{source, credits, cpBp}] → { bySource[{source, credits, gross, cp, santa, santaBp}], gross, cp, santa, santaBp } */
+  function santaMix(lines) {
+    const by = {}; for (const l of lines || []) { if (!l) continue; const k = String(l.source || 'credit_cp'); const x = by[k] || (by[k] = { source: k, credits: 0, gross: 0, cp: 0, santa: 0 }); const r = settleLine(l.credits, l.cpBp == null ? CP_BP : l.cpBp); if (r.error) continue;
+      x.credits += int(l.credits); x.gross += int(l.credits) * WON; x.cp += r.cp; x.santa += r.santa; }
+    const L = Object.keys(by).sort().map(k => ({ ...by[k], santaBp: by[k].gross > 0 ? fdiv(by[k].santa * 10000, by[k].gross) : 0 }));
+    const gross = L.reduce((s, x) => s + x.gross, 0), cp = L.reduce((s, x) => s + x.cp, 0); return { bySource: L, gross, cp, santa: gross - cp, santaBp: gross > 0 ? fdiv((gross - cp) * 10000, gross) : 0 };
+  }
+
   const rules = () => ({ won: WON, cpBp: CP_BP, santaBp: SANTA_BP, guardBp: GUARD_BP, bonus: { steps: BONUS_STEPS.map(s => ({ ...s })), bundleBp: BUNDLE_BP, maxBp: BONUS_MAX_BP }, validMonths: 12, carryMonths: 12, restore: { hours: RESTORE_HOURS, progLtPct: RESTORE_PROG_LT }, alertBp: ALERT_BP.slice() });
 
   const api = { WON, CP_BP, SANTA_BP, BONUS_MAX_BP, GUARD_BP, rules, credits, bonusBp, wallet, estimate, guard, partial, plan, discCredits, useCredits, deductMany, restorable, hoursBetween, cpOf, settle, sum,
+    RATE, SLOT, ORIG_CAP_BP, PROMO_MAX_MONTHS, rateKindOf, rateCheck, rateAt, cpBpOf, settleLine, promoFee, promoCheck, promoDeduct, origCapOk, recognized, santaMix, nextMonth1: d => effectiveFrom(d),
     expiry, addDays, addMonths, lotOrder, useLots, capOk, needApproval, alertOf, effectiveFrom, priceAt, eligibleFrom, optinMinEnd, optinMode, singleCand, singleAuto, singleMin, singleGuard, broker, b2c, path };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.marketCalc = api;
 })(typeof window !== 'undefined' ? window : globalThis);
