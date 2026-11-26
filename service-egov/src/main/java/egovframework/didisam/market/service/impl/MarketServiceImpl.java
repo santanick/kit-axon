@@ -200,6 +200,10 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
             ObjectNode x = O(); x.set("id", g(col, "id")); x.set("kind", g(col, "kind")); x.set("title", g(col, "title")); x.set("sector", g(col, "sector")); x.set("cover", g(col, "cover")); x.put("count", L.size()).put("avgCredits", L.size() > 0 ? Math.floorDiv(sum, L.size()) : 0); x.set("rows", L); out.add(x); }
         return out;
     }
+    /** 광고(추천 진열) 노출 — 구매 기관이 끄면(mk_party.ads = false) 그 기관 응답에 광고 슬롯을 넣지 않는다(Node adsOn과 같음) */
+    boolean adsOn(String tid) { if (tid == null || tid.isEmpty()) return true; JsonNode v = g(party(tid), "ads"); return nullish(v) || v.asBoolean(true); }
+    long adOrgs() throws Exception { return db.txAs("", true, () -> n(db.q1("select count(*)::int n from mk_party where pilot and ads"), "n")); }
+    List<String> adsOf(String slot, String tid) { return adsOn(tid) ? adsOf(slot) : new ArrayList<>(); }
     List<String> adsOf(String slot) { List<String> l = new ArrayList<>(); for (ObjectNode r : db.q("select product_id from mk_promo where ym = $1 and slot = $2 and status = 'ok' order by at, id limit $3", ym(), slot, DdMarketCalc.SLOT.get(slot)[0])) l.add(s(r, "product_id")); return l; }
     interface Out { ObjectNode of(JsonNode r); }
     static ArrayNode withAds(Iterable<JsonNode> rows, List<String> adIds, Out out) {
@@ -356,7 +360,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
                 if (k == null) { ObjectNode o = O().put("on", true); o.putArray("shelf"); o.putObject("me").put("allowed", false); return o; }
                 ObjectNode ctl = db.q1("select * from mk_control where contract_id = $1", s(k, "id")); List<ObjectNode> C = collections(day, g(k, "collections").size() > 0 ? strs(g(k, "collections")) : null);
                 if (ctl != null && g(ctl, "allow_cols").size() > 0) { List<String> al = strs(g(ctl, "allow_cols")); C.removeIf(x -> !al.contains(s(x, "id"))); }
-                List<String> ads = adsOf("shelf_top"); ArrayNode shelf = F.arrayNode(); int i = 0;
+                List<String> ads = adsOf("shelf_top", tid); ArrayNode shelf = F.arrayNode(); int i = 0;
                 for (ObjectNode x : C) { ObjectNode sx = shelf.addObject(); sx.set("colId", x.get("id")); sx.set("title", x.get("title")); ArrayNode items; if (i++ == 0) items = withAds(x.get("rows"), ads, MarketServiceImpl::itemOf); else { items = F.arrayNode(); for (JsonNode r : x.get("rows")) items.add(itemOf(r)); } sx.set("items", items); }
                 long used = monthUsed(s(k, "id"), sh); ObjectNode o = O().put("on", true); o.set("shelf", shelf); ObjectNode me = o.putObject("me").put("allowed", true); if (ctl != null && truthy(g(ctl, "month_cap"))) me.put("monthLeft", Math.max(0, n(ctl, "month_cap") - used)); return o; });
             case "GET mk-list": return T(() -> { if (!B(party(tid), "pilot")) { ObjectNode o = O().put("on", false); o.putArray("items"); return o; } String day = today(); ArrayNode a = F.arrayNode();

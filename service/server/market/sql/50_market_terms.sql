@@ -11,3 +11,7 @@ alter table mk_entry drop constraint if exists mk_entry_kind_check;
 alter table mk_entry add constraint mk_entry_kind_check check (kind in ('credit_sale','credit_bonus','platform_bundle','credit_use','credit_restore','cp_use','santa_use','credit_carry','credit_refund','single_sale','cp_single','santa_orig','promo_fee','promo_carry','payout','adj','lapse','usage_bill'));
 -- r3 C4 세금계산서 발행 대기 레코드 {status, date(작성일 = 구매 확정일), supply(보너스 제외), vat, total, bonusCredits, bonusInSupply:false, no, fixes[](수정세금계산서 · fixOf 연결)}
 alter table mk_contract add column if not exists tax jsonb;
+-- 대표님 지시(2026-11-26): 광고(CP 추천 진열) 노출은 구매 기관이 선택(기본 켬, 정운영자만 변경)
+alter table mk_party add column if not exists ads boolean not null default true;
+alter table mk_party add column if not exists ads_by text;
+alter table mk_party add column if not exists ads_at timestamptz;

@@ -38,7 +38,10 @@ module.exports = (ctx, S) => {
       return { id: col.id, kind: col.kind, title: col.title, sector: col.sector, cover: col.cover, count: L.length, avgCredits: L.length ? Math.floor(L.reduce((s, r) => s + r.credits, 0) / L.length) : 0, rows: L }; });
   }
   /* 이번 달 승인 슬롯(dev-addendum: 추천 앞에 ad:true) */
-  async function adsOf(c, slot) { return (await c.query("select product_id from mk_promo where ym = $1 and slot = $2 and status = 'ok' order by at, id limit $3", [ym(), slot, calc.SLOT[slot].cap])).rows.map(r => r.product_id); }
+  /* 광고(추천 진열) 노출: 구매 기관이 끄면(mk_party.ads = false) 그 기관 응답에 광고 슬롯을 넣지 않고 일반 추천 순서로 채운다 */
+  const adsOn = async (c, tid) => !tid || (await party(c, tid)).ads !== false;
+  const adOrgs = async () => S.txAs({ santa: true }, async c => (await q1(c, 'select count(*)::int n from mk_party where pilot and ads')).n); /* 노출 기관 수(집계만) */
+  async function adsOf(c, slot, tid) { if (!(await adsOn(c, tid))) return []; return (await c.query("select product_id from mk_promo where ym = $1 and slot = $2 and status = 'ok' order by at, id limit $3", [ym(), slot, calc.SLOT[slot].cap])).rows.map(r => r.product_id); }
   const withAds = (rows, adIds, out) => { const by = new Map(rows.map(r => [r.id, r])); const ads = adIds.map(id => by.get(id)).filter(Boolean); return [...ads.map(r => ({ ...out(r), ad: true })), ...rows.filter(r => !adIds.includes(r.id)).map(out)]; };
 
   /* ── 계약 · 지갑 ── */
@@ -172,7 +175,7 @@ module.exports = (ctx, S) => {
       return tx(async c => { if (!(await pubGate(c, tid))) return { on: false, shelf: [] }; const day = today(); const k = await liveContract(c, tid, day); if (!k) return { on: true, shelf: [], me: { allowed: false } };
         const ctl = await q1(c, 'select * from mk_control where contract_id = $1', [k.id]); let C = await collections(c, day, k.collections && k.collections.length ? k.collections : null);
         if (ctl && ctl.allow_cols && ctl.allow_cols.length) C = C.filter(x => ctl.allow_cols.includes(x.id));
-        const ads = await adsOf(c, 'shelf_top'); const it = r => ({ id: r.id, title: r.title, hours: r.hours_x10 / 10, credits: r.credits, thumb: r.thumb || null, ...(r.owner_kind === 'santa' ? { orig: true, badge: 'orig' } : {}) });
+        const ads = await adsOf(c, 'shelf_top', tid); const it = r => ({ id: r.id, title: r.title, hours: r.hours_x10 / 10, credits: r.credits, thumb: r.thumb || null, ...(r.owner_kind === 'santa' ? { orig: true, badge: 'orig' } : {}) });
         const shelf = C.map((x, i) => ({ colId: x.id, title: x.title, items: i === 0 ? withAds(x.rows, ads, it) : x.rows.map(it) }));
         const used = await monthUsed(c, k.id, sh); return { on: true, shelf, me: { allowed: true, ...(ctl && ctl.month_cap ? { monthLeft: Math.max(0, ctl.month_cap - used) } : {}) } }; }); },
     'GET mk-list': async (req, res, tid) => { await who(req, tid); return tx(async c => { if (!(await pubGate(c, tid))) return { on: false, items: [] }; const day = today();
@@ -202,8 +205,13 @@ module.exports = (ctx, S) => {
     'GET /api/market/home': async req => { const a = await need(req); const staff = a.role !== 'teacher';
       return T(async c => { await needPilot(c, a.tid); const day = today(); const C = await collections(c, day); const rows = (await listed(c, day)).filter(r => modeOf(r, day) === 'credit');
         const k = await liveContract(c, a.tid, day); let my = null; if (k && staff) { const W = await walletState(c, k); my = { contractId: k.id, balance: W.balance, total: W.total, validTo: k.e, carryTo: k.ce, alert: W.alert }; }
-        const ads = await adsOf(c, 'home_top'); const out = r => ({ productId: r.id, title: r.title, cp: r.owner_kind === 'santa' ? '산타 오리지널' : r.cp_name, hours: r.hours_x10 / 10, ...(staff ? { credits: r.credits } : {}), optin: 'credit', ...(r.owner_kind === 'santa' ? { orig: true } : {}) });
-        return { collections: C.map(({ rows: _r, ...x }) => x), recommended: withAds(rows, ads, out).slice(0, 12), ...(my ? { myCredit: my } : {}), eligible: await eligible(a.tid), pilot: true }; }); },
+        const ads = await adsOf(c, 'home_top', a.tid); const out = r => ({ productId: r.id, title: r.title, cp: r.owner_kind === 'santa' ? '산타 오리지널' : r.cp_name, hours: r.hours_x10 / 10, ...(staff ? { credits: r.credits } : {}), optin: 'credit', ...(r.owner_kind === 'santa' ? { orig: true } : {}) });
+        return { collections: C.map(({ rows: _r, ...x }) => x), recommended: withAds(rows, ads, out).slice(0, 12), ...(my ? { myCredit: my } : {}), eligible: await eligible(a.tid), pilot: true, ads: await adsOn(c, a.tid) }; }); },
+    /* 광고(추천 진열) 노출 선택 — 구매 기관 정운영자만, 감사 기록 market.ads */
+    'PUT /api/market/settings': async req => { const a = await needOwner(req); const b = await body(req); if (typeof b.ads !== 'boolean') throw E(400, 'ads', '광고 노출 여부(ads)를 true · false로 보내십시오.');
+      await T(async c => needPilot(c, a.tid)); /* mk_party 쓰기는 산타 범위만 허용(RLS) — 정운영자 확인 뒤 이 기관 행 한 칸만 바꾼다 */
+      await S.txAs({ santa: true }, c => c.query('update mk_party set ads = $2, ads_by = $3, ads_at = now() where tid = $1', [a.tid, b.ads, a.email]));
+      await log(a.tid, a.email, 'market.ads', { ads: b.ads }); return { ok: true, ads: b.ads }; },
     'GET /api/market/products': async req => { const a = await need(req); const q = Q(req); const staff = a.role !== 'teacher';
       return T(async c => { await needPilot(c, a.tid); const day = today(); let rows = await listed(c, day);
         const col = q.get('collection'); if (col) { const ids = new Set((await c.query('select product_id from mk_collection_item where collection_id = $1', [str(col, 30)])).rows.map(r => r.product_id)); rows = rows.filter(r => ids.has(r.id)); }
@@ -264,7 +272,7 @@ module.exports = (ctx, S) => {
         if (P.error) throw E(P.error === 'mk_promo_full' ? 409 : 422, P.error, MSG2[P.error]);
         const items = []; for (const m of months) { const x = await q1(c, 'insert into mk_promo (id, cp_tid, product_id, slot, ym, fee) values ($1,$2,$3,$4,$5,$6) returning *', [rid('mpr_'), a.tid, r.id, slot, m, calc.SLOT[slot].fee]).catch(e => { if (e.code === '23505') throw E(409, 'mk_promo_full', '같은 상품 · 슬롯 · 달의 신청이 이미 있습니다.'); throw e; }); items.push(promoOut(x)); }
         return { ok: true, items, fee: P.fee }; })); },
-    'GET /api/market/cp/promos': async req => { const a = await needCp(req); return T(async c => ({ items: (await c.query('select * from mk_promo where cp_tid = $1 order by ym desc, at desc', [a.tid])).rows.map(promoOut) })); },
+    'GET /api/market/cp/promos': async req => { const a = await needCp(req); return T(async c => ({ adOrgs: await adOrgs(), items: (await c.query('select * from mk_promo where cp_tid = $1 order by ym desc, at desc', [a.tid])).rows.map(promoOut) })); },
     /* 8-4 산타 운영 */
     'GET /api/market/ops/reviews': async req => { await needSanta(req); const st = str(Q(req).get('status'), 12) || 'in_review';
       return T(async c => ({ items: (await c.query(PROD_SQL + ' where p.status = $2 order by p.created_at', [today(), st])).rows.map(r => ({ ...prodOut(r, today(), true), ownerTid: r.owner_tid, listPrice: r.list_price, memo: r.review_memo })) })); },
@@ -299,8 +307,8 @@ module.exports = (ctx, S) => {
     'GET /api/market/ops/originals': async req => { await needSanta(req); return T(async c => { const day = today(); const rows = (await c.query(PROD_SQL + " where p.owner_kind = 'santa' order by p.created_at", [day])).rows; const items = [];
       for (const r of rows) items.push({ product: prodOut(r, day, true), credits: r.credits, used30d: (await q1(c, "select coalesce(sum(credits), 0)::int n from mk_credit_use where product_id = $1 and at > now() - interval '30 days'", [r.id])).n,
         collections: (await c.query('select collection_id from mk_collection_item where product_id = $1', [r.id])).rows.map(x => x.collection_id) }); return { items }; }); },
-    'GET /api/market/ops/promos': async req => { await needSanta(req); const st = str(Q(req).get('status'), 10); return T(async c => ({ items: (await c.query('select * from mk_promo' + (st ? ' where status = $1' : '') + ' order by ym, at', st ? [st] : [])).rows.map(promoOut) })); },
-    'GET /api/market/ops/revenue': async req => { await needSanta(req); return T(async c => revenue(c, Q(req))); },
+    'GET /api/market/ops/promos': async req => { await needSanta(req); const st = str(Q(req).get('status'), 10); return T(async c => ({ adOrgs: await adOrgs(), items: (await c.query('select * from mk_promo' + (st ? ' where status = $1' : '') + ' order by ym, at', st ? [st] : [])).rows.map(promoOut) })); },
+    'GET /api/market/ops/revenue': async req => { await needSanta(req); return T(async c => ({ ...(await revenue(c, Q(req))), adOrgs: await adOrgs() })); },
     'GET /api/market/ops/orgs': async req => { await needSanta(req); const q = Q(req); const t = str(q.get('q'), 60).trim();
       /* tenants는 마켓 역할 밖(로그인 계정), mk_party는 산타 범위(RLS)에서 따로 읽어 합친다(Java와 같음) */
       const ts = (await pool.query("select id, name, type from tenants where ($1 = '' or name ilike '%' || $1 || '%' or id = $1) order by created_at desc limit 2000", [t])).rows;

@@ -27,11 +27,16 @@ final class MkRoutes {
             return S.T(() -> { S.needPilot(tid(a)); String day = today(); List<ObjectNode> C = S.collections(day, null); List<JsonNode> rows = new ArrayList<>(); for (ObjectNode r : S.listed(day)) if ("credit".equals(modeOf(r, day))) rows.add(r);
                 ObjectNode k = S.liveContract(tid(a), day); ObjectNode my = null;
                 if (k != null && staff) { MarketServiceImpl.WS W = S.walletState(k); my = O().put("contractId", s(k, "id")).put("balance", W.balance).put("total", W.total); my.set("validTo", g(k, "e")); my.set("carryTo", g(k, "ce")); my.put("alert", W.alert); }
-                List<String> ads = S.adsOf("home_top");
+                List<String> ads = S.adsOf("home_top", tid(a));
                 ArrayNode rec = withAds(rows, ads, r -> { ObjectNode o = O().put("productId", s(r, "id")); o.set("title", g(r, "title")); o.set("cp", santaOwn(r) ? t("산타 오리지널") : g(r, "cp_name")); o.set("hours", hours(r)); if (staff) o.set("credits", g(r, "credits")); o.put("optin", "credit"); if (santaOwn(r)) o.put("orig", true); return o; });
                 ArrayNode cols = F.arrayNode(); for (ObjectNode x : C) { ObjectNode y = x.deepCopy(); y.remove("rows"); cols.add(y); }
                 ArrayNode rec12 = F.arrayNode(); for (int i = 0; i < Math.min(12, rec.size()); i++) rec12.add(rec.get(i));
-                ObjectNode o = O(); o.set("collections", cols); o.set("recommended", rec12); if (my != null) o.set("myCredit", my); o.set("eligible", S.eligible(tid(a))); o.put("pilot", true); return o; }); });
+                ObjectNode o = O(); o.set("collections", cols); o.set("recommended", rec12); if (my != null) o.set("myCredit", my); o.set("eligible", S.eligible(tid(a))); o.put("pilot", true); o.put("ads", S.adsOn(tid(a))); return o; }); });
+        /* 광고(추천 진열) 노출 선택 — 구매 기관 정운영자만, 감사 기록 market.ads(Node와 같음) */
+        S.r("PUT /api/market/settings", (req, res, raw, p) -> { Map<String, Object> a = S.needOwner(req); JsonNode b = body(raw); JsonNode v = get(b, "ads"); if (v == null || !v.isBoolean()) throw S.E(400, "ads", "광고 노출 여부(ads)를 true · false로 보내십시오.");
+            S.T(() -> { S.needPilot(tid(a)); return null; }); final boolean on = v.asBoolean();
+            db.txAs("", true, () -> db.x("update mk_party set ads = $2, ads_by = $3, ads_at = now() where tid = $1", tid(a), on, email(a)));
+            S.log(tid(a), email(a), "market.ads", map("ads", on)); return O().put("ok", true).put("ads", on); });
         S.r("GET /api/market/products", (req, res, raw, p) -> { Map<String, Object> a = S.need(req); boolean staff = staff(a);
             return S.T(() -> { S.needPilot(tid(a)); String day = today(); List<ObjectNode> rows = S.listed(day);
                 String col = qp(req, "collection"); if (col != null && !col.isEmpty()) { Set<String> ids = new HashSet<>(); for (ObjectNode r : db.q("select product_id from mk_collection_item where collection_id = $1", str(col, 30))) ids.add(s(r, "product_id")); rows.removeIf(r -> !ids.contains(s(r, "id"))); }
@@ -103,7 +108,7 @@ final class MkRoutes {
                 ArrayNode items = F.arrayNode(); for (String m : months) { ObjectNode x; try { x = db.q1("insert into mk_promo (id, cp_tid, product_id, slot, ym, fee) values ($1,$2,$3,$4,$5,$6) returning *", rid("mpr_"), tid(a), s(r, "id"), slot, m, DdMarketCalc.SLOT.get(slot)[1]); }
                     catch (DuplicateKeyException e) { throw S.E(409, "mk_promo_full", "같은 상품 · 슬롯 · 달의 신청이 이미 있습니다."); } items.add(S.promoOut(x)); }
                 ObjectNode o = O().put("ok", true); o.set("items", items); o.set("fee", P.get("fee")); return o; })); });
-        S.r("GET /api/market/cp/promos", (req, res, raw, p) -> { Map<String, Object> a = S.needCp(req); return S.T(() -> { ArrayNode it = F.arrayNode(); for (ObjectNode x : db.q("select * from mk_promo where cp_tid = $1 order by ym desc, at desc", tid(a))) it.add(S.promoOut(x)); ObjectNode o = O(); o.set("items", it); return o; }); });
+        S.r("GET /api/market/cp/promos", (req, res, raw, p) -> { Map<String, Object> a = S.needCp(req); return S.T(() -> { ArrayNode it = F.arrayNode(); for (ObjectNode x : db.q("select * from mk_promo where cp_tid = $1 order by ym desc, at desc", tid(a))) it.add(S.promoOut(x)); ObjectNode o = O().put("adOrgs", S.adOrgs()); o.set("items", it); return o; }); });
         /* ── 8-4 산타 운영 ── */
         S.r("GET /api/market/ops/reviews", (req, res, raw, p) -> { S.needSanta(req); String st0 = str(qp(req, "status"), 12); String st = st0.isEmpty() ? "in_review" : st0;
             return S.T(() -> { ArrayNode it = F.arrayNode(); for (ObjectNode r : db.q(PROD_SQL + " where p.status = $2 order by p.created_at", today(), st)) { ObjectNode o = prodOut(r, today(), true); o.set("ownerTid", g(r, "owner_tid")); o.set("listPrice", g(r, "list_price")); o.set("memo", g(r, "review_memo")); it.add(o); } ObjectNode o = O(); o.set("items", it); return o; }); });
@@ -143,8 +148,8 @@ final class MkRoutes {
                 ArrayNode cs = y.putArray("collections"); for (ObjectNode x : db.q("select collection_id from mk_collection_item where product_id = $1", s(r, "id"))) cs.add(g(x, "collection_id")); it.add(y); }
             return o; }); });
         S.r("GET /api/market/ops/promos", (req, res, raw, p) -> { S.needSanta(req); String st = str(qp(req, "status"), 10);
-            return S.T(() -> { ObjectNode o = O(); ArrayNode it = o.putArray("items"); for (ObjectNode x : st.isEmpty() ? db.q("select * from mk_promo order by ym, at") : db.q("select * from mk_promo where status = $1 order by ym, at", st)) it.add(S.promoOut(x)); return o; }); });
-        S.r("GET /api/market/ops/revenue", (req, res, raw, p) -> { S.needSanta(req); return S.T(() -> S.revenue(req)); });
+            return S.T(() -> { ObjectNode o = O().put("adOrgs", S.adOrgs()); ArrayNode it = o.putArray("items"); for (ObjectNode x : st.isEmpty() ? db.q("select * from mk_promo order by ym, at") : db.q("select * from mk_promo where status = $1 order by ym, at", st)) it.add(S.promoOut(x)); return o; }); });
+        S.r("GET /api/market/ops/revenue", (req, res, raw, p) -> { S.needSanta(req); return S.T(() -> S.revenue(req).put("adOrgs", S.adOrgs())); });
         S.r("POST /api/market/ops/collections", (req, res, raw, p) -> { Map<String, Object> a = S.needSanta(req); JsonNode b = body(raw);
             return S.T(() -> { String id = str(get(b, "id"), 30); if (!COL_RE.matcher(id).matches()) throw S.E(400, "id", "컬렉션 번호(mc_…)를 확인하십시오."); String title = trim(str(get(b, "title"), 80)); if (title.isEmpty()) throw S.E(400, "title", "이름을 입력하십시오.");
                 String kind = List.of("basic", "industry", "campus", "original").contains(S0(get(b, "kind"))) ? get(b, "kind").asText() : "basic"; String sec = str(get(b, "sector"), 40), cov = str(get(b, "cover"), 200); double so = I(get(b, "sort"));

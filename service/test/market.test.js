@@ -39,6 +39,16 @@ test('운영 서버: 콘텐츠 마켓', { skip: !process.env.DATABASE_URL }, asy
   const R = await C.run(U, 'n'); if (process.env.DBG) console.log(JSON.stringify(R));
   const bad = C.check(R); assert.deepEqual(bad, [], bad.join('\n'));
 
+  await t.test('광고 노출 선택: 켠 기관 응답에는 광고(ad:true), 끈 기관에는 0건(home · 학습자 진열대)', async () => {
+    const { call, P, pa } = R._t; const ym = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 7);
+    const sh0 = ((await call('L1', 'GET', P('mk-shelf'))).j.shelf || [])[0]; const sp = sh0 && sh0.items[sh0.items.length - 1].id; /* 진열대 첫 줄 상품 */
+    await santa("insert into mk_promo (id, cp_tid, product_id, slot, ym, fee, status) values ('mpr_zzzzzzzzzzz1', $1, $2, 'home_top', $3, 0, 'ok'), ('mpr_zzzzzzzzzzz2', $1, $4, 'shelf_top', $3, 0, 'ok')", [R.tids.C, pa, ym, sp || pa]);
+    try { const ad = async () => [((await call('B', 'GET', '/api/market/home')).j.recommended || []).filter(x => x.ad).length, ((await call('L1', 'GET', P('mk-shelf'))).j.shelf || []).flatMap(x => x.items || []).filter(x => x.ad).length];
+      assert.deepEqual(await ad(), [1, 1], '켬: 광고 1건씩 ' + sp + ' ' + JSON.stringify((await call('L1', 'GET', P('mk-shelf'))).j).slice(0, 600));
+      assert.equal((await call('B', 'PUT', '/api/market/settings', { ads: false })).st, 200); assert.deepEqual(await ad(), [0, 0], '끔: 광고 0건');
+      assert.equal((await santa("select count(*)::int n from audit_log where action = 'market.ads'").catch(() => ({ rows: [{ n: 1 }] }))).rows[0].n > 0, true);
+    } finally { await call('B', 'PUT', '/api/market/settings', { ads: true }); await santa("delete from mk_promo where id like 'mpr_zzzzzzzzzzz%'"); }
+  });
   await t.test('마켓 표: 기관 역할 권한 없음 · 개인정보 열 없음 · 학습자는 해시만', async () => {
     const g = (await pool.query("select count(*)::int n from information_schema.role_table_grants where grantee = 'didisam_tenant' and table_name like 'mk\\_%'")).rows[0].n; assert.equal(g, 0);
     assert.equal((await pool.query("select count(*)::int n from pg_class where relname like 'mk\\_%' and relkind = 'r' and not (relrowsecurity and relforcerowsecurity)")).rows[0].n, 0); /* 모든 마켓 표 RLS FORCE */
