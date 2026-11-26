@@ -34,7 +34,7 @@
       { k: 'ai3', n: 'AI 레벨 L3(에이전트)', min: 'enterprise' },
       { k: 'conn', n: 'SSO · API · MCP 외부 연결', min: 'enterprise', conns: ['mcp', 'claude'] },
       { k: 'multi', n: '멀티사이트(기관 관리)', min: 'enterprise', menus: ['org'] },
-      { k: 'mgr', n: '전담 매니저', d: 'U2 · G2 이상 포함', min: 'enterprise' },
+      { k: 'mgr', n: '전담 매니저', d: 'E3 · U2 · G2 이상 요금제에 포함(요금제 코드 기준, mgrCodes)', min: 'enterprise', part: { pro: 'U2 · G2 포함' } },
       { k: 'quota', n: 'AI 포함량 산타 지정', min: 'enterprise' }
     ],
     /* 2절 고객군별 단가 v1.0: [고객군, 인원 상한, 단가(원·인), 'month'|'year', 협의 하한] — 단가 null이면 협의 */
@@ -151,7 +151,7 @@
     const mgr = I.legacy || I.tier === 'enterprise' || T.mgrCodes.includes(I.code) ? '포함' : '미포함';
     const kv = [['현재 요금제', codeTxt], ['단계', tierTxt], ['계약 유형', I.legacy ? '기존 계약' : CONTRACT[I.contract] || I.contract || '—'], ['연 구독료', fv1, fv2], ['월 AI 포함 토큰', ai], ['다음 갱신일', renew], ['전담 매니저', mgr]]
       .map(([a, b, c]) => `<div><small>${a}</small><b>${b.includes('<small') ? b : E(b)}</b>${c ? `<em>${c}</em>` : ''}</div>`).join('');
-    const cur = I.tier; const rows = T.features.map(f => `<tr><td>${E(f.n)}${f.d ? `<small>${E(f.d)}</small>` : ''}</td>${T.tiers.map(t => `<td class="${t === cur ? 'cur' : ''}">${rank(t) >= rank(f.min) ? '<span class="y" aria-label="포함">포함</span>' : '<span class="n" aria-label="미포함">—</span>'}</td>`).join('')}</tr>`).join('');
+    const cur = I.tier; const rows = T.features.map(f => `<tr><td>${E(f.n)}${f.d ? `<small>${E(f.d)}</small>` : ''}</td>${T.tiers.map(t => `<td class="${t === cur ? 'cur' : ''}">${rank(t) >= rank(f.min) ? '<span class="y" aria-label="포함">포함</span>' : (f.part && f.part[t]) ? `<span class="y" aria-label="일부 포함">${E(f.part[t])}</span>` : '<span class="n" aria-label="미포함">—</span>'}</td>`).join('')}</tr>`).join('');
     const lvRow = `<tr><td>AI 레벨 상한</td>${T.tiers.map(t => `<td class="${t === cur ? 'cur' : ''}">${E(T.maxLevel[t])}</td>`).join('')}</tr>`;
     const demo = !live() && own ? `<section class="card"><h3>시연판 · 요금제 바꿔 보기</h3><div class="pl-acts"><label class="mini" for="plDemo">요금제 코드</label><select id="plDemo">${['', 'TRIAL', ...Object.keys(T.price)].map(c => `<option value="${c}" ${(c || '') === (I.legacy ? '' : I.code) ? 'selected' : ''}>${c ? `${c} · ${nm(T.codes[c])}` : '기존 계약(plan 없음)'}</option>`).join('')}</select></div><p class="mini">시연판에서만 보입니다. 운영 기관의 요금제는 산타 관리 화면에서 바꿉니다.</p></section>` : '';
     return `<div class="pl">
