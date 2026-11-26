@@ -43,14 +43,17 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
       await p.click('[data-act="mk-proxy"]'); await p.evaluate(() => { UI.mkSantaDemo = false; render(); }); await p.waitForTimeout(60);
       await p.click('[data-act="mk-confirm"]'); await p.waitForTimeout(80); ok(/세금계산서/.test(await T('#modal')), '1440 구매 확정 확인 카드');
       { const m = await T('#modal'); const dis0 = await p.evaluate(() => document.querySelector('#modal [data-mact="ok"]').disabled);
-        ok(dis0 && /크레딧 이용 조건/.test(m) && /남은 유료 크레딧 금액의 95%/.test(m) && /보너스 크레딧 제외/.test(m) && !/무제한(?! 이용권이 아닙니다)/.test(m), '1440 C2 이용 조건(B1) · 동의 전 [구매 확정] 비활성 · T1');
-        await p.check('#modal [name=mkPub]'); ok(/공공 기관/.test(await T('#modal [data-terms]')) && /회계연도/.test(await T('#modal [data-terms]')), '1440 C2-4 공공 기관 선택 → B2'); await p.uncheck('#modal [name=mkPub]');
-        await p.check('#modal [name=mkAgree]'); ok(!(await p.evaluate(() => document.querySelector('#modal [data-mact="ok"]').disabled)), '1440 C2 동의 후 활성'); }
-      await p.click('#modal [data-mact="ok"]'); await p.waitForTimeout(120); ok(await p.evaluate(() => { const q = S.market.quotes[0]; return q.terms && q.terms.ver === 'mk-credit-v1' && q.buyerKind === 'general'; }), '1440 C2 동의 기록(terms_ver)');
+        ok(dis0 && /콘텐츠 패스\(연간 이용권\) 이용 조건/.test(m) && /쓰지 않은 이용 한도\(보너스 포함\)는 소멸하며 환불되지 않습니다/.test(m) && /90%를 돌려 드립니다/.test(m) && /보너스 제외/.test(m) && !/충전|잔액|현금처럼|적립/.test(m) && !/무제한(?! 이용권이 아닙니다)/.test(m), '1440 r3 C2 이용권 조건(B1) · 동의 전 [구매 확정] 비활성 · T1 · 금칙어 없음');
+        await p.selectOption('#modal [name=mkMode]', 'public_postpaid'); ok(/후불 정산/.test(await T('#modal [data-terms]')) && /분기마다 실제 이용/.test(await T('#modal [data-terms]')), '1440 r3 C2 공공 후불(B2b)'); await p.selectOption('#modal [name=mkMode]', 'general');
+        await p.check('#modal [name=mkAgree]'); ok(await p.evaluate(() => document.querySelector('#modal [data-mact="ok"]').disabled), '1440 r3 C2 동의 1개만 → 아직 비활성'); await p.check('#modal [name=mkLapse]'); ok(!(await p.evaluate(() => document.querySelector('#modal [data-mact="ok"]').disabled)), '1440 r3 C2 소멸 조항까지 동의 후 활성'); }
+      await p.click('#modal [data-mact="ok"]'); await p.waitForTimeout(120); ok(await p.evaluate(() => { const q = S.market.quotes[0]; return q.terms && q.terms.ver === 'mk-pass-v2' && q.terms.lapseAck === true && q.buyerMode === 'general'; }), '1440 C2 동의 기록(terms_ver)');
       ok(/세금계산서 발행 대기/.test(await T('.mk')), '1440 구매 확정 → 세금계산서 발행 대기');
-      await tab('credit'); const a4 = await T('.mk'); ok(/25,680크레딧/.test(a4) && /유효 · 이월/.test(a4) && /2028-02-29/.test(a4) && /2029-02-28/.test(a4), '1440 A4 KPI 잔액 · 유효(T1)');
+      await tab('credit'); const a4 = await T('#main'); ok(/25,680크레딧/.test(a4) && /남은 이용 한도/.test(a4) && /이용 기간 · 갱신 이월 가능/.test(a4) && /2028-02-29/.test(a4) && /갱신 시 최대 [\d,]+크레딧 이월/.test(a4) && !/충전|잔액|현금처럼|적립/.test(a4), '1440 r3 A4 남은 이용 한도 · 이용 기간 · 갱신 이월 · 금칙어 없음');
       ok(/상태/.test(await T('#main table')) && /이용 가능/.test(await T('#main table')), '1440 C3-5 로트 상태 칸');
-      await p.click('[data-act="mk-refund"]'); await p.waitForTimeout(80); { const m = await T('#modal'); ok(/예상 환불액 [\d,]+원/.test(m) && /남은 유료 크레딧 환불/.test(m) && /크레딧 이용 조건/.test(m), '1440 C3-5 해지 · 환불 미리 보기(refundOf)'); } await p.click('#modal [data-mact="no"]'); await p.waitForTimeout(60);
+      await p.click('[data-act="mk-refund"]'); await p.waitForTimeout(80); { const m = await T('#modal'); ok(/예상 환불액 [\d,]+원/.test(m) && /중도 해지\(위약금 10%\)/.test(m) && /위약금 [\d,]+원/.test(m) && /연간 이용권/.test(m), '1440 r3 C3-6 해지 · 환불 미리 보기(refundOf v2)'); } await p.click('#modal [data-mact="no"]'); await p.waitForTimeout(60);
+      await p.evaluate(() => { const c = S.market.credit[0]; c._vt = c.validTo; const d = new Date(Date.now() + 9 * 3600e3 + 20 * 864e5).toISOString().slice(0, 10); c.validTo = d; c.wallet.forEach(l => { l._vt = l.validTo; l.validTo = d; l.carryTo = d; }); render(); });
+      ok(/이용 기간이 20일 남았습니다/.test(await T('[data-mk="x2"]')) && /소멸 예정\(D-20\)/.test(await T('#main table')), '1440 r3 C11-2 만료 30일 전 배너(X2) · 로트 소멸 예정');
+      await p.evaluate(() => { const c = S.market.credit[0]; c.validTo = c._vt; c.wallet.forEach(l => { l.validTo = l._vt; l.carryTo = l._vt; }); render(); });
       const rb = await p.evaluate(() => ({ r1: !!document.querySelector('[data-use="mu_d4"] [data-act="mk-restore"]'), r2: !!document.querySelector('[data-use="mu_d6"] [data-act="mk-dispute"]') }));
       ok(rb.r1 && rb.r2, `1440 A4 복원 버튼(R1 120시간 · 8%) · 기한 지남 이의 신청(R2 170시간) ${JSON.stringify(rb)}`);
       await p.click('[data-use="mu_d4"] [data-act="mk-restore"]'); await p.fill('#modal [name=r]', '대상 착오'); await p.click('#modal [data-mact="ok"]'); await p.waitForTimeout(120);
@@ -67,7 +70,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
       ok(await p.evaluate(() => CUR.tab === 'market' && UI.market === 'build'), '1440 A10 → A3 같은 값으로 열기');
       /* C5 교수자 */
       await p.evaluate(() => { MENU.mkops = MENU.mkops || { label: '마켓 운영', ws: 'ops', santa: true }; navAdd('mkops', true); S.me.role = 'teacher'; UI.market = 'home'; go('market'); }); await p.waitForTimeout(100);
-      const te = await p.evaluate(() => ({ tab: CUR.tab, subs: document.querySelectorAll('.mk-subtabs [role=tab]').length, cr: ((document.querySelector('.mk') || {}).innerText || '').match(/.{0,20}(크레딧 잔액|\d+크레딧).{0,10}/), ops: wsTabs('ops').includes('mkops'), no: TEACH_NO.includes('mkcp') && TEACH_NO.includes('mksell') }));
+      const te = await p.evaluate(() => ({ tab: CUR.tab, subs: document.querySelectorAll('.mk-subtabs [role=tab]').length, cr: ((document.querySelector('.mk') || {}).innerText || '').match(/.{0,20}(남은 이용 한도|\d+크레딧).{0,10}/), ops: wsTabs('ops').includes('mkops'), no: TEACH_NO.includes('mkcp') && TEACH_NO.includes('mksell') }));
       ok(te.tab === 'market' && te.subs === 1 && !te.cr && !te.ops && te.no, `1440 C5 교수자: 마켓 열림 · 크레딧 숨김 · 운영 메뉴 차단 ${JSON.stringify(te)}`);
       /* C6 산타 전용(시연판: 정운영자만) */
       const c6 = await p.evaluate(() => { S.me.role = 'sub'; const a = wsTabs('ops').includes('mkops'); S.me.role = 'owner'; const b = wsTabs('ops').includes('mkops'); return { sub: a, owner: b }; });
