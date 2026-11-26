@@ -127,7 +127,9 @@ function presetNav(type, ed) {
   return { ws: [...P.ws], tabs };
 }
 const menuOn = id => !!S.nav.tabs[MENU[id]?.ws]?.find(x => x.id === id && x.on);
-const wsTabs = w => (S.nav.tabs[w] || []).filter(x => x.on && MENU[x.id] && !(MENU[x.id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(x.id))).map(x => x.id);
+/* v48 C6: 산타 전용 메뉴(MENU.santa — 운영 LIVE.user.santa · 시연판 데모 정운영자) · 시범 게이트(MENU.gate() — 콘텐츠 마켓 org.mk.pilot)는 조건이 맞을 때만 보입니다 */
+const menuHid = id => { const m = MENU[id]; if (!m) return true; try { if (m.santa && !(typeof LIVE !== 'undefined' && LIVE && LIVE.tenant ? !!(LIVE.user && LIVE.user.santa) : S.me.role === 'owner')) return true; if (typeof m.gate === 'function' && !m.gate()) return true; } catch (e) { return true; } return false; };
+const wsTabs = w => (S.nav.tabs[w] || []).filter(x => x.on && MENU[x.id] && !menuHid(x.id) && !(MENU[x.id].owner && S.me.role !== 'owner') && !(S.me.role === 'teacher' && TEACH_NO.includes(x.id))).map(x => x.id);
 
 /* ───────── 공용 UI ───────── */
 function toast(msg, kind = '') { const box = $('#toasts'); if (box) [...box.children].forEach(x => x.remove()); /* v38 F5 P21 · C15: 안내는 한 번에 하나만 — '[게시하기]를 누르세요'와 '게시했습니다'가 겹치지 않게 */ const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; $('#toasts').appendChild(el); setTimeout(() => el.classList.add('out'), 2600); setTimeout(() => el.remove(), 3000); }
@@ -177,9 +179,10 @@ function resolve(id) {
   if (['plan', 'integr', 'service', 'terms', 'popup', 'consult', 'lang', 'rules', 'data', 'room'].includes(id)) { UI.settings = id; return { ws: 'settings', tab: '' }; } /* v32.8 설정 하위 화면 바로가기(현황 › 요금제 [업그레이드] 등) */
   return { ws: 'home', tab: '' };
 }
-const TEACH_NO = ['site', 'sales', 'billing', 'ledger', 'fac', 'crmbill', 'admins', 'org', 'auto', 'settings', 'dash', 'lmsm', 'lmsp']; /* QA7 q2#5: 학사 LMS 시스템 관리 · 공통 설정도 교수자 제외 */ /* v43 P3-F01: 강사에게 수납 · 매출 · 시설 · 청구 금액 숨김(서버 requireRole과 같게) */ /* v32.8 설정 · 기관 현황은 교수자 직접 이동도 막음(QA U4) */
+const TEACH_NO = ['site', 'sales', 'billing', 'ledger', 'fac', 'crmbill', 'admins', 'org', 'auto', 'settings', 'dash', 'lmsm', 'lmsp', 'mksell', 'mkcp', 'mkops']; /* v48 C5: 마켓 판매 · CP · 산타 운영은 교수자 제외(market은 열되 크레딧 · 금액 블록 숨김) */ /* QA7 q2#5: 학사 LMS 시스템 관리 · 공통 설정도 교수자 제외 */ /* v43 P3-F01: 강사에게 수납 · 매출 · 시설 · 청구 금액 숨김(서버 requireRole과 같게) */ /* v32.8 설정 · 기관 현황은 교수자 직접 이동도 막음(QA U4) */
 function go(id, keep) {
   let r = resolve(id);
+  if (r.tab && menuHid(r.tab)) { toast('이 기관에서 열 수 없는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; } /* v48 C6 */
   if (r.tab && MENU[r.tab]?.owner && S.me.role !== 'owner') { toast('정운영자만 볼 수 있는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; }
   if (S.me.role === 'teacher' && (TEACH_NO.includes(r.tab) || TEACH_NO.includes(r.ws) || (WS[r.ws] && r.ws !== 'home' && !r.tab && !wsTabs(r.ws).length))) { toast('교수자 권한으로는 열 수 없는 화면입니다.', 'warn'); r = { ws: 'home', tab: '' }; } /* v25 메뉴 숨김뿐 아니라 직접 이동도 막음 */
   if (r.tab && !menuOn(r.tab)) { toast(`'${mlabel(r.tab)}' 탭은 꺼져 있습니다. 설정에서 켤 수 있습니다.`, 'warn'); r = resolve(r.ws); }
