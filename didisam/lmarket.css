@@ -313,7 +313,7 @@ body.mk-nonav .lf{display:none}
 #lm > .sec.mk-sec{padding-top:16px}
 
 /* ── v1.1 크레딧형 패스 ── */
-.mk-bd.orig{background:var(--tb-ink);color:var(--surface)}
+.mk-bd.orig{background:var(--tb-gl);color:var(--tb-ink);box-shadow:inset 0 0 0 1.5px var(--tb-gd)} /* 개발자 3: --tb-ink 바탕은 다크에서 흰색 · 라이트 일부 테마에서 대비 부족 → 연한 초록 바탕 + 본문 잉크색(라이트 · 다크 모두 대비 확보) */
 .mk-bd.warn{background:var(--co50);color:var(--co700)}
 .mk-bd.on{background:var(--gr700);color:var(--surface)}
 .mk-bd.wait{background:var(--surface);color:var(--co700);box-shadow:inset 0 0 0 1px var(--co100,var(--tb-line))}
@@ -322,3 +322,11 @@ body.mk-nonav .lf{display:none}
 .mk-cap svg{color:var(--t-mag)}
 /* 추천 · 광고 슬롯 표시(마진 M2): 사진 오른쪽 위 작은 글자 */
 .mk-adl{position:absolute;right:6px;top:6px;z-index:1;padding:4px 6px;border-radius:6px;background:var(--surface);color:var(--tb-mute);font:600 12px/1 Pretendard,sans-serif;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.mk-cr{display:inline-flex;align-items:center;gap:6px;margin-top:8px!important;padding:5px 10px;border-radius:999px;background:var(--gr50);color:var(--t-mag)!important;font:700 13px/1.3 Pretendard,sans-serif!important}
+.mk-sub7{display:flex;gap:8px;align-items:flex-start;margin:8px 2px 0;font:500 13px/1.5 Pretendard,sans-serif;color:var(--tb-mute)}
+.mk-sub7 svg{flex:none;margin-top:2px}
+.mk-sub7.warn{padding:12px 14px;margin:0;border-radius:14px;background:var(--co50);color:var(--co700);font-weight:700}
+.mk-sub7.mute{color:var(--tb-mute)}
+.mk-st{padding:14px;border-radius:16px;background:var(--surface);box-shadow:0 0 0 1px var(--tb-line);margin-top:10px}
+.mk-stk{display:inline-block;margin-bottom:8px;font:700 12px/1 ui-monospace,Menlo,monospace;color:var(--tb-mute)}
+.mk-cta[disabled]{opacity:.55;cursor:not-allowed}

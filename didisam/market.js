@@ -9,6 +9,7 @@
   'use strict';
   if (typeof MENU === 'undefined' || typeof VIEWS === 'undefined' || typeof ACT === 'undefined') return;
 
+  try { if (typeof IC === 'object' && IC) { const add = { wallet: '<path d="M4 7h14a2 2 0 012 2v9a2 2 0 01-2 2H4zM4 7V6a2 2 0 012-2h10M16 13h2"/>', alert: '<path d="M12 4l9 16H3zM12 10v4M12 17v.5"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>', play: '<path d="M8 5l11 7-11 7z"/>' }; Object.keys(add).forEach(k => { if (!IC[k]) IC[k] = add[k]; }); } } catch (e) { }
   /* ── 계산(marketcalc.js 우선, 없으면 같은 규칙의 임시 구현) ── */
   const W = 1000, CP_BP = 6500, MAX_BP = 700, GUARD_BP = 3000;
   const FALLBACK = {
@@ -37,6 +38,8 @@
   const pilot = () => { try { return !LIVEON() || !!(S && S.org && S.org.mk && S.org.mk.pilot === true); } catch (e) { return false; } };
   window.mkPilot = pilot; window.mkIsSanta = santa;
   const teacher = () => S.me && S.me.role === 'teacher';
+  /* 산타 운영 대리 작성(보너스율 입력): 운영은 LIVE.user.santa, 시연판은 UI.mkSantaDemo(시험 · 산타 시연용)일 때만 — 구매 기관 화면에 산타 문구를 보이지 않게 */
+  const proxyOk = () => LIVEON() ? santa() : !!UI.mkSantaDemo;
   const owner = () => S.me && S.me.role === 'owner';
   const nf = n => (Number(n) || 0).toLocaleString('ko-KR');
   const pct = bp => (Math.floor(+bp || 0) / 100).toFixed(2) + '%';
@@ -100,6 +103,8 @@
   function mk1Migrate() { if (!S || !S.org || !S.nav || !S.nav.tabs || S.nav.mk1) return; const T = S.nav.tabs.learn = S.nav.tabs.learn || [];
     if (!Object.values(S.nav.tabs).some(L => (L || []).some(x => x.id === 'market'))) { const on = ON_TYPES.includes(S.org.type); const at = T.findIndex(x => x.id === 'clib' || x.id === 'library'); const row = { id: 'market', on }; if (at >= 0) T.splice(at + 1, 0, row); else T.push(row); }
     S.nav.mk1 = 1; }
+  /* 간편 메뉴(slimEss): 시범 기관 · 기본 켬 유형이면 「콘텐츠 마켓」을 보관함(clib) 바로 뒤에 둡니다(spec 4-3 · 4-4) */
+  if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { let E = base(...a) || []; try { if (S && S.org && pilot() && ON_TYPES.includes(S.org.type) && Array.isArray(E) && !E.includes('market')) { const at = E.findIndex(id => id === 'clib' || id === 'library'); E = [...E]; E.splice(at < 0 ? E.length : at + 1, 0, 'market'); } } catch (e) { console.error('market slim', e); } return E; }; }
   if (typeof window.slimMD === 'function') { const base = window.slimMD; window.slimMD = id => id === 'market' ? ['콘텐츠 패스 · 마켓을 둘러봅니다', '예산 3,000만 원으로 비교과 패스 구성해 줘'] : base(id); }
   if (typeof DICT !== 'undefined') Object.assign(DICT, { '콘텐츠 마켓': 'Content Market|コンテンツマーケット|内容市场|Mercado de contenidos|Marché de contenus|Content-Markt|Chợ nội dung|ตลาดคอนเทนต์|Маркет контента', '콘텐츠 패스': 'Content Pass|コンテンツパス|内容通行证|Pase de contenidos|Pass contenus|Content-Pass|Gói nội dung|พาสคอนเทนต์|Контент-пасс' });
   if (typeof postSeed === 'function') { const base = postSeed; postSeed = (...a) => { const r = base(...a); try { ensure(); } catch (e) { console.error('market', e); } return r; }; } /* eslint-disable-line no-global-assign */
@@ -177,7 +182,7 @@
     const bal = c ? balOf(c) : 0; const w = c && c.total ? Math.round(bal * 100 / c.total) : 0;
     const myCard = teacher() ? '' : c ? `<div class="mk-float"><span class="mk-av g">${icx('wallet', 18)}</span><div style="flex:1"><b style="font-size:14.5px">크레딧 잔액 <span class="mk-num">${nf(bal)} / ${nf(c.total)}</span> · 유효 ${esc(c.validTo)}</b><div class="mk-meter" role="img" aria-label="크레딧 잔액 ${w}%" style="margin:8px 0 0"><i style="width:${w}%"></i><b style="left:20%"></b><b style="left:10%"></b></div><div class="mk-meter-l"><span>10% · 20% 경보</span><span class="mk-num">${nf(bal)} / ${nf(c.total)}크레딧</span></div></div></div><button class="btn sm ghost" data-act="tab" data-key="market" data-v="credit">사용 현황</button></div>`
       : `<div class="mk-float"><span class="mk-av g">${icx('wallet', 18)}</span><div style="flex:1"><b style="font-size:14.5px">아직 크레딧 패스가 없습니다</b><small class="mk-sub">예산을 넣으면 크레딧과 예상 수강 건수를 계산합니다.</small></div><button class="btn sm pri" data-act="tab" data-key="market" data-v="build">크레딧 패스 구성하기</button></div>`;
-    const hero = `<section class="mk-hero"><div class="mk-hl"><p class="mk-eye">${esc(S.org.name || '')} 맞춤 · 크레딧형 콘텐츠 패스</p><h2>예산만 입력하시면<br><em>크레딧 패스</em>를 제안합니다</h2><p class="mk-sub">1크레딧 = 1,000원(부가세 별도). 학습자가 과정을 시작할 때 CP 정가대로 차감됩니다. AI 사용료는 별도입니다.</p>
+    const hero = `<section class="mk-hero"><div class="mk-hl"><p class="mk-eye">${esc(S.org.name || '')} 맞춤 · 크레딧형 콘텐츠 패스</p><h2>${teacher() ? '우리 기관 패스 과정을<br><em>수업에 넣어</em> 보십시오' : '예산만 입력하시면<br><em>크레딧 패스</em>를 제안합니다'}</h2><p class="mk-sub">${teacher() ? '검수된 CP 과정을 우리 기관 패스로 이용합니다.' : '1크레딧 = 1,000원(부가세 별도). 학습자가 과정을 시작할 때 CP 정가대로 차감됩니다. AI 사용료는 별도입니다.'}</p>
       <label class="mk-search">${icx('search', 18)}<input type="search" value="${esc(UI.mkQ || '')}" data-chg="mk-q" placeholder="과정 · 공급사를 검색합니다 (예: 면접, 글쓰기, 반도체)" aria-label="마켓 검색"><button class="btn pri sm" data-act="mk-search">검색</button></label>
       <div class="chips" role="group" aria-label="참여 필터"><button class="chip ${UI.mkSingle ? '' : 'on'}" data-act="mk-filter" data-v="credit" aria-pressed="${!UI.mkSingle}">크레딧 참여만</button><button class="chip ${UI.mkSingle ? 'on' : ''}" data-act="mk-filter" data-v="single" aria-pressed="${!!UI.mkSingle}">개별 임대 포함</button></div></div>
       <div class="mk-hp" style="background-image:url(${IMG('lib-02')})">${myCard}</div></section>`;
@@ -203,14 +208,14 @@
 
   /* ── A3 크레딧 패스 구성 ── */
   function vBuild() { const x = calcIn(); const R = planOf(x); const C = cols(); const cpp = x.cpp; const avg = R.avgCredits; const colN = cols().filter(c => x.cols.includes(c.id)).map(c => c.title).join(' · ') || '선택한 컬렉션';
-    const proxy = santa() && UI.mkProxy; const byB = x.people == null;
+    const proxy = proxyOk() && UI.mkProxy; const byB = x.people == null;
     const inp = `<div class="card" style="display:flex;flex-direction:column;gap:16px"><div><p class="mk-eye">① 예산 또는 예상 인원</p><h2 class="mk-h2">하나만 넣으면 나머지를 계산합니다</h2></div>
       <div class="mk-calc"><div class="mk-in ${byB ? 'on' : ''}"><label for="mkB">연간 예산 <span class="tag ${byB ? 'g' : 'b'}">${byB ? '입력' : '계산됨'}</span></label><span class="mk-v"><input id="mkB" class="mk-inp" inputmode="numeric" data-chg="mk-calc-in" name="budget" value="${nf(R.budget)}" aria-label="연간 예산(원)"><small>원</small></span><span class="mk-h">부가세 별도 · 예상 인원을 넣으면 예산을 계산합니다</span></div>
       <div class="mk-in ${byB ? '' : 'on'}"><label for="mkP">예상 인원 <span class="tag ${byB ? 'b' : 'g'}">${byB ? '계산됨' : '입력'}</span></label><span class="mk-v"><input id="mkP" class="mk-inp" inputmode="numeric" data-chg="mk-calc-in" name="people" value="${nf(byB ? R.people : x.people)}" aria-label="예상 인원(명)"><small>명</small></span><span class="mk-h">둘 중 하나만 입력합니다</span></div>
       <div class="mk-in"><label for="mkA">1인 평균 과정 수 <span class="tag">가정</span></label><span class="mk-v"><input id="mkA" class="mk-inp" inputmode="decimal" data-chg="mk-assume" value="${cpp}" aria-label="1인 평균 과정 수"><small>과정</small></span><span class="mk-h">기본값 대학 1.5 · 기업 2.0</span></div></div>
       <div class="mk-field"><label>② 컬렉션 선택(복수)</label><div class="chips">${C.map(c => `<button class="chip ${x.cols.includes(c.id) ? 'on' : ''}" data-act="mk-col" data-v="${esc(c.id)}" aria-pressed="${x.cols.includes(c.id)}">${esc(c.title)} · 평균 ${c.avgCredits}크레딧</button>`).join('')}</div></div>
       <div class="mk-opt ${x.bundle ? 'on' : ''}" role="checkbox" tabindex="0" aria-checked="${!!x.bundle}" data-act="mk-bundle"><span class="mk-ck"></span><div><b style="font-size:14.5px">③ 플랫폼 구독과 함께 계약</b><p class="mk-sub" style="font-size:13px">체크하면 보너스가 7%(최대)로 올라갑니다.</p></div></div>
-      ${santa() ? `<div class="mk-opt ${UI.mkProxy ? 'on' : ''}" role="checkbox" tabindex="0" aria-checked="${!!UI.mkProxy}" data-act="mk-proxy"><span class="mk-ck"></span><div><b style="font-size:14.5px">산타 운영 대리 작성</b><p class="mk-sub" style="font-size:13px">보너스율을 직접 넣습니다(최대 7%).</p></div></div>` : ''}
+      ${proxyOk() ? `<div class="mk-opt ${UI.mkProxy ? 'on' : ''}" role="checkbox" tabindex="0" aria-checked="${!!UI.mkProxy}" data-act="mk-proxy"><span class="mk-ck"></span><div><b style="font-size:14.5px">산타 운영 대리 작성</b><p class="mk-sub" style="font-size:13px">보너스율을 직접 넣습니다(최대 7%).</p></div></div>` : ''}
       ${proxy ? `<div class="mk-in"><label for="mkX">보너스율 <span class="tag">최대 7%</span></label><span class="mk-v"><input id="mkX" class="mk-inp" inputmode="decimal" data-chg="mk-bonus" value="${x.bonusBp != null ? x.bonusBp / 100 : ''}" placeholder="기본 규칙" aria-label="보너스율(%)"><small>%</small></span></div>` : ''}</div>`;
     /* 구매 기관 화면에는 산타 몫 · 실효 % · CP 지급액을 보이지 않습니다(통합 담당 지시). 가드 문구는 산타 대리 작성 때만 */
     const err = !proxy ? '' : R.bonusBp > MAX_BP ? guard('', '보너스 크레딧은 구매 크레딧의 7%까지만 줄 수 있습니다.', '보너스를 포함한 산타 몫이 30% 미만이라 계약을 만들 수 없습니다. 보너스는 최대 7%까지 줄 수 있습니다.') : R.santaBp < GUARD_BP ? guard('', '보너스를 포함한 산타 몫이 30% 미만이라 계약 · 견적을 만들 수 없습니다.', '') : '';
@@ -267,7 +272,7 @@
     const ro = teacher() ? '<p class="mk-sub">교수자 권한에서는 크레딧 · 가격 · 계약 정보를 보여 주지 않습니다.</p>' : '';
     let body = ''; try { body = ({ home: vHome, item: vItem, build: vBuild, credit: vCredit, ctrl: vCtrl, approve: vApprove, cart: vCart })[tab](); } catch (e) { console.error('market view', e); body = `<div class="empty">화면을 그리지 못했습니다: ${esc(typeof errMsg === 'function' ? errMsg(e) : e.message)}</div>`; }
     const right = teacher() ? '' : tab === 'build' ? '' : '<button class="btn pri" data-act="tab" data-key="market" data-v="build">크레딧 패스 구성하기</button>';
-    return `${head('콘텐츠 마켓', '크레딧형 콘텐츠 패스로 검수된 CP 과정을 이용합니다. 1크레딧 = 1,000원(부가세 별도).', right)}${subtabs(tab === 'item' ? 'home' : tab)}<div class="mk" data-mk-tab="${tab}">${warn}${ro}${body}</div>`; }
+    return `${head('콘텐츠 마켓', teacher() ? '우리 기관 패스에 들어 있는 검수된 CP 과정을 둘러보고 과정에 넣습니다.' : '크레딧형 콘텐츠 패스로 검수된 CP 과정을 이용합니다. 1크레딧 = 1,000원(부가세 별도).', right)}${subtabs(tab === 'item' ? 'home' : tab)}<div class="mk" data-mk-tab="${tab}">${warn}${ro}${body}</div>`; }
   VIEWS.market = viewMarket;
 
   /* ── 동작(ACT, 모두 mk- 접두사) ── */
