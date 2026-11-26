@@ -32,6 +32,7 @@ const key = c => c.join('/');
     await p.waitForFunction(() => !document.querySelector('#app .gen'), null, { timeout: 9000 }).catch(() => { }); await p.waitForTimeout(1000);
     await p.evaluate(k => { try { closeModal(); } catch (e) { } if (k) try { CL.set({ key: k, model: 'claude-haiku-5-5', chat: true, docs: true, site: true }); } catch (e) { } }, o.key || '');
     return { p, pe }; };
+  /* 지문에서 S.tq도 뺀다(QA6 v49): 질문함은 처음 읽을 때 게시판 질문 · 학습자 튜터가 넘긴 질문으로 채워지는 지연 생성(tqEnsure) — 조회 칩 「답변 안 한 질문 보기」가 읽기만 해도 생긴다 */
   /* 지문에서 S.lms는 뺀다: 학사 LMS 데모 저장소는 화면 · 조회가 처음 읽을 때 만들어진다(지연 생성). AI SAM 쓰기(공지 · 메시지)는 S.lms를 건드리지 않는다 */
   /* 메뉴 → 시험할 유형(운영자에게 켜진 첫 유형, 학사 LMS 계열은 학사 LMS) */
   const ON = {}, HAS = {};
@@ -43,7 +44,7 @@ const key = c => c.join('/');
   for (const c of CASES) { const ids = PICK[key(c)] || []; const lite = key(c) === 'univ/lite'; const extra = lite ? HAS['univ/lite'].filter(id => /^lms|^aigov$|^org$|^groups$/.test(id) && !ids.includes(id)) : [];
     if (!ids.length && !extra.length) continue; const { p, pe } = await open(c);
     const R = await p.evaluate(async ([ids, extra, FULL]) => { const sl = ms => new Promise(o => setTimeout(o, ms)); const out = [];
-      const fp = () => { const o = {}; Object.keys(S).filter(k => !['chat', 'audit', 'ai', 'gsig', 'nav', 'v', 'lms'].includes(k)).forEach(k => { o[k] = S[k]; }); return JSON.stringify(o); };
+      const fp = () => { const o = {}; Object.keys(S).filter(k => !['chat', 'audit', 'ai', 'gsig', 'nav', 'v', 'lms', 'tq'].includes(k)).forEach(k => { o[k] = S[k]; }); return JSON.stringify(o); };
       for (const id of [...ids, ...extra]) { const rec = { id, label: id === 'dash' ? '현황' : mlabel(id), only: !ids.includes(id), chips: [], card: 0, err: '' };
         const goK = () => { S.chat = []; CUR = id === 'dash' ? { ws: 'dash', tab: '' } : id === 'settings' ? { ws: 'settings', tab: '' } : { ws: MENU[id].ws, tab: id }; render(); };
         try { goK(); } catch (e) { rec.err = 'render ' + e.message; out.push(rec); continue; } await sl(350);
@@ -62,7 +63,7 @@ const key = c => c.join('/');
       return out; }, [ids, extra, FULL]);
     /* ④ 위험 요청: 계획 카드 없이 안내만 · 데이터 그대로 */
     const RR = await p.evaluate(async RISKY => { const sl = ms => new Promise(o => setTimeout(o, ms)); const out = [];
-      const fp = () => { const o = {}; Object.keys(S).filter(k => !['chat', 'audit', 'ai', 'gsig', 'nav', 'v', 'lms'].includes(k)).forEach(k => { o[k] = S[k]; }); return JSON.stringify(o); };
+      const fp = () => { const o = {}; Object.keys(S).filter(k => !['chat', 'audit', 'ai', 'gsig', 'nav', 'v', 'lms', 'tq'].includes(k)).forEach(k => { o[k] = S[k]; }); return JSON.stringify(o); };
       for (const [id, q] of Object.entries(RISKY)) { if (!MENU[id] || !(S.nav.tabs[MENU[id].ws] || []).some(x => x.id === id)) continue; CUR = { ws: MENU[id].ws, tab: id }; render(); await sl(250); if (CUR.tab !== id) continue; const f0 = fp(); let r = {}; try { r = answer(q) || {}; } catch (e) { r = { text: 'ERR ' + e.message }; } out.push({ id, q, plan: !!r.plan, guide: !!r.guide, changed: fp() !== f0, tx: String(r.text || '').slice(0, 80) }); if (r.plan && PLANS[r.plan]) delete PLANS[r.plan]; }
       return out; }, RISKY);
     RES[key(c)] = { R, RR };

@@ -224,5 +224,5 @@ AFTER.push(() => {
 });
 
 /* ── 학습자 게시본: 튜터 설정(공개 가능한 값만) ── */
-{ const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); const tu = (S.settings && S.settings.tutor) || {}; r.tutor = { enabled: tu.enabled !== false, name: String(tu.name || 'AI 튜터').slice(0, 12), daily: clamp(Math.round(+tu.daily) || 20, 1, 500), help: tu.help === 'hint' ? 'hint' : 'feedback', loginOnly: tu.loginOnly === true, guestDaily: clamp(+tu.guestDaily || 10, 0, 50) }; /* v23.4: 방문자도 튜터 사용(로그인 전부터) */ return r; }; }
+{ const base = lsSnapshot; lsSnapshot = (...a) => { const r = base(...a); const tu = (S.settings && S.settings.tutor) || {}; r.tutor = { enabled: tu.enabled !== false, name: String(tu.name || 'AI 튜터').slice(0, 12), daily: clamp(Math.round(+tu.daily) || 20, 1, 500), help: tu.help === 'hint' ? 'hint' : 'feedback', loginOnly: tu.loginOnly === true, guestDaily: clamp(tu.guestDaily == null || tu.guestDaily === '' ? 10 : Math.round(+tu.guestDaily) || 0, 0, 50) }; /* QA6(v49): 0회(방문자 사용 안 함)가 10회로 바뀌던 것 — 서버(app.js · PubServiceImpl)와 같은 규칙 */ /* v23.4: 방문자도 튜터 사용(로그인 전부터) */ return r; }; }
 COVER.push(['[신규] 역할별 AI SAM: 운영 스튜디오(AI SAM) · 교수 스튜디오(AI 조교 — 설계 · 개발 · 개설 · 운영 · 성과) · 학습자 포털(AI 튜터)', 'home', '']);

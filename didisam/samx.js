@@ -192,7 +192,7 @@
         D.forEach(c => { if (!(isMd(c) && merge)) add(wrapRun(c)); });
         mine.forEach(c => { if (out.length < 3 || !TRIM) add(c); });
         /* 그래도 3개가 안 되면: 이 화면 현황 요약 · 지금 할 일 */
-        if (out.length < 3) add([`x-${k}-sum`, `${lab(k)} 현황 요약`, () => sum(k), '현황 요약']);
+        if (out.length < 3) add([`x-${k}-sum`, `${String(lab(k)).replace(/\s*현황$/, '')} 현황 요약`, () => sum(k), '현황 요약']); /* QA6(v49): 메뉴 이름이 「○○ 현황」이면 「학원 현황 현황 요약」처럼 겹치지 않게 */
         if (out.length < 3) add([`x-${k}-todo`, `${lab(k)} 할 일 보기`, () => todo(k), '할 일 보기']);
         if (out.length < 3) add([`x-${k}-list`, `${lab(k)} 목록 보기`, () => list(k), '목록 보기']);
       }

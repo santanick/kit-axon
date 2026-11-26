@@ -10,6 +10,8 @@ const LTK = () => 'didisam.lt.open.' + (LR.tid || 'x');
 const LT = { open: false, msgs: [], busy: false, ai: null, nudged: false, q: {} };
 /* v27 학습자가 고른 'AI 선생님'(lapp.js ltPersona) — 이름 · 말투를 튜터 전체에 적용 */
 const TCFG = () => { const B = { enabled: true, name: 'AI 튜터', daily: 20, help: 'feedback', loginOnly: false, guide: '', ...((SITE() && SITE().tutor) || {}) }; const P = typeof ltPersona === 'function' ? ltPersona() : null; return P && P.n ? { ...B, orgName: B.name, name: P.n, tone: P.tone || '' } : B; };
+/* QA6(v49) P-AI-48: 방문자 하루 한도 — 기관이 0회(방문자 사용 안 함)로 두면 0을 그대로(전에는 0이 기본 10회로 바뀌어 화면은 「10회 남음」, 서버는 401) */
+const ltLim = () => { const C = TCFG(); if (LR.me) return Math.min(500, Math.max(1, Math.round(+C.daily) || 20)); const g = C.guestDaily; return g == null || g === '' ? 10 : Math.min(50, Math.max(0, Math.round(+g) || 0)); };
 const ltDayKey = () => 'didisam.lt.' + (LR.tid || 'x') + '.' + ((LR.me && LR.me.sid) || 'guest') + '.' + kstDay();
 const ltUsed = () => { try { return +sessionStorage.getItem(ltDayKey()) || 0; } catch (e) { return 0; } };
 const ltUse = () => { try { sessionStorage.setItem(ltDayKey(), String(ltUsed() + 1)); } catch (e) { } };
@@ -207,7 +209,7 @@ function ltRender() {
   if (!R) { R = document.createElement('div'); R.id = 'ltut'; R.className = 'lt'; document.body.appendChild(R); }
   const old = R.querySelector('#ltq'); const keep = old ? old.value : ''; const had = old && document.activeElement === old;
   const A = LR.me ? ltTodo() : []; const qa = ltQA().filter(x => !LT.q['seen' + x.id]).length; const badge = A.length + qa;
-  const left = Math.max(0, (LR.me ? (+C.daily || 20) : (+C.guestDaily || 10)) - ltUsed());
+  const left = Math.max(0, ltLim() - ltUsed());
   const sc = typeof LSAM === 'object' ? LSAM.screen() : { k: 'page', name: ltWhere().label, chips: ltChips().map(q => ({ l: q, q })) };
   const st = ltStatus(); const fresh = !LT.msgs.some(m => m.me); const nm = esc(C.name);
   if (LT.sk !== sc.k + '|' + sc.name) { LT.hint = LT.sk && !LT.open && sc.chips.length ? sc.name : ''; LT.sk = sc.k + '|' + sc.name; }
@@ -257,21 +259,22 @@ function ltOpen() {
   if (!LT.msgs.length || LT.who !== ((LR.me && LR.me.sid) || '')) { LT.who = (LR.me && LR.me.sid) || ''; const b = ltBrief(); LT.msgs = [{ t: b.t, h: b.h, sys: 1 }]; ltQA().forEach(x => { LT.q['seen' + x.id] = 1; }); }
   ltRender(); setTimeout(() => $('#ltq') && $('#ltq').focus(), 30);
 }
+const LT_STOP = { ai_month_quota: '이번 달 AI 사용량 소진', trial_ended: '무료 체험 종료', ai_level_off: 'AI 끄기 과제', plan_feature: '요금제 밖 기능', tutor_off: 'AI 튜터 꺼짐', policy: '기관 AI 정책' };
 async function ltAsk(q, opts = {}) {
   q = String(q || '').trim(); if (!q || LT.busy) return; const C = TCFG();
   try { const ch = typeof LSAM === 'object' ? LSAM.find(q) : null; if (ch) { const exact = ch.q === q; opts = { ro: !!ch.f && exact, ai: !ch.f && exact, extra: ch.x ? ch.x() : '', ...opts }; } } catch (e) { } /* 칩을 누른 정해진 안내만 기본 안내로 고정, 직접 쓴 질문은 Claude가 먼저(실패하면 같은 안내) */
   /* v24: 홈의 '내 AI 학습 비서' 화면에서 물으면 떠 있는 창을 열지 않고 화면 안에 답한다(lai-home.js) */
   const page = !LT.open && !!document.querySelector('.lai-th');
   if (page) { const w = (LR.me && LR.me.sid) || ''; if (LT.who !== w) { LT.who = w; LT.msgs = []; } } else if (!LT.open) ltOpen();
-  if (C.loginOnly && !LR.me) { LT.msgs.push({ me: 1, t: q }, { t: '로그인한 뒤에 쓸 수 있습니다.', h: ltLinks([{ h: '로그인하기', d: '', href: '#login' }]) }); ltRender(); return; }
-  const lim = LR.me ? (+C.daily || 20) : (+C.guestDaily || 10); if (ltUsed() >= lim) { LT.msgs.push({ me: 1, t: q }, { t: LR.me ? `오늘 질문 한도(${lim}회)를 모두 썼습니다. 내일 다시 이어 가거나, 급한 질문은 선생님께 넘겨 주세요.` : `방문자 질문 한도(${lim}회)를 모두 썼습니다. 무료 가입 후 로그인하면 계속 물어볼 수 있습니다.`, h: ltBtns([['선생님께 질문 넘기기', q, 'esc']]) }); ltRender(); return; }
+  if ((C.loginOnly || ltLim() === 0) && !LR.me) { LT.msgs.push({ me: 1, t: q }, { t: '로그인한 뒤에 쓸 수 있습니다.', h: ltLinks([{ h: '로그인하기', d: '', href: '#login' }]) }); ltRender(); return; }
+  const lim = ltLim(); if (ltUsed() >= lim) { LT.msgs.push({ me: 1, t: q }, { t: LR.me ? `오늘 질문 한도(${lim}회)를 모두 썼습니다. 내일 다시 이어 가거나, 급한 질문은 선생님께 넘겨 주세요.` : `방문자 질문 한도(${lim}회)를 모두 썼습니다. 무료 가입 후 로그인하면 계속 물어볼 수 있습니다.`, h: ltBtns([['선생님께 질문 넘기기', q, 'esc']]) }); ltRender(); return; }
   LT.msgs.push({ me: 1, t: q }); LT.msgs = LT.msgs.slice(-30); ltUse();
   if (opts.esc) { const r = ltEscalate(q); LT.msgs.push({ ...r, src: '질문 전달' }); ltRender(); return; }
   let r = ltRule(q) || ltRule('?'); if (r.esc) { const last = [...LT.msgs].reverse().find(m => m.me && !/(선생님|교수님|강사님).{0,10}(물어|질문|전달|넘겨)/.test(m.t)); r = ltEscalate(last ? last.t : q); LT.msgs.push({ ...r, src: '질문 전달' }); ltRender(); return; }
   const actionish = /(계획|스케줄|퀴즈|복습|문제\s*내|리포트|진도|현황|할\s*일|브리핑|마감|추천|대신|정답)/.test(q);
   if (!opts.ro && (opts.ai || !actionish) && (LR.me || !/(로그인|가입|접근\s*코드|비밀번호)/.test(q))) {
     LT.busy = true; ltRender();
-    try { const a = await ltAI(opts.extra ? q + '\n\n' + opts.extra : q); if (a && a.t) r = { t: a.t, h: LR.me && !(typeof lGuard === 'function' && lGuard()) ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: `Claude · ${String(a.src || '').replace('claude-', '')}` }; } catch (e) { r = e && e.code === 'ai_month_quota' ? { t: errMsg(e), h: LR.me ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: '이번 달 AI 사용량 소진' } /* v47 기관 월 AI 한도 */ : { ...r, src: `기본 안내 · AI 연결 오류(${String(errMsg(e, '')).slice(0, 40)})` }; }
+    try { const a = await ltAI(opts.extra ? q + '\n\n' + opts.extra : q); if (a && a.t) r = { t: a.t, h: LR.me && !(typeof lGuard === 'function' && lGuard()) ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: `Claude · ${String(a.src || '').replace('claude-', '')}` }; } catch (e) { r = e && LT_STOP[e.code] ? { t: errMsg(e), h: LR.me ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: LT_STOP[e.code] } /* v47 기관 월 AI 한도 · QA6(v49) 체험 종료 · AI 끄기 과제 · 요금제 밖 · 튜터 꺼짐도 같은 방식(기본 안내로 덮지 않고 그 사유를 답으로) */ : { ...r, src: `기본 안내 · AI 연결 오류(${String(errMsg(e, '')).slice(0, 40)})` }; }
     LT.busy = false;
   }
   LT.msgs.push({ src: r.src || (LR.mode === 'live' ? '기본 안내' : '기본 안내 · 데모'), ...r }); LT.msgs = LT.msgs.slice(-30); ltRender();
