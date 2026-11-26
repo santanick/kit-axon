@@ -1,4 +1,5 @@
 'use strict';
+const { adminPool, closeAdmin, NEED } = require('./_admin'); // QA8: 비슈퍼유저 DB에서는 직접 조회만 슈퍼유저 연결로(서버는 RLS 아래 그대로)
 /* v40 시설 · 장비 예약 서버 — 계산 기준값(tests/fac-vectors.json) · 동시 예약 · 금액 위조 · 기관 격리 · QR 1회용 · 노쇼 정리 · 예약 정지 · 환불 = 벡터.
    DATABASE_URL=postgres://… FAC_SWEEP_MS=0 node --test service/test/fac40.test.js */
 const test = require('node:test'); const assert = require('node:assert/strict'); const crypto = require('node:crypto'); const path = require('node:path');
@@ -20,7 +21,7 @@ test('계산 기준값(fac-vectors.json)', () => {
 
 test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL }, async t => {
   const { poolFrom, migrate, inTenant } = require('../server/db'); const { createApp } = require('../server/app');
-  const pool = poolFrom(process.env); await migrate(pool);
+  const pool = poolFrom(process.env); await migrate(pool); const adm = await adminPool(pool); if (!adm) { await pool.end(); t.skip(NEED); return; }
   const app = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', PII_KEY: crypto.randomBytes(32).toString('hex'), FAC_SWEEP_MS: '0' }, log: process.env.FAC_LOG ? console : {} }); await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
   const jar = {}; const call = async (who, method, p, body) => { const r = await fetch(U + p, { method, headers: { 'x-didisam': '1', ...(body ? { 'content-type': 'application/json' } : {}), ...(jar[who] ? { cookie: jar[who] } : {}) }, body: body ? JSON.stringify(body) : undefined });
     const c = r.headers.get('set-cookie'); if (c) jar[who] = c.split(';')[0]; return { status: r.status, j: await r.json().catch(() => ({})) }; };
@@ -58,7 +59,7 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
     /* 자원을 고르지 않은 4명 → 코트 2개만 성공 */
     const R = await Promise.all(['L1', 'L2', 'L3', 'L4'].map(w => call(w, 'POST', P('fac-book'), { fac: 'f_t', day: D3, slot: 11, slots: 1, aud: 'public' })));
     assert.equal(R.filter(r => r.status === 200).length, 2); assert.deepEqual(R.filter(r => r.status !== 200).map(r => r.j.error), ['taken', 'taken']);
-    const n = (await pool.query("select count(*)::int n from fac_slot where tenant_id = $1 and day = $2 and slot = 11", [A.tid, D3])).rows[0].n; assert.equal(n, 2);
+    const n = (await adm.query("select count(*)::int n from fac_slot where tenant_id = $1 and day = $2 and slot = 11", [A.tid, D3])).rows[0].n; assert.equal(n, 2);
     /* 같은 요청 번호 재전송은 한 건 */
     const w = ok[0] === x ? 'L1' : 'L2'; const again = await call(w, 'POST', P('fac-book'), { fac: 'f_t', res: 'r1', day: D3, slot: 10, slots: 1, aud: 'public', idem: 'race-' + w }); assert.equal(again.status, 200); assert.equal(again.j.booking.id, ok[0].j.booking.id);
     /* 동일인 같은 시간 다른 코트 */
@@ -112,12 +113,12 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
     const q = await call('L3', 'POST', P('fac-qr'), { booking: qrBk }); assert.equal(q.status, 200); /* 퇴장 중에는 재입장 QR */
     const re = await call('A', 'POST', '/api/fac/checkin', { token: q.j.token }); assert.equal(re.j.reentry, true);
     assert.equal((await call('A', 'POST', '/api/fac/checkin', { booking: qrBk, out: true })).status, 200);
-    await pool.query("update fac_booking set left_at = now() - interval '16 minutes' where tenant_id = $1 and id = $2", [A.tid, qrBk]);
+    await adm.query("update fac_booking set left_at = now() - interval '16 minutes' where tenant_id = $1 and id = $2", [A.tid, qrBk]);
     await call('A', 'GET', '/api/fac/overview');
-    const bk = (await pool.query('select status, cancel_reason from fac_booking where tenant_id = $1 and id = $2', [A.tid, qrBk])).rows[0]; assert.deepEqual([bk.status, bk.cancel_reason], ['cancelled', '이탈 자동 취소']);
+    const bk = (await adm.query('select status, cancel_reason from fac_booking where tenant_id = $1 and id = $2', [A.tid, qrBk])).rows[0]; assert.deepEqual([bk.status, bk.cancel_reason], ['cancelled', '이탈 자동 취소']);
     const p = await call('L1', 'POST', P('fac-buy'), { productId: 'p_m1', aud: 'public' }); assert.equal(p.j.pass.status, 'pending');
-    await pool.query("update fac_pass set created_at = now() - interval '8 days' where tenant_id = $1 and id = $2", [A.tid, p.j.pass.id]); await call('A', 'GET', '/api/fac/overview');
-    assert.equal((await pool.query('select status from fac_pass where tenant_id = $1 and id = $2', [A.tid, p.j.pass.id])).rows[0].status, 'cancelled');
+    await adm.query("update fac_pass set created_at = now() - interval '8 days' where tenant_id = $1 and id = $2", [A.tid, p.j.pass.id]); await call('A', 'GET', '/api/fac/overview');
+    assert.equal((await adm.query('select status from fac_pass where tenant_id = $1 and id = $2', [A.tid, p.j.pass.id])).rows[0].status, 'cancelled');
     rev = (await call('A', 'PUT', '/api/state', { doc: { ...docOf('스포츠센터', { roster: ['20260001'] }), members: [{ id: 'm9', sid: L.L4 }], classes: [{ id: 'c1', name: '테니스 기초', learners: ['m9'] }] }, rev })).j.rev;
     const my = await call('L4', 'GET', P('fac-my')); const cp = my.j.passes.filter(x => x.productId === 'p_c1'); assert.equal(cp.length, 1); assert.equal(cp[0].kind, 'course'); assert.equal(cp[0].total, 20); assert.equal(cp[0].status, 'active');
     assert.equal((await call('L4', 'GET', P('fac-my'))).j.passes.filter(x => x.productId === 'p_c1').length, 1); /* 한 번만 */
@@ -126,14 +127,14 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
 
   await t.test('노쇼: 요청 시 정리 → 칸 해제, 3회 누적 30일 정지', async () => {
     const b = await call('L4', 'POST', P('fac-book'), { fac: 'f_t', res: 'r2', day: today, slot: hour, slots: 1, aud: 'public' }); assert.equal(b.status, 200, JSON.stringify(b.j));
-    await pool.query("update fac_booking set start_at = now() - interval '20 minutes' where tenant_id = $1 and id = $2", [A.tid, b.j.booking.id]);
+    await adm.query("update fac_booking set start_at = now() - interval '20 minutes' where tenant_id = $1 and id = $2", [A.tid, b.j.booking.id]);
     const o = await call('A', 'GET', '/api/fac/overview'); assert.equal(o.status, 200); assert.ok(o.j.noShow >= 1);
-    const st = (await pool.query('select status from fac_booking where tenant_id = $1 and id = $2', [A.tid, b.j.booking.id])).rows[0].status; assert.equal(st, 'no_show');
-    assert.equal((await pool.query('select count(*)::int n from fac_slot where tenant_id = $1 and booking_id = $2', [A.tid, b.j.booking.id])).rows[0].n, 0);
+    const st = (await adm.query('select status from fac_booking where tenant_id = $1 and id = $2', [A.tid, b.j.booking.id])).rows[0].status; assert.equal(st, 'no_show');
+    assert.equal((await adm.query('select count(*)::int n from fac_slot where tenant_id = $1 and booking_id = $2', [A.tid, b.j.booking.id])).rows[0].n, 0);
     const ns = await call('A', 'GET', '/api/fac/noshow'); assert.ok(ns.j.bookings.some(x => x.id === b.j.booking.id));
-    const ev = (await pool.query("select data from learner_events where tenant_id = $1 and type = 'fac-note' and xid = $2", [A.tid, b.j.booking.id])).rows; assert.ok(ev.some(e => e.data.kind === 'no_show'));
+    const ev = (await adm.query("select data from learner_events where tenant_id = $1 and type = 'fac-note' and xid = $2", [A.tid, b.j.booking.id])).rows; assert.ok(ev.some(e => e.data.kind === 'no_show'));
     /* 노쇼 2건 더(지난 날) → 3회 → 정지 */
-    for (const n of [1, 2]) await pool.query("insert into fac_booking (tenant_id, id, fac_id, res_id, sid, aud, day, start_slot, slots, start_at, end_at, status, pay_mode) values ($1, $2, 'f_t', 'r1', $3, 'public', $4, 3, 1, now() - interval '3 days', now() - interval '3 days', 'no_show', 'onsite')", [A.tid, 'bk_nsx' + n + sfx.slice(-8).padStart(8, '0'), L.L4, plus(-n)]);
+    for (const n of [1, 2]) await adm.query("insert into fac_booking (tenant_id, id, fac_id, res_id, sid, aud, day, start_slot, slots, start_at, end_at, status, pay_mode) values ($1, $2, 'f_t', 'r1', $3, 'public', $4, 3, 1, now() - interval '3 days', now() - interval '3 days', 'no_show', 'onsite')", [A.tid, 'bk_nsx' + n + sfx.slice(-8).padStart(8, '0'), L.L4, plus(-n)]);
     const s = await call('L4', 'POST', P('fac-book'), { fac: 'f_t', day: D3, slot: 20, slots: 1, aud: 'public' }); assert.equal(s.status, 403); assert.equal(s.j.error, 'suspended'); assert.equal(s.j.until, calc.addDays(today, 29));
     /* 되살리기 */
     const r = await call('A', 'POST', `/api/fac/noshow/${b.j.booking.id}/restore`); assert.equal(r.j.status, 'confirmed');
@@ -153,7 +154,7 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
     assert.equal((await call('A', 'POST', '/api/fac/payments', { pass: p.j.pass.id, method: 'card_onsite', amount: 150000 })).status, 200);
     const ck = await call('A', 'POST', '/api/fac/checkin', { passId: p.j.pass.id }); assert.equal(ck.status, 200, JSON.stringify(ck.j)); assert.equal(ck.j.kind, 'pass');
     assert.equal((await call('A', 'POST', '/api/fac/checkin', { passId: p.j.pass.id })).j.error, 'once_per_day');
-    const pay = (await pool.query('select id from fac_payment where tenant_id = $1 and pass_id = $2', [A.tid, p.j.pass.id])).rows[0].id;
+    const pay = (await adm.query('select id from fac_payment where tenant_id = $1 and pass_id = $2', [A.tid, p.j.pass.id])).rows[0].id;
     const vec = V.refund.find(x => x.name.startsWith('월이용권 1회'));
     const pv = await call('A', 'POST', '/api/fac/refunds', { payment: pay, preview: true }); assert.equal(pv.j.auto, vec.out.auto);
     const nr = await call('A', 'POST', '/api/fac/refunds', { payment: pay, amount: 80000 }); assert.equal(nr.status, 400); assert.equal(nr.j.error, 'reason'); assert.equal(nr.j.auto, 75000);
@@ -166,7 +167,7 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
     const one = await call('L1', 'POST', P('fac-rent'), { fac: 'f_t', productId: 'p_lt', aud: 'public', res: 'r1' }); assert.equal(one.status, 200); assert.equal(one.j.rental.deposit, 10000);
     assert.equal((await call('L2', 'POST', P('fac-rent'), { fac: 'f_t', productId: 'p_lt', aud: 'public', res: 'r1' })).j.error, 'taken');
     assert.equal((await call('A', 'POST', `/api/fac/rentals/${one.j.rental.id}/lend`, {})).j.status, 'lent');
-    await pool.query("update fac_rental set due_day = due_day - 5 where tenant_id = $1 and id = $2", [A.tid, one.j.rental.id]);
+    await adm.query("update fac_rental set due_day = due_day - 5 where tenant_id = $1 and id = $2", [A.tid, one.j.rental.id]);
     const r = await call('A', 'POST', `/api/fac/rentals/${one.j.rental.id}/return`, { condition: '양호' }); assert.equal(r.status, 200); assert.equal(r.j.lateDays, 3); assert.equal(r.j.lateFee, 3000); assert.equal(r.j.depositReturn, 7000);
   });
 
@@ -188,7 +189,7 @@ test('운영 서버: 시설 · 장비 예약', { skip: !process.env.DATABASE_URL
     const s = await call('A', 'GET', `/api/fac/stats?from=${today}&to=${plus(7)}&group=fac`); assert.equal(s.status, 200); assert.ok(s.j.rows[0].booked >= 1); assert.ok(s.j.sales.onsite >= 156000);
     assert.equal((await call('G', 'GET', '/api/fac/overview')).status, 401);
   });
-  app.close(); await pool.end();
+  app.close(); await Promise.all([closeAdmin(adm, pool), pool.end()]);
 });
 
 test('운영 서버: 토스 승인 · 취소(가짜 토스 서버) · 알림 메일', { skip: !process.env.DATABASE_URL }, async t => {
@@ -203,7 +204,7 @@ test('운영 서버: 토스 승인 · 취소(가짜 토스 서버) · 알림 메
     const m = /^\/v1\/payments\/([^/]+)\/cancel$/.exec(rq.url); if (m) { rs.end(JSON.stringify({ status: 'CANCELED', cancels: [{ transactionKey: 'tx_' + m[1], cancelAmount: b.cancelAmount }] })); return; }
     rs.statusCode = 404; rs.end('{}'); });
   await new Promise(ok => fake.listen(0, ok)); const FU = `http://127.0.0.1:${fake.address().port}`;
-  const pool = poolFrom(process.env); await migrate(pool);
+  const pool = poolFrom(process.env); await migrate(pool); const adm = await adminPool(pool); if (!adm) { fake.close(); await pool.end(); t.skip(NEED); return; }
   const app = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', PII_KEY: crypto.randomBytes(32).toString('hex'), PII_DEV_OTP: '1', FAC_SWEEP_MS: '0', TOSS_SECRET_KEY: 'test_sk_fake', TOSS_URL: FU, MAIL_PROVIDER: 'webhook', MAIL_WEBHOOK_URL: FU + '/mail' }, log: {} });
   await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
   const jar = {}; const call = async (who, method, p, b) => { const r = await fetch(U + p, { method, headers: { 'x-didisam': '1', ...(b ? { 'content-type': 'application/json' } : {}), ...(jar[who] ? { cookie: jar[who] } : {}) }, body: b ? JSON.stringify(b) : undefined });
@@ -240,5 +241,5 @@ test('운영 서버: 토스 승인 · 취소(가짜 토스 서버) · 알림 메
     const mine = mails.filter(m => m.to === email); assert.ok(mine.some(m => /확정/.test(m.subject)), JSON.stringify(mails.map(m => m.subject))); assert.ok(mine.some(m => /환불/.test(m.subject)), JSON.stringify(mails.map(m => [m.to === email, m.subject])));
     assert.ok(mine.every(m => !m.text.includes(email)));
   });
-  app.close(); fake.close(); await pool.end();
+  app.close(); fake.close(); await Promise.all([closeAdmin(adm, pool), pool.end()]);
 });

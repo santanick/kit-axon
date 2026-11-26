@@ -1,4 +1,5 @@
 'use strict';
+const { adminPool, closeAdmin, NEED } = require('./_admin'); // QA8: 비슈퍼유저 DB에서는 직접 조회만 슈퍼유저 연결로(서버는 RLS 아래 그대로)
 /* 보안 2차 — 새 환경 로그인 알림(SEC-0008 보완 통제) · SEC-0011 쓰기 MCP 키는 정운영자만
    DATABASE_URL=postgresql://… node --test service/test/devices.test.js */
 const test = require('node:test'); const assert = require('node:assert/strict'); const http = require('node:http');
@@ -11,11 +12,13 @@ test('기기 요약 · IP 대역 단위', () => {
 });
 
 test('새 환경 로그인 알림 · 기기 목록 · SEC-0011', async t => {
-  const pool = poolFrom(process.env); await migrate(pool);
+  const pool = poolFrom(process.env); await migrate(pool); const adm = await adminPool(pool); if (!adm) { await pool.end(); t.skip(NEED); return; }
   const mails = []; const mock = http.createServer((q, r) => { let b = ''; q.on('data', c => b += c); q.on('end', () => { mails.push(JSON.parse(b)); r.end('{}'); }); });
   await new Promise(ok => mock.listen(0, ok));
-  const app = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', TRUST_PROXY_HOPS: '1', GEO_COUNTRY_HEADER: 'x-client-geo-country', MAIL_PROVIDER: 'webhook', MAIL_WEBHOOK_URL: `http://127.0.0.1:${mock.address().port}/` }, log: {} });
+  const app = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', MFA_OFF: '1', TRUST_PROXY_HOPS: '1', GEO_COUNTRY_HEADER: 'x-client-geo-country', MAIL_PROVIDER: 'webhook', MAIL_WEBHOOK_URL: `http://127.0.0.1:${mock.address().port}/` }, log: {} });
   await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
+  /* QA8: 실패해도 서버를 닫아 멈추지 않게(이전: 첫 실패 뒤 240초 멈춤) · 2단계 인증은 mfa.test가 따로 검증 */
+  t.after(() => { app.close(); mock.close(); return Promise.all([closeAdmin(adm, pool), pool.end()]); });
   /* 브라우저마다 쿠키 통(세션 · 기기 표식) */
   const jars = {}; const call = async (who, method, path, body, hd = {}) => {
     const J = jars[who] || (jars[who] = {});
@@ -24,7 +27,7 @@ test('새 환경 로그인 알림 · 기기 목록 · SEC-0011', async t => {
     return { status: r.status, j: await r.json().catch(() => ({})) };
   };
   const sfx = Date.now().toString(36); const OW = `dev${sfx}@d.kr`, PW = 'Passw0rd-dev';
-  const evs = async () => (await pool.query("select detail from audit_log where actor = $1 and action = 'login.newdevice' order by id", [OW])).rows.map(r => r.detail);
+  const evs = async () => (await adm.query("select detail from audit_log where actor = $1 and action = 'login.newdevice' order by id", [OW])).rows.map(r => r.detail);
   const wait = () => new Promise(ok => setTimeout(ok, 150));
 
   await t.test('가입 · 같은 기기 재로그인은 알림 없음(단계 · 응답 형태 그대로)', async () => {
@@ -70,9 +73,8 @@ test('새 환경 로그인 알림 · 기기 목록 · SEC-0011', async t => {
     assert.equal((await call('T', 'POST', '/api/keys', { name: 'r', scope: 'read' })).status, 403, '교강사는 키 발급 불가');
   });
   await t.test('메일 미설정이면 audit만(mailed:false)', async () => {
-    const app2 = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE' }, log: {} }); await new Promise(ok => app2.listen(0, ok));
+    const app2 = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', MFA_OFF: '1' }, log: {} }); await new Promise(ok => app2.listen(0, ok));
     const n0 = mails.length; const r = await fetch(`http://127.0.0.1:${app2.address().port}/api/login`, { method: 'POST', headers: { 'x-didisam': '1', 'content-type': 'application/json' }, body: JSON.stringify({ email: OW, password: PW }) });
     assert.equal(r.status, 200); await wait(); const e = await evs(); assert.equal(e[e.length - 1].mailed, false); assert.equal(mails.length, n0); app2.close();
   });
-  app.close(); mock.close(); await pool.end();
 });

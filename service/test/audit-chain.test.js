@@ -1,4 +1,5 @@
 'use strict';
+const { adminPool, closeAdmin, NEED } = require('./_admin'); // QA8: 비슈퍼유저 DB에서는 직접 조회만 슈퍼유저 연결로(서버는 RLS 아래 그대로)
 /* 가디언 2차(SEC-0006) — 일반 audit_log 해시 체인(DB 트리거) · GET /api/audit/verify
    DATABASE_URL=postgresql://… node --test service/test/audit-chain.test.js
    시험 DB 전용: 변조 재현을 위해 트리거를 잠시 끄고 행을 고친다(로그인 계정 = 표 소유자). */
@@ -6,7 +7,7 @@ const test = require('node:test'); const assert = require('node:assert/strict');
 const { poolFrom, migrate, inTenant } = require('../server/db'); const { createApp } = require('../server/app');
 
 test('감사 기록 해시 체인', async t => {
-  const pool = poolFrom(process.env); await migrate(pool);
+  const pool = poolFrom(process.env); await migrate(pool); const adm = await adminPool(pool); if (!adm) { await pool.end(); t.skip(NEED); return; }
   const app = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE' }, log: {} }); await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
   const jar = {}; const call = async (who, method, path, body) => {
     const r = await fetch(U + path, { method, headers: { 'x-didisam': '1', ...(body ? { 'content-type': 'application/json' } : {}), ...(jar[who] ? { cookie: jar[who] } : {}) }, body: body ? JSON.stringify(body) : undefined });
@@ -17,7 +18,7 @@ test('감사 기록 해시 체인', async t => {
   const B = (await call('B', 'POST', '/api/signup', { email: `bc${sfx}@a.kr`, password: 'Passw0rd-bbb', orgName: 'AudB', type: 'adult', code: 'C0DE' })).j.tenant.tid;
   const ins = (tid, action, detail) => inTenant(pool, tid, c => c.query('insert into audit_log (tenant_id, actor, action, detail) values ($1, $2, $3, $4)', [tid, 't@a.kr', action, detail ? JSON.stringify(detail) : null]));
   const verify = tid => inTenant(pool, tid, async c => (await c.query('select audit_verify($1) v', [tid])).rows[0].v);
-  const owner = async (sql, args) => pool.query(sql, args);
+  const owner = async (sql, args) => adm.query(sql, args);
 
   await t.test('insert마다 prev_hash · hash가 채워지고 기관별 체인이 이어진다', async () => {
     await ins(A, 'x.one', { a: 1 }); await ins(B, 'x.one'); await ins(A, 'x.two', { b: '한글|"' });
@@ -65,5 +66,5 @@ test('감사 기록 해시 체인', async t => {
     try { await owner("update audit_log set actor = 'evil' where tenant_id = $1 and action = 'old.2'", [C]); } finally { await owner('alter table audit_log enable trigger audit_log_chain'); }
     v = await verify(C); assert.equal(v.ok, false); assert.equal(v.reason, 'legacy');
   });
-  await new Promise(ok => app.close(ok)); await pool.end();
+  await new Promise(ok => app.close(ok)); await Promise.all([closeAdmin(adm, pool), pool.end()]);
 });

@@ -135,7 +135,7 @@ function createTeams(ctx) {
   const KEY = keys ? Buffer.from(crypto.hkdfSync('sha256', keys.enc, Buffer.alloc(0), 'didisam-conn-teams-v1', 32)) : Buffer.from(crypto.hkdfSync('sha256', Buffer.from(String(pepper)), Buffer.alloc(0), 'didisam-conn-teams-dev', 32));
   const aad = (tid, kind, id) => `${tid}|conn|teams|${kind}|${id}`;
   const enc = (v, a) => { const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', KEY, iv); c.setAAD(Buffer.from(a)); const ct = Buffer.concat([c.update(String(v), 'utf8'), c.final()]); return `enc1:v1.${iv.toString('base64url')}.${c.getAuthTag().toString('base64url')}.${ct.toString('base64url')}`; };
-  const dec = (s, a) => { const [, iv, tag, ct] = String(s).slice(5).split('.'); const d = crypto.createDecipheriv('aes-256-gcm', KEY, Buffer.from(iv, 'base64url'), { authTagLength: 16 }); d.setAuthTag(Buffer.from(tag, 'base64url')); d.setAAD(Buffer.from(a)); return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); };
+  const dec = (s, a) => { const [, iv, tag, ct] = String(s).slice(5).split('.'); const d = require('../gcm').gcmDecipher(KEY, Buffer.from(iv, 'base64url'), Buffer.from(tag, 'base64url')); /* QA8: 공통 gcm.js(iv 12 · 태그 16 고정) */ d.setAAD(Buffer.from(a)); return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8'); };
   const bidx = (tid, kind, v) => keys ? crypto.createHmac('sha256', keys.idx).update(`${tid}|${kind}|${String(v).trim().toLowerCase()}`).digest('base64url') : '';
 
   /* ── 서명 봉투 · 논스 쿠키(PKCE 검증값은 쿠키에만) ── */
