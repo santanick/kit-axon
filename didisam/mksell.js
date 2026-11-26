@@ -101,9 +101,9 @@
   window.mkGate = id => { try { if (!S || !S.org) return false; if (!['mksell', 'mkcp', 'mkops', 'market'].includes(id)) return true; if (S.me && S.me.role === 'teacher') return id === 'market' && pilot(); if (id === 'mkops') return santa(); if (!pilot()) return false; if (id === 'mkcp') return !LIVEON() || !!(S.org.mk && S.org.mk.cp); if (id === 'mksell') return !LIVEON() || !!(S.org.mk && S.org.mk.seller); return true; } catch (e) { return false; } };
 
   /* ── 메뉴 · 프리셋 · 기존 저장 사용자(공급 · 운영 메뉴 3개) ── */
-  MENU.mksell = { label: '마켓 판매', ws: 'ops', mk: true };
-  MENU.mkcp = { label: 'CP 파트너 포털', ws: 'ops', mk: true };
-  MENU.mkops = { label: '마켓 운영(산타)', ws: 'ops', mk: true, santa: true };
+  MENU.mksell = { label: '마켓 판매', ws: 'ops', mk: true, gate: () => window.mkGate('mksell') };
+  MENU.mkcp = { label: 'CP 파트너 포털', ws: 'ops', mk: true, gate: () => window.mkGate('mkcp') };
+  MENU.mkops = { label: '마켓 운영(산타)', ws: 'ops', mk: true, santa: true, gate: () => window.mkGate('mkops') }; /* 통합: core.js menuHid가 gate로 사이드바 노출 판정 */
   if (typeof TEACH_NO !== 'undefined' && Array.isArray(TEACH_NO)) ['mksell', 'mkcp', 'mkops'].forEach(id => { if (!TEACH_NO.includes(id)) TEACH_NO.push(id); }); /* C5 — core.js 수정 전에도 교수자 직접 이동 차단 */
   Object.keys(PRESET).forEach(k => { const P = PRESET[k]; ['mksell', 'mkcp', 'mkops'].forEach(id => { if (!P.on.includes(id) && !P.off.includes(id)) P.off.push(id); }); });
   if (typeof MENU_ALIAS !== 'undefined') { MENU_ALIAS.mkreview = () => { UI.mkops = 'review'; return 'mkops'; }; MENU_ALIAS.mkoptin = () => { UI.mkcp = 'optin'; return 'mkcp'; }; MENU_ALIAS.mkpilot = () => { UI.mkops = 'pilot'; return 'mkops'; }; MENU_ALIAS.mkpromo = () => { UI.mkcp = 'promo'; return 'mkcp'; }; MENU_ALIAS.mkrev = () => { UI.mkops = 'rev'; return 'mkops'; }; MENU_ALIAS.mkorig = () => { UI.mkops = 'orig'; return 'mkops'; }; }
