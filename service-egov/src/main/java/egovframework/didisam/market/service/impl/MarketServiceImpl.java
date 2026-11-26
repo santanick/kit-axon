@@ -314,7 +314,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
         ObjectNode ctl = db.q1("select * from mk_control where contract_id = $1", s(k, "id"));
         ObjectNode had = db.q1("select * from mk_credit_use where contract_id = $1 and product_id = $2 and sid_hash = $3 and kind = 'use' and not restored", s(k, "id"), pid, sh);
         if (had != null) { X.access = "started"; X.had = had; return X; }
-        if (!"credit".equals(modeOf(r, day)) && db.q("select 1 from mk_credit_use where contract_id = $1 and product_id = $2 and kind = 'use' limit 1", s(k, "id"), pid).isEmpty()) { X.access = "out"; return X; }
+        if (!"credit".equals(modeOf(r, day)) && db.q("select 1 from mk_credit_use where contract_id = $1 and product_id = $2 and kind = 'use' limit 1", s(k, "id"), pid).isEmpty()) { X.access = "buy"; return X; } /* 철회 보호 밖 개별 판매 전용은 「따로 구매」 */
         List<String> cols = new ArrayList<>(); for (ObjectNode x : db.q("select collection_id from mk_collection_item where product_id = $1", pid)) cols.add(s(x, "collection_id"));
         List<JsonNode> scope = new ArrayList<>(); if (g(k, "collections").size() > 0) scope.add(g(k, "collections")); if (ctl != null && g(ctl, "allow_cols").size() > 0) scope.add(g(ctl, "allow_cols"));
         for (JsonNode S0 : scope) { boolean any = false; for (String x : cols) for (JsonNode y : S0) if (y.asText().equals(x)) any = true; if (!any) { X.access = "out"; return X; } }
@@ -333,7 +333,10 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
         db.x("insert into mk_entry (kind, contract_id, party_tid, credits, ref) values ('credit_use', $1, $2, $3, $4)", s(k, "id"), tid, cr, s(u, "id"));
         X.access = "charged"; X.u = u; return X;
     }
-    static final Map<String, Object[]> ACCESS_ERR = Map.of("cap", new Object[]{ 409, "mk_cap" }, "balance", new Object[]{ 409, "mk_balance" }, "pre", new Object[]{ 409, "mk_pre" }, "pre_asked", new Object[]{ 409, "mk_pre" },
+    /** L3 항목 상태(해요체 라벨) */
+    static final Map<String, String> ACCESS_LABEL = Map.of("started", "이어서 학습해요", "credit", "크레딧으로 바로 시작할 수 있어요", "pre", "담당 선생님 승인 후 시작할 수 있어요", "pre_asked", "승인을 요청했어요", "cap", "이번 달 사용할 수 있는 크레딧을 모두 썼어요",
+        "empty", "지금은 시작할 수 없어요. 담당 선생님께 알려 주세요", "out", "우리 기관 패스에 포함되지 않은 과정이에요", "buy", "패스 밖 과정이라 따로 구매해야 해요", "none", "찾을 수 없는 과정이에요");
+    static final Map<String, Object[]> ACCESS_ERR = Map.of("buy", new Object[]{ 403, "mk_scope" }, "cap", new Object[]{ 409, "mk_cap" }, "balance", new Object[]{ 409, "mk_balance" }, "pre", new Object[]{ 409, "mk_pre" }, "pre_asked", new Object[]{ 409, "mk_pre" },
         "out", new Object[]{ 403, "mk_scope" }, "empty", new Object[]{ 409, "mk_balance" }, "none", new Object[]{ 404, "product" });
     static ObjectNode itemOf(JsonNode r) { ObjectNode o = O(); o.set("id", g(r, "id")); o.set("title", g(r, "title")); o.set("hours", hours(r)); o.set("credits", g(r, "credits")); o.set("thumb", orNull(g(r, "thumb"))); if (santaOwn(r)) o.put("orig", true).put("badge", "orig"); return o; }
 
@@ -356,7 +359,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
                 ObjectNode o = O().put("on", true); o.set("items", a); return o; });
             case "GET mk-item": { String pid = str(qp(req, "id"), 20); if (!PID_RE.matcher(pid).matches()) throw E(404, "product", "과정을 찾지 못했어요.");
                 return T(() -> { if (!B(party(tid), "pilot")) throw E(403, "mk_learner_off"); SX X = startOf(tid, sh, pid, "check"); if (X.r == null) throw E(404, "product", "과정을 찾지 못했어요.");
-                    ObjectNode it = O(); it.set("id", g(X.r, "id")); it.set("title", g(X.r, "title")); it.set("hours", hours(X.r)); if (X.cr != null && X.cr != 0) it.put("credits", X.cr); else it.set("credits", g(X.r, "credits")); it.put("access", "balance".equals(X.access) ? "empty" : X.access); if (santaOwn(X.r)) it.put("orig", true);
+                    ObjectNode it = O(); it.set("id", g(X.r, "id")); it.set("title", g(X.r, "title")); it.set("hours", hours(X.r)); if (X.cr != null && X.cr != 0) it.put("credits", X.cr); else it.set("credits", g(X.r, "credits")); String acc = "balance".equals(X.access) ? "empty" : X.access; it.put("access", acc).put("accessLabel", ACCESS_LABEL.getOrDefault(acc, "")); if (santaOwn(X.r)) it.put("orig", true);
                     ObjectNode o = O(); o.set("item", it); return o; }); }
             case "POST mk-start": { rl.limit("mk-start:" + tid + ":" + sid, 30, 60000L); JsonNode b = DdWeb.readBody(body, 32 * 1024); String pid = str(get(b, "productId"), 20); if (!PID_RE.matcher(pid).matches()) throw E(404, "product", "과정을 찾지 못했어요.");
                 SX X; try { X = T(() -> { if (!B(party(tid), "pilot")) throw E(403, "mk_learner_off"); ObjectNode k0 = liveContract(tid, today()); if (k0 != null) db.q("select id from mk_contract where id = $1 for update", s(k0, "id"));

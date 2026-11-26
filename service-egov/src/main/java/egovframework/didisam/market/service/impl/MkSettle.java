@@ -64,9 +64,9 @@ final class MkSettle {
                 Object[] rt = rateOn(rateRows(cp), ym + "-01"); long net = u[0] - u[1]; long cpBp = (Long) rt[0]; ObjectNode Ln = DdMarketCalc.settleLine(net, cpBp); long lcp = Ln.path("cp").asLong();
                 ObjectNode ex = db.q1("select * from mk_stmt where cp_tid = $1 and ym = $2 for update", cp, ym);
                 if (ex != null && !"draft".equals(ex.path("status").asText())) { out.add(stmtOut(ex)); continue; }
-                Object[] v = { cp, ym, MarketServiceImpl.quarterOf(ym), u[0], u[1], net, cpBp, lcp, lcp, lines, rt[1] };
+                Object[] v = { cp, ym, MarketServiceImpl.quarterOf(ym), u[0], u[1], net, cpBp, lcp, lcp, lines.toString(), rt[1] };
                 ObjectNode row = ex != null ? db.q1("update mk_stmt set used = $4, restored = $5, net = $6, cp_bp = $7, cp_amount = $8, total = $9 + adj, lines = $10, rate_kind = $11, at = now() where cp_tid = $1 and ym = $2 and quarter = $3 returning *", v)
-                    : db.q1("insert into mk_stmt (id, cp_tid, ym, quarter, used, restored, net, cp_bp, cp_amount, total, lines, rate_kind) values ($12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning *", cp, ym, MarketServiceImpl.quarterOf(ym), u[0], u[1], net, cpBp, lcp, lcp, lines, rt[1], MarketServiceImpl.rid("ms_"));
+                    : db.q1("insert into mk_stmt (id, cp_tid, ym, quarter, used, restored, net, cp_bp, cp_amount, total, lines, rate_kind) values ($12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning *", cp, ym, MarketServiceImpl.quarterOf(ym), u[0], u[1], net, cpBp, lcp, lcp, lines.toString(), rt[1], MarketServiceImpl.rid("ms_"));
                 out.add(stmtOut(row));
             }
             db.x("update mk_credit_use set settle_ym = $1 where kind = 'use' and settle_ym is null and to_char(at at time zone 'Asia/Seoul', 'YYYY-MM') = $1", ym);
@@ -115,8 +115,8 @@ final class MkSettle {
             ObjectNode ex = db.q1("select * from mk_close where quarter = $1 and status <> 'cancelled' for update", quarter);
             if (ex != null && "confirmed".equals(ex.path("status").asText())) throw S.E(409, "mk_close_done", "이미 확정한 분기입니다.");
             Object[] Q = quarterCalc(quarter);
-            ObjectNode row = ex != null ? db.q1("update mk_close set run_by = $2, checks = $3, totals = $4, at = now() where id = $1 returning *", ex.get("id").asText(), by, Q[1], Q[2])
-                : db.q1("insert into mk_close (id, quarter, run_by, checks, totals) values ($1,$2,$3,$4,$5) returning *", MarketServiceImpl.rid("mz_"), quarter, by, Q[1], Q[2]);
+            ObjectNode row = ex != null ? db.q1("update mk_close set run_by = $2, checks = $3, totals = $4, at = now() where id = $1 returning *", ex.get("id").asText(), by, Q[1].toString(), Q[2].toString())
+                : db.q1("insert into mk_close (id, quarter, run_by, checks, totals) values ($1,$2,$3,$4,$5) returning *", MarketServiceImpl.rid("mz_"), quarter, by, Q[1].toString(), Q[2].toString());
             ObjectNode r = F.objectNode().put("ok", true); r.set("close", closeOut(row)); r.set("checks", (JsonNode) Q[1]); r.set("totals", (JsonNode) Q[2]); return r;
         });
     }
@@ -141,7 +141,7 @@ final class MkSettle {
             db.x("update mk_promo set status = 'done', close_id = $2 where ym = any($1) and status = 'ok'", M, id);
             if (T.get("santa").asLong() != 0) db.x("insert into mk_entry (kind, amount, credits, ref) values ('santa_use', $1, $2, $3)", T.get("santa"), T.get("net"), id);
             if (T.get("santaOrig").asLong() != 0) db.x("insert into mk_entry (kind, amount, credits, ref) values ('santa_orig', $1, $2, $3)", T.get("santaOrig"), T.get("orig"), id);
-            ObjectNode row = db.q1("update mk_close set status = 'confirmed', confirm_by = $2, confirmed_at = now(), totals = $3, checks = $4 where id = $1 returning *", id, by, T, checks);
+            ObjectNode row = db.q1("update mk_close set status = 'confirmed', confirm_by = $2, confirmed_at = now(), totals = $3, checks = $4 where id = $1 returning *", id, by, T.toString(), checks.toString());
             ObjectNode r = F.objectNode().put("ok", true); r.set("close", closeOut(row)); r.set("totals", T); return r;
         });
     }

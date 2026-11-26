@@ -216,6 +216,10 @@ public final class DdMarketCalc {
         ObjectNode r = o(); r.set("bySource", L); return r.put("gross", gross).put("cp", cp).put("santa", gross - cp).put("santaBp", gross > 0 ? fdiv((gross - cp) * 10000, gross) : 0);
     }
 
+    /* 화면 공용 이름(marketcalc.js 별칭) */
+    public static long alertLevel(long total, long bal, JsonNode bps) { if (!(total > 0)) return 0; String r = alertOf(bal, total, bps); return r.isEmpty() ? 0 : I(num(r.substring(1))); }
+    public static boolean preNeeded(JsonNode preFrom, long course) { return needApproval(course, preFrom); }
+    public static ObjectNode validity(String start) { return expiry(start); }
     /** GET /api/market/credit/rules 본문(rules()) */
     public static ObjectNode rules() {
         ObjectNode r = o().put("won", WON).put("cpBp", CP_BP).put("santaBp", SANTA_BP).put("guardBp", GUARD_BP); ObjectNode b = r.putObject("bonus"); ArrayNode st = b.putArray("steps");
@@ -274,6 +278,11 @@ public final class DdMarketCalc {
             case "origCapOk": return F.booleanNode(origCapOk(I(get(i, "colCount")), I(get(i, "origCount"))));
             case "recognized": return F.numberNode(recognized(I(get(i, "credits")), I(get(i, "amount")), I(get(i, "totalCredits"))));
             case "santaMix": return santaMix(get(i, "lines"));
+            /* ui 묶음(화면 공용 이름) */
+            case "alertLevel": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(alertLevel(I(x.get(0)), I(x.get(1)), x.get(2))); return a; }
+            case "preNeeded": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(preNeeded(x.get(0), I(x.get(1)))); return a; }
+            case "validity": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "starts"))) a.add(validity(str(x))); return a; }
+            case "capOkUi": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(capOk(I(x.get(0)), I(x.get(1)), x.get(2))); return a; }
             case "nextMonth1": return t(nextMonth1(S(get(i, "day"))));
             default: throw new IllegalArgumentException("알 수 없는 fn: " + fn);
         }

@@ -43,6 +43,7 @@ public class MkDb {
 
     /** node-postgres prepareValue */
     static String lit(Object v) {
+        if (v == null) return null;
         if (v instanceof JsonNode) { JsonNode j = (JsonNode) v; if (j.isNull() || j.isMissingNode()) return null; if (j.isTextual()) return j.textValue(); if (j.isNumber()) return numStr(j.doubleValue()); if (j.isBoolean()) return j.booleanValue() ? "true" : "false";
             if (j.isArray()) { List<Object> l = new ArrayList<>(); j.forEach(l::add); return arrLit(l); } return j.toString(); }
         if (v instanceof Collection) return arrLit((Collection<?>) v);
