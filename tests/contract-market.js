@@ -173,6 +173,15 @@ async function run(U, tag) {
   const pq = await call('B', 'POST', '/api/market/quotes', { kind: 'credit', input: { budget: 30000000, collections: [CID] }, idem: 'pq1' });
   const pk2 = await call('B', 'POST', '/api/market/contracts', { quoteId: pq.j.quote && pq.j.quote.id, start: kst(), terms: 'mk-pass-v2', lapseAck: true, buyerMode: 'public_license', idem: 'pk1' });
   R.publicK = [pk2.st, pk2.j.contract && pk2.j.contract.buyerMode, pk2.j.contract && pk2.j.contract.carryEnd === pk2.j.contract.end];
+  /* QA5(v49) 해지 · 환불 확정(산타 운영): 기관 403 · 확정 → cancelled · 남은 한도 0 · 위약금 포함 감액(원 계약 + 추가 구매분) · 두 번 확정 409 · 확정 뒤 재요청 409 — Node · Java 같음 */
+  { const q2 = await call('B', 'POST', '/api/market/quotes', { kind: 'credit', input: { budget: 10000000, collections: [CID] }, idem: 'rq1' }); const k2 = (await call('B', 'POST', '/api/market/contracts', { quoteId: q2.j.quote && q2.j.quote.id, start: kst(), terms: 'mk-pass-v2', lapseAck: true, idem: 'rk1' })).j.contract || {};
+    await call('S1', 'POST', `/api/market/contracts/${k2.id}/activate`, { taxInvNo: 'TX-0101', idem: 'ra1' });
+    const t2 = await call('B', 'POST', `/api/market/contracts/${k2.id}/topup`, { amount: 2000000, idem: 'rt1' }); const tk2 = (await call('B', 'POST', '/api/market/contracts', { quoteId: t2.j.quote && t2.j.quote.id, terms: 'mk-pass-v2', lapseAck: true, idem: 'rtk1' })).j.contract || {};
+    await call('S1', 'POST', `/api/market/contracts/${tk2.id}/activate`, { taxInvNo: 'TX-0102', idem: 'rta1' });
+    await call('B', 'POST', `/api/market/contracts/${k2.id}/refund`, { reason: '예산 반납', idem: 'rr1' });
+    const rc0 = await call('B', 'POST', `/api/market/contracts/${k2.id}/refund/confirm`, { idem: 'rc0' }); const rc = await call('S1', 'POST', `/api/market/contracts/${k2.id}/refund/confirm`, { memo: '확인', idem: 'rc1' }); const f = rc.j.refund || {};
+    const fx = -((f.taxFix && f.taxFix.supply) || 0) - (f.taxFixTopups || []).reduce((s, x) => s + x.supply, 0);
+    R.refundConfirm = [rc0.st, rc.st, rc.j.status, f.status, f.mode, f.amount, f.penalty, fx === f.amount + f.penalty, (f.taxFixTopups || []).map(x => x.supply).join(), (await call('S1', 'POST', `/api/market/contracts/${k2.id}/refund/confirm`, { idem: 'rc2' })).j.error, (await call('B', 'POST', `/api/market/contracts/${k2.id}/refund`, { reason: '다시', idem: 'rf9' })).j.error]; }
   R.tids = { B, C, D, E: E2 }; Object.defineProperty(R, '_t', { value: { call, P, pa }, enumerable: false });
   return R;
 }
@@ -189,7 +198,7 @@ const EXPECT = {
   cap: 'mk_cap', scope: ['mk_scope', 'buy', 30, '패스 밖 과정이라 따로 구매해야 해요'], vol: [true, 45], guest: 401,
   balance: [31962, 32100, 138, 0], usesPii: [3, false, 10], restore: [200, -45, 32007], restoreAgain: 'mk_restore_state', restoreWindow: 'mk_restore_window', restart: [true, 45], restoreOnce: 'mk_restore_once', origUse: [true, 15],
   dispute: [200, 'accepted', 31990],
-  refund: [29890, 0, 26901000, 'requested', 'terminate', 'mk-refund-v2', false, 2989000], refundSanta: ['santa_fault', 29890000, 403], tax: ['wait', true, 30000000, 3000000, 2100, false, 0], taxFix: ['reduce', -29890000, 'issue'] /* policy v1.3 제46조의2 제3항: 환불 대상 전액(환불 26,901,000 + 위약금 2,989,000) 감액 */, taxIssued: ['wait', 'TX-0001', true], ads: [200, false, false, 0, 1, true, true, 'ads', true, true], noTerms: ['mk_terms', 'mk_terms'], terms: ['general', 'mk-pass-v2', true, true], publicK: [200, 'public_license', true], topup: [5000, 'merged', true, 36990],
+  refund: [29890, 0, 26901000, 'requested', 'terminate', 'mk-refund-v2', false, 2989000], refundSanta: ['santa_fault', 29890000, 403], tax: ['wait', true, 30000000, 3000000, 2100, false, 0], taxFix: ['reduce', -29890000, 'issue'], refundConfirm: [403, 200, 'cancelled', 'confirmed', 'full', 12000000, 0, true, '-2000000', 'mk_refund_state', 'mk_refund_state'] /* QA5(v49) 14일 안 · 미사용 → 전액(원 1,000만 + 추가 200만), 수정세금계산서 원 계약 −1,000만 · 추가분 −200만 */ /* policy v1.3 제46조의2 제3항: 환불 대상 전액(환불 26,901,000 + 위약금 2,989,000) 감액 */, taxIssued: ['wait', 'TX-0001', true], ads: [200, false, false, 0, 1, true, true, 'ads', true, true], noTerms: ['mk_terms', 'mk_terms'], terms: ['general', 'mk-pass-v2', true, true], publicK: [200, 'public_license', true], topup: [5000, 'merged', true, 36990],
   rateBad: ['mk_cp_rate', 'mk_cp_rate'], rate: [6000, true], cpRate: [6500, 6000], promoMonths: 'mk_promo_months', promoTarget: 'mk_promo_target', promo: [200, 500000, 'asked'], promoOk: 'ok', promoCancel: 'mk_promo_state',
   month: [200, 183, 88, 95, 6500, 61750, 15000], stmtLines: [2, true, false], stmtDispute: 'disputed', closeChecks: false, closeSame: 'mk_close_same_user', close: [200, 'confirmed', 61750, true, 15000],
   export: [200, true, true], revenue: [200, true, 0], recognized: 103774, closes: true, stmtPdf: [200, true, true], isolation: ['mk_off', 404, 'mk_cp'], disputes: [200, 'open', 'mk_dispute_open', 'contract', 'reason', 3], item: ['started', 50, true], rls: [404, 404, 404, 404, 0, 404, null, 404, 0, 404, 404, 0, 0]
