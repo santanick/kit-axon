@@ -1,0 +1,1254 @@
+{
+ "version": "market v1.1",
+ "notes": [
+  "디디쌤 콘텐츠 마켓 v1.1(크레딧형 패스) 계산 기준값 — 화면 didisam/marketcalc.js(window.marketCalc) · Node service/server/market/calc.js(같은 파일) · Java DdMarketCalc가 모두 같은 out을 내야 합니다(깊은 비교).",
+  "키(name)는 서비스 기획서 v1.1 10장 · f/vec.py와 같습니다(42개). 호출 방법은 tests/market-vectors-run.js(fn · in 키 이름 그대로).",
+  "원 · 크레딧 정수, 나눗셈 내림, 과정 크레딧 환산(정가 → 크레딧)만 올림. 비율 bp 정수. 1크레딧 = 1,000원, CP 65 · 산타 35, 보너스 상한 700bp, 마진 가드 3000bp.",
+  "margin 묶음: dev-addendum 5장(r/margin.py 검산 25건 — 차등 요율 · 오리지널 · 프로모션 공제 · 오리지널 비중 상한).",
+  "ui 묶음: 화면 공용 이름 alertLevel(total, bal) · preNeeded(preFrom, credits) · validity(start) · capOk(usedMonth, credits, cap) — 인자 순서 주의.",
+  "날짜는 YYYY-MM-DD. 2/29 시작 계약의 1년 뒤는 3/1. 출시 + N개월이 없는 날이면 그 달 말일."
+ ],
+ "rules": {
+  "won": 1000,
+  "cpBp": 6500,
+  "santaBp": 3500,
+  "guardBp": 3000,
+  "bonus": {
+   "steps": [
+    {
+     "from": 30000000,
+     "bp": 300
+    },
+    {
+     "from": 50000000,
+     "bp": 700
+    }
+   ],
+   "bundleBp": 700,
+   "maxBp": 700
+  },
+  "validMonths": 12,
+  "carryMonths": 12,
+  "restore": {
+   "hours": 168,
+   "progLtPct": 10
+  },
+  "alertBp": [
+   2000,
+   1000
+  ]
+ },
+ "cases": [
+  {
+   "name": "C1",
+   "fn": "credits",
+   "in": {
+    "price": 30000
+   },
+   "out": 30
+  },
+  {
+   "name": "C2",
+   "fn": "credits",
+   "in": {
+    "price": 42500
+   },
+   "out": 43
+  },
+  {
+   "name": "C3",
+   "fn": "credits",
+   "in": {
+    "price": 49900
+   },
+   "out": 50
+  },
+  {
+   "name": "B1",
+   "fn": "wallet",
+   "in": {
+    "amount": 30000000,
+    "bundle": true
+   },
+   "out": {
+    "base": 30000,
+    "bonus": 2100,
+    "bonusBp": 700,
+    "total": 32100
+   }
+  },
+  {
+   "name": "B2",
+   "fn": "wallet",
+   "in": {
+    "amount": 30000000,
+    "bundle": false
+   },
+   "out": {
+    "base": 30000,
+    "bonus": 900,
+    "bonusBp": 300,
+    "total": 30900
+   }
+  },
+  {
+   "name": "B3",
+   "fn": "wallet",
+   "in": {
+    "amount": 10000000,
+    "bundle": true
+   },
+   "out": {
+    "base": 10000,
+    "bonus": 700,
+    "bonusBp": 700,
+    "total": 10700
+   }
+  },
+  {
+   "name": "B4",
+   "fn": "wallet",
+   "in": {
+    "amount": 5000000,
+    "bundle": false
+   },
+   "out": {
+    "base": 5000,
+    "bonus": 0,
+    "bonusBp": 0,
+    "total": 5000
+   }
+  },
+  {
+   "name": "B5",
+   "fn": "wallet",
+   "in": {
+    "amount": 50000000,
+    "bundle": true
+   },
+   "out": {
+    "base": 50000,
+    "bonus": 3500,
+    "bonusBp": 700,
+    "total": 53500
+   }
+  },
+  {
+   "name": "B6",
+   "fn": "wallet",
+   "in": {
+    "amount": 10000000,
+    "bundle": false
+   },
+   "out": {
+    "base": 10000,
+    "bonus": 0,
+    "bonusBp": 0,
+    "total": 10000
+   }
+  },
+  {
+   "name": "B7",
+   "fn": "wallet",
+   "in": {
+    "amount": 50000000,
+    "bundle": false
+   },
+   "out": {
+    "base": 50000,
+    "bonus": 3500,
+    "bonusBp": 700,
+    "total": 53500
+   }
+  },
+  {
+   "name": "B8",
+   "fn": "wallet",
+   "in": {
+    "amount": 29990000,
+    "bundle": false
+   },
+   "out": {
+    "base": 29990,
+    "bonus": 0,
+    "bonusBp": 0,
+    "total": 29990
+   }
+  },
+  {
+   "name": "E1",
+   "fn": "estimate",
+   "in": {
+    "totalCredits": 32100,
+    "avgCredits": 45,
+    "coursesPerPerson": 1.5
+   },
+   "out": {
+    "total": 32100,
+    "enrollments": 713,
+    "people": 475
+   }
+  },
+  {
+   "name": "E2",
+   "fn": "estimate",
+   "in": {
+    "totalCredits": 53500,
+    "avgCredits": 45,
+    "coursesPerPerson": 2
+   },
+   "out": {
+    "total": 53500,
+    "enrollments": 1188,
+    "people": 594
+   }
+  },
+  {
+   "name": "E3",
+   "fn": "estimate",
+   "in": {
+    "totalCredits": 30900,
+    "avgCredits": 45,
+    "coursesPerPerson": 1.5
+   },
+   "out": {
+    "total": 30900,
+    "enrollments": 686,
+    "people": 457
+   }
+  },
+  {
+   "name": "E3g",
+   "fn": "guard",
+   "in": {
+    "amount": 30000000,
+    "bonusBp": 300
+   },
+   "out": {
+    "credits": 30900,
+    "cpMax": 20085000,
+    "santaBp": 3305,
+    "ok": true
+   }
+  },
+  {
+   "name": "G1",
+   "fn": "guard",
+   "in": {
+    "amount": 30000000,
+    "bonusBp": 700
+   },
+   "out": {
+    "credits": 32100,
+    "cpMax": 20865000,
+    "santaBp": 3045,
+    "ok": true
+   }
+  },
+  {
+   "name": "G2",
+   "fn": "guard",
+   "in": {
+    "amount": 30000000,
+    "bonusBp": 800
+   },
+   "out": {
+    "credits": 32400,
+    "cpMax": 21060000,
+    "santaBp": 2980,
+    "ok": false
+   }
+  },
+  {
+   "name": "G3",
+   "fn": "guard",
+   "in": {
+    "amount": 30000000,
+    "bonusBp": 0
+   },
+   "out": {
+    "credits": 30000,
+    "cpMax": 19500000,
+    "santaBp": 3500,
+    "ok": true
+   }
+  },
+  {
+   "name": "G4",
+   "fn": "partial",
+   "in": {
+    "amount": 30000000,
+    "totalCredits": 32100,
+    "pct": 85
+   },
+   "out": {
+    "used": 27285,
+    "cp": 17735250,
+    "santa": 12264750
+   }
+  },
+  {
+   "name": "V1",
+   "fn": "deductMany",
+   "in": {
+    "price": 50000,
+    "n": 600,
+    "fromN": 500,
+    "offBp": 1000
+   },
+   "out": {
+    "total": 29495,
+    "full": 50,
+    "disc": 45
+   }
+  },
+  {
+   "name": "V2",
+   "fn": "deductMany",
+   "in": {
+    "price": 42500,
+    "n": 600,
+    "fromN": 500,
+    "offBp": 1000
+   },
+   "out": {
+    "total": 25396,
+    "full": 43,
+    "disc": 39
+   }
+  },
+  {
+   "name": "V3",
+   "fn": "deductMany",
+   "in": {
+    "price": 50000,
+    "n": 499,
+    "fromN": 500,
+    "offBp": 1000
+   },
+   "out": {
+    "total": 24950,
+    "full": 50,
+    "disc": 45
+   }
+  },
+  {
+   "name": "R1",
+   "fn": "restorable",
+   "in": {
+    "hours": 120,
+    "progPct": 8
+   },
+   "out": true
+  },
+  {
+   "name": "R2",
+   "fn": "restorable",
+   "in": {
+    "hours": 170,
+    "progPct": 3
+   },
+   "out": false
+  },
+  {
+   "name": "R3",
+   "fn": "restorable",
+   "in": {
+    "hours": 24,
+    "progPct": 10
+   },
+   "out": false
+  },
+  {
+   "name": "M1",
+   "fn": "settle",
+   "in": {
+    "rows": [
+     {
+      "cp": "CP러닝웍스",
+      "used": 1800,
+      "restored": 60
+     },
+     {
+      "cp": "CP에듀온",
+      "used": 700,
+      "restored": 40
+     },
+     {
+      "cp": "CP한빛미디어",
+      "used": 3,
+      "restored": 0
+     }
+    ]
+   },
+   "out": {
+    "lines": [
+     {
+      "cp": "CP러닝웍스",
+      "used": 1800,
+      "restored": 60,
+      "net": 1740,
+      "cpAmount": 1131000
+     },
+     {
+      "cp": "CP에듀온",
+      "used": 700,
+      "restored": 40,
+      "net": 660,
+      "cpAmount": 429000
+     },
+     {
+      "cp": "CP한빛미디어",
+      "used": 3,
+      "restored": 0,
+      "net": 3,
+      "cpAmount": 1950
+     }
+    ],
+    "net": 2403,
+    "gross": 2403000,
+    "cp": 1561950,
+    "santa": 841050
+   }
+  },
+  {
+   "name": "M2",
+   "fn": "cpOf",
+   "in": {
+    "credits": 7
+   },
+   "out": 4550
+  },
+  {
+   "name": "M3",
+   "fn": "sum",
+   "in": {
+    "values": [
+     1560000,
+     1820000,
+     975000
+    ]
+   },
+   "out": 4355000
+  },
+  {
+   "name": "T1",
+   "fn": "expiry",
+   "in": {
+    "start": "2027-03-01"
+   },
+   "out": {
+    "validTo": "2028-02-29",
+    "carryTo": "2029-02-28"
+   }
+  },
+  {
+   "name": "T2",
+   "fn": "useLots",
+   "in": {
+    "lots": [
+     {
+      "id": "w1",
+      "kind": "carry",
+      "exp": "2029-02-28",
+      "remain": 4000
+     },
+     {
+      "id": "w2",
+      "kind": "paid",
+      "exp": "2030-02-28",
+      "remain": 20000
+     }
+    ],
+    "n": 5000
+   },
+   "out": {
+    "lots": [
+     {
+      "id": "w1",
+      "kind": "carry",
+      "take": 4000,
+      "remain": 0
+     },
+     {
+      "id": "w2",
+      "kind": "paid",
+      "take": 1000,
+      "remain": 19000
+     }
+    ],
+    "short": 0
+   }
+  },
+  {
+   "name": "K1",
+   "fn": "capOk",
+   "in": {
+    "cases": [
+     [
+      45,
+      45,
+      90
+     ],
+     [
+      50,
+      45,
+      90
+     ]
+    ]
+   },
+   "out": [
+    true,
+    false
+   ]
+  },
+  {
+   "name": "K2",
+   "fn": "needApproval",
+   "in": {
+    "cases": [
+     [
+      79,
+      80
+     ],
+     [
+      120,
+      80
+     ]
+    ]
+   },
+   "out": [
+    false,
+    true
+   ]
+  },
+  {
+   "name": "K3",
+   "fn": "alertOf",
+   "in": {
+    "cases": [
+     [
+      6420,
+      32100
+     ],
+     [
+      3210,
+      32100
+     ],
+     [
+      7000,
+      32100
+     ]
+    ]
+   },
+   "out": [
+    "r20",
+    "r10",
+    ""
+   ]
+  },
+  {
+   "name": "P1",
+   "fn": "priceAt",
+   "in": {
+    "history": [
+     {
+      "effectiveFrom": "2000-01-01",
+      "listPrice": 50000
+     },
+     {
+      "effectiveFrom": "2027-12-01",
+      "listPrice": 60000,
+      "askedAt": "2027-11-15"
+     }
+    ],
+    "days": [
+     "2027-11-30",
+     "2027-12-01"
+    ],
+    "asked": "2027-11-15"
+   },
+   "out": {
+    "listPrice": [
+     50000,
+     60000
+    ],
+    "credits": [
+     50,
+     60
+    ],
+    "effectiveFrom": "2027-12-01"
+   }
+  },
+  {
+   "name": "O1",
+   "fn": "eligibleFrom",
+   "in": {
+    "launch": "2027-05-01",
+    "months": 6
+   },
+   "out": "2027-11-01"
+  },
+  {
+   "name": "O2",
+   "fn": "optinMinEnd",
+   "in": {
+    "from": "2027-03-01"
+   },
+   "out": "2028-03-01"
+  },
+  {
+   "name": "I1",
+   "fn": "singleAuto",
+   "in": {
+    "price": 30000000,
+    "floorSum": 21000000
+   },
+   "out": true
+  },
+  {
+   "name": "I2",
+   "fn": "singleAuto",
+   "in": {
+    "price": 30000000,
+    "floorSum": 22000000
+   },
+   "out": false
+  },
+  {
+   "name": "I3",
+   "fn": "singleMin",
+   "in": {
+    "floorSum": 22000000
+   },
+   "out": 31428572
+  },
+  {
+   "name": "X1",
+   "fn": "broker",
+   "in": {
+    "amount": 10000000
+   },
+   "out": {
+    "market": 3000000,
+    "direct": 1500000,
+    "agency": 3500000
+   }
+  },
+  {
+   "name": "X2",
+   "fn": "b2c",
+   "in": {
+    "vatPrice": 33000
+   },
+   "out": {
+    "supply": 30000,
+    "market": {
+     "cp": 21000,
+     "santa": 9000
+    },
+    "self": {
+     "seller": 27000,
+     "santa": 3000
+    }
+   }
+  },
+  {
+   "name": "X3",
+   "fn": "path",
+   "in": {
+    "vatPrice": 55000
+   },
+   "out": {
+    "supply": 50000,
+    "cp": 30000,
+    "curator": 7500,
+    "santa": 12500
+   }
+  }
+ ],
+ "margin": [
+  {
+   "name": "R1",
+   "fn": "settleLine",
+   "in": {
+    "net": 1000,
+    "cpBp": 6500
+   },
+   "out": {
+    "cp": 650000,
+    "santa": 350000
+   }
+  },
+  {
+   "name": "R2",
+   "fn": "settleLine",
+   "in": {
+    "net": 1000,
+    "cpBp": 6000
+   },
+   "out": {
+    "cp": 600000,
+    "santa": 400000
+   }
+  },
+  {
+   "name": "R3",
+   "fn": "settleLine",
+   "in": {
+    "net": 1000,
+    "cpBp": 5500
+   },
+   "out": {
+    "cp": 550000,
+    "santa": 450000
+   }
+  },
+  {
+   "name": "R4",
+   "fn": "settleLine",
+   "in": {
+    "net": 1000,
+    "cpBp": 5000
+   },
+   "out": {
+    "cp": 500000,
+    "santa": 500000
+   }
+  },
+  {
+   "name": "R5a",
+   "fn": "rateCheck",
+   "in": {
+    "cpBp": 7000,
+    "agreeRef": "AG-1"
+   },
+   "out": "mk_cp_rate"
+  },
+  {
+   "name": "R5b",
+   "fn": "rateCheck",
+   "in": {
+    "cpBp": 6000,
+    "agreeRef": ""
+   },
+   "out": "mk_cp_rate"
+  },
+  {
+   "name": "R6",
+   "fn": "rateAt",
+   "in": {
+    "asked": "2027-03-15",
+    "cpBp": 6000,
+    "net": 1000,
+    "days": [
+     "2027-03-31",
+     "2027-04-10"
+    ]
+   },
+   "out": {
+    "effectiveFrom": "2027-04-01",
+    "cp": [
+     650000,
+     600000
+    ]
+   }
+  },
+  {
+   "name": "R7",
+   "fn": "settleLine",
+   "in": {
+    "net": 1000,
+    "cpBp": 0
+   },
+   "out": {
+    "cp": 0,
+    "santa": 1000000
+   }
+  },
+  {
+   "name": "R8",
+   "fn": "santaMix",
+   "in": {
+    "lines": [
+     {
+      "source": "credit_cp",
+      "credits": 300,
+      "cpBp": 6500
+     },
+     {
+      "source": "credit_cp_x",
+      "credits": 200,
+      "cpBp": 6000
+     },
+     {
+      "source": "credit_orig",
+      "credits": 100,
+      "cpBp": 0
+     }
+    ]
+   },
+   "out": {
+    "bySource": [
+     {
+      "source": "credit_cp",
+      "credits": 300,
+      "gross": 300000,
+      "cp": 195000,
+      "santa": 105000,
+      "santaBp": 3500
+     },
+     {
+      "source": "credit_cp_x",
+      "credits": 200,
+      "gross": 200000,
+      "cp": 120000,
+      "santa": 80000,
+      "santaBp": 4000
+     },
+     {
+      "source": "credit_orig",
+      "credits": 100,
+      "gross": 100000,
+      "cp": 0,
+      "santa": 100000,
+      "santaBp": 10000
+     }
+    ],
+    "gross": 600000,
+    "cp": 315000,
+    "santa": 285000,
+    "santaBp": 4750
+   }
+  },
+  {
+   "name": "R9",
+   "fn": "recognized",
+   "in": {
+    "credits": 600,
+    "amount": 30000000,
+    "totalCredits": 32100,
+    "cp": 315000,
+    "cpStd": 390000
+   },
+   "out": {
+    "rec": 560748,
+    "santa": 245748,
+    "santaBp": 4382,
+    "santaStd": 170748,
+    "santaStdBp": 3045
+   }
+  },
+  {
+   "name": "P1",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-03",
+     "2027-04"
+    ],
+    "o": {
+     "approvedInMonth": 0,
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "fee": 1000000
+   }
+  },
+  {
+   "name": "P2",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-03"
+    ],
+    "o": {
+     "approvedInMonth": 3,
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_full"
+   }
+  },
+  {
+   "name": "P3",
+   "fn": "promoDeduct",
+   "in": {
+    "total": 3000000,
+    "fee": 1000000,
+    "carryIn": 0
+   },
+   "out": {
+    "deduct": 1000000,
+    "pay": 2000000,
+    "carryOut": 0
+   }
+  },
+  {
+   "name": "P4",
+   "fn": "promoDeduct",
+   "in": {
+    "total": 600000,
+    "fee": 1000000,
+    "carryIn": 0
+   },
+   "out": {
+    "deduct": 600000,
+    "pay": 0,
+    "carryOut": 400000
+   }
+  },
+  {
+   "name": "P5",
+   "fn": "promoDeduct",
+   "in": {
+    "total": 2000000,
+    "fee": 0,
+    "carryIn": 400000
+   },
+   "out": {
+    "deduct": 400000,
+    "pay": 1600000,
+    "carryOut": 0
+   }
+  },
+  {
+   "name": "P6a",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-03"
+    ],
+    "o": {
+     "optin": "single",
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_target"
+   }
+  },
+  {
+   "name": "P6b",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-03"
+    ],
+    "o": {
+     "orig": true,
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_target"
+   }
+  },
+  {
+   "name": "P6c",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "new_launch",
+    "months": [
+     "2027-03"
+    ],
+    "o": {
+     "launchDays": 120,
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_target"
+   }
+  },
+  {
+   "name": "P7a",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-03",
+     "2027-04",
+     "2027-05",
+     "2027-06"
+    ],
+    "o": {
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_months"
+   }
+  },
+  {
+   "name": "P7b",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "new_launch",
+    "months": [
+     "2027-03",
+     "2027-04"
+    ],
+    "o": {
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_months"
+   }
+  },
+  {
+   "name": "P7c",
+   "fn": "promoCheck",
+   "in": {
+    "slot": "home_top",
+    "months": [
+     "2027-02"
+    ],
+    "o": {
+     "thisYm": "2027-02"
+    }
+   },
+   "out": {
+    "error": "mk_promo_months"
+   }
+  },
+  {
+   "name": "O1",
+   "fn": "credits",
+   "in": {
+    "price": 15000
+   },
+   "out": 15
+  },
+  {
+   "name": "O2",
+   "fn": "origCapOk",
+   "in": {
+    "colCount": 20,
+    "origCount": 6
+   },
+   "out": false
+  },
+  {
+   "name": "O3",
+   "fn": "origCapOk",
+   "in": {
+    "colCount": 20,
+    "origCount": 5
+   },
+   "out": true
+  },
+  {
+   "name": "G0",
+   "fn": "guard",
+   "in": {
+    "amount": 30000000,
+    "bonusBp": 700
+   },
+   "out": {
+    "credits": 32100,
+    "cpMax": 20865000,
+    "santaBp": 3045,
+    "ok": true
+   }
+  },
+  {
+   "name": "R8b",
+   "fn": "santaMix",
+   "in": {
+    "lines": [
+     {
+      "source": "credit_cp",
+      "credits": 300,
+      "cpBp": 6500
+     },
+     {
+      "source": "promo",
+      "amount": 500000
+     },
+     {
+      "source": "single",
+      "amount": 30000000,
+      "cp": 21000000
+     }
+    ]
+   },
+   "out": {
+    "bySource": [
+     {
+      "source": "credit_cp",
+      "credits": 300,
+      "gross": 300000,
+      "cp": 195000,
+      "santa": 105000,
+      "santaBp": 3500
+     },
+     {
+      "source": "promo",
+      "credits": 0,
+      "gross": 500000,
+      "cp": 0,
+      "santa": 500000,
+      "santaBp": 10000
+     },
+     {
+      "source": "single",
+      "credits": 0,
+      "gross": 30000000,
+      "cp": 21000000,
+      "santa": 9000000,
+      "santaBp": 3000
+     }
+    ],
+    "gross": 30800000,
+    "cp": 21195000,
+    "santa": 9605000,
+    "santaBp": 3118
+   }
+  }
+ ],
+ "ui": [
+  {
+   "name": "U1",
+   "fn": "alertLevel",
+   "in": {
+    "cases": [
+     [
+      32100,
+      6420
+     ],
+     [
+      32100,
+      3210
+     ],
+     [
+      32100,
+      7000
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      32100,
+      0
+     ]
+    ]
+   },
+   "out": [
+    20,
+    10,
+    0,
+    0,
+    10
+   ]
+  },
+  {
+   "name": "U2",
+   "fn": "preNeeded",
+   "in": {
+    "cases": [
+     [
+      80,
+      79
+     ],
+     [
+      80,
+      80
+     ],
+     [
+      80,
+      120
+     ],
+     [
+      null,
+      500
+     ],
+     [
+      0,
+      500
+     ]
+    ]
+   },
+   "out": [
+    false,
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "name": "U3",
+   "fn": "validity",
+   "in": {
+    "starts": [
+     "2027-03-01",
+     "2028-02-29",
+     "2027-01-01"
+    ]
+   },
+   "out": [
+    {
+     "validTo": "2028-02-29",
+     "carryTo": "2029-02-28"
+    },
+    {
+     "validTo": "2029-02-28",
+     "carryTo": "2030-02-28"
+    },
+    {
+     "validTo": "2027-12-31",
+     "carryTo": "2028-12-31"
+    }
+   ]
+  },
+  {
+   "name": "U4",
+   "fn": "capOkUi",
+   "in": {
+    "cases": [
+     [
+      45,
+      45,
+      90
+     ],
+     [
+      50,
+      45,
+      90
+     ],
+     [
+      500,
+      45,
+      null
+     ],
+     [
+      0,
+      90,
+      90
+     ],
+     [
+      0,
+      91,
+      90
+     ]
+    ]
+   },
+   "out": [
+    true,
+    false,
+    true,
+    true,
+    false
+   ]
+  }
+ ]
+}
