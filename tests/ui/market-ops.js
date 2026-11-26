@@ -93,6 +93,16 @@ function indexHtml() { let h = fs.readFileSync(path.join(ROOT, 'index.html'), 'u
   await tab('mksell', 'mksell', 'new'); await p.click('[data-act="mk-prod-pick"]'); await p.click('[data-act="mk-prod-ai"]'); ok(await p.$eval('[data-act="mk-prod-submit"]', b => b.disabled) && /기관 판매 상품은 개별 판매 · 중개로 판매됩니다/.test(await main()), 'A5 보완 2건 전 제출 불가 · 크레딧 참여 선택지 없음');
   for (const k of ['pii', 'link']) await p.click(`[data-act="mk-prod-check"][data-v="${k}"]`); await p.click('[data-act="mk-prod-submit"]'); ok(await p.evaluate(() => S.mksellD.items[0].status === 'review'), 'A5 심사 제출');
 
+  /* QA5(v49) A9 운영 모드: 계약 목록이 운영 응답({ contract, buyer, supply })으로도 상태 · 구매액 · [입금 확인] · [해지 · 환불 확정]을 그리고, 확정은 /refund/confirm 호출 */
+  { const Q = await p.evaluate(async () => { const calls = window.__qa5 = []; const K = (id, st, rf) => ({ contract: { id, status: st, refund: rf || null, buyerTid: 'tn_b' }, buyer: '한빛대학교', supply: 30000000, bonusBp: 300, used: 120, balance: 30780, santaBp: 3305 });
+      window.LIVE = { tenant: { tid: 'tn_s' }, user: { email: 's@x.kr', santa: true }, cfg: {} }; window.api = async (m, u, b) => { calls.push([m, u, b]); if (/\/api\/market\/ops\/contracts/.test(u)) return { items: [K('mk_aaaaaaaaaaaa', 'pending_pay'), K('mk_bbbbbbbbbbbb', 'active', { status: 'requested', mode: 'terminate', paidUnused: 18000, bonusUsed: 0, penalty: 1800000, amount: 16200000 })] }; return { items: [] }; };
+      S.org.mk = { pilot: true }; UI.mkops = 'credit'; go('mkops'); render(); await new Promise(k => setTimeout(k, 120)); render(); await new Promise(k => setTimeout(k, 60));
+      const t = document.getElementById('main').innerText; const btn = !!document.querySelector('[data-act="mk-cr-refund"][data-v="mk_bbbbbbbbbbbb"]'); const act = !!document.querySelector('[data-act="mk-cr-activate"][data-v="mk_aaaaaaaaaaaa"]');
+      return { t: /세금계산서 발행 대기/.test(t) && /이용 중/.test(t) && /3,000만/.test(t), btn, act, calls }; });
+    ok(Q.t && Q.btn && Q.act, 'QA5 A9 운영 모드 계약 목록: 상태 · 구매액 · [입금 확인 · 활성화] · [해지 · 환불 확정] ' + JSON.stringify({ t: Q.t, btn: Q.btn, act: Q.act }));
+    if (Q.btn) { await p.click('[data-act="mk-cr-refund"][data-v="mk_bbbbbbbbbbbb"]'); const mt = await p.evaluate(() => (document.getElementById('modal') || {}).innerText || ''); ok(/위약금/.test(mt) && /16,200,000원/.test(mt) && /수정세금계산서/.test(mt), 'QA5 환불 확정 카드: 위약금 · 환불액 · 수정세금계산서 안내 '); await mok(); await p.waitForTimeout(80);
+      ok((await p.evaluate(() => window.__qa5.some(c => c[0] === 'POST' && /\/api\/market\/contracts\/mk_bbbbbbbbbbbb\/refund\/confirm$/.test(c[1]) && c[2] && c[2].idem))), 'QA5 환불 확정 → POST /refund/confirm(idem 포함)'); }
+    await p.evaluate(() => { delete window.LIVE; delete window.api; S.org.mk = {}; UI.mkops = 'review'; render(); }); }
   /* ⑩ 휴대폰 390 · 넘침 */
   await p.setViewportSize({ width: 390, height: 844 }); const OV = [];
   for (const [m, k, v] of [['mkops', 'mkops', 'review'], ['mkops', 'mkops', 'quote'], ['mkops', 'mkops', 'credit'], ['mkops', 'mkops', 'close'], ['mkops', 'mkops', 'rev'], ['mkops', 'mkops', 'pilot'], ['mkcp', 'mkcp', 'home'], ['mkcp', 'mkcp', 'settle'], ['mkcp', 'mkcp', 'promo'], ['mksell', 'mksell', 'items']]) { await tab(m, k, v); const w = await p.evaluate(() => document.documentElement.scrollWidth); if (w > 392) OV.push(`${m}/${v}:${w}`); }

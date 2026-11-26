@@ -19,14 +19,14 @@
     return { R, alt1, alt2, colN: C.join(' · ') || '선택한 컬렉션', cpp: x.coursesPerPerson || (S.org.type === 'corp' ? 2 : 1.5) }; }
   const out = (x, Q) => ({ 예산: Q.R.budget, 구매크레딧: Q.R.credits, 보너스크레딧: Q.R.bonusCredits, 보너스율: Q.R.bonusBp / 100 + '%', 합계크레딧: Q.R.total, 평균크레딧: Q.R.avgCredits, 예상수강건수: Q.R.enrollments, 예상인원: Q.R.people, 가정: `1인 ${Q.cpp}과정 · 평균 ${Q.R.avgCredits}크레딧`,
     대안: [{ 이름: '플랫폼 구독과 함께 계약', 보너스율: Q.alt1.bonusBp / 100 + '%', 합계크레딧: Q.alt1.total, 예상수강건수: Q.alt1.enrollments, 예상인원: Q.alt1.people }, { 이름: '베이직 컬렉션 포함', 평균크레딧: Q.alt2.avgCredits, 예상수강건수: Q.alt2.enrollments, 예상인원: Q.alt2.people, 안내: '실제 평균은 계산 화면에서 확인' }],
-    안내: '크레딧은 학습자가 과정을 시작할 때 CP 정가대로 차감됩니다. 무제한 이용권이 아닙니다. 예상 인원은 가정값입니다. AI 사용료는 별도입니다. 저장 · 계약은 A3에서 정운영자가 확정합니다.' });
+    안내: '크레딧은 학습자가 과정을 시작할 때 CP 정가대로 차감되며, 이용 한도 안에서만 쓸 수 있습니다. 예상 인원은 가정값입니다. AI 사용료는 별도입니다. 저장 · 계약은 A3에서 정운영자가 확정합니다.' });
   /* 견적 카드(디자이너 i A10 마크업) */
   function cardHTML(x, Q) { const R = Q.R;
     return `<p class="mk-a-tool">quote_content_pass · 예산 ${nf(R.budget)}원 · 조회만(저장 안 함)</p><div class="mk-a-q"><div class="mk-a-qh"><span class="mk-bd pass">크레딧</span><b>크레딧 패스 견적 제안</b><span class="tag y">초안 · 저장 전</span></div>
       <div class="mk-a-opt on"><span class="mk-a-rd"></span><div><b>${nf(R.total)}크레딧 · 구매 ${nf(R.credits)} + 보너스 ${nf(R.bonusCredits)}(${R.bonusBp / 100}%)</b><small>${esc(Q.colN)} 평균 ${R.avgCredits}크레딧 기준 · 예상 수강 ${nf(R.enrollments)}건 · 약 ${nf(R.people)}명(1인 ${Q.cpp}과정 가정)</small></div><b class="mk-num">${nf(R.budget)}원</b></div>
       ${x.bundle ? '' : `<div class="mk-a-opt"><span class="mk-a-rd"></span><div><b>플랫폼 구독과 함께 계약 — 보너스 ${Q.alt1.bonusBp / 100}% · ${nf(Q.alt1.total)}크레딧</b><small>약 ${nf(Q.alt1.enrollments)}건 · ${nf(Q.alt1.people)}명</small></div></div>`}
       <div class="mk-a-opt"><span class="mk-a-rd"></span><div><b>베이직 컬렉션 포함</b><small>평균 크레딧이 낮아 예상 인원이 늘어납니다(실제 평균은 계산 화면에서 확인)</small></div></div>
-      <p class="mk-a-note">부가세 별도 · 1크레딧 = 1,000원 · 크레딧은 과정을 시작할 때 차감되며 무제한 이용권이 아닙니다 · AI 사용료 별도</p></div>`; }
+      <p class="mk-a-note">부가세 별도 · 1크레딧 = 1,000원 · 크레딧은 과정을 시작할 때 이용 한도 안에서 차감됩니다 · AI 사용료 별도</p></div>`; }
   const textOf = Q => `예산 ${nf(Q.R.budget / 10000)}만 원이면 ${nf(Q.R.credits)}크레딧에 보너스 ${nf(Q.R.bonusCredits)}크레딧(${Q.R.bonusBp / 100}%)을 더해 ${nf(Q.R.total)}크레딧입니다. ${Q.colN} 컬렉션 평균 ${Q.R.avgCredits}크레딧(정가 ${nf(Q.R.avgCredits * 1000)}원) 기준으로 약 ${nf(Q.R.enrollments)}건, 1인 ${Q.cpp}과정이면 약 ${nf(Q.R.people)}명이 수강할 수 있습니다(가정값).`;
   const norm = x => { const o = { budget: x.budget != null ? Math.max(0, Math.round(+x.budget || 0)) : undefined, people: x.people != null ? Math.max(0, Math.round(+x.people || 0)) : undefined, collections: Array.isArray(x.collections) ? x.collections.filter(c => /^[a-z_]+$/.test(c)) : [], coursesPerPerson: +x.coursesPerPerson || undefined, bundle: !!x.bundle };
     if (!o.collections.length) o.collections = S.org.type === 'univ' ? ['univ'] : S.org.type === 'corp' || S.org.type === 'voc' ? ['ind', 'job'] : ['basic']; return o; };

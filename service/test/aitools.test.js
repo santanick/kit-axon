@@ -1,4 +1,5 @@
 'use strict';
+const { adminPool, closeAdmin, NEED } = require('./_admin'); // QA8: 비슈퍼유저 DB에서는 직접 조회만 슈퍼유저 연결로(서버는 RLS 아래 그대로)
 /* 체크리스트 09 · 11 — AI SAM 도구 등급 서버 강제 · MCP 허용목록 · 도구 목록 해시 고정
    DATABASE_URL=postgresql://… node --test service/test/aitools.test.js */
 const test = require('node:test'); const assert = require('node:assert/strict'); const http = require('node:http');
@@ -50,7 +51,7 @@ test('MCP 해시 불일치 → 연결 정지(503) + 기능 끄기 신호 1회', 
 
 test('서버 강제: /api/ai/messages · /api/ai/tool-confirm', { skip: !process.env.DATABASE_URL }, async t => {
   const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app');
-  const pool = poolFrom(process.env); await migrate(pool);
+  const pool = poolFrom(process.env); await migrate(pool); const adm = await adminPool(pool); if (!adm) { await pool.end(); t.skip(NEED); return; }
   let reply = [{ type: 'text', text: 'ok' }]; let hits = 0;
   const mock = http.createServer((q, r) => { let b = ''; q.on('data', c => b += c); q.on('end', () => { hits++; r.setHeader('content-type', 'application/json'); r.end(JSON.stringify({ model: 'm', content: reply, stop_reason: 'tool_use', usage: { input_tokens: 1, output_tokens: 1 } })); }); });
   await new Promise(ok => mock.listen(0, ok));
@@ -90,10 +91,10 @@ test('서버 강제: /api/ai/messages · /api/ai/tool-confirm', { skip: !process
     assert.equal((await call('B', 'POST', '/api/ai/tool-confirm', { id: 'toolu_2', name: 'run_studio_command' })).status, 401, '로그인 필요');
   });
   await t.test('감사 기록', async () => {
-    const { rows } = await pool.query("select action from audit_log where actor = $1 and action like 'ai.tool%' order by id", [`at${sfx}@a.kr`]);
+    const { rows } = await adm.query("select action from audit_log where actor = $1 and action like 'ai.tool%' order by id", [`at${sfx}@a.kr`]);
     const s = new Set(rows.map(r => r.action)); for (const k of ['ai.tool_tool_unregistered', 'ai.tool_mcp_not_allowed', 'ai.tool_hitl', 'ai.tool_blocked', 'ai.tool_confirm']) assert.ok(s.has(k), k);
   });
-  await new Promise(ok => app.close(ok)); mock.close(); await pool.end();
+  await new Promise(ok => app.close(ok)); mock.close(); await Promise.all([closeAdmin(adm, pool), pool.end()]);
 });
 
 test('v48 콘텐츠 마켓 AI SAM 도구(quote_content_pass · open_pass_builder)는 0등급 등록 — 운영 Claude 경로 400 tool_unregistered 방지(Java DdAiTools 같은 표)', () => {
