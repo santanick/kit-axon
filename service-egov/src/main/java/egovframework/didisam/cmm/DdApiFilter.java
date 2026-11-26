@@ -53,6 +53,8 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** 가디언 /api/security/* — 메서드 · 경로 세부 판정은 SecServiceImpl.route(없으면 404) */
     /** 콘텐츠 마켓 v1.1 /api/market/* — 세부 경로 · 메서드는 MarketServiceImpl 경로 표가 판정(없으면 404) */
     public static final java.util.regex.Pattern MARKET = java.util.regex.Pattern.compile("^/api/market/[\\w./:-]{1,160}\\z");
+    /** 통합 센터 /api/group · /api/group/* · MS Teams /api/conn/teams · /api/conn/teams/* — 세부 경로 · 메서드는 각 서비스 경로 표가 판정(없으면 404) */
+    public static final java.util.regex.Pattern GROUP = java.util.regex.Pattern.compile("^/api/group(?:/[\\w./:-]{1,160})?\\z"), TEAMS = java.util.regex.Pattern.compile("^/api/conn/teams(?:/[\\w./:-]{1,160})?\\z");
     public static final java.util.regex.Pattern SECURITY = java.util.regex.Pattern.compile("^/api/security/[\\w./:-]{1,140}\\z");
     public static final java.util.regex.Pattern SANTA = java.util.regex.Pattern.compile("^/api/santa/orgs/tn_[a-z0-9]{8,16}/plan\\z");
     static boolean mediaRoute(String m, String path) {
@@ -84,7 +86,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         if ("admin".equals(props.module) && !("GET".equals(m) && "/api/health".equals(path)) && !DdModule.ipAllowed(props.adminIps, web.ip(req))) { res.setHeader("cache-control", "no-store"); json(res, 403, "ip", "허용되지 않은 접속 위치입니다."); return; }
         if (path.startsWith("/api/")) {
             res.setHeader("cache-control", "no-store");
-            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !LOAUTH.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !MILEAGE.matcher(path).matches() && !MARKET.matcher(path).matches() && !mediaRoute(m, path) && !("PUT".equals(m) && SANTA.matcher(path).matches()) && !SECURITY.matcher(path).matches()) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
+            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !LOAUTH.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !MILEAGE.matcher(path).matches() && !MARKET.matcher(path).matches() && !GROUP.matcher(path).matches() && !TEAMS.matcher(path).matches() && !mediaRoute(m, path) && !("PUT".equals(m) && SANTA.matcher(path).matches()) && !SECURITY.matcher(path).matches()) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
             if (!"GET".equals(m)) {
                 if (!"1".equals(req.getHeader("x-didisam"))) { json(res, 403, "csrf", "허용되지 않은 요청입니다."); return; }
                 String o = req.getHeader("origin");

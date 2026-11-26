@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 디디쌤 통합 센터 — 표 정의는 service/server/group/sql(Node 마이그레이션 소유).
+     grp_* 교차 표는 MkDb가 Node와 같은 SQL 문장으로 다룬다(didisam_group 역할). 여기에는 소속 기관 자기 범위(inTenant) 질의만 둔다. -->
+<mapper namespace="egovframework.didisam.group.service.impl.GroupMapper">
+  <select id="selectDoc" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select doc::text as doc from tenant_state where tenant_id = #{tid}</select>
+  <select id="selectAiDay" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select calls::bigint as calls, (tin + tout)::bigint as tok from ai_usage where tenant_id = #{tid} and day = #{day}::date</select>
+  <select id="selectRevDay" resultType="java.lang.Long" flushCache="true" useCache="false">
+    select coalesce((select sum(amount) from led_receipt where tenant_id = #{tid} and status = 'paid' and (paid_at at time zone 'Asia/Seoul')::date = #{day}::date), 0)
+         - coalesce((select sum(amount) from led_refund where tenant_id = #{tid} and status = 'done' and (coalesce(done_at, at) at time zone 'Asia/Seoul')::date = #{day}::date), 0)
+  </select>
+  <select id="selectMfaFresh" resultType="java.lang.Integer" flushCache="true" useCache="false">select 1 from user_totp where user_id = #{uid}::uuid and on_at is not null and updated_at &gt; now() - interval '10 minutes'</select>
+  <update id="updateDocPath">update tenant_state set doc = jsonb_set(jsonb_set(doc, '{org}', coalesce(doc->'org', '{}'::jsonb)), '{org,grp}', coalesce(doc->'org'->'grp', '{}'::jsonb) || jsonb_build_object(#{key}, #{value}::jsonb)), rev = rev + 1, updated_at = now() where tenant_id = #{tid}</update>
+  <update id="updateDoc">update tenant_state set doc = #{doc}::jsonb, rev = rev + 1, bytes = octet_length(#{doc}), updated_at = now() where tenant_id = #{tid}</update>
+</mapper>
