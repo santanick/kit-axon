@@ -2,6 +2,8 @@
 /* /api/group/* (spec 1-3 · 1-4 · 1-5, 계약 group/contract.json). 권한 함수가 요청 범위(기관 · 묶음 · 산타)를 정하고 tx()가 RLS 세션 변수로 넘긴다.
    상위 기관 경로: 로그인 기관 = grp_group.owner_tid · pilot · active + 통합 센터 역할(정운영자 = grp_admin 자동).
    소속 기관 경로(/my): 로그인 기관 = grp_link.child_tid. 쓰기는 idem 필수. 상위 기관에 나가는 값은 kpi.mask로 가린 집계뿐이다. */
+/* 재인증 판정(시험용으로 따로 둠): mfa.freshWithin(user, 600) — MFA_OFF면 세션 10분 안 발급도 함께, mfa 없으면 세션만 */
+async function freshRule(m, a, sessFresh) { return m && typeof m.freshWithin === 'function' ? (await m.freshWithin(a, 600)) && (!m.off || await sessFresh(a)) : sessFresh(a); }
 module.exports = (ctx, S) => {
   const { readBody, pool, HttpErr } = ctx; const { E, K, C, rid, str, kstDay, sha, tx, txIn, scopeSet, q1, idem, gaudit, tlog, docOf, docEdit, tenantName, gkey } = S;
   const isSanta = a => !!(ctx.isSanta && ctx.isSanta(a));
@@ -31,7 +33,10 @@ module.exports = (ctx, S) => {
   const needChildOwner = async req => { const a = await needChild(req); if (a.role !== 'owner') throw E('grp_owner'); return a; };
   const needSanta = async req => { const a = await ctx.need(req); if (!isSanta(a)) throw new HttpErr(403, '산타 관리자만 쓸 수 있습니다.', 'santa'); scopeSet(a.tid, '', true); return a; };
   /* 재인증(임시: 세션이 10분 안에 만들어짐 — 로그인 · 2단계 인증 직후). mfa.js freshWithin 공개 시 교체(코어 요청 5) */
-  const needFresh = async a => { const r = (await pool.query("select created_at > now() - interval '10 minutes' ok from sessions where id = $1", [a.sid])).rows[0]; if (!r || !r.ok) throw E('grp_mfa', { mfa: 'required' }); };
+  /* 재인증(spec 1-2 needFresh): 최근 10분 안에 2단계 인증 통과 = mfa.freshWithin(user, 600)(코어 요청 5, 개발 5).
+     MFA_OFF(시험 · 시연 전용)는 freshWithin이 늘 true이므로, 그때는 비밀번호 재로그인(세션 10분 안 발급)을 재인증으로 본다 — 결정(QA49-3 #6: 재인증 단계 생략 금지) */
+  const sessFresh = async a => { const r = (await pool.query("select created_at > now() - interval '10 minutes' ok from sessions where id = $1", [a.sid])).rows[0]; return !!(r && r.ok); };
+  const needFresh = async a => { if (!(await freshRule(ctx.mfa, a, sessFresh))) throw E('grp_mfa', { mfa: 'required' }); };
   const ipOf = req => String((ctx.ip && ctx.ip(req)) || '');
 
   /* ── 출력 ── */
@@ -213,7 +218,9 @@ module.exports = (ctx, S) => {
       const agreed = links.filter(l => l.share && l.share.learnerAgg); await tx(c => gaudit(c, { gid: g.id, actor: a.email, actorTid: a.tid, action: 'grp.learners', target: `${rg.from}~${rg.to}`, ok: agreed.length > 0, ip: ipOf(req) }));
       if (!agreed.length) throw E('grp_consent');
       const ok = new Set(agreed.map(l => l.child_tid)); const X = lx.filter(r => ok.has(r.child_tid)); const M = (n) => (n >= 1 && n <= 4 ? K.UNDER5 : n);
-      if (g.kind === 'region') return { range: rg, basis: 'unifiedId', unified: null, multi: null, byChild: agreed.map(l => ({ tid: l.child_tid, label: l.label, lrn: M(X.filter(r => r.child_tid === l.child_tid).length), shared: null })), byDept: [], flows: [], consent: { agreed: agreed.length, total: links.length } };
+      /* QA49-3 #7: 지자체 · 교육청은 학번이 없어 grp_lx가 비므로, 기관별 학습자 수는 기간 마지막 하루 집계(lrn)로 냅니다(통합 학습 ID는 2차) */
+      if (g.kind === 'region') { const kd = (await tx(c => c.query("select distinct on (child_tid) child_tid, v from grp_kpi_day where group_id = $1 and day between $2::date and $3::date order by child_tid, day desc", [g.id, rg.from, rg.to]))).rows; const lv = new Map(kd.map(r => [r.child_tid, +((r.v || {}).lrn) || 0]));
+        return { range: rg, basis: 'unifiedId', unified: null, multi: null, byChild: agreed.map(l => ({ tid: l.child_tid, label: l.label, lrn: M(lv.get(l.child_tid) || 0), shared: null })), byDept: [], flows: [], consent: { agreed: agreed.length, total: links.length } }; }
       const by = new Map(); for (const r of X) { const s = by.get(r.gkey) || new Set(); s.add(r.child_tid); by.set(r.gkey, s); }
       const multi = { 1: 0, 2: 0, '3+': 0 }; for (const s of by.values()) multi[s.size >= 3 ? '3+' : s.size]++;
       const byChild = agreed.map(l => { const mine = X.filter(r => r.child_tid === l.child_tid); return { tid: l.child_tid, label: l.label, lrn: M(mine.length), shared: M(mine.filter(r => by.get(r.gkey).size > 1).length) }; });
@@ -399,3 +406,4 @@ module.exports = (ctx, S) => {
       for (const [m, re, fn] of P) { if (m !== method) continue; const x = re.exec(p); if (x) return (req, res) => fn(req, ...x.slice(1), res); } return null; }
   };
 };
+module.exports.freshRule = freshRule;

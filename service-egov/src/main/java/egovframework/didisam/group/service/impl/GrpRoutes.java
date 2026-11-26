@@ -307,7 +307,10 @@ final class GrpRoutes {
             Set<String> ok = new LinkedHashSet<>(tidsOf(agreed)); List<ObjectNode> X = new ArrayList<>(); for (ObjectNode r : lx) if (ok.contains(s(r, "child_tid"))) X.add(r);
             ObjectNode o = O(); o.putObject("range").put("from", rg[0]).put("to", rg[1]);
             if ("region".equals(s(x.g, "kind"))) { o.put("basis", "unifiedId").putNull("unified"); o.putNull("multi"); ArrayNode bc = o.putArray("byChild");
-                for (ObjectNode l : agreed) { long c = 0; for (ObjectNode r : X) if (s(l, "child_tid").equals(s(r, "child_tid"))) c++; ObjectNode e = bc.addObject(); e.set("tid", g(l, "child_tid")); e.set("label", g(l, "label")); e.set("lrn", M(c)); e.putNull("shared"); }
+                /* QA49-3 #7: 기관별 학습자 수 = 기간 마지막 하루 집계 lrn(Node와 같음) */
+                List<ObjectNode> kd = S.T(() -> db.q("select distinct on (child_tid) child_tid, v from grp_kpi_day where group_id = $1 and day between $2::date and $3::date order by child_tid, day desc", x.gid(), rg[0], rg[1]));
+                Map<String, Long> lv = new LinkedHashMap<>(); for (ObjectNode r : kd) lv.put(s(r, "child_tid"), (long) GrpKpi.nz(get(g(r, "v"), "lrn")));
+                for (ObjectNode l : agreed) { long c = lv.getOrDefault(s(l, "child_tid"), 0L); ObjectNode e = bc.addObject(); e.set("tid", g(l, "child_tid")); e.set("label", g(l, "label")); e.set("lrn", M(c)); e.putNull("shared"); }
                 o.putArray("byDept"); o.putArray("flows"); o.putObject("consent").put("agreed", agreed.size()).put("total", links.size()); return o; }
             Map<String, LinkedHashSet<String>> by = new LinkedHashMap<>(); for (ObjectNode r : X) by.computeIfAbsent(s(r, "gkey"), k -> new LinkedHashSet<>()).add(s(r, "child_tid"));
             long m1 = 0, m2 = 0, m3 = 0; for (Set<String> st : by.values()) { if (st.size() >= 3) m3++; else if (st.size() == 2) m2++; else m1++; }

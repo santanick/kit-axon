@@ -19,7 +19,8 @@ async function run(U, tag = 'g', hooks = {}) {
   await join('S', SANTA, '산타 운영', 'corp');
   const F = await join('F', `gf_${sfx}@example.com`, '디디 영어 본사', 'k12'); const A = await join('A', `ga_${sfx}@example.com`, '해운대점', 'k12'); const B = await join('B', `gb_${sfx}@example.com`, '기장점', 'k12');
   const Un = await join('U', `gu_${sfx}@example.com`, '한빛대학교 본부', 'univ'); const X = await join('X', `gx_${sfx}@example.com`, '한빛대 평생교육원', 'univ'); const Y = await join('Y', `gy_${sfx}@example.com`, '한빛대 취업센터', 'univ');
-  R.tids = { F, A, B, U: Un, X, Y };
+  const Rg = await join('R', `gr_${sfx}@example.com`, '해운구청 평생학습', 'public'); const Rc = await join('Rc', `grc_${sfx}@example.com`, '해운구 평생학습관', 'lifelong');
+  R.tids = { F, A, B, U: Un, X, Y, R: Rg, Rc };
   const mem = (k, extra) => Array.from({ length: k }, (_, i) => ({ id: `m${i}`, name: `학습자${i}`, ...(extra ? extra(i) : {}) }));
   const cls = (id, ids, p, extra) => ({ id, name: `과정 ${id}`, status: '운영중', learners: ids, prog: Object.fromEntries(ids.map((x, i) => [x, { p: p(i), at: kst() }])), ...(extra || {}) });
   await put('F', { org: { name: '디디 영어 본사', type: 'k12' }, classes: [cls('fc1', [], () => 0, { items: [{ id: 'it1', type: 'video', title: '1차시', seen: { fz1: 1 } }], learners: ['fz1'], prog: { fz1: { p: 10 } }, enr: { fz1: { at: '2026-11-01' } }, attT: { fz1: 3 }, ask: { fz1: '질문' }, desc: '신규 강사 OT' }), cls('fmk', [], () => 0, { mk: { productId: 'mp_x' } })], lsite: { pub: { pages: [{ id: 'fp1', name: '가맹 안내', access: 'all', sections: [{ type: 'text', data: { t: '안내' } }] }] } } });
@@ -143,6 +144,20 @@ async function run(U, tag = 'g', hooks = {}) {
   R.bPol = ((await call('B', 'GET', '/api/group/my/policies')).j.items || []).map(x => `${x.key}:${x.mine.state}`).sort().join(',');
   R.audit = (await call('F', 'GET', '/api/group/audit')).j.total > 5; R.auditViewer = err(await call('Fs', 'GET', '/api/group/audit'));
 
+  // 지자체 · 교육청 여정(QA49-3): 수납액 요청 불가 · 소속 구분 · 통합 학습자는 기관별 집계만(통합 학습 ID 2차)
+  await put('Rc', { org: { name: '해운구 평생학습관', type: 'lifelong' }, members: mem(7), classes: [cls('r1', mem(7).map(m => m.id), i => (i < 5 ? 100 : 30))] });
+  const gR = await call('S', 'POST', '/api/group/admin/groups', { idem: I(), ownerTid: Rg, kind: 'region', name: '해운구 시민대학' });
+  R.rgRev = err(await call('R', 'POST', '/api/group/invites', { idem: I(), label: '평생학습관', unit: 'lifelong', ask: { revenue: true } }));
+  R.rgUnit = err(await call('R', 'POST', '/api/group/invites', { idem: I(), label: '평생학습관', unit: 'branch' }));
+  const ir = await call('R', 'POST', '/api/group/invites', { idem: I(), label: '평생학습관', unit: 'lifelong', to: { tid: Rc } });
+  R.rgAccRev = err(await call('Rc', 'POST', '/api/group/my/accept', { idem: I(), linkId: ir.j.linkId, share: { kpi: true, revenue: true }, agreeVer: 'grp-share-v1' }));
+  R.rgAcc = ((await call('Rc', 'POST', '/api/group/my/accept', { idem: I(), linkId: ir.j.linkId, share: { kpi: true, ai: true, learnerAgg: true }, agreeVer: 'grp-share-v1' })).j.link || {}).status;
+  await call('R', 'POST', '/api/group/refresh', { idem: I() }); const dr = await call('R', 'GET', `/api/group/dash?from=${kst(-6)}&to=${kst()}&unit=day`); const rc = (dr.j.children || [])[0] || { v: {} };
+  R.rgDash = [dr.j.kpis && dr.j.kpis.join(','), rc.v.lrn, rc.v.cmp, rc.v.cmpRateBp, dr.j.total && dr.j.total.lrn, 'rev' in (rc.v || {}) ? rc.v.rev : 'x'];
+  const lr = await call('R', 'GET', `/api/group/learners/summary?from=${kst(-60)}&to=${kst()}`); R.rgLs = [lr.st, lr.j.basis, lr.j.unified, (lr.j.byChild || []).map(x => x.lrn).join(',')];
+  R.rgLookup = err(await call('R', 'POST', '/api/group/learners/lookup', { idem: I(), key: { studentNo: '1234' }, purpose: '시민대학 수강 이력 확인 목적입니다' }));
+  void gR;
+
   // 해제 · 탈퇴(T-ISO-4 · 판정 ②)
   R.leaveShort = err(await call('B', 'POST', '/api/group/my/leave', { idem: I(), reason: 'x' }));
   R.leave = (await call('B', 'POST', '/api/group/my/leave', { idem: I(), reason: '가맹 계약 종료' })).j.link.status;
@@ -166,6 +181,7 @@ const WANT = {
   license: '409:grp_license', source: '404:grp_source', share: [200, 'draft'], publish: 2, inbox: 'offered', reqDecline: '409:grp_required', adopt: [200, 1], adoptDoc: ['준비중', 0, true, true, 1],
   version: 2, outdated: true, update: 2, up: 'requested', approve: ['approved', 'published'], redist: true, recallShort: '400:grp_reason', recall: 'recalled', recallDoc: true, recallPub: true, pageDraft: [200, false, true, 0, true],
   polKey: '400:grp_policy_key', polPut: 1, polVer: '409:grp_ver', polApply: 2, locked: '409:grp_locked', skipped: 'overridden', bPol: 'brand:applied,notice:overridden', audit: true, auditViewer: '403:grp_role',
+  rgRev: '400:grp_field', rgUnit: '400:grp_unit', rgAccRev: '400:grp_field', rgAcc: 'active', rgDash: ['lrn,crs,cmpRateBp,new,aiCalls,act', 7, 5, 7143, 7, null], rgLs: [200, 'unifiedId', null, '7'], rgLookup: '403:grp_detail_off',
   leaveShort: '400:grp_reason', leave: 'left', afterLeave: [false, 1], remove: 'removed', unauth: 401, nf: 404
 };
 function check(R) { const bad = []; for (const [k, v] of Object.entries(WANT)) { if (R[k] === 'skip') continue; const a = JSON.stringify(R[k]); if (a !== JSON.stringify(v)) bad.push(`${k}: ${a} ≠ ${JSON.stringify(v)}`); } return bad; }

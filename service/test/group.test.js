@@ -23,6 +23,16 @@ test('KPI 계산 · 가림(순수 함수) · 계약 파일 · 오류 문구 한 
   const src = fs.readFileSync(path.join(ROOT, 'service', 'server', 'group', 'routes.js'), 'utf8'); for (const [m, p] of CT.routes) { const re = p.replace(/:[a-zA-Z]+/g, 'X'); assert.ok(src.includes(`['${m}'`), m); void re; }
 });
 
+test('QA49-3 #6 재인증 판정: mfa.freshWithin(user, 600) 기준, MFA_OFF면 세션 10분 안 발급도 필요', async () => {
+  const { freshRule } = require('../server/group/routes'); const calls = []; const m = (fresh, off) => ({ off, freshWithin: async (u, s) => { calls.push(s); return fresh; } });
+  assert.equal(await freshRule(m(false, false), { uid: 'u' }, async () => true), false, '2단계 10분 지남 → 거절(세션이 새것이어도)');
+  assert.equal(await freshRule(m(true, false), { uid: 'u' }, async () => false), true, '2단계 10분 안 → 통과(세션이 오래돼도)');
+  assert.equal(await freshRule(m(true, true), { uid: 'u' }, async () => false), false, 'MFA_OFF: 세션 오래됨 → 거절');
+  assert.equal(await freshRule(m(true, true), { uid: 'u' }, async () => true), true, 'MFA_OFF: 방금 다시 로그인 → 통과');
+  assert.equal(await freshRule(null, {}, async () => true), true); assert.ok(calls.every(s => s === 600), '600초');
+  const app = fs.readFileSync(path.join(ROOT, 'service', 'server', 'app.js'), 'utf8'); assert.ok(/createGroup\(\{[^}]*\bmfa\b/.test(app), 'app.js가 mfa를 통합 센터에 넘김');
+});
+
 test('운영 서버: 통합 센터', { skip: !process.env.DATABASE_URL }, async t => {
   const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app'); const C = require(path.join(ROOT, 'tests', 'contract-group.js'));
   const pool = poolFrom(process.env); await migrate(pool); await migrate(pool); /* 두 번 적용해도 안전 */

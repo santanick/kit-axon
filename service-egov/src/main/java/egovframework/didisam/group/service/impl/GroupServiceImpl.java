@@ -177,10 +177,12 @@ public class GroupServiceImpl extends EgovAbstractServiceImpl implements GroupSe
     Map<String, Object> needChild(HttpServletRequest req) throws Exception { Map<String, Object> a = need(req); if ("teacher".equals(a.get("role"))) throw H(403, "교강사 권한으로 사용할 수 없습니다.", "teacher"); return a; }
     Map<String, Object> needChildOwner(HttpServletRequest req) throws Exception { Map<String, Object> a = needChild(req); if (!"owner".equals(a.get("role"))) throw E("grp_owner"); return a; }
     Map<String, Object> needSanta(HttpServletRequest req) throws Exception { Map<String, Object> a = auth.need(req); if (!isSanta(a)) throw H(403, "산타 관리자만 쓸 수 있습니다.", "santa"); scopeSet(tid(a), "", true); return a; }
-    /** 재인증 = 현재 운영자 세션이 10분 안에 만들어짐(로그인 · 2단계 인증 직후) — contract.json decisions.fresh */
+    @org.springframework.beans.factory.annotation.Autowired(required = false) private egovframework.didisam.auth.service.impl.LoginMfa loginMfa;
+    /** 재인증 = 10분 안에 2단계 인증 통과(LoginMfa.freshWithin(user, 600)). MFA_OFF(시험 · 시연)는 세션 10분 안 발급(비밀번호 재로그인)으로 판정 — Node routes.js needFresh와 같음(QA49-3 #6) */
     void needFresh(Map<String, Object> a) throws Exception {
-        String sid = (String) a.get("sid"); Integer ok = sid == null ? null : ttx.plain(() -> mapper.selectFresh(sid));
-        if (ok == null || ok != 1) throw E("grp_mfa", map("mfa", "required"));
+        String sid = (String) a.get("sid"); Integer s0 = sid == null ? null : ttx.plain(() -> mapper.selectFresh(sid)); boolean sess = s0 != null && s0 == 1;
+        boolean ok = loginMfa != null ? loginMfa.freshWithin(a, 600) && (!loginMfa.off || sess) : sess;
+        if (!ok) throw E("grp_mfa", map("mfa", "required"));
     }
 
     // ── 집계(snap.js) ──────────────────────────────────────
