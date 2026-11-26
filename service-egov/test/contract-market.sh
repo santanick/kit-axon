@@ -7,9 +7,7 @@ for d in mkn mkj; do su postgres -c "$PB/psql -h /tmp -p 5520 -U postgres -qc 'd
 export SIGNUP_CODE=C0DE SANTA_ADMIN_EMAILS=mk-santa1@example.com,mk-santa2@example.com PII_KEY=$(printf 'a%.0s' {1..64})
 N=${N:-$(cd .. && pwd)}   # Node 코드 · tests/contract-market.js가 있는 저장소 루트
 mig() { DATABASE_URL=postgres://didisam:x@127.0.0.1:5520/$1 PORT=$2 node $N/service/server/index.js > /tmp/mk2-mig-$1.log 2>&1 & local P=$!
-  for i in $(seq 1 40); do curl -s 127.0.0.1:$2/api/health >/dev/null && break; sleep 1; done; kill $P; wait $P 2>/dev/null
-  # PG16: createrole 사용자가 만든 역할에는 SET 없는 멤버십이 자동으로 생겨 20_market_rls.sql의 grant가 건너뛰어진다(개발자 1 보고)
-  su postgres -c "$PB/psql -h /tmp -p 5520 -U postgres -d $1 -qc 'grant didisam_market to didisam with set true, inherit false'" 2>/dev/null; }
+  for i in $(seq 1 40); do curl -s 127.0.0.1:$2/api/health >/dev/null && break; sleep 1; done; kill $P; wait $P 2>/dev/null; }
 mig mkn 9628; mig mkj 9629
 DATABASE_URL=postgres://didisam:x@127.0.0.1:5520/mkn PORT=9621 PUBLIC_DIR=$N/service/public node $N/service/server/index.js > /tmp/mk2-node.log 2>&1 & NP=$!
 JDBC_URL=jdbc:postgresql://127.0.0.1:5520/mkj JDBC_USER=didisam JDBC_PASSWORD=x PORT=9622 PUBLIC_DIR=$N/service/public java -jar target/didisam-egov.war > /tmp/mk2-java.log 2>&1 & JP=$!

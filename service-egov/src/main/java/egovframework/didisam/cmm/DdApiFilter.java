@@ -38,7 +38,7 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** v30 학사 LMS 묶음 경로(/api/lms/**) — 기동 때 DdLmsRoutes가 @RequestMapping에서 자동 수집한다(묶음별 등록 불필요) */
     public static final Set<String> LMS = ConcurrentHashMap.newKeySet();
     /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */
-    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel)|ledger-(?:my|order|confirm|bill|bill-order|bill-confirm)|mile-(?:my|list|rewards|redeem|redeem-cancel|proof|guardian|streak-repair|notice-read)|mk-(?:shelf|list|item|start|pre|path|order|earn))\\z");
+    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel)|ledger-(?:my|order|confirm|bill|bill-order|bill-confirm)|mile-(?:my|list|rewards|redeem|redeem-cancel|proof|guardian|streak-repair|notice-read)|mk-(?:shelf|list|item|start|pre))\\z");
     /** QA7 학습자 소셜 가입 · 로그인(Node loauth.handle) — 시작은 기관별, 콜백은 제공자별 하나 */
     public static final java.util.regex.Pattern LOAUTH = java.util.regex.Pattern.compile("^/api/pub/(?:[^/]+/loauth/(?:google|kakao|naver)/start|loauth/(?:google|kakao|naver)/callback)\\z");
     /** v41 통합 수납 원장 운영자 경로(/api/ledger/*, :id 포함) — Node ledger/mod-admin과 같은 목록(09 규격 3절) */
