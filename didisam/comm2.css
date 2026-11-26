@@ -158,3 +158,5 @@ mark{background:#ffe58a;border-radius:3px;padding:0 2px}
   #main .cm26hs .bar2 input[type=search]{min-width:0;width:100%}
   #main .cm26hs .cm26adv{white-space:nowrap;flex:none;min-height:44px}
 }
+/* QA49-7 다크: 순서 이동 버튼이 흰 바탕에 밝은 글자(대비 1.1)로 보이던 문제 */
+.cmn-mv{background:var(--surface,#fff);color:var(--ink,#1A1814)}

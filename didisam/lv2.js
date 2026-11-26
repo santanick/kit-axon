@@ -58,7 +58,7 @@
     if (k <= st.step) return ''; if (k !== st.step + 1) return '앞 단계를 먼저 열어 주세요.';
     if (it && it.ai && it.ai.reveal) return '';
     if (k === 5) { if (!solOk(it)) return '풀이는 선생님이 허용한 과제에서만 볼 수 있어요.'; if (!st.selfExp) return '풀이를 보기 전에, 지금까지 어떻게 풀었는지 적어 주세요.'; return ''; }
-    if (lvl === 'L3' || k === 1) return '';
+    if (lvl !== 'L1' || k === 1) return ''; /* QA6(v49) P-AI-6 · 서버 hintCheck: 시도 잠금은 코치(L1)만, 파트너(L2) · 에이전트(L3)는 순서만 */
     const need = k === 2 ? 0 : k - 1; return st.tries.some(x => (+x.s || 0) >= need) ? '' : '먼저 내 생각을 적어 주세요. 그래야 다음 힌트가 열려요.';
   }
 
@@ -74,7 +74,7 @@
   }
   let CTX = null; /* 지금 보내는 튜터 요청의 항목 · 힌트 맥락(데모 aiguard · 운영 요청 본문에 사용) */
   async function gen(h, k, st, v, prev) {
-    CTX = { lvl: h.lvl, sol: solOk(h.it), reveal: !!(h.it.ai && h.it.ai.reveal), selfExp: !!st.selfExp, item: { key: h.key, lvl: h.lvl }, hint: { step: k, cur: prev, tries: st.tries.map(x => +x.s || 0), attempt: st.last ? bare(st.last).length : 0 } };
+    CTX = { lvl: h.lvl, sol: solOk(h.it), reveal: !!(h.it.ai && h.it.ai.reveal), selfExp: !!st.selfExp, item: { key: h.key, lvl: h.lvl }, hint: { step: k, cur: prev, tries: st.tries.map(x => +x.s || 0), attempt: st.last ? bare(st.last).length : 0, text: String((k === 5 ? st.sx : st.last) || '').slice(0, 600) /* 서버 hintCheck는 시도 글(가림 뒤)의 길이로 판정 — 숫자를 보내면 자릿수로 셈 */ } };
     const q = `[힌트 ${k}단계 · ${STEPN[k]}] 「${h.it.title}」${st.last ? `\n내 최근 시도: ${st.last}` : ''}${k === 5 && st.sx ? `\n내 자기 설명: ${st.sx}` : ''}`;
     try {
       const C = TCFG(); const lim = +C.daily || 20; if (typeof ltUsed === 'function' && ltUsed() >= lim) throw Object.assign(new Error('quota'), { status: 429 });
@@ -88,7 +88,7 @@
   { const _f = window.fetch.bind(window); window.fetch = function (input, init) {
     try { const url = typeof input === 'string' ? input : (input && input.url) || '';
       if (on() && /\/api\/pub\/[^/]+\/tutor$/.test(url) && init && typeof init.body === 'string') { const b = JSON.parse(init.body); const h = here();
-        if (h) { b.cls = h.c.id; b.item = CTX ? CTX.item : { key: h.key, lvl: h.lvl }; if (CTX && CTX.hint) b.hint = { step: CTX.hint.step, attempt: CTX.hint.attempt }; init = { ...init, body: JSON.stringify(b) }; } } } catch (e) { }
+        if (h) { b.cls = h.c.id; b.item = CTX ? CTX.item : { key: h.key, lvl: h.lvl }; if (CTX && CTX.hint) b.hint = { step: CTX.hint.step, attempt: CTX.hint.text, ...(CTX.hint.step === 5 && CTX.selfExp ? { selfExp: true } : {}) }; /* QA6(v49): 서버 규격(aigw hintCheck · DdAiGateway)대로 시도 글 · 자기 설명 표시 — 전에는 길이 숫자만 보내 5단계(풀이)가 운영에서 늘 잠김 */ init = { ...init, body: JSON.stringify(b) }; } } } catch (e) { }
     return _f(input, init); }; }
 
   /* ── ① 과제 화면 맨 위 레벨 띠 ── */
@@ -112,7 +112,7 @@
     const rows = [1, 2, 3, 4, 5].map(k => { const open = k <= st.step; const cur = k === st.step; const why = open ? '' : canOpen(st, k, lvl, h.it); const nx = k === st.step + 1;
       const cls = open ? (cur ? 'cur' : 'done') : 'lk' + (nx ? ' nx' : '');
       const body = open ? (C[k] ? `<div class="v2-box">${nl(C[k].t)}</div>${C[k].fb ? '<p class="v2-fb">지금은 기본 힌트를 보여 드려요</p>' : ''}<button type="button" class="v2-lk" data-v2="again" data-k="${k}">다른 표현으로 다시 보기</button>` : `<button type="button" class="v2-lk" data-v2="open" data-k="${k}">이 단계 다시 보기</button>`)
-        : nx ? (why ? `<p>${esc(why)}</p>` : `<button type="button" class="v2-open" data-v2="open" data-k="${k}">${k === 1 ? '힌트 받기' : '다음 힌트 열기'}</button>`) : k === 5 && !sol ? '<p>선생님이 허용한 과제만</p>' : '<p>내 시도를 적으면 열려요</p>';
+        : nx ? (why ? `<p>${esc(why)}</p>` : `<button type="button" class="v2-open" data-v2="open" data-k="${k}">${k === 1 ? '힌트 받기' : '다음 힌트 열기'}</button>`) : k === 5 && !sol ? '<p>선생님이 허용한 과제만</p>' : lvl === 'L1' ? '<p>내 시도를 적으면 열려요</p>' : '<p>앞 단계를 열면 열려요</p>';
       return `<li class="v2-st ${cls}"><span class="v2-s" aria-hidden="true">${open && !cur ? ico('check', 15) : k}</span><div class="v2-t"><b>${k} · ${STEPN[k]}${cur ? ' <em>지금</em>' : ''}${!open ? '<span class="sr">(잠김)</span>' : ''}</b>${body}</div></li>`; }).join('');
     const sx = st.step >= 4 && sol && !st.selfExp; /* 결정 3: 모든 레벨에서 풀이 전 자기 설명 */
     return `<section class="v2-lad" aria-label="힌트 사다리"><div class="v2-lh"><b>힌트 사다리</b><small>${st.step ? `${st.step}단계까지 열렸어요` : '어디서 막혔나요? 먼저 내 생각을 적어 주세요.'}</small><span class="v2-cnt">${st.step} / 5</span></div>

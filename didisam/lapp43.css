@@ -554,3 +554,6 @@ html body.lapp #lm .ap-pw2 .lai-cc:not(.on)::after{content:'연결 ›';position
 /* 110 입력창 아래 안내는 두 줄까지 */
 body.lapp #ltut .lt-note,body.lapp .lt-panel .lt-note{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.45}
 }
+/* QA49-7: 비활성 [켜기] 외곽선 버튼 글자는 글자 전용 초록(--pri-tx)으로(라이트 #00C53B 대비 2.3 → 4.5 이상). 다크는 공통 「주 버튼 글자 검정」 규칙이 덮어 바탕 없이 글자가 사라지던 문제(대비 1.1) */
+html body.lapp #lm .ap-pr [data-ap="push-on"]:disabled{color:var(--pri-tx,var(--pri))!important}
+html[data-theme="dark"] body.lapp #lm .ap-pr .lbtn.pri[data-ap="push-on"]:disabled:not(.ghost):not(.out):not(.line):not(.red):not(.warn):not(.sec){background:transparent!important;color:var(--pri-tx,#5FE08A)!important;border:1.5px solid var(--pri-tx,#5FE08A)!important}

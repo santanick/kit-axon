@@ -508,3 +508,5 @@ body.lapp.tb-fcov #tbFab.tb-fab{opacity:0;pointer-events:none} /* v43.7 Q4: 멈�
 .tb-gin label span{font-size:15px;color:var(--tb-mute)}
 .tb-gsh .tb-gerr{margin:4px 0 8px;min-height:1em;font-size:13px;color:#C62828}
 .tb-gok{width:100%;min-height:52px;border:0;border-radius:8px;background:var(--tb-gd);color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:8px}
+/* QA49-7 휴대폰: 타일 제목은 한 줄 줄임 대신 두 줄까지(「5차시 · 엑셀 실무 마…」처럼 과정 이름이 잘리던 문제) */
+@media (max-width:480px){.tb-tile .tb-tl{white-space:normal;text-overflow:clip;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}}

@@ -10,6 +10,8 @@ const LTK = () => 'didisam.lt.open.' + (LR.tid || 'x');
 const LT = { open: false, msgs: [], busy: false, ai: null, nudged: false, q: {} };
 /* v27 학습자가 고른 'AI 선생님'(lapp.js ltPersona) — 이름 · 말투를 튜터 전체에 적용 */
 const TCFG = () => { const B = { enabled: true, name: 'AI 튜터', daily: 20, help: 'feedback', loginOnly: false, guide: '', ...((SITE() && SITE().tutor) || {}) }; const P = typeof ltPersona === 'function' ? ltPersona() : null; return P && P.n ? { ...B, orgName: B.name, name: P.n, tone: P.tone || '' } : B; };
+/* QA6(v49) P-AI-48: 방문자 하루 한도 — 기관이 0회(방문자 사용 안 함)로 두면 0을 그대로(전에는 0이 기본 10회로 바뀌어 화면은 「10회 남음」, 서버는 401) */
+const ltLim = () => { const C = TCFG(); if (LR.me) return Math.min(500, Math.max(1, Math.round(+C.daily) || 20)); const g = C.guestDaily; return g == null || g === '' ? 10 : Math.min(50, Math.max(0, Math.round(+g) || 0)); };
 const ltDayKey = () => 'didisam.lt.' + (LR.tid || 'x') + '.' + ((LR.me && LR.me.sid) || 'guest') + '.' + kstDay();
 const ltUsed = () => { try { return +sessionStorage.getItem(ltDayKey()) || 0; } catch (e) { return 0; } };
 const ltUse = () => { try { sessionStorage.setItem(ltDayKey(), String(ltUsed() + 1)); } catch (e) { } };
@@ -59,7 +61,7 @@ function ltBrief() {
   const C = TCFG();
   if (!LR.me) return { t: `안녕하세요, 내 AI 학습 비서 ${C.name}입니다.\n로그인하지 않아도 강좌 내용 · 수강 방법 · ${typeof lPayOff === 'function' && lPayOff() ? '' : '가격 · '}가입 방법을 바로 물어보실 수 있습니다. 로그인하면 내 진도 · 과제 피드백에 맞춰 학습 계획과 복습까지 도와 드립니다.`, h: `<div class="lt-acts"><a class="lt-act" href="#login" data-tact="go"><b>로그인하기</b><small>${SITE().org.type === 'univ' ? '학번' : '번호'} + 접근코드</small>${ico('arrow', 15)}</a>${diagFirst() ? `<a class="lt-act" href="#dg/${esc(diagFirst().id)}" data-tact="go"><b>3분 진단 먼저 해 보기</b><small>나에게 맞는 과정이 열립니다</small>${ico('arrow', 15)}</a>` : ''}</div>` };
   const A = ltTodo(); const st = myStats(); const qa = ltQA().filter(x => !LT.q['seen' + x.id]);
-  const lines = [`${lCall()}${/님$/.test(lCall()) ? "" : "님"}, 내 학습 기록을 보고 ${A.length ? `오늘 할 일 ${A.length}가지를 정리했습니다.` : '오늘 급한 일은 없습니다.'}`];
+  const lines = [`${lCall()}${/님$/.test(lCall()) ? "" : "님"}, 내 학습 기록을 보고 ${A.length ? `오늘 할 일 ${A.length}가지를 정리했어요.` : '오늘 급한 일은 없어요.'}`];
   if (st.streak >= 2) lines.push(`${st.streak}일 연속 학습 중입니다. 오늘도 이어 가 볼까요?`); else if (st.active) lines.push('오늘 10분만 해도 연속 학습이 시작됩니다.');
   if (qa.length) lines.push(`선생님 답변 ${qa.length}건이 도착했습니다.`);
   return { t: lines.join('\n'), h: (qa.length ? `<div class="lt-qa">${qa.slice(0, 2).map(x => `<div><small>선생님 답변 · ${esc(x.cls || '')}</small><b>Q. ${esc(x.q)}</b><p>${nl(x.a)}</p></div>`).join('')}</div>` : '') + (A.length ? ltLinks(A) : '') + ltBtns([['이번 주 학습 계획 맡기기', '이번 주 학습 계획 짜줘'], ['복습 퀴즈', '복습 퀴즈 내줘'], ...(st.courses.some(x => x.fb) ? [['피드백 해설', '과제 피드백 해설해줘']] : [])]) };
@@ -108,7 +110,7 @@ function ltRule(q) {
   if (/(마감|알림|언제까지|기한)/.test(s)) { const L = myStats().courses.filter(x => !x.done && x.c.end).sort((a, b) => a.c.end.localeCompare(b.c.end));
     return { t: L.length ? `마감이 가까운 순서입니다. 계획을 맡기시면 마감 전에 끝나도록 배치해 드립니다.` : '진행 중인 마감이 없습니다.', h: L.length ? `<div class="lt-rep">${L.slice(0, 4).map(x => `<div><span>${esc(x.c.name)}</span><small>${esc(x.c.end)} 종료</small><b>${x.p}%</b></div>`).join('')}</div>${ltBtns([['마감 맞춰 계획 짜기', '이번 주 학습 계획 짜줘']])}` : '' }; }
   if (w.k === 'cls' && w.it && /(정리|요약|핵심|설명|이해|모르|어려|뭐야|무슨)/.test(s)) { const it = w.it; const pts = ltSplit(it.desc, 3);
-    return { t: `「${it.title}」${lJ(it.title, '을', '를')} 정리했습니다.`, h: `<ol class="lt-ol">${(pts.length ? pts : [`이 레슨의 목표: ${it.title}`, '영상(자료)을 보며 낯선 용어 2개를 적어 보세요.', '내 업무 · 전공에 쓸 수 있는 예를 하나 떠올려 보세요.']).map(p => `<li><b>${esc(p)}</b></li>`).join('')}</ol><p class="lt-mini">스스로 확인: 이 레슨에서 가장 중요한 한 가지를 한 문장으로 말하면 무엇일까요? 답을 적어 주시면 맞는지 봐 드립니다.</p>${ltBtns([['확인 문제 내줘', '이 내용으로 확인 문제 내줘'], ['선생님께 질문 넘기기', s, 'esc']])}` }; }
+    return { t: `「${it.title}」${lJ(it.title, '을', '를')} 정리했어요.`, h: `<ol class="lt-ol">${(pts.length ? pts : [`이 레슨의 목표: ${it.title}`, '영상(자료)을 보며 낯선 용어 2개를 적어 보세요.', '내 업무 · 전공에 쓸 수 있는 예를 하나 떠올려 보세요.']).map(p => `<li><b>${esc(p)}</b></li>`).join('')}</ol><p class="lt-mini">스스로 확인: 이 레슨에서 가장 중요한 한 가지를 한 문장으로 말하면 무엇일까요? 답을 적어 주시면 맞는지 봐 드릴게요.</p>${ltBtns([['확인 문제 내줘', '이 내용으로 확인 문제 내줘'], ['선생님께 질문 넘기기', s, 'esc']])}` }; }
   if (w.k === 'tut' && w.t && /(단계|따라|미션|어떻게)/.test(s)) { const t = w.t;
     return { t: `「${t.title}」${lJ(t.title, '은', '는')} 영상을 보고 3단계를 따라 한 뒤 미션 결과물을 제출하면 됩니다.`, h: `<ol class="lt-ol">${(t.steps || []).slice(0, 3).map(x => `<li><b>${esc(typeof x === 'string' ? x : (x.t || x.title || ''))}</b></li>`).join('')}</ol>${t.mission ? `<p class="lt-mini">미션: ${esc(t.mission)}<br>미션은 '무엇을 했는지 · 결과 · 느낀 점'을 2~3줄로 쓰면 충분합니다.</p>` : ''}` }; }
   return { t: `좋은 질문입니다. 바로 답을 드리기보다 같이 풀어 보겠습니다.\n1) 지금 막힌 부분이 개념인지, 실습 방법인지 알려 주세요.\n2) 지금까지 시도한 것을 한 줄로 적어 주세요.\n${w.k === 'cls' && w.it ? `「${w.it.title}」 내용과 연결해 힌트를 드리겠습니다.` : '보고 있는 레슨을 열고 물어보시면 그 내용에 맞춰 답합니다.'}`, h: ltBtns([['선생님께 질문 넘기기', s, 'esc'], ['오늘 할 일', '오늘 뭐 하면 돼?']]) };
@@ -207,7 +209,7 @@ function ltRender() {
   if (!R) { R = document.createElement('div'); R.id = 'ltut'; R.className = 'lt'; document.body.appendChild(R); }
   const old = R.querySelector('#ltq'); const keep = old ? old.value : ''; const had = old && document.activeElement === old;
   const A = LR.me ? ltTodo() : []; const qa = ltQA().filter(x => !LT.q['seen' + x.id]).length; const badge = A.length + qa;
-  const left = Math.max(0, (LR.me ? (+C.daily || 20) : (+C.guestDaily || 10)) - ltUsed());
+  const left = Math.max(0, ltLim() - ltUsed());
   const sc = typeof LSAM === 'object' ? LSAM.screen() : { k: 'page', name: ltWhere().label, chips: ltChips().map(q => ({ l: q, q })) };
   const st = ltStatus(); const fresh = !LT.msgs.some(m => m.me); const nm = esc(C.name);
   if (LT.sk !== sc.k + '|' + sc.name) { LT.hint = LT.sk && !LT.open && sc.chips.length ? sc.name : ''; LT.sk = sc.k + '|' + sc.name; }
@@ -257,21 +259,22 @@ function ltOpen() {
   if (!LT.msgs.length || LT.who !== ((LR.me && LR.me.sid) || '')) { LT.who = (LR.me && LR.me.sid) || ''; const b = ltBrief(); LT.msgs = [{ t: b.t, h: b.h, sys: 1 }]; ltQA().forEach(x => { LT.q['seen' + x.id] = 1; }); }
   ltRender(); setTimeout(() => $('#ltq') && $('#ltq').focus(), 30);
 }
+const LT_STOP = { ai_month_quota: '이번 달 AI 사용량 소진', trial_ended: '무료 체험 종료', ai_level_off: 'AI 끄기 과제', plan_feature: '요금제 밖 기능', tutor_off: 'AI 튜터 꺼짐', policy: '기관 AI 정책' };
 async function ltAsk(q, opts = {}) {
   q = String(q || '').trim(); if (!q || LT.busy) return; const C = TCFG();
   try { const ch = typeof LSAM === 'object' ? LSAM.find(q) : null; if (ch) { const exact = ch.q === q; opts = { ro: !!ch.f && exact, ai: !ch.f && exact, extra: ch.x ? ch.x() : '', ...opts }; } } catch (e) { } /* 칩을 누른 정해진 안내만 기본 안내로 고정, 직접 쓴 질문은 Claude가 먼저(실패하면 같은 안내) */
   /* v24: 홈의 '내 AI 학습 비서' 화면에서 물으면 떠 있는 창을 열지 않고 화면 안에 답한다(lai-home.js) */
   const page = !LT.open && !!document.querySelector('.lai-th');
   if (page) { const w = (LR.me && LR.me.sid) || ''; if (LT.who !== w) { LT.who = w; LT.msgs = []; } } else if (!LT.open) ltOpen();
-  if (C.loginOnly && !LR.me) { LT.msgs.push({ me: 1, t: q }, { t: '로그인한 뒤에 쓸 수 있습니다.', h: ltLinks([{ h: '로그인하기', d: '', href: '#login' }]) }); ltRender(); return; }
-  const lim = LR.me ? (+C.daily || 20) : (+C.guestDaily || 10); if (ltUsed() >= lim) { LT.msgs.push({ me: 1, t: q }, { t: LR.me ? `오늘 질문 한도(${lim}회)를 모두 썼습니다. 내일 다시 이어 가거나, 급한 질문은 선생님께 넘겨 주세요.` : `방문자 질문 한도(${lim}회)를 모두 썼습니다. 무료 가입 후 로그인하면 계속 물어볼 수 있습니다.`, h: ltBtns([['선생님께 질문 넘기기', q, 'esc']]) }); ltRender(); return; }
+  if ((C.loginOnly || ltLim() === 0) && !LR.me) { LT.msgs.push({ me: 1, t: q }, { t: '로그인한 뒤에 쓸 수 있습니다.', h: ltLinks([{ h: '로그인하기', d: '', href: '#login' }]) }); ltRender(); return; }
+  const lim = ltLim(); if (ltUsed() >= lim) { LT.msgs.push({ me: 1, t: q }, { t: LR.me ? `오늘 질문 한도(${lim}회)를 모두 썼습니다. 내일 다시 이어 가거나, 급한 질문은 선생님께 넘겨 주세요.` : `방문자 질문 한도(${lim}회)를 모두 썼습니다. 무료 가입 후 로그인하면 계속 물어볼 수 있습니다.`, h: ltBtns([['선생님께 질문 넘기기', q, 'esc']]) }); ltRender(); return; }
   LT.msgs.push({ me: 1, t: q }); LT.msgs = LT.msgs.slice(-30); ltUse();
   if (opts.esc) { const r = ltEscalate(q); LT.msgs.push({ ...r, src: '질문 전달' }); ltRender(); return; }
   let r = ltRule(q) || ltRule('?'); if (r.esc) { const last = [...LT.msgs].reverse().find(m => m.me && !/(선생님|교수님|강사님).{0,10}(물어|질문|전달|넘겨)/.test(m.t)); r = ltEscalate(last ? last.t : q); LT.msgs.push({ ...r, src: '질문 전달' }); ltRender(); return; }
   const actionish = /(계획|스케줄|퀴즈|복습|문제\s*내|리포트|진도|현황|할\s*일|브리핑|마감|추천|대신|정답)/.test(q);
   if (!opts.ro && (opts.ai || !actionish) && (LR.me || !/(로그인|가입|접근\s*코드|비밀번호)/.test(q))) {
     LT.busy = true; ltRender();
-    try { const a = await ltAI(opts.extra ? q + '\n\n' + opts.extra : q); if (a && a.t) r = { t: a.t, h: LR.me && !(typeof lGuard === 'function' && lGuard()) ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: `Claude · ${String(a.src || '').replace('claude-', '')}` }; } catch (e) { r = e && e.code === 'ai_month_quota' ? { t: errMsg(e), h: LR.me ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: '이번 달 AI 사용량 소진' } /* v47 기관 월 AI 한도 */ : { ...r, src: `기본 안내 · AI 연결 오류(${String(errMsg(e, '')).slice(0, 40)})` }; }
+    try { const a = await ltAI(opts.extra ? q + '\n\n' + opts.extra : q); if (a && a.t) r = { t: a.t, h: LR.me && !(typeof lGuard === 'function' && lGuard()) ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: `Claude · ${String(a.src || '').replace('claude-', '')}` }; } catch (e) { r = e && LT_STOP[e.code] ? { t: errMsg(e), h: LR.me ? ltBtns([['선생님께 질문 넘기기', q, 'esc']]) : '', src: LT_STOP[e.code] } /* v47 기관 월 AI 한도 · QA6(v49) 체험 종료 · AI 끄기 과제 · 요금제 밖 · 튜터 꺼짐도 같은 방식(기본 안내로 덮지 않고 그 사유를 답으로) */ : { ...r, src: `기본 안내 · AI 연결 오류(${String(errMsg(e, '')).slice(0, 40)})` }; }
     LT.busy = false;
   }
   LT.msgs.push({ src: r.src || (LR.mode === 'live' ? '기본 안내' : '기본 안내 · 데모'), ...r }); LT.msgs = LT.msgs.slice(-30); ltRender();
@@ -314,7 +317,7 @@ document.addEventListener('keydown', e => { if (e.target.id === 'ltq' && e.key =
 /* ── 마이페이지: 'AI 튜터 코칭' 카드(맡긴 계획 · 선생님 답변 · 맡기기 버튼) ── */
 { const base = MYR.next; MYR.next = st => { let card = '';
   try { if (TCFG().enabled) { const T = ltTutor(); const A = ltTodo(); const qa = ltQA(); const C = TCFG(); const fb = st.courses.some(x => x.fb);
-    const line = A.length ? `오늘 할 일 ${A.length}가지 중 「${A[0].h}」부터 하면 좋겠습니다.` : (((SITE() || {}).tuts || []).some(t => t.yt) ? '오늘 급한 일은 없습니다. 다음 수준 튜토리얼에 도전해 볼까요?' : '오늘 급한 일은 없습니다. 지난 내용을 가볍게 복습해 볼까요?') /* v38 F5 V12 · L18: 실습 영상이 없는 기관은 영상 도전을 권하지 않는다 */;
+    const line = A.length ? `오늘 할 일 ${A.length}가지 중 「${A[0].h}」부터 하면 좋겠어요.` : (((SITE() || {}).tuts || []).some(t => t.yt) ? '오늘 급한 일은 없어요. 다음 수준 튜토리얼에 도전해 볼까요?' : '오늘 급한 일은 없어요. 지난 내용을 가볍게 복습해 볼까요?') /* v38 F5 V12 · L18: 실습 영상이 없는 기관은 영상 도전을 권하지 않는다 */;
     card = `<div class="mycard wide lt-coach" id="m-tutor"><div class="lt-ch"><span class="lt-orb" aria-hidden="true"></span><div><small>${esc(C.name)} · 내 AI 학습 비서</small><b>${esc(line)}</b><span>평균 진도 ${st.avg}% · 연속 ${st.streak}일 · 배지 ${LR.mine.badges.length}개${st.myType ? ' · 유형 ' + esc(st.myType) : ''}</span></div></div>
       <div class="lt-qs">${[['이번 주 계획 맡기기', '이번 주 학습 계획 짜줘'], ['복습 퀴즈', '복습 퀴즈 내줘'], ...(fb ? [['피드백 해설', '과제 피드백 해설해줘']] : []), ['내 학습 리포트', '내 학습 리포트 보여줘']].map(([l, q]) => `<button type="button" class="lt-chip" data-tact="mq" data-v="${esc(q)}">${ico('spark', 13)} ${esc(l)}</button>`).join('')}</div>
       ${T.plan.length ? `<div class="lt-saved"><div class="lt-sh"><b>맡긴 이번 주 계획</b><button type="button" class="lt-link" data-tact="plan-clear">지우기</button></div>${ltPlanHTML(T.plan, true)}</div>` : ''}

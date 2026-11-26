@@ -342,3 +342,7 @@ body.mk-nonav .lf{display:none}
 
 /* v48.1 휴대폰: 진열대 타일 메타 줄은 잘라 내지 않고 두 줄까지 보입니다 */
 .mk-rail .tb-tl{white-space:normal;text-overflow:clip;overflow:visible;display:block}
+/* QA49-7: 학습자 웹 홈(lhb-home 뒤)에 붙는 패스 선반은 홈 본문 폭(--lhb-max)에 맞춘다 — 폭 1100 · 1440에서 레일의 -16px 여백이 화면 밖으로 나가 가로 스크롤이 생기던 문제 */
+.lhb-home ~ .mk-home{box-sizing:border-box;max-width:var(--lhb-max,1168px);margin:0 auto 40px;padding:0 16px}
+/* QA49-7 휴대폰: 필터 버튼 누르는 자리 44px */
+@media (max-width:760px){.mk-fbtn{height:44px}}

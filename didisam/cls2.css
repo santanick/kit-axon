@@ -42,3 +42,7 @@
 .c2lbar .c2cchips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;min-width:0;flex:1 1 auto;scrollbar-width:none}
 .c2cchip{flex:0 0 auto;min-height:36px;padding:6px 14px;border-radius:999px;border:0;background:var(--surface2,#f2f4f3);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 .c2cchip.on{background:var(--ink);color:var(--surface,#fff)}.c2cchip.set{background:transparent;color:var(--pr-ink,#0a7a32);box-shadow:inset 0 0 0 1px var(--hair)}
+/* QA49-7: 「+ 카테고리 설정」 칩 글자는 글자 전용 토큰(다크 대비 3.3 → 4.5 이상)
+   휴대폰: 과정 카드 제목 링크 · 더 보기(⋯) 누르는 자리 44px */
+.c2cchip.set{color:var(--t-mag,#066B2A)}
+@media (max-width:760px){.d26-ttl>a[data-act="cls-open"],a.c2nm[data-act="cls-open"]{display:inline-flex;align-items:center;min-height:44px}.d26-more>summary{min-width:44px;min-height:44px;display:grid;place-items:center}}

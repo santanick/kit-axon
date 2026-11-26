@@ -80,3 +80,5 @@
 #main .cnb-ask:hover{box-shadow:0 0 0 1.5px var(--g,#16a34a)}
 #main .cnb-plus{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--g100,#eef6f0);color:var(--g-ink,#15803d);font-size:22px;font-weight:700;margin-bottom:8px}
 @media (max-width:640px){#main .cnb-safe{margin-left:0}#main .cnb-bar .sl-search{max-width:none}}
+/* QA49-7 휴대폰: 단계별 안내 접기 줄(Teams 카드 등)도 누르는 자리 44px */
+@media (max-width:760px){.cn-guide summary{min-height:44px}}

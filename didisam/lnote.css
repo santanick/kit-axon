@@ -475,3 +475,5 @@ html[data-theme=dark] .ln-bars2 rect{fill:#21332A}html[data-theme=dark] .ln-bars
 .ln-cands{padding:10px 12px;border-radius:14px;background:var(--gr50,#ECFDF3);border:1px solid var(--gr100,#D1FADF)}.ln-cands p{display:flex;gap:6px;margin:0 0 8px;font-size:13.5px;font-weight:700;color:var(--gr800,#066B2A)}
 .ln-cands .ln-tag{height:auto;min-height:44px;white-space:normal;text-align:left;line-height:1.35;padding:8px 14px}
 html[data-theme=dark] .ln-cands{background:rgba(0,197,59,.1);border-color:#21332A}html[data-theme=dark] .ln-cands p{color:#9FEDB8}
+/* QA49-7: 탭 · 태그의 개수 숫자는 정보이므로 보조 글자 대비 4.5:1(--t4 2.8 → --t3) */
+.ln-seg button sup,.ln-seg button em,.ln-tag em{color:var(--t3)}

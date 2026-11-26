@@ -550,3 +550,5 @@ body .l43-chip,body .da-chip,body .cmn-to{font-size:13px}
 }
 /* v43.7 Q1(Q2 몫 15): 현황 달력 아래 회색 일정 상자 안 도구줄(.bar2)은 흰 카드가 아닌 글 줄로 — 카드 안 카드 */
 #main .d26-evl .bar2{background:transparent!important;box-shadow:none!important;border:0}
+/* QA49-7: 체크박스 · 라디오 키보드 포커스 표시 — 위 링(box-shadow)을 다른 규칙(.ckl input{box-shadow:none!important} 등)이 지워 Teams 알림 종류 · 통합 센터 초대 동의 칸에서 포커스가 보이지 않던 문제. 지워지지 않는 외곽선으로 한 겹 더 */
+html body input:is([type=checkbox],[type=radio]):focus-visible{outline:2px solid var(--f43-acc,#00862D)!important;outline-offset:2px}
