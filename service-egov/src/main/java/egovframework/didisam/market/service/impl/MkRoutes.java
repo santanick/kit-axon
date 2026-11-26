@@ -283,7 +283,7 @@ final class MkRoutes {
                 ObjectNode R = DdMarketCalc.refundOf(L, today(), op);
                 ObjectNode refund = O().put("rule", "mk-refund-v2").put("mode", R.get("mode").asText()).put("cause", cause).put("paidUnused", R.get("paidUnused").asLong()).put("bonusUsed", R.get("bonusUsed").asLong()).put("penalty", R.get("penalty").asLong()).put("amount", R.get("amount").asLong());
                 refund.put("reason", str(get(b, "reason"), 300)).put("status", "requested").put("at", isoNow());
-                JsonNode TX0 = g(k, "tax"); JsonNode fix = truthy(TX0) && refund.get("amount").asLong() > 0 ? DdMarketCalc.taxFixOf(TX0, refund.get("amount").asLong(), today()) : F.nullNode();
+                JsonNode TX0 = g(k, "tax"); JsonNode fix = truthy(TX0) && refund.get("amount").asLong() > 0 ? DdMarketCalc.taxFixOf(TX0, refund.get("amount").asLong() + refund.get("penalty").asLong(), today()) /* policy v1.3 제46조의2 제3항: 환불 대상 전액(위약금 포함) 감액 */ : F.nullNode();
                 if (!fix.isNull()) { refund.set("taxFix", fix); ObjectNode T1 = ((ObjectNode) TX0).deepCopy(); ArrayNode fx = F.arrayNode(); for (JsonNode x : arr(get(TX0, "fixes"))) if (!"wait".equals(S(get(x, "status")))) fx.add(x); fx.add(fix); T1.set("fixes", fx);
                     db.x("update mk_contract set refund = $2, tax = $3::jsonb where id = $1", s(k, "id"), refund.toString(), T1.toString()); }
                 else db.x("update mk_contract set refund = $2 where id = $1", s(k, "id"), refund.toString()); S.log(s(k, "buyer_tid"), email(a), "market.refund", map("contract", s(k, "id"), "amount", refund.get("amount").asLong(), "cause", cause));

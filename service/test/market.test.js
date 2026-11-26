@@ -49,6 +49,17 @@ test('운영 서버: 콘텐츠 마켓', { skip: !process.env.DATABASE_URL }, asy
       assert.equal((await santa("select count(*)::int n from audit_log where action = 'market.ads'").catch(() => ({ rows: [{ n: 1 }] }))).rows[0].n > 0, true);
     } finally { await call('B', 'PUT', '/api/market/settings', { ads: true }); await santa("delete from mk_promo where id like 'mpr_zzzzzzzzzzz%'"); }
   });
+  await t.test('QA5(v49): 한도 부족이면 409 mk_balance + 운영자 알림 근거(market.short) — policy v1.3 제17조 제5항', async () => {
+    const { call, P } = R._t; const k = ((await call('B', 'GET', '/api/market/home')).j.myCredit || {}).contractId; assert.ok(k, '계약 있음');
+    const sh = ((await call('L2', 'GET', P('mk-shelf'))).j.shelf || []).flatMap(x => x.items || []); const used = new Set(); for (const it of sh) { const a = (await call('L2', 'GET', P(`mk-item?id=${it.id}`))).j.item; if (a && a.access === 'started') used.add(it.id); }
+    const pid = (sh.find(x => !used.has(x.id)) || {}).id; assert.ok(pid, '아직 시작하지 않은 과정');
+    const W = (await santa('select id, remain from mk_credit_wallet where contract_id = $1', [k])).rows; const ctl = (await call('B', 'PUT', `/api/market/contracts/${k}/controls`, { monthCap: 100000, preFrom: 100000 })).st; assert.equal(ctl, 200);
+    await santa('update mk_credit_wallet set remain = 0 where contract_id = $1', [k]);
+    try { const r = await call('L2', 'POST', P('mk-start'), { productId: pid, idem: 'qa5short' }); assert.deepEqual([r.st, r.j.error], [409, 'mk_balance']); assert.match(r.j.message, /담당 선생님께 알려 드렸어요/);
+      const { inTenant } = require('../server/db'); const n = await inTenant(pool, R.tids.B, async c => (await c.query("select count(*)::int n from audit_log where tenant_id = $1 and action = 'market.short'", [R.tids.B])).rows[0].n); assert.ok(n > 0, '운영자 알림 근거(market.short) 기록');
+      assert.equal((await call('L2', 'GET', P(`mk-item?id=${pid}`))).j.item.access, 'empty', '차감 없음 · 학습자 상태는 「시작할 수 없음」');
+    } finally { for (const w of W) await santa('update mk_credit_wallet set remain = $2 where id = $1', [w.id, w.remain]); await call('B', 'PUT', `/api/market/contracts/${k}/controls`, { monthCap: 100, preFrom: 46 }); }
+  });
   await t.test('마켓 표: 기관 역할 권한 없음 · 개인정보 열 없음 · 학습자는 해시만', async () => {
     const g = (await pool.query("select count(*)::int n from information_schema.role_table_grants where grantee = 'didisam_tenant' and table_name like 'mk\\_%'")).rows[0].n; assert.equal(g, 0);
     assert.equal((await pool.query("select count(*)::int n from pg_class where relname like 'mk\\_%' and relkind = 'r' and not (relrowsecurity and relforcerowsecurity)")).rows[0].n, 0); /* 모든 마켓 표 RLS FORCE */

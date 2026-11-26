@@ -374,6 +374,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
                 SX X; try { X = T(() -> { if (!B(party(tid), "pilot")) throw E(403, "mk_learner_off"); ObjectNode k0 = liveContract(tid, today()); if (k0 != null) db.q("select id from mk_contract where id = $1 for update", s(k0, "id"));
                     SX x = startOf(tid, sh, pid, "start"); Object[] er = ACCESS_ERR.get(x.access); if (er != null) { DdException e = E((Integer) er[0], (String) er[1]); if ("pre_asked".equals(x.access)) e.extra(map("access", "pre_asked")); throw e; } return x; }); }
                 catch (DuplicateKeyException e) { X = new SX("started"); }
+                catch (DdException e) { if ("mk_balance".equals(e.getCode())) log(tid, "system", "market.short", map("product", pid)); throw e; } /* policy v1.3 제17조 제5항: 한도 부족 운영자 알림 근거 */
                 if ("charged".equals(X.access)) { log(tid, "learner", "market.use", map("product", pid, "credits", X.cr)); SX fx = X; T(() -> { WS W = walletState(fx.k); if (!W.alert.isEmpty()) log(tid, "system", "market.alert", map("contract", s(fx.k, "id"), "alert", W.alert, "balance", W.balance)); return null; }); }
                 ObjectNode o = O().put("ok", true).put("courseRef", "#mk/" + pid).put("charged", "charged".equals(X.access)); if (X.cr != null && X.cr != 0 && "charged".equals(X.access)) o.put("credits", X.cr); return o; }
             case "POST mk-pre": { JsonNode b = DdWeb.readBody(body, 32 * 1024); String pid = str(get(b, "productId"), 20);
