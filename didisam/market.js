@@ -188,7 +188,9 @@
       ctrl: r.control || r.controls || c.controls || {}, pre: ((LV.d.pre && LV.d.pre.items) || []).map(p => ({ id: p.id, sid: p.sid || (p.learner && p.learner.sid) || '', dept: p.dept || (p.learner && p.learner.dept) || '', title: p.title || (p.product && p.product.title) || '', credits: +p.credits || 0, at: p.at || '', st: p.status || p.st || 'asked' })), restoreReq: [] }; }
 
   /* ── 상태 읽기(시연 · 운영 공통 모양) ── */
-  const prods = () => LIVEON() ? ((LV.d.prods && LV.d.prods.items) || (LV.d.home && LV.d.home.recommended) || []).map(mProd) : PRODS;
+  /* 광고(추천 진열) 노출: 기관이 끄면 「광고」 슬롯을 빼고 일반 추천 순서로 보인다(서버도 같은 기관 응답에서 뺀다) */
+  const adsOn = () => LIVEON() ? !(LV.d.home && LV.d.home.ads === false) : !(S.org && S.org.mk && S.org.mk.ads === false);
+  const prods = () => { const L = LIVEON() ? ((LV.d.prods && LV.d.prods.items) || (LV.d.home && LV.d.home.recommended) || []).map(mProd) : PRODS; return adsOn() ? L : L.map(p => p.ad ? { ...p, ad: false } : p); };
   const cols = () => LIVEON() ? ((LV.d.home && LV.d.home.collections) || []).map(c => ({ id: c.id, kind: c.kind, title: c.title, avgCredits: +c.avgCredits || 45, count: +c.count || 0, img: c.cover || 'cls-01', note: '' })) : COLS;
   const contract = () => LIVEON() ? liveCon() : con();
   const credOf = p => p.credits != null && !isNaN(p.credits) ? +p.credits : MC('courseCredits')(p.listPrice);
@@ -287,7 +289,9 @@
   function vCtrl() { const c = contract(); if (!c) return noCon(); const k = c.ctrl || {}; const ro = !(owner() || (santa() && LIVEON()));
     const avg = avgOf(c.cols || k.allowCols || []); const rec = avg * 2;
     const groups = (S.groups || []).map(g => g.name).filter(Boolean).slice(0, 20); const allowG = k.allowGroups || [];
-    return `<div class="card"><div class="ch"><b>기관 통제</b><small>${ro ? '정운영자만 바꿀 수 있습니다' : '다음 차감부터 적용합니다. 이미 차감된 수강은 바뀌지 않습니다.'}</small></div><form class="mk-calc" id="mkCtrl">
+    const adro = !owner(); const adOn = adsOn();
+    const adCard = `<div class="card" data-mk="ads"><div class="ch"><b>광고(추천 진열) 노출</b><small>${adro ? '정운영자만 바꿀 수 있습니다' : '바꾸면 바로 적용합니다'}</small></div><label class="mk-ckl" style="margin:0 0 4px"><input type="checkbox" role="switch" data-act="mk-ads" aria-checked="${adOn}" ${adOn ? 'checked' : ''} ${adro ? 'disabled' : ''}> 광고(추천 진열) ${adOn ? '노출 중' : '끔'}</label><p class="mk-sub">CP가 비용을 내고 노출하는 추천 상품입니다. 끄면 우리 기관 스튜디오와 학습자 앱에 보이지 않습니다.</p></div>`;
+    return adCard + `<div class="card"><div class="ch"><b>기관 통제</b><small>${ro ? '정운영자만 바꿀 수 있습니다' : '다음 차감부터 적용합니다. 이미 차감된 수강은 바뀌지 않습니다.'}</small></div><form class="mk-calc" id="mkCtrl">
       <label class="mk-field"><span>1인 월 상한(크레딧, 권장 ${rec} = 평균 ${avg} × 2)</span><input class="mk-inp" name="monthCap" inputmode="numeric" value="${k.monthCap || ''}" ${ro ? 'disabled' : ''}></label>
       <div class="mk-field"><span>허용 컬렉션</span><div class="chips">${cols().map(x => `<label class="chip ${(k.allowCols || []).includes(x.id) ? 'on' : ''}"><input type="checkbox" name="allowCols" value="${esc(x.id)}" ${(k.allowCols || []).includes(x.id) ? 'checked' : ''} ${ro ? 'disabled' : ''}> ${esc(x.title)}</label>`).join('')}</div></div>
       <div class="mk-field"><span>허용 학과 · 소속(비우면 전체)</span><div class="chips">${groups.length ? groups.map(g => `<label class="chip ${allowG.includes(g) ? 'on' : ''}"><input type="checkbox" name="allowGroups" value="${esc(g)}" ${allowG.includes(g) ? 'checked' : ''} ${ro ? 'disabled' : ''}> ${esc(g)}</label>`).join('') : '<small class="mk-sub">등록된 소속이 없습니다. 전체 학습자가 이용합니다.</small>'}</div></div>
@@ -370,6 +374,9 @@
       [{ id: 'no', label: '취소' }, { id: 'ok', label: '요청하기', kind: 'pri', run: w => { const reason = fv(w, 'r'); if (!reason) { toast('사유를 입력하십시오.', 'warn'); return false; }
         if (LIVEON()) { liveDo('POST', `/api/market/contracts/${encodeURIComponent(c.id)}/refund`, { reason, idem: idem() }, () => toast('해지 · 환불을 요청했습니다.', 'ok')).catch(() => { }); return; }
         c.refund = { rule: 'mk-refund-v2', cause: 'buyer', ...R, reason, status: 'requested', at: new Date().toISOString() }; save(); toast('해지 · 환불을 요청했습니다.', 'ok'); render(); } }]); return mw; };
+  ACT['mk-ads'] = el => { if (!owner()) { render(); return toast('광고 노출은 정운영자만 바꿀 수 있습니다.', 'warn'); } const on = !!el.checked;
+    if (LIVEON()) { api('PUT', '/api/market/settings', { ads: on }).then(() => { LV.key = ''; toast(on ? '광고(추천 진열)를 다시 노출합니다.' : '광고(추천 진열)를 껐습니다.'); render(); }).catch(e => { toast(errOf(e), 'warn'); render(); }); return; }
+    S.org.mk = { ...(S.org.mk || {}), ads: on }; if (typeof logAudit === 'function') logAudit(`콘텐츠 마켓: 광고(추천 진열) 노출 ${on ? '켬' : '끔'}`); save(); toast(on ? '광고(추천 진열)를 다시 노출합니다.' : '광고(추천 진열)를 껐습니다.'); render(); };
   ACT['mk-x2-close'] = () => { UI.mkX2Closed = 1; render(); };
   ACT['mk-x2-learn'] = () => { if (typeof go === 'function') { toast('학습자 공지 화면에서 패스 과정을 안내하십시오. 남은 이용 한도는 만료일에 소멸합니다.'); } };
   ACT['mk-renew'] = () => { const c = cur(); if (!c) return; const x = calcIn(); x.budget = c.amount || 30000000; x.people = null; x.bundle = (c.bonusBp || 0) >= 700; UI.market = 'build'; render(); toast('갱신 견적을 같은 조건으로 계산했습니다. 남은 크레딧은 1년 이월됩니다.'); };

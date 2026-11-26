@@ -60,6 +60,14 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
       ok(/25,725크레딧/.test(await T('.kpis')), '1440 A4 복원 후 잔액 25,725');
       await tab('ctrl'); await p.fill('#mkCtrl [name=monthCap]', '120'); await p.click('[data-act="mk-ctrl-save"]'); await p.waitForTimeout(60); ok(/다음 차감부터/.test(await T('#modal')), '1440 기관 통제 저장 안내'); await p.click('#modal [data-mact="ok"]'); await p.waitForTimeout(80);
       ok(await p.evaluate(() => S.market.credit[0].ctrl.monthCap === 120), '1440 기관 통제 월 상한 저장');
+      /* 광고(추천 진열) 노출 선택(대표님 지시): 정운영자만 · 끄면 광고 0건 · 켜면 「광고」 배지 */
+      { const sw = '[data-mk="ads"] [data-act="mk-ads"]'; ok(/CP가 비용을 내고 노출하는 추천 상품입니다\. 끄면 우리 기관 스튜디오와 학습자 앱에 보이지 않습니다\./.test(await T('[data-mk="ads"]')) && !(await p.evaluate(s => document.querySelector(s).disabled, sw)), '1440 광고 노출 스위치(정운영자) · 안내 문구');
+        await p.click(sw); await p.waitForTimeout(80); ok(await p.evaluate(() => S.org.mk.ads === false), '1440 광고 끔 저장');
+        await tab('home'); ok(await p.evaluate(() => document.querySelectorAll('.mk-ad').length) === 0 && !/광고 안내/.test(await T('#main')), '1440 광고 끈 기관: A1 광고 0건');
+        for (const r of ['sub', 'teacher']) { const dis = await p.evaluate(r => { S.me.role = r; UI.market = 'ctrl'; go('market'); render(); const el = document.querySelector('[data-mk="ads"] [data-act="mk-ads"]'); const v = !el || el.disabled; S.me.role = 'owner'; return v; }, r); ok(dis, `1440 광고 노출: ${r === 'sub' ? '부운영자' : '교수자'}는 바꿀 수 없음`); }
+        await tab('ctrl'); await p.click(sw); await p.waitForTimeout(80); await tab('home'); ok(await p.evaluate(() => S.org.mk.ads === true && [...document.querySelectorAll('.mk-pc .mk-ad')].map(x => x.textContent).join() === '광고'), '1440 광고 켠 기관: 「광고」 배지');
+        const ao = await p.evaluate(() => { UI.mkops = 'promo'; go('mkops'); render(); const a = (document.querySelector('#main .kpis') || {}).innerText || ''; UI.mkops = 'rev'; render(); const b = (document.querySelector('[data-mk="adorgs"]') || {}).innerText || ''; UI.mkcp = 'promo'; go('mkcp'); render(); const c = (document.querySelector('[data-mk="adorgs"]') || {}).innerText || ''; return [a, b, c]; });
+        ok(/광고 노출 기관/.test(ao[0]) && /노출 기관 \d+곳/.test(ao[1]) && /노출 기관 \d+곳/.test(ao[2]), `1440 노출 기관 수 A8-P · A9-V · A7-P ${JSON.stringify(ao.map(x => x.slice(0, 40)))}`); }
       await tab('approve'); const n0 = await p.evaluate(() => document.querySelectorAll('[data-act="mk-ok"][data-ok="1"]').length); await p.click('[data-act="mk-ok"][data-ok="1"]'); await p.waitForTimeout(80);
       const n1 = await p.evaluate(() => document.querySelectorAll('[data-act="mk-ok"][data-ok="1"]').length); ok(n0 === 2 && n1 === 1, `1440 사전 승인 처리 ${n0} → ${n1}`);
       /* A10 규칙 엔진 */
@@ -113,6 +121,9 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
         const cs = getComputedStyle(sp); const f = L(rgb(cs.color)), g = L(rgb(cs.backgroundColor)); sp.remove(); return Math.round((Math.max(f, g) + 0.05) / (Math.min(f, g) + 0.05) * 10) / 10; }, th);
         ok(cr >= 4.5, `오리지널 배지 대비 ${th} ${cr}:1`); } }
     ok(!errs.length, `학습자 pageerror 없음 ${errs.slice(0, 2).join(' / ')}`); await ctx.close(); }
+  { const { ctx, p, errs } = await openL('&mk=1&mkads=0'); await go(p, '#home'); const sh = await p.evaluate(() => (document.querySelector('[data-mk="pass-shelf"]') || {}).innerText || '');
+    ok(/우리 학교 패스/.test(sh) && !(await p.evaluate(() => document.querySelectorAll('.mk-adl,.mk-ad').length)) && !/광고 안내/.test(sh), '광고 끈 기관: 학습자 L1 진열대 광고 0건(일반 진열)');
+    await go(p, '#mk'); ok(!(await p.evaluate(() => [...document.querySelectorAll('.mk-list .t')].some(x => /^광고/.test(x.textContent)))), '광고 끈 기관: L2 광고 표시 0건'); ok(!errs.length, '학습자(광고 끔) pageerror 없음'); await ctx.close(); }
   { const { ctx, p, errs } = await openL(''); await go(p, '#home'); ok(!(await p.evaluate(() => !!document.querySelector('[data-mk="pass-shelf"]'))), '시범 아님(?mk 없음): 진열대 없음'); ok(!errs.length, '학습자(꺼짐) pageerror 없음'); await ctx.close(); }
 
   await browser.close(); srv.close();

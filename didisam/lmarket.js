@@ -37,7 +37,10 @@
   const papi = (m, p, b) => api(m, `/api/pub/${encodeURIComponent(LR.tid)}/${p}`, b);
   function pull(key, path, set) { if (LV.busy[key]) return; LV.busy[key] = 1; papi('GET', path).then(r => { set(r); LV.err = ''; }).catch(e => { LV.err = (e && e.message) || 'err'; set(null); }).finally(() => { delete LV.busy[key]; try { lrender(); } catch (e) { } }); }
   const shelfL = () => { if (!live()) return pub(); if (LV.shelf === null && !LV.busy.shelf) pull('shelf', 'mk-shelf', r => { LV.shelf = r || { on: false, shelf: [] }; }); return LV.shelf && LV.shelf.on ? { ...pub(), ...LV.shelf } : null; };
-  const allItems = P => [].concat(...((P && P.shelf) || []).map(c => (c.items || []).map(it => ({ ...it, colId: c.colId, colTitle: c.title }))));
+  /* 광고(추천 진열) 노출: 기관이 끄면(site mk.ads === false · 시연 ?mkads=0) 광고 슬롯을 빼고 일반 순서로 보인다 — 운영은 서버가 응답에서 뺀다 */
+  const adsOn = () => { const s = site(); return !(s && s.mk && s.mk.ads === false) && Q0.get('mkads') !== '0'; };
+  const noAds = items => { const L = (items || []).map(it => it.ad ? { ...it, ad: false, _ad: 1 } : it); return [...L.filter(x => !x._ad), ...L.filter(x => x._ad)]; };
+  const allItems = P => [].concat(...((P && P.shelf) || []).map(c => (adsOn() ? (c.items || []) : noAds(c.items)).map(it => ({ ...it, colId: c.colId, colTitle: c.title }))));
   const findItem = id => { const P = shelfL(); const it = allItems(P).find(x => x.id === id); if (live()) { const L = LV.item[id]; if (L === undefined && !LV.busy['i' + id]) pull('i' + id, 'mk-item?id=' + encodeURIComponent(id), r => { LV.item[id] = (r && (r.item || r)) || null; }); return L ? { ...(it || {}), ...L } : it; } return it; };
 
   /* ── 접근 상태(spec 8-5 access): started · credit · pre · pre_asked · cap · empty · out ── */
