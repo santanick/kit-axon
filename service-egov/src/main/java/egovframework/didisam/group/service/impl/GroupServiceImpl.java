@@ -159,7 +159,7 @@ public class GroupServiceImpl extends EgovAbstractServiceImpl implements GroupSe
 
     // ── 권한 ───────────────────────────────────────────────
     boolean isSanta(Map<String, Object> a) { return a != null && ai.isSanta(a); }
-    void lim(String key, int max, long win) throws Exception { try { rl.limit(key, max, win); } catch (DdException e) { if (e.getStatus() == 429) throw E("grp_limit"); throw e; } }
+    void lim(String key, int max, long win) throws Exception { try { rl.limit(key, max, win); } catch (DdException e) { if (e.getStatus() == 429) throw E("grp_limit"); throw e; } catch (org.egovframe.rte.fdl.cmmn.exception.EgovBizException e) { if (String.valueOf(e.getMessageKey()).contains("429")) throw E("grp_limit"); throw e; } }
     Map<String, Object> need(HttpServletRequest req) throws Exception { Map<String, Object> a = auth.need(req); scopeSet(tid(a), "", false); return a; }
     List<String> rolesOf(Map<String, Object> a, JsonNode g0) throws Exception {
         List<String> rs = new ArrayList<>(); for (ObjectNode r : T(() -> db.q("select role from grp_staff where group_id = $1 and user_id = $2", s(g0, "id"), uid(a)))) rs.add(s(r, "role"));
