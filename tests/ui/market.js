@@ -49,6 +49,8 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
       await p.click('#modal [data-mact="ok"]'); await p.waitForTimeout(120); ok(await p.evaluate(() => { const q = S.market.quotes[0]; return q.terms && q.terms.ver === 'mk-credit-v1' && q.buyerKind === 'general'; }), '1440 C2 동의 기록(terms_ver)');
       ok(/세금계산서 발행 대기/.test(await T('.mk')), '1440 구매 확정 → 세금계산서 발행 대기');
       await tab('credit'); const a4 = await T('.mk'); ok(/25,680크레딧/.test(a4) && /유효 · 이월/.test(a4) && /2028-02-29/.test(a4) && /2029-02-28/.test(a4), '1440 A4 KPI 잔액 · 유효(T1)');
+      ok(/상태/.test(await T('#main table')) && /이용 가능/.test(await T('#main table')), '1440 C3-5 로트 상태 칸');
+      await p.click('[data-act="mk-refund"]'); await p.waitForTimeout(80); { const m = await T('#modal'); ok(/예상 환불액 [\d,]+원/.test(m) && /남은 유료 크레딧 환불/.test(m) && /크레딧 이용 조건/.test(m), '1440 C3-5 해지 · 환불 미리 보기(refundOf)'); } await p.click('#modal [data-mact="no"]'); await p.waitForTimeout(60);
       const rb = await p.evaluate(() => ({ r1: !!document.querySelector('[data-use="mu_d4"] [data-act="mk-restore"]'), r2: !!document.querySelector('[data-use="mu_d6"] [data-act="mk-dispute"]') }));
       ok(rb.r1 && rb.r2, `1440 A4 복원 버튼(R1 120시간 · 8%) · 기한 지남 이의 신청(R2 170시간) ${JSON.stringify(rb)}`);
       await p.click('[data-use="mu_d4"] [data-act="mk-restore"]'); await p.fill('#modal [name=r]', '대상 착오'); await p.click('#modal [data-mact="ok"]'); await p.waitForTimeout(120);
