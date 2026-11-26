@@ -138,6 +138,17 @@ public class OAuthServiceImpl extends EgovAbstractServiceImpl implements OAuthSe
         go(res, "ok");
     }
 
+    /** 13차 Entra 운영자 SSO 마무리(Node teams opCallback 뒤쪽과 같음): 국외 차단 → 2단계 → 세션 · 감사. 반환값 = #oauth= 해시 */
+    public String msFinish(HttpServletRequest req, HttpServletResponse res, String uid, String tid, String email) throws Exception {
+        try { rec.geoCheck(req, tid, email); } catch (DdException e) { return "err:geo_blocked"; }
+        if (!mfa.off) { Map<String, Object> r; try { r = mfa.start(res, uid, tid, email, "microsoft"); } catch (org.egovframe.rte.fdl.cmmn.exception.EgovBizException e) { return "err:" + (String.valueOf(e.getMessageKey()).startsWith("dd.503.mfa_mail") ? "mfa_mail" : "provider"); } return "mfa-" + r.get("mfa"); }
+        mapper.updateLastLogin(uid); newSession(res, uid, tid);
+        try { tx.audit(tid, email, "login", DdWeb.JSON.createObjectNode().put("via", "microsoft").toString()); } catch (Exception ignore) { }
+        return "ok";
+    }
+    /** 13차 운영자 계정에 Microsoft 연결(user_oauth, 중복이면 false) */
+    public boolean msLink(String sub, String uid) { try { mapper.insertOAuthStrict("microsoft", sub, uid); return true; } catch (org.springframework.dao.DuplicateKeyException e) { return false; } }
+    public Map<String, Object> msUser(String sub) { return mapper.selectOAuthUser("microsoft", sub); }
     private void newSession(HttpServletResponse res, String uid, String tid) throws Exception {
         org.springframework.web.context.request.RequestAttributes ra = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
         sessions.create(ra instanceof org.springframework.web.context.request.ServletRequestAttributes sa ? sa.getRequest() : null, res, uid, tid); /* 가디언 4차 세션 정책 */

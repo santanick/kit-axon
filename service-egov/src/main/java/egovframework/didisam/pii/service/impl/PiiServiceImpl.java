@@ -119,7 +119,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
     record Sns(String prov, String h) {}
     private Sns snsSub(JsonNode b, HttpServletRequest req, String tid) throws Exception {
         JsonNode oa = get(b, "oauth");
-        if (oa != null && oa.isBoolean() && oa.booleanValue()) { JsonNode o = req == null ? null : tickets.snsGet(req, tid); if (o == null || !PROVIDERS.contains(o.path("p").asText())) throw new DdException(400, "소셜 로그인 정보가 만료되었어요. 다시 시도해 주세요.", "oauth_pending"); return new Sns(o.path("p").asText(), o.path("h").asText()); }
+        if (oa != null && oa.isBoolean() && oa.booleanValue()) { JsonNode o = req == null ? null : tickets.snsGet(req, tid); if (o == null || !(PROVIDERS.contains(o.path("p").asText()) || "microsoft".equals(o.path("p").asText()))) throw new DdException(400, "소셜 로그인 정보가 만료되었어요. 다시 시도해 주세요.", "oauth_pending"); return new Sns(o.path("p").asText(), o.path("h").asText()); }
         String prov = sOr(get(b, "provider")); if (!PROVIDERS.contains(prov)) throw processException("dd.400.provider");
         /* 운영: const sub = await verifyOAuth(prov, b.token) */
         String ds = sOr(get(b, "dev_sub"));
@@ -192,7 +192,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
                 stu = trim(sOr(get(b, "student_no"))); dept = cut(trim(sOr(get(b, "dept"))), 40);
                 if (!STU_RE.matcher(stu).matches()) throw processException("dd.400.student_no");
                 if (dept.isEmpty()) throw processException("dd.400.dept");
-                if ("sns".equals(via)) { /* QA7 대학 소셜 가입: 제공자 해시 + 학번 · 학과만(이메일 · 비밀번호 없음) */ Sns s = snsSub(b, req, tid); if (!includes(org.social(), t(s.prov()))) throw processException("dd.403.provider"); login = s.prov(); sub = s.h(); noPw[0] = true; }
+                if ("sns".equals(via)) { /* QA7 대학 소셜 가입: 제공자 해시 + 학번 · 학과만(이메일 · 비밀번호 없음) */ Sns s = snsSub(b, req, tid); if (!"microsoft".equals(s.prov()) && !includes(org.social(), t(s.prov()))) throw processException("dd.403.provider"); login = s.prov(); sub = s.h(); noPw[0] = true; }
                 else { if (sOr(get(b, "pw")).length() < 8) throw processException("dd.400.pw"); if (r.L(() -> strictPw(tid)) && !egovframework.didisam.cmm.DdModule.pwRule(sOr(get(b, "pw")))) throw processException("dd.400.pw_rule");
                     sub = bidx(tid, "univ", stu); login = "univ"; }
                 if (nick.isEmpty()) nick = slice(stu, -4, stu.length()) + "학번";
@@ -200,7 +200,7 @@ public class PiiServiceImpl extends EgovAbstractServiceImpl implements PiiServic
                 email = trim(sOr(get(b, "email"))).toLowerCase(Locale.ROOT); if (!MAIL_RE.matcher(email).matches()) throw processException("dd.400.email");
                 String eb = bidx(tid, "email", email); r.P(() -> { useOtp(tid, eb, "signup", get(b, "code")); return null; });
             } else if ("sns".equals(via)) {
-                Sns s = snsSub(b, req, tid); if (!includes(org.social(), t(s.prov()))) throw processException("dd.403.provider");
+                Sns s = snsSub(b, req, tid); if (!"microsoft".equals(s.prov()) && !includes(org.social(), t(s.prov()))) throw processException("dd.403.provider");
                 login = s.prov(); sub = s.h();
             } else throw processException("dd.400.via");
             if (!NICK_RE.matcher(nick).matches()) throw processException("dd.400.nickname");
