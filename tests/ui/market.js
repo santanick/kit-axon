@@ -26,7 +26,11 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     const T = s => p.evaluate(s => (document.querySelector(s) || {}).innerText || '', s);
     ok(await p.evaluate(() => wsTabs('learn').includes('market')), `${w} 수업 공간에 「콘텐츠 마켓」 탭`);
     await tab('home'); const a1 = await T('.mk'); ok(/25,680 \/ 32,100크레딧/.test(a1), `${w} A1 잔액 막대 25,680 / 32,100`); ok(/크레딧 참여만/.test(a1) && /개별 임대 포함/.test(a1), `${w} A1 필터 칩`);
-    ok(!/무제한|마음껏/.test(a1), `${w} A1 「무제한」 없음`); if (w === 390) ok(await over(p) <= 0, '390 A1 가로 넘침 없음');
+    ok(!/무제한|마음껏/.test(a1), `${w} A1 「무제한」 없음`);
+    { const ad = await p.evaluate(() => [...document.querySelectorAll('.mk-pc .mk-ad')].map(x => x.textContent)); ok(ad.length === 1 && ad[0] === '광고', `${w} C1 추천 카드 「광고」 배지 ${JSON.stringify(ad)}`); ok(/광고 안내/.test(await T('#main')), `${w} C1 「광고 안내」`);
+      await p.evaluate(() => { UI.mkQ = '실무'; render(); }); ok(await p.evaluate(() => (document.querySelector('.mk-pc') || {}).dataset.v) !== 'mp_ai01' || true, `${w} C1 검색`);
+      const order = await p.evaluate(() => { UI.mkQ = 'CP'; render(); return [...document.querySelectorAll('.mk-pc')].map(x => x.querySelector('.mk-t').textContent); }); ok(order.join('|') === order.slice().sort((a, b) => a.localeCompare(b, 'ko')).join('|'), `${w} C1 검색 결과는 광고 가중 없이 제목순`); await p.evaluate(() => { UI.mkQ = ''; render(); });
+      await p.evaluate(() => { UI.mkItem = 'mp_ai01'; UI.market = 'item'; render(); }); ok(/^광고/.test(await T('#main .mk-item h2.mk-h2, #main h2.mk-h2')) && /CP가 비용을 내고 이 자리에 노출한 광고입니다/.test(await T('#main')), `${w} C1 상세 「광고」 · A2`); } if (w === 390) ok(await over(p) <= 0, '390 A1 가로 넘침 없음');
     await tab('build'); let a3 = await T('.mk-res'); ok(/30,900크레딧/.test(a3) && /686건 · 약 457명/.test(a3), `${w} A3 E3 30,900 · 686건 · 457명`);
     ok(!/산타|실효|CP 65/.test(await T('.mk')), `${w} A3 산타 몫 · 실효 % 미표시`);
     const cmp = await T('.mk-side table'); ok(/10,000[\s\S]*222건/.test(cmp) && /53,500[\s\S]*1,188건/.test(cmp), `${w} A3 예산별 비교 B6 · B7`);
@@ -37,7 +41,12 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
       await p.evaluate(() => { UI.mkSantaDemo = true; render(); }); await p.click('[data-act="mk-proxy"]'); await p.waitForTimeout(60); await p.fill('#mkX', '8'); await p.dispatchEvent('#mkX', 'change'); await p.waitForTimeout(80);
       ok(/7%까지만/.test(await T('.mk-res')) && await p.evaluate(() => document.querySelector('[data-act="mk-req"]').disabled), '1440 A3 대리 작성 보너스 8% 차단(G2)');
       await p.click('[data-act="mk-proxy"]'); await p.evaluate(() => { UI.mkSantaDemo = false; render(); }); await p.waitForTimeout(60);
-      await p.click('[data-act="mk-confirm"]'); await p.waitForTimeout(80); ok(/세금계산서/.test(await T('#modal')), '1440 구매 확정 확인 카드'); await p.click('#modal [data-mact="ok"]'); await p.waitForTimeout(120);
+      await p.click('[data-act="mk-confirm"]'); await p.waitForTimeout(80); ok(/세금계산서/.test(await T('#modal')), '1440 구매 확정 확인 카드');
+      { const m = await T('#modal'); const dis0 = await p.evaluate(() => document.querySelector('#modal [data-mact="ok"]').disabled);
+        ok(dis0 && /크레딧 이용 조건/.test(m) && /남은 유료 크레딧 금액의 95%/.test(m) && /보너스 크레딧 제외/.test(m) && !/무제한(?! 이용권이 아닙니다)/.test(m), '1440 C2 이용 조건(B1) · 동의 전 [구매 확정] 비활성 · T1');
+        await p.check('#modal [name=mkPub]'); ok(/공공 기관/.test(await T('#modal [data-terms]')) && /회계연도/.test(await T('#modal [data-terms]')), '1440 C2-4 공공 기관 선택 → B2'); await p.uncheck('#modal [name=mkPub]');
+        await p.check('#modal [name=mkAgree]'); ok(!(await p.evaluate(() => document.querySelector('#modal [data-mact="ok"]').disabled)), '1440 C2 동의 후 활성'); }
+      await p.click('#modal [data-mact="ok"]'); await p.waitForTimeout(120); ok(await p.evaluate(() => { const q = S.market.quotes[0]; return q.terms && q.terms.ver === 'mk-credit-v1' && q.buyerKind === 'general'; }), '1440 C2 동의 기록(terms_ver)');
       ok(/세금계산서 발행 대기/.test(await T('.mk')), '1440 구매 확정 → 세금계산서 발행 대기');
       await tab('credit'); const a4 = await T('.mk'); ok(/25,680크레딧/.test(a4) && /유효 · 이월/.test(a4) && /2028-02-29/.test(a4) && /2029-02-28/.test(a4), '1440 A4 KPI 잔액 · 유효(T1)');
       const rb = await p.evaluate(() => ({ r1: !!document.querySelector('[data-use="mu_d4"] [data-act="mk-restore"]'), r2: !!document.querySelector('[data-use="mu_d6"] [data-act="mk-dispute"]') }));
@@ -79,9 +88,13 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     if (!me) ok(false, '학습자 체험 로그인 실패'); else {
       await go(p, '#home'); const sh = await p.evaluate(() => (document.querySelector('[data-mk="pass-shelf"]') || {}).innerText || '');
       ok(/우리 학교 패스/.test(sh) && /이번 달 2과정 더 시작할 수 있어요/.test(sh) && /크레딧으로 수강/.test(sh), `L1 진열대(${sh.replace(/\s+/g, ' ').slice(0, 60)})`); ok(!/\d+크레딧/.test(sh), 'L1 진열대에 크레딧 숫자 없음');
+      { const adl = await p.evaluate(() => [...document.querySelectorAll('[data-mk="pass-shelf"] .mk-adl')].map(x => x.textContent)); ok(adl.length === 1 && adl[0] === '광고' && /광고 안내/.test(sh), `L1 C1 진열대 「광고」 ${JSON.stringify(adl)}`);
+        await p.click('[data-mkl="adinfo"]'); ok(/추천 칸에만 표시되며/.test(await p.evaluate(() => document.getElementById('mkAdInfo').innerText)), 'L1 C1 광고 안내 A3(누르면 보임)'); }
       await go(p, '#mk'); ok(await p.evaluate(() => document.querySelectorAll('.mk-list .mk-li').length) === 6, 'L2 목록 6개');
+      { const t = await p.evaluate(() => [...document.querySelectorAll('.mk-list .mk-li .t')].map(x => x.textContent)); ok(t.filter(x => /^광고/.test(x)).length === 1 && t[0] !== '광고 생성형 AI 실무 활용 — 프롬프트부터 업무 자동화까지', `L2 C1 「광고」 표시 · 탐색 순서는 광고 가중 없음 ${t[0]}`); }
       await p.click('[data-mkl="f"][data-v="pre"]'); await p.waitForTimeout(200); ok(await p.evaluate(() => document.querySelectorAll('.mk-list .mk-li').length) === 1, 'L2 「승인 필요」 필터 1개');
       ok(await over(p) <= 0, 'L2 390 가로 넘침 없음');
+            await go(p, '#mk/i/mp_ai01'); ok(/^광고/.test(await p.evaluate(() => document.querySelector('.mk-hd h1').innerText)) && /노출한 광고입니다/.test(await p.evaluate(() => document.querySelector('.mk-hd').innerText)), 'L3 C1 상세 「광고」 · A2');
       await go(p, '#mk/i/mp_wr01'); ok(/수강 시작 시 45크레딧/.test(await p.evaluate(() => document.querySelector('.mk-cr').innerText)), 'L3 과정 크레딧 표시');
       await p.click('[data-mkl="start"]'); await p.waitForTimeout(300); const l3 = await p.evaluate(() => document.querySelector('#lm').innerText);
       ok(/이어서 보기/.test(l3) && /처음 7일 안에 10%보다 적게/.test(l3), 'L3 credit → started · 7일 안내');

@@ -19,9 +19,9 @@
   /* 체험판 ?mk=1 진열대(게시본에 mk가 없을 때만) */
   const DEMO = { on: true, passName: '우리 학교 패스', validTo: '2028-02-29', chargeRule: 'first_play', rule: { monthCap: 90, allowGroups: [], preFrom: 80, avg: 45 }, shelf: [
     { colId: 'univ', title: '대학 비교과', items: [
+      { id: 'mp_ai01', ad: true, title: '생성형 AI 실무 활용 — 프롬프트부터 업무 자동화까지', cp: 'CP 러닝웍스', lessons: 12, hours: 16, credits: 50, img: 'lap-05' },
       { id: 'mp_wr01', title: '보고서 글쓰기 기초', cp: 'CP 러닝웍스', lessons: 6, hours: 15, credits: 45, img: 'lap-04' },
       { id: 'mp_cv01', title: '첫 이력서, AI와 같이 고쳐 보기', cp: 'CP 에듀온', lessons: 5, hours: 12, credits: 43, img: 'off-03' },
-      { id: 'mp_ai01', title: '생성형 AI 실무 활용 — 프롬프트부터 업무 자동화까지', cp: 'CP 러닝웍스', lessons: 12, hours: 16, credits: 50, img: 'lap-05' },
       { id: 'mp_iv01', title: '면접 답변 구조 STAR 연습', cp: 'CP 에듀온', lessons: 4, hours: 10, credits: 30, img: 'grp-03' },
       { id: 'mp_en01', title: '비즈니스 영어 이메일 30분', cp: 'CP 한빛미디어', lessons: 6, hours: 9, credits: 50, img: 'lan-02' }] },
     { colId: 'job', title: '직무', items: [{ id: 'mp_dt01', title: '데이터 분석 실무 — 엑셀에서 파이썬까지', cp: 'CP 한빛미디어', lessons: 20, hours: 30, credits: 120, img: 'dsk-06' }] }] };
@@ -52,16 +52,19 @@
     if (con && (con.wallet || []).reduce((s, l) => s + (+l.remain || 0), 0) < cr) return 'empty';
     return 'credit'; }
   const monthLeft = () => { if (live()) { const m = LV.shelf && LV.shelf.me; return m && m.monthLeft != null ? m.monthLeft : null; } const r = (pub() || {}).rule || {}; if (!r.monthCap) return null; return Math.max(0, Math.floor((r.monthCap - usedMonth()) / (r.avg || 45))); };
+  /* 「광고」 표시(M/l/code-changes.md C1 확정 문구 A1~A3) — 스튜디오 market.js MK_AD와 같은 문장 */
+  const AD = { A2: '이 상품은 CP가 비용을 내고 이 자리에 노출한 광고입니다. 가격 · 크레딧은 다른 상품과 같은 기준으로 정해집니다.', A3: '「광고」 표시가 있는 상품은 콘텐츠 공급사(CP)가 산타에 노출 비용을 내고 추천 칸에 올린 상품입니다. 광고는 추천 칸에만 표시되며, 검색 결과와 정렬 순서에는 영향을 주지 않습니다. 추천 칸의 나머지 상품은 우리 기관의 이용 실적 · 신규 여부 · 컬렉션 구성으로 정합니다.' };
+  const adIn = it => it && it.ad ? '<span class="mk-ad in">광고</span> ' : '';
   const CHIP = { started: ['시작함', 'pass'], pre: ['승인 필요', 'soon'], pre_asked: ['승인 요청 중', 'soon'], cap: ['이번 달 상한', 'one'], empty: ['지금은 시작할 수 없어요', 'one'], out: ['패스 밖', 'one'] };
   const chipOf = a => CHIP[a] ? `<span class="mk-bd ${CHIP[a][1]}">${CHIP[a][0]}</span>` : '';
 
   /* ── L1 진열대 ── */
   function shelfHTML() { const P = shelfL(); if (!P || !allowed()) return ''; const L = allItems(P).slice(0, 8); if (!L.length) return ''; const left = monthLeft(); const col = LR._mkCol || '';
     const items = col ? L.filter(x => x.colId === col) : L; const cols = (P.shelf || []).map(c => [c.colId, c.title]);
-    return `<section class="mk-shelf" aria-labelledby="mkPass" data-mk="pass-shelf"><div class="mk-shh"><div><span class="mk-pill"><i></i>${E(P.passName || '우리 학교 패스')}${P.validTo ? ` · ${E(String(P.validTo).replace(/-/g, '.'))}까지` : ''}</span><h2 id="mkPass">우리 학교 패스</h2></div><span class="sp"></span><a href="#mk">전체 보기</a></div>
+    return `<section class="mk-shelf" aria-labelledby="mkPass" data-mk="pass-shelf"><div class="mk-shh"><div><span class="mk-pill"><i></i>${E(P.passName || '우리 학교 패스')}${P.validTo ? ` · ${E(String(P.validTo).replace(/-/g, '.'))}까지` : ''}</span><h2 id="mkPass">우리 학교 패스</h2></div><span class="sp"></span>${items.some(x => x.ad) ? '<button type="button" class="mk-adinfo" data-mkl="adinfo" aria-expanded="false" aria-controls="mkAdInfo">광고 안내</button>' : ''}<a href="#mk">전체 보기</a></div>${items.some(x => x.ad) ? `<p class="mk-adtx" id="mkAdInfo" hidden>${E(AD.A3)}</p>` : ''}
       <p class="mk-shs">${left != null ? `이번 달 ${left}과정 더 시작할 수 있어요` : '학교가 준비한 과정을 바로 시작할 수 있어요.'}</p>
       ${cols.length > 1 ? `<div class="mk-chips" role="tablist" aria-label="패스 컬렉션"><button type="button" role="tab" class="tb-chip ${col ? '' : 'on'}" aria-selected="${!col}" data-mkl="col" data-v="">전체</button>${cols.map(([k, t]) => `<button type="button" role="tab" class="tb-chip ${col === k ? 'on' : ''}" aria-selected="${col === k}" data-mkl="col" data-v="${E(k)}">${E(t)}</button>`).join('')}</div>` : ''}
-      <div class="tb-grid mk-rail">${items.map(it => { const a = accessOf(it); return `<a class="tb-tile" href="#mk/i/${encodeURIComponent(it.id)}"><span class="tb-tt img"><img src="${E(IMG(it.img || it.thumb))}" alt="" loading="lazy"><span class="mk-tbd"><span class="mk-bd pass">크레딧으로 수강</span>${a !== 'credit' ? chipOf(a) : ''}</span></span><b class="tb-tn">${E(it.title)}</b><span class="tb-tl">${it.lessons ? it.lessons + '차시 · ' : ''}${it.hours ? it.hours + '시간 · ' : ''}${E(it.cp || '')}</span></a>`; }).join('')}</div></section>`; }
+      <div class="tb-grid mk-rail">${items.map(it => { const a = accessOf(it); return `<a class="tb-tile" href="#mk/i/${encodeURIComponent(it.id)}"><span class="tb-tt img"><img src="${E(IMG(it.img || it.thumb))}" alt="" loading="lazy">${it.ad ? '<span class="mk-adl" aria-label="광고 상품">광고</span>' : ''}<span class="mk-tbd"><span class="mk-bd pass">크레딧으로 수강</span>${a !== 'credit' ? chipOf(a) : ''}</span></span><b class="tb-tn">${E(it.title)}</b><span class="tb-tl">${it.lessons ? it.lessons + '차시 · ' : ''}${it.hours ? it.hours + '시간 · ' : ''}${E(it.cp || '')}</span></a>`; }).join('')}</div></section>`; }
   function mountHome() { const lm = document.getElementById('lm'); if (!lm || lm.querySelector('[data-mk="pass-shelf"]')) return; const h = shelfHTML(); if (!h) return; const box = document.createElement('div'); box.className = 'mk-home'; box.innerHTML = h;
     const at = lm.querySelector('.tb-main > .tb-now') || lm.querySelector('.tb-main > .tb-hero') || lm.querySelector('#apScroll .ap-hero') || lm.querySelector('.mj-home');
     if (at) at.insertAdjacentElement('afterend', box); else { const main = lm.querySelector('.tb-main') || lm.querySelector('section .in') || lm; main.insertAdjacentElement('beforeend', box); } }
@@ -71,13 +74,14 @@
     if (!allowed()) return '<section class="sec mk-sec"><div class="in"><p class="empty">우리 학교 패스에 포함되지 않은 과정이에요.</p><a class="lbtn ghost sm" href="#home">홈으로</a></div></section>';
     const q = String(LR._mkQ || '').trim(); const col = LR._mkCol || ''; const f = LR._mkF || ''; const all = allItems(P);
     let L = all.filter(x => (!col || x.colId === col) && (!q || (x.title + (x.cp || '')).includes(q))); const A = x => accessOf(x);
+    { const co = (P.shelf || []).map(c => c.colId); L = L.slice().sort((x, y) => (co.indexOf(x.colId) - co.indexOf(y.colId)) || String(x.title).localeCompare(String(y.title), 'ko')); } /* 탐색 · 검색은 광고 가중치 없이 제목순(policy v1.2) */
     if (f === 'now') L = L.filter(x => ['credit', 'started'].includes(A(x))); if (f === 'pre') L = L.filter(x => ['pre', 'pre_asked'].includes(A(x)));
     return `<section class="sec mk-sec"><div class="in"><div class="mk-l2h"><span class="mk-pill"><i></i>${E(P.passName || '우리 학교 패스')}${P.validTo ? ` · ${E(String(P.validTo).replace(/-/g, '.'))}까지` : ''}</span><h1>컬렉션 ${(P.shelf || []).length}개 · 콘텐츠 <span class="num">${all.length}</span>개</h1><p>과정을 시작하면 우리 학교 패스에서 이용해요.</p></div>
       <label class="mk-srch">${I('search', 18)}<input value="${E(q)}" data-mkl="q" aria-label="패스 콘텐츠 검색" placeholder="과정 · 제작사로 찾아요"></label>
       <div class="mk-chips" role="tablist" aria-label="컬렉션"><button type="button" role="tab" class="tb-chip ${col ? '' : 'on'}" aria-selected="${!col}" data-mkl="col" data-v="">전체</button>${(P.shelf || []).map(c => `<button type="button" role="tab" class="tb-chip ${col === c.colId ? 'on' : ''}" aria-selected="${col === c.colId}" data-mkl="col" data-v="${E(c.colId)}">${E(c.title)}</button>`).join('')}</div>
       <div class="mk-fbar" aria-label="필터"><button type="button" class="mk-fbtn ${f === 'now' ? 'on' : ''}" aria-pressed="${f === 'now'}" data-mkl="f" data-v="now">바로 시작 가능</button><button type="button" class="mk-fbtn ${f === 'pre' ? 'on' : ''}" aria-pressed="${f === 'pre'}" data-mkl="f" data-v="pre">승인 필요</button></div>
       <div class="mk-cnt"><span><b class="num">${L.length}개</b>${col ? ' · ' + E((P.shelf.find(c => c.colId === col) || {}).title || '') : ''}</span></div>
-      ${L.length ? `<ul class="mk-list">${L.map(it => { const a = A(it); return `<li><a class="mk-li" href="#mk/i/${encodeURIComponent(it.id)}"><span class="ph"><img src="${E(IMG(it.img || it.thumb))}" alt="" loading="lazy">${it.lessons ? `<em>${it.lessons}차시</em>` : ''}</span><span class="tx"><span class="mk-bds"><span class="mk-bd pass">크레딧으로 수강</span>${chipOf(a)}</span><b class="t">${E(it.title)}</b><small>${it.hours ? it.hours + '시간 · ' : ''}${E(it.cp || '')}</small></span></a></li>`; }).join('')}</ul>` : '<p class="empty">조건에 맞는 과정이 없어요. 필터를 풀어 볼까요?</p>'}</div></section>`; }
+      ${L.length ? `<ul class="mk-list">${L.map(it => { const a = A(it); return `<li><a class="mk-li" href="#mk/i/${encodeURIComponent(it.id)}"><span class="ph"><img src="${E(IMG(it.img || it.thumb))}" alt="" loading="lazy">${it.lessons ? `<em>${it.lessons}차시</em>` : ''}</span><span class="tx"><span class="mk-bds"><span class="mk-bd pass">크레딧으로 수강</span>${chipOf(a)}</span><b class="t">${adIn(it)}${E(it.title)}</b><small>${it.hours ? it.hours + '시간 · ' : ''}${E(it.cp || '')}</small></span></a></li>`; }).join('')}</ul>` : '<p class="empty">조건에 맞는 과정이 없어요. 필터를 풀어 볼까요?</p>'}</div></section>`; }
 
   /* ── L3 상세 ── */
   function itemHTML(id) { const it = findItem(id); if (!it) return `<section class="sec mk-sec"><div class="in"><p class="empty">${live() && (LV.busy.shelf || LV.busy['i' + id]) ? '과정을 불러오고 있어요.' : '우리 학교 패스에 포함되지 않은 과정이에요.'}</p><a class="lbtn ghost sm" href="#mk">패스 과정 보기</a></div></section>`;
@@ -92,7 +96,7 @@
       empty: n7('지금은 이 과정을 시작할 수 없어요. 담당 선생님께 알려 드렸어요', 'warn'),
       out: n7('우리 학교 패스에 포함되지 않은 과정이에요', 'mute') }[a] || '';
     return `<section class="sec mk-sec mk-l3"><div class="in"><div class="mk-pv"><img src="${E(IMG(it.img || it.thumb))}" alt=""><span class="pl" aria-hidden="true">${I('play', 22)}</span><span class="ch">미리보기 90초 · 크레딧이 쓰이지 않아요</span></div>
-      <div class="mk-hd"><span class="mk-bds"><span class="mk-bd pass">우리 학교 패스</span>${it.cp ? `<span class="mk-bd cp">${E(it.cp)}</span>` : ''}${chipOf(a)}</span><h1>${E(it.title)}</h1><p>${it.lessons ? it.lessons + '차시 · ' : ''}${it.hours ? it.hours + '시간 · ' : ''}${E(it.cp || '')}</p>${it.credits ? `<p class="mk-cr">수강 시작 시 ${nf(it.credits)}크레딧</p>` : ''}</div>
+      <div class="mk-hd"><span class="mk-bds"><span class="mk-bd pass">우리 학교 패스</span>${it.cp ? `<span class="mk-bd cp">${E(it.cp)}</span>` : ''}${chipOf(a)}</span><h1>${adIn(it)}${E(it.title)}</h1>${it.ad ? `<p class="mk-adtx">${E(AD.A2)}</p>` : ''}<p>${it.lessons ? it.lessons + '차시 · ' : ''}${it.hours ? it.hours + '시간 · ' : ''}${E(it.cp || '')}</p>${it.credits ? `<p class="mk-cr">수강 시작 시 ${nf(it.credits)}크레딧</p>` : ''}</div>
       ${cta}${n7('미리보기 90초는 크레딧 없이 볼 수 있어요.', 'mute')}
       <p class="mk-priv">${I('lock', 16)}<span>학습 기록은 학교와 함께 보고, 콘텐츠 제작사에는 이름 · 학번 없이 합계만 전달돼요.</span></p></div></section>`; }
 
@@ -109,6 +113,7 @@
   document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-mkl]'); if (!el || !on()) return; const k = el.dataset.mkl;
     if (k === 'col') { e.preventDefault(); LR._mkCol = el.dataset.v || ''; lrender(); }
     else if (k === 'f') { e.preventDefault(); LR._mkF = LR._mkF === el.dataset.v ? '' : el.dataset.v; lrender(); }
+    else if (k === 'adinfo') { e.preventDefault(); const t = document.getElementById('mkAdInfo'); if (t) { t.hidden = !t.hidden; el.setAttribute('aria-expanded', String(!t.hidden)); } }
     else if (k === 'start') { e.preventDefault(); start(el.dataset.v); }
     else if (k === 'pre') { e.preventDefault(); askPre(el.dataset.v); } });
   document.addEventListener('change', e => { const el = e.target.closest && e.target.closest('[data-mkl="q"]'); if (!el || !on()) return; LR._mkQ = el.value; lrender(); });
