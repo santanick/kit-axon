@@ -44,17 +44,26 @@ function mask(raw, share) {
   const R = raw || {};
   for (const k of PEOPLE) { const n = +R[k] || 0; if (n >= 1 && n <= 4) { v[k] = UNDER5; masked.push(k); } else v[k] = n; }
   /* 수료율: 종료 과정 수강이 있으면 그 안의 수료, 없으면 전체 수강 대비 수료 */
-  const ended = (+R.cmpBase || 0) > 0; const base = ended ? +R.cmpBase : +R.enr || 0; if (base >= 1 && base <= 4) { v.cmpRateBp = null; masked.push('cmpRateBp'); } else v.cmpRateBp = rate(ended ? +R.cmpEnd || 0 : +R.cmp || 0, base);
+  /* 역산 방지(QA49-3 #1): 분자(수료 수)가 1~4명이어도 비율을 가린다 — 수강 건수 × 수료율로 가린 수료 수가 되살아나지 않게 */
+  const ended = (+R.cmpBase || 0) > 0; const base = ended ? +R.cmpBase : +R.enr || 0; const numr = ended ? +R.cmpEnd || 0 : +R.cmp || 0;
+  if ((base >= 1 && base <= 4) || (numr >= 1 && numr <= 4)) { v.cmpRateBp = null; masked.push('cmpRateBp'); } else v.cmpRateBp = rate(numr, base);
   const pn = +R.progN || 0; if (pn >= 1 && pn <= 4) { v.progBp = null; masked.push('progBp'); } else v.progBp = pn ? Math.round((+R.progSum || 0) / pn * 100) : 0;
   v.crs = +R.crs || 0;
   for (const k of ['aiCalls', 'aiTok', 'rev']) if (!noConsent.includes(k)) v[k] = R[k] == null ? null : +R[k] || 0;
   return { v, masked, noConsent };
 }
 /* 합계: 동의한 원래 수만 더한 뒤 다시 가림. 동의하지 않은 기관이 하나라도 있으면 그 키는 null */
+/* 차이 공격 방지(QA49-3 #2, spec 1-7): 가린 기관이 한 곳뿐이거나 가린 값의 합이 5명 미만이면 「합계 − 보이는 기관」으로
+   가린 값이 되살아나므로 그 키의 합계를 null로 둔다. 수료 · 수강 합계를 가리면 수료율 합계도, 비율을 가린 기관이 한 곳이면 그 비율 합계도 가린다. */
 function total(list) {
   const sum = {}; const nc = new Set();
   for (const x of list) { for (const k of [...STATE, ...FLOW]) if (x.raw && x.raw[k] != null) sum[k] = (sum[k] || 0) + (+x.raw[k] || 0); for (const k of x.noConsent || []) nc.add(k); }
-  const m = mask(sum, { ai: true, revenue: true }).v; for (const k of nc) m[k] = null; return m;
+  const m = mask(sum, { ai: true, revenue: true }).v; for (const k of nc) m[k] = null;
+  const each = list.map(x => mask((x && x.raw) || {}, { ai: true, revenue: true }).masked);
+  for (const k of [...PEOPLE, 'cmpRateBp', 'progBp']) { const idx = each.map((ms, i) => (ms.includes(k) ? i : -1)).filter(i => i >= 0); if (!idx.length) continue;
+    const s = idx.reduce((t, i) => t + (+((list[i].raw || {})[k]) || 0), 0); if (idx.length === 1 || (PEOPLE.includes(k) && s < 5)) m[k] = null; }
+  if (m.cmp === null || m.enr === null) m.cmpRateBp = null;
+  return m;
 }
 /* 순위(큰 값이 1등, 가림 · null 제외) */
 function ranks(children, kpis) {

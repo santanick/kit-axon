@@ -39,7 +39,7 @@
   /* ── 5명 미만 가림 · 합계(spec 1-7 · 5-2). 순수 함수: 시험 · 운영 응답 검증에 같이 씁니다 ── */
   function grpMask(raw, share) { const v = {}, masked = [], noConsent = [];
     PEOPLE.forEach(k => { if (raw[k] == null) return; const n = +raw[k]; if (n >= 1 && n <= 4) { v[k] = MASK; masked.push(k); } else v[k] = n; });
-    const rate = (k, num, den) => { if (den == null || num == null) { v[k] = null; return; } if (den < 5) { v[k] = null; masked.push(k); } else v[k] = Math.round(num * 10000 / den); };
+    const rate = (k, num, den) => { if (den == null || num == null) { v[k] = null; return; } if (den < 5 || (num >= 1 && num <= 4)) { v[k] = null; masked.push(k); } else v[k] = Math.round(num * 10000 / den); };
     rate('cmpRateBp', raw.cmp, raw.end); if (raw.progSum != null) { if ((raw.progN || 0) < 5) { v.progBp = null; masked.push('progBp'); } else v.progBp = Math.round(raw.progSum * 10000 / raw.progN); }
     if (raw.lrn != null) { if (raw.lrn < 5 || (raw.act >= 1 && raw.act <= 4)) { v.actRate = null; masked.push('actRate'); } else v.actRate = Math.round((raw.act || 0) * 10000 / raw.lrn); }
     v.crs = raw.crs == null ? null : +raw.crs;
@@ -54,6 +54,10 @@
     if (keys.includes('progBp')) { const d = sum('progN'); T.progBp = d < 5 ? null : Math.round(sum('progSum') * 10000 / d); }
     if (keys.includes('actRate')) { const d = sum('lrn'); T.actRate = d < 5 ? null : Math.round(sum('act') * 10000 / d); }
     ['crs', 'aiCalls', 'rev'].forEach(k => { if (keys.includes(k) && T[k] !== null) T[k] = sum(k === 'aiCalls' ? 'aiCalls' : k); });
+    /* 차이 공격 방지(QA49-3 #2, 서버 kpi.js total과 같음): 가린 기관이 한 곳뿐이거나 가린 값 합이 5명 미만이면 그 합계를 가립니다 */
+    [...PEOPLE, 'cmpRateBp', 'progBp', 'actRate'].forEach(k => { if (!keys.includes(k)) return; const ms = rows.filter(r => (r.masked || []).includes(k)); if (!ms.length) return;
+      if (ms.length === 1 || (PEOPLE.includes(k) && ms.reduce((s, r) => s + (+(r.raw || {})[k] || 0), 0) < 5)) T[k] = null; });
+    if (keys.includes('cmpRateBp') && (T.cmp === null || T.enr === null)) T.cmpRateBp = null;
     return T; }
   window.grpMask = grpMask; window.grpTotal = grpTotal;
 
@@ -230,7 +234,7 @@
     const p = UI.grpP || 'm'; const x = get(`/api/group/dash?p=${p}&from=${rangeOf(p).from}&to=${rangeOf(p).to}&unit=week`); const ln = get('/api/group/links?status=active');
     const d = x.d; if (!d) return demoBar() + loading(x); const nAct = (ln.d && ln.d.items || []).length;
     const start = nAct ? '' : `<section class="gp-card gp-start"><h3>${esc(T.space)}을 시작합니다</h3><ol class="gp-steps"><li><b>${esc(T.child)} 초대</b><span>초대 코드를 보내고 수락을 기다립니다.</span><button class="btn sm pri" data-act="go" data-v="grplinks">초대하기</button></li><li><b>목표값 정하기</b><span>${esc(KL('cmpRateBp', g))} 목표와 경고 기준</span><button class="btn sm ghost" data-act="grp-rules">정하기</button></li><li><b>역할 지정</b><span>조회 · 콘텐츠 · 학습자 열람 담당</span><button class="btn sm ghost" data-act="go" data-v="grpaudit">지정하기</button></li></ol></section>`;
-    const tot = d.total || {}; const cards = T.kpis.map(k => { const v = tot[k]; const hid = v === null && d.children.some(r => (r.noConsent || []).includes(k)); return `<div class="gp-kpi" data-k="${k}"><span>${esc(KL(k, g))}</span><b>${esc(hid ? '일부 비공개' : fmt(k, v))}</b>${hid ? '<small>동의하지 않은 기관이 있어 합계를 내지 않습니다</small>' : k === 'cmpRateBp' && g.targets && g.targets.cmpRateBp ? `<small>목표 ${fmt('cmpRateBp', g.targets.cmpRateBp)}</small>` : ''}</div>`; }).join('');
+    const tot = d.total || {}; const cards = T.kpis.map(k => { const v = tot[k]; const hid = v === null && d.children.some(r => (r.noConsent || []).includes(k)); const msk = !hid && v === null && !d.filtered && d.children.some(r => (r.masked || []).includes(k) || (k === 'cmpRateBp' && (r.masked || []).some(x => x === 'cmp' || x === 'enr'))); return `<div class="gp-kpi" data-k="${k}"><span>${esc(KL(k, g))}</span><b>${esc(hid ? '일부 비공개' : msk ? '합계 가림' : fmt(k, v))}</b>${hid ? '<small>동의하지 않은 기관이 있어 합계를 내지 않습니다</small>' : msk ? '<small>5명 미만 기관 값이 합계에서 역산되지 않게 가렸습니다</small>' : k === 'cmpRateBp' && g.targets && g.targets.cmpRateBp ? `<small>목표 ${fmt('cmpRateBp', g.targets.cmpRateBp)}</small>` : ''}</div>`; }).join('');
     const flags = d.children.filter(r => r.flags.length); const alerts = flags.length ? `<section class="gp-card gp-alerts" aria-label="경고"><h3>${icx('alert', 16)} 확인이 필요한 ${esc(T.child)} ${flags.length}곳</h3><ul>${flags.map(r => `<li><button type="button" class="gp-lnk" data-act="grp-child" data-v="${esc(r.tid)}">${esc(r.label)}</button><span>${r.flags.map(f => esc(f.label)).join(' · ')}</span></li>`).join('')}</ul></section>` : '';
     const sk = UI.grpSort || 'cmpRateBp'; const val = (r, k) => { const v = r.v[k]; return v == null || v === MASK ? -1 : +v; }; const rows = [...d.children].sort((a, b) => val(b, sk) - val(a, sk));
     const cols = T.cols.filter(k => d.kpis.includes(k) || k === 'actRate');

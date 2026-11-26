@@ -24,7 +24,7 @@ async function run(U, tag = 'g', hooks = {}) {
   const cls = (id, ids, p, extra) => ({ id, name: `과정 ${id}`, status: '운영중', learners: ids, prog: Object.fromEntries(ids.map((x, i) => [x, { p: p(i), at: kst() }])), ...(extra || {}) });
   await put('F', { org: { name: '디디 영어 본사', type: 'k12' }, classes: [cls('fc1', [], () => 0, { items: [{ id: 'it1', type: 'video', title: '1차시' }], learners: [], desc: '신규 강사 OT' }), cls('fmk', [], () => 0, { mk: { productId: 'mp_x' } })] });
   await put('A', { org: { name: '해운대점', type: 'k12' }, members: mem(3), classes: [cls('a1', ['m0', 'm1', 'm2'], i => [100, 50, 20][i])] });
-  await put('B', { org: { name: '기장점', type: 'k12' }, members: mem(8), classes: [cls('b1', mem(8).map(m => m.id), i => (i < 2 ? 100 : 40))], notices: [{ id: 'bn1', title: '기장점 공지', body: '알림' }] });
+  await put('B', { org: { name: '기장점', type: 'k12' }, members: mem(20), classes: [cls('b1', mem(20).map(m => m.id), i => (i < 5 ? 100 : 40))], notices: [{ id: 'bn1', title: '기장점 공지', body: '알림' }] });
   await put('X', { org: { name: '평생교육원', type: 'univ' }, members: mem(6, i => ({ sid: `2023${String(1234 + i)}`, dept: i < 5 ? '기계공학과' : '경영학과' })), classes: [cls('x1', ['m0', 'm1', 'm2', 'm3', 'm4', 'm5'], i => i * 20, { term: '2026-2' })] });
   await put('Y', { org: { name: '취업센터', type: 'univ' }, members: mem(5, i => ({ sid: `2023${String(1234 + i)}`, dept: '기계공학과' })), classes: [cls('y1', ['m0', 'm1', 'm2', 'm3', 'm4'], () => 60)] });
 
@@ -155,7 +155,7 @@ const WANT = {
   badCode: '404:grp_invite_code', noTerms: '400:grp_terms', ownSelf: '400:grp_self', accept: [200, 'active', false], acceptAgain: true, acceptB: 'active', multi: 'active', myLinks: 2, pick: '400:grp_link_pick',
   subNoRole: '403:grp_role', staffOther: '400:grp_staff_tenant', staffSet: 200, subView: 200, subInvite: '403:grp_role', lastAdmin: '409:grp_last_admin', teacherAccept: 403,
   rule: '400:grp_rule', refresh: 2, refreshLimit: '429:grp_limit', dashKeys: 'asOf,children,kpis,range,series,stale,total', dashN: 2,
-  maskA: ['5명 미만', null, true, true, 0], valB: [8, 2500, 0, 1], total: [11, null], series: true, tidTotal: null, otherTid: 0, range: '400:grp_range', export: [200, true, true, true],
+  maskA: ['5명 미만', null, true, true, 0], valB: [20, 2500, 0, 1], total: [null, null] /* QA49-3 #2: 가린 기관(해운대점 3명)이 한 곳뿐이면 합계 − 기장점으로 역산되므로 합계 lrn 가림 */, series: true, tidTotal: null, otherTid: 0, range: '400:grp_range', export: [200, true, true, true],
   links: 'acceptedAt,childName,childTid,childType,endedAt,expiresAt,invitedAt,label,lastDay,linkId,share,status,unit',
   lsFr: '403:grp_consent', lsShort: '400:grp_range', ls: [200, 'studentNo', 6, 5, 2, '기계공학과:5|(5명 미만 학과 묶음):5명 미만'],
   lkRole: '403:grp_role', lkMfa: ['403:grp_mfa', 'required'], lkPurpose: '400:grp_purpose', lookup: [200, 1, 2, 'courses,dept,studentNo', false], myAudit: [true, true], santaLookup: '403:grp_off',
