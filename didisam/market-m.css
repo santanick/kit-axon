@@ -38,3 +38,15 @@
 .mk-chart .ref{stroke:var(--t-bad);stroke-width:1.5;stroke-dasharray:4 4}
 .mk-chart text.v{fill:var(--n900);font-weight:700}
 .mk-chart .hit{fill:transparent}
+
+/* v48.1 법무 반영(C1 · C2): 광고 안내 · 크레딧 이용 조건 · 필수 동의 — 토큰만 사용 */
+.mk-ad{font-weight:700;letter-spacing:0}
+.mk-adinfo{margin-left:8px;padding:0 6px;min-height:28px;border:0;background:none;color:var(--t-sub);font:600 13px/1 Pretendard,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer;vertical-align:middle}
+.mk-adinfo:focus-visible{outline:2px solid var(--pr);outline-offset:2px;border-radius:6px}
+.mk-adtx{margin:4px 0 0;font-size:13.5px;line-height:1.6;color:var(--t-sub)}
+.mk-terms{margin:14px 0 10px;padding:14px 16px;border-radius:12px;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--n200);font-size:13px;line-height:1.6;color:var(--g800)}
+.mk-terms b{display:block;margin-bottom:6px;color:var(--g900);font-size:14px}
+.mk-terms ol{margin:0;padding-left:18px;display:grid;gap:4px}
+.mk-ckl{display:flex;align-items:flex-start;gap:8px;margin:8px 0 0;font-size:13.5px;color:var(--g900);line-height:1.5;cursor:pointer}
+.mk-ckl input{width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:var(--pr)}
+.mk-ckl.req{font-weight:700}

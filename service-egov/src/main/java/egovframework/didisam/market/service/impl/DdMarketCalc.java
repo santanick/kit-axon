@@ -119,7 +119,7 @@ public final class DdMarketCalc {
     public static String addDays(String s, long n) { int[] p = pd(s); return p == null ? null : U(p[0], p[1], p[2]).plusDays(n).toString(); }
     public static ObjectNode expiry(String start) {
         int[] p = pd(start); if (p == null) return null; String v = yearOn(p[0] + 1, p[1], p[2]); int[] q = pd(v);
-        return o().put("validTo", addDays(v, -1)).put("carryTo", addDays(yearOn(q[0] + 1, q[1], q[2]), -1));
+        return o().put("validTo", addDays(v, -1)).put("carryTo", addDays(v, -1)); /* r3 자동 이월 폐지 */
     }
     static int lotRank(String k) { return "bonus".equals(k) ? 1 : 0; }
     static String kindOf(JsonNode l) { return truthy(get(l, "kind")) ? str(get(l, "kind")) : truthy(get(l, "lot")) ? str(get(l, "lot")) : null; }
@@ -135,6 +135,37 @@ public final class DdMarketCalc {
         for (JsonNode l : lotOrder(lots)) { long r = Math.max(0, I(get(l, "remain"))); long t = Math.min(r, Math.max(0, left)); left -= t; ObjectNode x = out.addObject(); JsonNode id = get(l, "id"); if (!undef(id)) x.set("id", id); String k = kindOf(l); if (k != null) x.put("kind", k); x.put("take", t).put("remain", r - t); }
         ObjectNode r = o(); r.set("lots", out); return r.put("short", Math.max(0, left));
     }
+
+    /* 소멸 · 이월 · 해지 환불(policy v1.3, code-changes r3 C3) — marketcalc.js refundOf · carryOf와 같은 규칙 */
+    public static final long PENALTY_BP = 1000, CARRY_BP = 2000, CARRY_MAX_BP = 5000, RENEW_GRACE_DAYS = 30, REFUND_FULL_DAYS = 14;
+    static String toOf(JsonNode l) { for (String k : new String[]{ "validTo", "carryTo", "exp" }) if (truthy(get(l, k))) return str(get(l, k)); return ""; }
+    public static ObjectNode refundOf(JsonNode lots, String day, JsonNode op) {
+        String start = truthy(get(op, "start")) ? str(get(op, "start")) : null; long usedTotal = I(get(op, "usedTotal")); String mode0 = S(get(op, "buyerMode"));
+        long pen = Math.min(PENALTY_BP, Math.max(0, undef(get(op, "penaltyBp")) || nullish(get(op, "penaltyBp")) ? PENALTY_BP : I(get(op, "penaltyBp"))));
+        long bonusUsed = 0, paidAll = 0, paidUnused = 0; int live = 0;
+        for (JsonNode l : arr(lots)) { if (!truthy(l)) continue; String k = kindOf(l); if (k == null) k = "paid"; long cr = I(get(l, "credits")), rm = I(get(l, "remain"));
+            if ("bonus".equals(k)) { bonusUsed += Math.max(0, cr - rm); continue; } paidAll += cr; String to = toOf(l); if (to.isEmpty() || day.compareTo(to) <= 0) { live++; paidUnused += rm; } }
+        if ("public_postpaid".equals(mode0)) return rf("none", paidUnused, bonusUsed, 0, 0);
+        if (live == 0) return rf("none", 0, bonusUsed, 0, 0);
+        if (start != null && usedTotal == 0 && day.compareTo(addDays(start, REFUND_FULL_DAYS - 1)) <= 0) return rf("full", paidAll, bonusUsed, 0, paidAll * WON);
+        if ("santa".equals(S(get(op, "cause")))) return rf("santa_fault", paidUnused, bonusUsed, 0, paidUnused * WON);
+        long base = Math.max(0, paidUnused - bonusUsed) * WON, amount = Math.floorDiv(base * (10000 - pen), 10000);
+        return rf("public_license".equals(mode0) ? "contract" : "terminate", paidUnused, bonusUsed, base - amount, amount);
+    }
+    static ObjectNode rf(String mode, long pu, long bu, long pen, long amt) { return o().put("mode", mode).put("paidUnused", pu).put("bonusUsed", bu).put("penalty", pen).put("amount", amt); }
+    public static ObjectNode carryOf(JsonNode prev, JsonNode renew, JsonNode op) {
+        long bp = Math.min(CARRY_MAX_BP, Math.max(0, undef(get(op, "carryBp")) || nullish(get(op, "carryBp")) ? CARRY_BP : I(get(op, "carryBp")))); long unused = Math.max(0, I(get(prev, "paidUnused")));
+        long limit = Math.floorDiv(Math.min(I(get(prev, "paidCredits")), I(get(renew, "paidCredits"))) * bp, 10000);
+        if (!truthy(prev) || !truthy(renew) || !truthy(get(prev, "validTo")) || !truthy(get(renew, "signedAt")) || str(get(renew, "signedAt")).compareTo(addDays(str(get(prev, "validTo")), RENEW_GRACE_DAYS)) > 0)
+            return o().put("ok", false).put("credits", 0).put("limit", limit).put("lapse", unused).put("reason", "late");
+        long cr = Math.min(unused, limit); return o().put("ok", true).put("credits", cr).put("limit", limit).put("lapse", unused - cr).put("reason", "");
+    }
+
+    /* 세금계산서(r3 C4) — marketcalc.js taxOf · taxFixOf와 같음 */
+    public static ObjectNode taxOf(long supply, long bonusCredits, String day) { long sp = Math.max(0, supply), vat = Math.floorDiv(sp, 10);
+        ObjectNode t = o().put("status", "wait").put("date", day).put("supply", sp).put("vat", vat).put("total", sp + vat).put("bonusCredits", Math.max(0, bonusCredits)).put("bonusInSupply", false); t.putNull("no"); t.putArray("fixes"); return t; }
+    public static JsonNode taxFixOf(JsonNode tax, long refundAmount, String day) { long sup = I(get(tax, "supply")); long amt = Math.min(Math.max(0, refundAmount), sup); if (amt == 0) return F.nullNode(); long vat = Math.floorDiv(amt, 10);
+        return o().put("status", "wait").put("kind", amt >= sup ? "cancel" : "reduce").put("date", day).put("supply", -amt).put("vat", -vat).put("total", -(amt + vat)).put("fixOf", truthy(get(tax, "no")) ? str(get(tax, "no")) : "issue"); }
 
     /* 9) 기관 통제 — cap · th는 비어 있으면 제한 없음 */
     static boolean blank(JsonNode v) { return nullish(v) || (v.isTextual() && v.textValue().isEmpty()) || I(v) <= 0; }
@@ -255,6 +286,10 @@ public final class DdMarketCalc {
             case "sum": return F.numberNode(sum(get(i, "values")));
             case "expiry": return expiry(S(get(i, "start")));
             case "useLots": return useLots(get(i, "lots"), I(get(i, "n")));
+            case "refundOf": return refundOf(get(i, "lots"), S(get(i, "day")), get(i, "o"));
+            case "carryOf": return carryOf(get(i, "prev"), get(i, "renew"), get(i, "o"));
+            case "taxOf": return taxOf(I(get(i, "supply")), I(get(i, "bonusCredits")), S(get(i, "day")));
+            case "taxFixOf": return taxFixOf(get(i, "tax"), I(get(i, "refundAmount")), S(get(i, "day")));
             case "capOk": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(capOk(I(x.get(0)), I(x.get(1)), x.get(2))); return a; }
             case "needApproval": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(needApproval(I(x.get(0)), x.get(1))); return a; }
             case "alertOf": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(alertOf(I(x.get(0)), I(x.get(1)), x.get(2))); return a; }

@@ -60,6 +60,8 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
             "mk_pre", "이 과정은 담당 선생님 승인 후 시작할 수 있어요.",
             "mk_scope", "우리 학교 패스에 포함되지 않은 과정이에요.",
             "mk_learner_off", "지금은 콘텐츠 마켓을 이용할 수 없어요.",
+            "mk_terms", "크레딧 이용 조건에 동의해야 구매를 확정할 수 있습니다.",
+            "mk_credit_scope", "크레딧은 산타가 공급하는 콘텐츠에만 쓸 수 있습니다.",
             /* dev-addendum 3장 */
             "mk_cp_rate", "CP 요율은 표준 65% · 독점 60% · 영업 대행 55% · 해외 IP 50% 중에서만 고를 수 있고, CP 서면 동의 번호가 필요합니다.",
             "mk_promo_target", "크레딧에 참여하고 심사를 통과한 CP 상품만 추천 슬롯을 신청할 수 있습니다(산타 오리지널 · 신규 출시 90일이 지난 상품의 「신규 출시」 슬롯 제외).",
@@ -198,6 +200,10 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
             ObjectNode x = O(); x.set("id", g(col, "id")); x.set("kind", g(col, "kind")); x.set("title", g(col, "title")); x.set("sector", g(col, "sector")); x.set("cover", g(col, "cover")); x.put("count", L.size()).put("avgCredits", L.size() > 0 ? Math.floorDiv(sum, L.size()) : 0); x.set("rows", L); out.add(x); }
         return out;
     }
+    /** 광고(추천 진열) 노출 — 구매 기관이 끄면(mk_party.ads = false) 그 기관 응답에 광고 슬롯을 넣지 않는다(Node adsOn과 같음) */
+    boolean adsOn(String tid) { if (tid == null || tid.isEmpty()) return true; JsonNode v = g(party(tid), "ads"); return nullish(v) || v.asBoolean(true); }
+    long adOrgs() throws Exception { return db.txAs("", true, () -> n(db.q1("select count(*)::int n from mk_party where pilot and ads"), "n")); }
+    List<String> adsOf(String slot, String tid) { return adsOn(tid) ? adsOf(slot) : new ArrayList<>(); }
     List<String> adsOf(String slot) { List<String> l = new ArrayList<>(); for (ObjectNode r : db.q("select product_id from mk_promo where ym = $1 and slot = $2 and status = 'ok' order by at, id limit $3", ym(), slot, DdMarketCalc.SLOT.get(slot)[0])) l.add(s(r, "product_id")); return l; }
     interface Out { ObjectNode of(JsonNode r); }
     static ArrayNode withAds(Iterable<JsonNode> rows, List<String> adIds, Out out) {
@@ -210,7 +216,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     ObjectNode contractOfTid(String tid, String id) { ObjectNode k = db.q1(KSEL + " where id = $1", str(id, 20)); if (k == null || !s(k, "buyer_tid").equals(tid)) throw E(404, "contract", "없는 계약입니다."); return k; }
     static ObjectNode cp(JsonNode r, String... kv) { ObjectNode o = O(); for (int i = 0; i + 1 < kv.length; i += 2) o.set(kv[i], g(r, kv[i + 1])); return o; }
     static ObjectNode kOut(JsonNode k) { return cp(k, "id", "id", "buyerTid", "buyer_tid", "quoteId", "quote_id", "kind", "kind", "collections", "collections", "start", "s", "end", "e", "carryEnd", "ce", "supplyTotal", "supply_total", "bonusBp", "bonus_bp", "bundlePlatform", "bundle_platform",
-        "status", "status", "taxStatus", "tax_status", "taxInvNo", "tax_inv_no", "renewOf", "renew_of", "refund", "refund", "activatedAt", "activated_at"); }
+        "status", "status", "taxStatus", "tax_status", "taxInvNo", "tax_inv_no", "renewOf", "renew_of", "refund", "refund", "activatedAt", "activated_at", "buyerMode", "buyer_mode", "terms", "terms", "tax", "tax"); }
     static JsonNode ctlOut(JsonNode t) { return t == null ? F.nullNode() : cp(t, "monthCap", "month_cap", "allowCols", "allow_cols", "allowGroups", "allow_groups", "preFrom", "pre_from", "alertBp", "alert_bp", "alertTo", "alert_to"); }
     static final class WS { List<ObjectNode> lots; ArrayNode wallet; long total, balance; ObjectNode ctl; String alert; }
     WS walletState(JsonNode k) {
@@ -278,6 +284,8 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     ObjectNode activate(ObjectNode k, JsonNode b) {
         if (!"pending_pay".equals(s(k, "status"))) throw E(409, "mk_contract_state", "결제 대기 계약만 활성화할 수 있습니다.");
         ObjectNode qt = db.q1("select * from mk_quote where id = $1", s(k, "quote_id")); String tax = trim(str(get(b, "taxInvNo"), 40)); String ts = tax.isEmpty() ? "waiting" : "issued"; String tn = tax.isEmpty() ? null : tax;
+        if (!tax.isEmpty()) { ObjectNode T0 = truthy(g(k, "tax")) ? ((ObjectNode) g(k, "tax")).deepCopy() : DdMarketCalc.taxOf(n(k, "supply_total"), n(qt, "bonus_credits"), kstDay(g(k, "at"))); String td = S(get(b, "taxInvDate")); /* 작성일 기본 = 구매 확정일 */
+            T0.put("status", "issued").put("no", tax).put("date", DAY_RE.matcher(td).matches() ? td : S(get(T0, "date"))); db.x("update mk_contract set tax = $2::jsonb where id = $1", s(k, "id"), T0.toString()); }
         String id = s(k, "id"), buyer = s(k, "buyer_tid");
         if ("single".equals(s(k, "kind"))) {
             db.q1("update mk_contract set status = 'active', activated_at = now(), tax_status = $2, tax_inv_no = $3 where id = $1", id, ts, tn);
@@ -310,6 +318,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     SX startOf(String tid, String sh, String pid, String mode) {
         String day = today(); ObjectNode k = liveContract(tid, day); ObjectNode r = prod(pid, day);
         if (r == null || !"listed".equals(s(r, "status")) || !truthy(g(r, "credits"))) return new SX("none");
+        if ("seller".equals(s(r, "owner_kind"))) { SX z = new SX("scope"); z.r = r; return z; } /* C5 크레딧은 산타 공급 상품에만(기관 간 중개 상품 불가) */
         SX X = new SX("empty"); X.r = r; if (k == null) return X; X.k = k;
         ObjectNode ctl = db.q1("select * from mk_control where contract_id = $1", s(k, "id"));
         ObjectNode had = db.q1("select * from mk_credit_use where contract_id = $1 and product_id = $2 and sid_hash = $3 and kind = 'use' and not restored", s(k, "id"), pid, sh);
@@ -335,8 +344,8 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     }
     /** L3 항목 상태(해요체 라벨) */
     static final Map<String, String> ACCESS_LABEL = Map.of("started", "이어서 학습해요", "credit", "크레딧으로 바로 시작할 수 있어요", "pre", "담당 선생님 승인 후 시작할 수 있어요", "pre_asked", "승인을 요청했어요", "cap", "이번 달 사용할 수 있는 크레딧을 모두 썼어요",
-        "empty", "지금은 시작할 수 없어요. 담당 선생님께 알려 주세요", "out", "우리 기관 패스에 포함되지 않은 과정이에요", "buy", "패스 밖 과정이라 따로 구매해야 해요", "none", "찾을 수 없는 과정이에요");
-    static final Map<String, Object[]> ACCESS_ERR = Map.of("buy", new Object[]{ 403, "mk_scope" }, "cap", new Object[]{ 409, "mk_cap" }, "balance", new Object[]{ 409, "mk_balance" }, "pre", new Object[]{ 409, "mk_pre" }, "pre_asked", new Object[]{ 409, "mk_pre" },
+        "empty", "지금은 시작할 수 없어요. 담당 선생님께 알려 주세요", "out", "우리 기관 패스에 포함되지 않은 과정이에요", "buy", "패스 밖 과정이라 따로 구매해야 해요", "none", "찾을 수 없는 과정이에요", "scope", "크레딧으로는 수강할 수 없는 과정이에요");
+    static final Map<String, Object[]> ACCESS_ERR = Map.of("scope", new Object[]{ 409, "mk_credit_scope" }, "buy", new Object[]{ 403, "mk_scope" }, "cap", new Object[]{ 409, "mk_cap" }, "balance", new Object[]{ 409, "mk_balance" }, "pre", new Object[]{ 409, "mk_pre" }, "pre_asked", new Object[]{ 409, "mk_pre" },
         "out", new Object[]{ 403, "mk_scope" }, "empty", new Object[]{ 409, "mk_balance" }, "none", new Object[]{ 404, "product" });
     static ObjectNode itemOf(JsonNode r) { ObjectNode o = O(); o.set("id", g(r, "id")); o.set("title", g(r, "title")); o.set("hours", hours(r)); o.set("credits", g(r, "credits")); o.set("thumb", orNull(g(r, "thumb"))); if (santaOwn(r)) o.put("orig", true).put("badge", "orig"); return o; }
 
@@ -351,7 +360,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
                 if (k == null) { ObjectNode o = O().put("on", true); o.putArray("shelf"); o.putObject("me").put("allowed", false); return o; }
                 ObjectNode ctl = db.q1("select * from mk_control where contract_id = $1", s(k, "id")); List<ObjectNode> C = collections(day, g(k, "collections").size() > 0 ? strs(g(k, "collections")) : null);
                 if (ctl != null && g(ctl, "allow_cols").size() > 0) { List<String> al = strs(g(ctl, "allow_cols")); C.removeIf(x -> !al.contains(s(x, "id"))); }
-                List<String> ads = adsOf("shelf_top"); ArrayNode shelf = F.arrayNode(); int i = 0;
+                List<String> ads = adsOf("shelf_top", tid); ArrayNode shelf = F.arrayNode(); int i = 0;
                 for (ObjectNode x : C) { ObjectNode sx = shelf.addObject(); sx.set("colId", x.get("id")); sx.set("title", x.get("title")); ArrayNode items; if (i++ == 0) items = withAds(x.get("rows"), ads, MarketServiceImpl::itemOf); else { items = F.arrayNode(); for (JsonNode r : x.get("rows")) items.add(itemOf(r)); } sx.set("items", items); }
                 long used = monthUsed(s(k, "id"), sh); ObjectNode o = O().put("on", true); o.set("shelf", shelf); ObjectNode me = o.putObject("me").put("allowed", true); if (ctl != null && truthy(g(ctl, "month_cap"))) me.put("monthLeft", Math.max(0, n(ctl, "month_cap") - used)); return o; });
             case "GET mk-list": return T(() -> { if (!B(party(tid), "pilot")) { ObjectNode o = O().put("on", false); o.putArray("items"); return o; } String day = today(); ArrayNode a = F.arrayNode();
@@ -440,16 +449,34 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
      *  유효 만료 → 이월(carry, credit_carry 장부) · 이월 만료 → ended(미사용분 자동 소멸 없음) · 견적 만료 · 사전 승인 요청 30일 만료. 월 집계 · 분기 마감은 산타 운영자가 실행(Node와 같음) */
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 3600000, initialDelayString = "${dd.market.tickMs:600000}")
     public void tick() { try { sweep(); } catch (Exception ignore) { /* 표가 없거나(마이그레이션 전) 일시 오류 — 다음 회차에 다시 */ } }
+    static final long[] NOTICE_DAYS = { 90, 30, 7 };
+    /** 오늘 보낼 만료 고지 단계(90 · 30 · 7, 주말이면 직전 금요일) — Node sweep.dueNotice와 같음 */
+    public static long dueNotice(String day, String end) { int dow = java.time.LocalDate.parse(day).getDayOfWeek().getValue() % 7;
+        for (long n : NOTICE_DAYS) { String t = DdMarketCalc.addDays(end, -n); if (t.equals(day)) return n; if (dow == 5 && (DdMarketCalc.addDays(day, 1).equals(t) || DdMarketCalc.addDays(day, 2).equals(t))) return n; } return 0; }
+    static String x1(long n, String end, long left, long bonus) { java.text.NumberFormat f = java.text.NumberFormat.getInstance(java.util.Locale.KOREA);
+        return "[디디쌤] 우리 기관 콘텐츠 패스 이용 기간이 " + n + "일 남았습니다(만료 " + end.replace('-', '.') + "). 남은 이용 한도 " + f.format(left) + "크레딧(보너스 " + f.format(bonus) + " 포함)은 만료일에 소멸하며 환불되지 않습니다. 만료 전 또는 만료 후 30일 안에 갱신하면 남은 유료 한도 중 일부(직전 유료 한도의 20%까지)를 새 계약으로 옮길 수 있습니다."; }
     public int sweep() throws Exception {
-        return db.txAs("", true, () -> { String day = today(); int n = 0;
-            List<ObjectNode> carry = db.q("update mk_contract set status = 'carry' where id in (select id from mk_contract where status = 'active' and kind = 'credit' and \"end\" < $1::date limit 200) returning id, buyer_tid", day);
+        List<Object[]> logs = new ArrayList<>();
+        int r0 = db.txAs("", true, () -> { String day = today(); int n = 0;
+            List<ObjectNode> carry = db.q("update mk_contract set status = 'carry' where id in (select id from mk_contract where status = 'active' and kind = 'credit' and \"end\" < $1::date and carry_end >= $1::date limit 200) returning id, buyer_tid", day);
             for (ObjectNode k : carry) { long r = n(db.q1("select coalesce(sum(remain), 0)::int n from mk_credit_wallet where contract_id = $1", s(k, "id")), "n");
                 db.x("insert into mk_entry (kind, contract_id, party_tid, credits, ref) values ('credit_carry', $1, $2, $3, $4)", s(k, "id"), s(k, "buyer_tid"), r, day); }
             n += carry.size();
-            n += db.x("update mk_contract set status = 'ended' where id in (select id from mk_contract where status in ('active','carry') and carry_end < $1::date limit 200)", day);
+            List<ObjectNode> ended = db.q("update mk_contract set status = 'ended' where id in (select id from mk_contract where status in ('active','carry') and carry_end < $1::date limit 200) returning id, buyer_tid", day);
+            for (ObjectNode k : ended) { ObjectNode w = db.q1("select coalesce(sum(remain) filter (where lot <> 'bonus'), 0)::int paid, coalesce(sum(remain) filter (where lot = 'bonus'), 0)::int bonus from mk_credit_wallet where contract_id = $1", s(k, "id"));
+                db.x("insert into mk_entry (kind, contract_id, party_tid, credits, amount, ref) values ('lapse', $1, $2, $3, $4, $5)", s(k, "id"), s(k, "buyer_tid"), n(w, "paid"), n(w, "paid") * DdMarketCalc.WON, day);
+                logs.add(new Object[]{ s(k, "buyer_tid"), "market.lapse", map("contract", s(k, "id"), "paid", n(w, "paid"), "bonus", n(w, "bonus")) }); }
+            n += ended.size();
+            for (ObjectNode k : db.q("select k.id, k.buyer_tid, to_char(k.carry_end, 'YYYY-MM-DD') ce, coalesce(k.terms, '{}'::jsonb) terms from mk_contract k where k.status = 'active' and k.kind = 'credit' and k.carry_end between $1::date and $1::date + 92 limit 200", day)) {
+                long d = dueNotice(day, s(k, "ce")); if (d == 0) continue; boolean sent = false; for (JsonNode x : arr(get(g(k, "terms"), "notices"))) if (String.valueOf(d).equals(x.asText())) sent = true; if (sent) continue;
+                ObjectNode w = db.q1("select coalesce(sum(remain), 0)::int lft, coalesce(sum(remain) filter (where lot = 'bonus'), 0)::int bonus from mk_credit_wallet where contract_id = $1", s(k, "id"));
+                db.x("update mk_contract set terms = jsonb_set(coalesce(terms, '{}'::jsonb), '{notices}', coalesce(terms->'notices', '[]'::jsonb) || to_jsonb($2::text)) where id = $1", s(k, "id"), String.valueOf(d));
+                logs.add(new Object[]{ s(k, "buyer_tid"), "market.lapse_notice", map("contract", s(k, "id"), "d", d, "text", x1(d, s(k, "ce"), n(w, "lft"), n(w, "bonus"))) }); n++; }
             n += db.x("update mk_quote set status = 'expired' where id in (select id from mk_quote where status in ('ready','sent','cp_wait') and valid_to < $1::date limit 200)", day);
             n += db.x("update mk_preapproval set status = 'expired' where id in (select id from mk_preapproval where status = 'asked' and at < now() - interval '30 days' limit 200)");
             return n; });
+        for (Object[] x : logs) log((String) x[0], "system", (String) x[1], x[2]);
+        return r0;
     }
 
     // 라우트 본문(MkRoutes)이 쓰는 접근자

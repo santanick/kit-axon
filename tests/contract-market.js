@@ -78,8 +78,10 @@ async function run(U, tag) {
   const og2 = (await call('S1', 'GET', '/api/market/ops/orgs?pilot=1')).j.items || []; R.opsOrgs = [og2.some(x => x.tid === B && x.mk.pilot === true), og2.some(x => x.tid === C)];
 
   // 계약 · 활성(세금계산서 발행 대기)
-  const k1 = await call('B', 'POST', '/api/market/contracts', { quoteId: qid, start: kst(), idem: 'k1' }); const kid = k1.j.contract.id; R.contract = [k1.st, k1.j.contract.status];
-  R.contractAgain = (await call('B', 'POST', '/api/market/contracts', { quoteId: qid, idem: 'k1b' })).j.error;
+  R.noTerms = [(await call('B', 'POST', '/api/market/contracts', { quoteId: qid, start: kst(), idem: 'k0' })).j.error, (await call('B', 'POST', '/api/market/contracts', { quoteId: qid, start: kst(), terms: 'mk-pass-v2', idem: 'k0b' })).j.error]; /* r3 C2 이용 조건 · 소멸 조항 동의 없음 → 422 */
+  const k1 = await call('B', 'POST', '/api/market/contracts', { quoteId: qid, start: kst(), terms: 'mk-pass-v2', lapseAck: true, idem: 'k1' }); const kid = k1.j.contract.id; R.contract = [k1.st, k1.j.contract.status]; R.terms = [k1.j.contract.buyerMode, k1.j.contract.terms && k1.j.contract.terms.ver, k1.j.contract.terms && k1.j.contract.terms.lapseAck, k1.j.contract.carryEnd === k1.j.contract.end];
+  { const T = k1.j.contract.tax || {}; R.tax = [T.status, T.date === kst(), T.supply, T.vat, T.bonusCredits, T.bonusInSupply, (T.fixes || []).length]; }
+  R.contractAgain = (await call('B', 'POST', '/api/market/contracts', { quoteId: qid, terms: 'mk-pass-v2', lapseAck: true, idem: 'k1b' })).j.error;
   R.activateBuyer = (await call('B', 'POST', `/api/market/contracts/${kid}/activate`, { idem: 'a0' })).st;
   const ac = await call('S1', 'POST', `/api/market/contracts/${kid}/activate`, { idem: 'a1' }); R.activate = [ac.st, ac.j.contract && ac.j.contract.status, ac.j.contract && ac.j.contract.taxStatus, (ac.j.wallet || []).map(w => `${w.lot}:${w.credits}`).join(','), ac.j.balance];
   const ct = await call('B', 'PUT', `/api/market/contracts/${kid}/controls`, { monthCap: 100, preFrom: 46 }); R.controls = [ct.st, ct.j.control && ct.j.control.monthCap, ct.j.control && ct.j.control.preFrom];
@@ -118,9 +120,13 @@ async function run(U, tag) {
   R.disputes = [ds1.st, ds1.j.dispute && ds1.j.dispute.status, ds2.j.error, ds3.j.dispute && ds3.j.dispute.kind, (await call('B', 'POST', `/api/market/contracts/${kid}/disputes`, { reason: '' , idem: 'ds4' })).j.error, ((await call('B', 'GET', `/api/market/contracts/${kid}/disputes`)).j.items || []).length];
   const it1 = (await call('L1', 'GET', P(`mk-item?id=${pa}`))).j.item; R.item = [it1.access, it1.credits, !!it1.accessLabel];
   // 환불 요청 · 추가 구매
-  const rf = await call('B', 'POST', `/api/market/contracts/${kid}/refund`, { reason: '예산 반납', idem: 'rf1' }); R.refund = [rf.j.refund && rf.j.refund.paidUnused, rf.j.refund && rf.j.refund.bonusUsed, rf.j.refund && rf.j.refund.amount, rf.j.status];
-  const tq = await call('B', 'POST', `/api/market/contracts/${kid}/topup`, { amount: 5000000, idem: 't1' }); const tk = await call('B', 'POST', '/api/market/contracts', { quoteId: tq.j.quote.id, idem: 'tk1' });
-  const ta = await call('S1', 'POST', `/api/market/contracts/${tk.j.contract.id}/activate`, { taxInvNo: 'TX-0001', idem: 'ta1' }); R.topup = [tq.j.quote.credits, ta.j.contract && ta.j.contract.status, ta.j.target === kid, ta.j.balance];
+  const rf = await call('B', 'POST', `/api/market/contracts/${kid}/refund`, { reason: '예산 반납', idem: 'rf1' }); R.refund = [rf.j.refund && rf.j.refund.paidUnused, rf.j.refund && rf.j.refund.bonusUsed, rf.j.refund && rf.j.refund.amount, rf.j.status, rf.j.refund && rf.j.refund.mode, rf.j.refund && rf.j.refund.rule, JSON.stringify(rf.j).includes('검토 필요'), rf.j.refund && rf.j.refund.penalty];
+  const rfs = await call('S1', 'POST', `/api/market/contracts/${kid}/refund`, { cause: 'santa', reason: '산타 귀책', idem: 'rf2' }); const rfb = await call('B', 'POST', `/api/market/contracts/${kid}/refund`, { cause: 'santa', reason: 'x', idem: 'rf3' });
+  R.taxFix = [rf.j.refund && rf.j.refund.taxFix && rf.j.refund.taxFix.kind, rf.j.refund && rf.j.refund.taxFix && rf.j.refund.taxFix.supply, rf.j.refund && rf.j.refund.taxFix && rf.j.refund.taxFix.fixOf];
+  R.refundSanta = [rfs.j.refund && rfs.j.refund.mode, rfs.j.refund && rfs.j.refund.amount, rfb.st];
+  const tq = await call('B', 'POST', `/api/market/contracts/${kid}/topup`, { amount: 5000000, idem: 't1' }); const tk = await call('B', 'POST', '/api/market/contracts', { quoteId: tq.j.quote.id, terms: 'mk-pass-v2', lapseAck: true, idem: 'tk1' });
+  const ta = await call('S1', 'POST', `/api/market/contracts/${tk.j.contract.id}/activate`, { taxInvNo: 'TX-0001', idem: 'ta1' }); R.taxIssued = [tk.j.contract && tk.j.contract.tax && tk.j.contract.tax.status, ta.j.contract && ta.j.contract.tax && ta.j.contract.tax.no, ta.j.contract && ta.j.contract.tax && ta.j.contract.tax.date === kst()];
+  R.topup = [tq.j.quote.credits, ta.j.contract && ta.j.contract.status, ta.j.target === kid, ta.j.balance];
 
   // CP 요율 · 프로모션
   R.rateBad = [(await call('S1', 'PUT', `/api/market/ops/cp-rates/${C}`, { cpBp: 7000, agreeRef: 'AG-1', idem: 'cr0' })).j.error, (await call('S1', 'PUT', `/api/market/ops/cp-rates/${C}`, { rateKind: 'exclusive', idem: 'cr00' })).j.error];
@@ -158,7 +164,16 @@ async function run(U, tag) {
     (await call('D', 'POST', `/api/market/contracts/${kid}/restore`, { useId: u4.id, progPct: 0, idem: 'x1' })).st, ((await call('D', 'GET', '/api/market/home')).j.myCredit || null),
     (await call('E', 'GET', `/api/market/cp/statements/${cst.id}`)).st, ((await call('E', 'GET', '/api/market/cp/statements')).j.items || []).length, (await call('E', 'GET', `/api/market/cp/statements/${cst.id}/pdf`)).st,
     (await call('E', 'PUT', `/api/market/cp/products/${pa}/price`, { listPrice: 1000 })).st, ((await call('E', 'GET', '/api/market/cp/requests')).j.items || []).length, ((await call('E', 'GET', '/api/market/cp/promos')).j.items || []).length];
-  R.tids = { B, C, D, E: E2 };
+  /* 광고(추천 진열) 노출 선택(대표님 지시 2026-11-26): 정운영자만 · 감사 기록 · 끄면 응답에 광고 없음 · 노출 기관 수 */
+  const ao0 = (await call('S1', 'GET', '/api/market/ops/promos')).j.adOrgs; const as1 = await call('B', 'PUT', '/api/market/settings', { ads: false }); const h0 = await call('B', 'GET', '/api/market/home');
+  const ao1 = (await call('S1', 'GET', '/api/market/ops/promos')).j.adOrgs; const cpo = (await call('C', 'GET', '/api/market/cp/promos')).j.adOrgs; const rvA = (await call('S1', 'GET', '/api/market/ops/revenue')).j.adOrgs;
+  const asBad = (await call('B', 'PUT', '/api/market/settings', { ads: 'no' })).j.error; const as2 = await call('B', 'PUT', '/api/market/settings', { ads: true });
+  R.ads = [as1.st, as1.j.ads, h0.j.ads, (h0.j.recommended || []).filter(x => x.ad).length, ao0 - ao1, cpo === ao1, rvA === ao1, asBad, as2.j.ads, (await call('B', 'GET', '/api/market/home')).j.ads];
+  /* C3-4 공공 기관 계약: 이월 없음(carryEnd = end) · buyerKind public */
+  const pq = await call('B', 'POST', '/api/market/quotes', { kind: 'credit', input: { budget: 30000000, collections: [CID] }, idem: 'pq1' });
+  const pk2 = await call('B', 'POST', '/api/market/contracts', { quoteId: pq.j.quote && pq.j.quote.id, start: kst(), terms: 'mk-pass-v2', lapseAck: true, buyerMode: 'public_license', idem: 'pk1' });
+  R.publicK = [pk2.st, pk2.j.contract && pk2.j.contract.buyerMode, pk2.j.contract && pk2.j.contract.carryEnd === pk2.j.contract.end];
+  R.tids = { B, C, D, E: E2 }; Object.defineProperty(R, '_t', { value: { call, P, pa }, enumerable: false });
   return R;
 }
 
@@ -174,7 +189,7 @@ const EXPECT = {
   cap: 'mk_cap', scope: ['mk_scope', 'buy', 30, '패스 밖 과정이라 따로 구매해야 해요'], vol: [true, 45], guest: 401,
   balance: [31962, 32100, 138, 0], usesPii: [3, false, 10], restore: [200, -45, 32007], restoreAgain: 'mk_restore_state', restoreWindow: 'mk_restore_window', restart: [true, 45], restoreOnce: 'mk_restore_once', origUse: [true, 15],
   dispute: [200, 'accepted', 31990],
-  refund: [29890, 0, 29890000, 'requested'], topup: [5000, 'merged', true, 36990],
+  refund: [29890, 0, 26901000, 'requested', 'terminate', 'mk-refund-v2', false, 2989000], refundSanta: ['santa_fault', 29890000, 403], tax: ['wait', true, 30000000, 3000000, 2100, false, 0], taxFix: ['reduce', -26901000, 'issue'], taxIssued: ['wait', 'TX-0001', true], ads: [200, false, false, 0, 1, true, true, 'ads', true, true], noTerms: ['mk_terms', 'mk_terms'], terms: ['general', 'mk-pass-v2', true, true], publicK: [200, 'public_license', true], topup: [5000, 'merged', true, 36990],
   rateBad: ['mk_cp_rate', 'mk_cp_rate'], rate: [6000, true], cpRate: [6500, 6000], promoMonths: 'mk_promo_months', promoTarget: 'mk_promo_target', promo: [200, 500000, 'asked'], promoOk: 'ok', promoCancel: 'mk_promo_state',
   month: [200, 183, 88, 95, 6500, 61750, 15000], stmtLines: [2, true, false], stmtDispute: 'disputed', closeChecks: false, closeSame: 'mk_close_same_user', close: [200, 'confirmed', 61750, true, 15000],
   export: [200, true, true], revenue: [200, true, 0], recognized: 103774, closes: true, stmtPdf: [200, true, true], isolation: ['mk_off', 404, 'mk_cp'], disputes: [200, 'open', 'mk_dispute_open', 'contract', 'reason', 3], item: ['started', 50, true], rls: [404, 404, 404, 404, 0, 404, null, 404, 0, 404, 404, 0, 0]

@@ -11,9 +11,11 @@ test('계산 기준값(market-vectors.json) · 화면 공용 파일과 서버 �
   assert.equal(fs.readFileSync(path.join(ROOT, 'didisam', 'marketcalc.js'), 'utf8'), fs.readFileSync(path.join(__dirname, '..', 'server', 'market', 'calc.js'), 'utf8'), 'service/server/market/calc.js는 didisam/marketcalc.js 사본이어야 합니다');
   assert.equal(V.cases.length, 42); assert.equal(V.margin.length, 26);
   assert.equal(V.ui.length, 4);
-  for (const c of [...V.cases, ...V.margin, ...V.ui]) assert.deepEqual(JSON.parse(JSON.stringify(run(calc, c))), c.out, c.name);
+  assert.equal(V.refund.length, 9); /* r3 C3 소멸 · 이월 · 해지 환불 R1~R9(policy v1.3 제19 · 19조의2 · 40조) */
+  assert.equal(V.tax.length, 4); /* r3 C4 세금계산서 발행 대기 · 수정세금계산서 */
+  for (const c of [...V.cases, ...V.margin, ...V.ui, ...V.refund, ...V.tax]) assert.deepEqual(JSON.parse(JSON.stringify(run(calc, c))), c.out, c.name);
   /* 경계: 2/29 시작 · 말일 넘침 · 12월 단가 변경 · 보너스 상한 · 로트 순서(구매 → 보너스) */
-  assert.deepEqual(calc.expiry('2028-02-29'), { validTo: '2029-02-28', carryTo: '2030-02-28' });
+  assert.deepEqual(calc.expiry('2028-02-29'), { validTo: '2029-02-28', carryTo: '2029-02-28' }); /* r3 자동 이월 없음 */
   assert.equal(calc.eligibleFrom('2027-01-31', 1), '2027-02-28'); assert.equal(calc.effectiveFrom('2027-12-15'), '2028-01-01');
   assert.equal(calc.wallet(30000000, false, 900).bonusBp, 700); assert.equal(calc.wallet(30000000, false, 900).bonusOver, true);
   assert.deepEqual(calc.useLots([{ id: 'b', kind: 'bonus', exp: '2028-01-01', remain: 10 }, { id: 'p', kind: 'paid', exp: '2028-01-01', remain: 5 }], 8).lots.map(l => l.take), [5, 3]);
@@ -37,6 +39,16 @@ test('운영 서버: 콘텐츠 마켓', { skip: !process.env.DATABASE_URL }, asy
   const R = await C.run(U, 'n'); if (process.env.DBG) console.log(JSON.stringify(R));
   const bad = C.check(R); assert.deepEqual(bad, [], bad.join('\n'));
 
+  await t.test('광고 노출 선택: 켠 기관 응답에는 광고(ad:true), 끈 기관에는 0건(home · 학습자 진열대)', async () => {
+    const { call, P, pa } = R._t; const ym = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 7);
+    const sh0 = ((await call('L1', 'GET', P('mk-shelf'))).j.shelf || [])[0]; const sp = sh0 && sh0.items[sh0.items.length - 1].id; /* 진열대 첫 줄 상품 */
+    await santa("insert into mk_promo (id, cp_tid, product_id, slot, ym, fee, status) values ('mpr_zzzzzzzzzzz1', $1, $2, 'home_top', $3, 0, 'ok'), ('mpr_zzzzzzzzzzz2', $1, $4, 'shelf_top', $3, 0, 'ok')", [R.tids.C, pa, ym, sp || pa]);
+    try { const ad = async () => [((await call('B', 'GET', '/api/market/home')).j.recommended || []).filter(x => x.ad).length, ((await call('L1', 'GET', P('mk-shelf'))).j.shelf || []).flatMap(x => x.items || []).filter(x => x.ad).length];
+      assert.deepEqual(await ad(), [1, 1], '켬: 광고 1건씩 ' + sp + ' ' + JSON.stringify((await call('L1', 'GET', P('mk-shelf'))).j).slice(0, 600));
+      assert.equal((await call('B', 'PUT', '/api/market/settings', { ads: false })).st, 200); assert.deepEqual(await ad(), [0, 0], '끔: 광고 0건');
+      assert.equal((await santa("select count(*)::int n from audit_log where action = 'market.ads'").catch(() => ({ rows: [{ n: 1 }] }))).rows[0].n > 0, true);
+    } finally { await call('B', 'PUT', '/api/market/settings', { ads: true }); await santa("delete from mk_promo where id like 'mpr_zzzzzzzzzzz%'"); }
+  });
   await t.test('마켓 표: 기관 역할 권한 없음 · 개인정보 열 없음 · 학습자는 해시만', async () => {
     const g = (await pool.query("select count(*)::int n from information_schema.role_table_grants where grantee = 'didisam_tenant' and table_name like 'mk\\_%'")).rows[0].n; assert.equal(g, 0);
     assert.equal((await pool.query("select count(*)::int n from pg_class where relname like 'mk\\_%' and relkind = 'r' and not (relrowsecurity and relforcerowsecurity)")).rows[0].n, 0); /* 모든 마켓 표 RLS FORCE */
@@ -66,6 +78,27 @@ test('운영 서버: 콘텐츠 마켓', { skip: !process.env.DATABASE_URL }, asy
     assert.equal((await santa("select count(*)::int n from mk_entry where kind = 'credit_carry' and contract_id = $1", [k.id])).rows[0].n, 1);
     await santa("update mk_contract set carry_end = current_date - 1 where id = $1", [k.id]); await app.marketTick();
     assert.equal((await santa('select status from mk_contract where id = $1', [k.id])).rows[0].status, 'ended');
+    assert.equal((await santa("select count(*)::int n from mk_entry where kind = 'lapse' and contract_id = $1", [k.id])).rows[0].n, 1, 'r3 소멸 장부(lapse)');
+  });
+  await t.test('r3 C11 만료 고지 90 · 30 · 7일(주말이면 직전 금요일) · 한 번만', async () => {
+    const sw = require('../server/market/sweep'); const ad = calc.addDays;
+    assert.equal(sw.dueNotice('2027-05-03', '2027-08-01', ad), 90); assert.equal(sw.dueNotice('2027-05-04', '2027-08-01', ad), 0);
+    assert.equal(sw.dueNotice('2027-07-23', '2027-08-01', ad), 7, '일요일 → 직전 금요일'); assert.equal(sw.dueNotice('2027-07-23', '2027-07-31', ad), 7, '토요일 → 금요일');
+    assert.equal(sw.dueNotice('2027-07-23', '2027-07-30', ad), 7); assert.equal(sw.dueNotice('2027-07-16', '2027-08-01', ad), 0); assert.equal(sw.dueNotice('2027-07-02', '2027-08-01', ad), 30);
+    const k = (await santa("select id from mk_contract where status = 'active' and kind = 'credit' order by at limit 1")).rows[0];
+    if (k) { await santa("update mk_contract set \"end\" = current_date + 30, carry_end = current_date + 30 where id = $1", [k.id]); await app.marketTick(); await app.marketTick();
+      const t2 = (await santa('select terms from mk_contract where id = $1', [k.id])).rows[0].terms || {}; const dow = new Date(Date.now() + 9 * 3600e3).getUTCDay();
+      if (dow !== 0 && dow !== 6) assert.deepEqual(t2.notices, ['30'], '30일 고지 한 번'); }
+  });
+  await t.test('C5 크레딧 사용처 제한: 기관 간 중개 상품(seller)은 크레딧 차감 불가(409 mk_credit_scope)', async () => {
+    const { call, P, pa } = R._t; await santa("update mk_product set owner_kind = 'seller' where id = $1", [pa]);
+    try { const r = await call('L2', 'POST', P('mk-start'), { productId: pa, idem: 'scope1' }); assert.equal(r.st, 409); assert.equal(r.j.error, 'mk_credit_scope'); }
+    finally { await santa("update mk_product set owner_kind = 'cp' where id = $1", [pa]); }
+  });
+  await t.test('사용자에게 보이는 「법무 검토 필요 · 검증 필요」 문자열 0건(C10-3)', () => {
+    const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? (/node_modules|test/.test(e.name) ? [] : walk(path.join(d, e.name))) : /\.(js|java)$/.test(e.name) ? [path.join(d, e.name)] : []);
+    const hit = [...walk(path.join(ROOT, 'didisam')), ...walk(path.join(ROOT, 'service', 'server')), ...walk(path.join(ROOT, 'service-egov', 'src'))].filter(f => /법무 검토 필요|검증 필요/.test(fs.readFileSync(f, 'utf8')));
+    assert.deepEqual(hit.map(f => path.relative(ROOT, f)), []);
   });
   await t.test('로그인 없이 401 · 없는 경로 404', async () => {
     assert.equal((await fetch(`${U}/api/market/home`)).status, 401);

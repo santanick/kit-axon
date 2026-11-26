@@ -95,7 +95,7 @@
   function yearOn(y, m, d) { return m === 2 && d === 29 && lastDay(y, 2) < 29 ? fmt(U(y, 3, 1)) : fmt(U(y, m, d)); }
   function expiry(start) {
     const p = pd(start); if (!p) return null; const v = yearOn(p[0] + 1, p[1], p[2]); const q = pd(v);
-    return { validTo: addDays(v, -1), carryTo: addDays(yearOn(q[0] + 1, q[1], q[2]), -1) };
+    return { validTo: addDays(v, -1), carryTo: addDays(v, -1) }; /* r3: 자동 이월 폐지 — carryTo = validTo(기존 코드 호환) */
   }
   /* 사용 순서: 만료(carryTo) 이른 로트 → 구매(paid · topup · carry) → 보너스 → id. lots [{id?, kind|lot, exp|carryTo, remain}] */
   const lotRank = k => k === 'bonus' ? 1 : 0;
@@ -121,7 +121,7 @@
   /* 화면 공용 이름(개발자 3 market.js와 같은 규칙) — 위 함수의 별칭 · 다른 반환형 */
   const alertLevel = (total, bal, bps) => { if (!(int(total) > 0)) return 0; const r = alertOf(bal, total, bps); return r ? int(r.slice(1)) : 0; }; /* 잔액 ≤ 10% → 10, ≤ 20% → 20, 그 밖 0 */
   const preNeeded = (preFrom, course) => needApproval(course, preFrom);
-  const validity = start => expiry(start); /* { validTo: 시작 + 1년 − 1일, carryTo: + 1년 } */
+  const validity = start => expiry(start); /* { validTo: 시작 + 1년 − 1일, carryTo = validTo(r3 자동 이월 없음) } */
 
   /* 10) 단가 변경: 신청일 다음 달 1일부터(소급 없음) */
   function effectiveFrom(asked) { const p = pd(asked); if (!p) return null; return p[1] === 12 ? fmt(U(p[0] + 1, 1, 1)) : fmt(U(p[0], p[1] + 1, 1)); }
@@ -188,10 +188,38 @@
     const gross = L.reduce((s, x) => s + x.gross, 0), cp = L.reduce((s, x) => s + x.cp, 0); return { bySource: L, gross, cp, santa: gross - cp, santaBp: gross > 0 ? fdiv((gross - cp) * 10000, gross) : 0 };
   }
 
+  /* 소멸 · 이월 · 해지 환불(policy v1.3 제19 · 19조의2 · 40조, code-changes r3 C3) — 크레딧은 「연간 콘텐츠 이용권」의 이용 한도.
+     · 기간 종료(validTo 다음 날) 모든 로트 소멸, 자동 이월 없음. · 해지(기관 사정) = ⌊max(0, 남은 유료 − 사용 보너스) × 1,000 × (1 − 위약금 10%)⌋, 14일 이내 · 사용 0이면 전액,
+       산타 귀책 = 남은 유료 × 1,000 전액. · public_license는 계약 조건 우선(contract, 금액만 계산) · public_postpaid는 선불 없음(none).
+     lots [{lot, credits, remain, validTo|carryTo}], o { start, usedTotal, cause, penaltyBp, buyerMode } */
+  const PENALTY_BP = 1000, CARRY_BP = 2000, CARRY_MAX_BP = 5000, RENEW_GRACE_DAYS = 30, REFUND_FULL_DAYS = 14;
+  function refundOf(lots, day, o) { o = o || {}; const L = (lots || []).map(l => ({ lot: l.lot || l.kind || 'paid', credits: int(l.credits), remain: int(l.remain), to: l.validTo || l.carryTo || l.exp || '' }));
+    const P = L.filter(l => l.lot !== 'bonus'), B = L.filter(l => l.lot === 'bonus'); const pen = Math.min(PENALTY_BP, Math.max(0, o.penaltyBp == null ? PENALTY_BP : int(o.penaltyBp)));
+    const bonusUsed = B.reduce((s, l) => s + Math.max(0, l.credits - l.remain), 0); const paidAll = P.reduce((s, l) => s + l.credits, 0);
+    const live = P.filter(l => !l.to || day <= l.to); const paidUnused = live.reduce((s, l) => s + l.remain, 0); const out = (mode, amount, penalty, pu) => ({ mode, paidUnused: pu == null ? paidUnused : pu, bonusUsed, penalty, amount });
+    if (o.buyerMode === 'public_postpaid') return out('none', 0, 0);
+    if (!live.length) return out('none', 0, 0, 0); /* 기간 종료 — 소멸, 환불 없음 */
+    if (o.start && int(o.usedTotal || 0) === 0 && day <= addDays(o.start, REFUND_FULL_DAYS - 1)) return out('full', paidAll * WON, 0, paidAll);
+    if (o.cause === 'santa') return out('santa_fault', paidUnused * WON, 0);
+    const base = Math.max(0, paidUnused - bonusUsed) * WON; const amount = fdiv(base * (10000 - pen), 10000);
+    return out(o.buyerMode === 'public_license' ? 'contract' : 'terminate', amount, base - amount); }
+  /* 갱신 이월: 직전 validTo + 30일 안에 맺은 갱신만. 이월 = min(남은 유료, ⌊min(직전 유료, 갱신 유료) × carryBp ÷ 10000⌋), carryBp 기본 20% · 상한 50%. 보너스 · 이월분은 다시 옮기지 않음 */
+  function carryOf(prev, renew, o) { o = o || {}; const bp = Math.min(CARRY_MAX_BP, Math.max(0, o.carryBp == null ? CARRY_BP : int(o.carryBp))); const unused = Math.max(0, int(prev && prev.paidUnused));
+    const limit = fdiv(Math.min(int(prev && prev.paidCredits), int(renew && renew.paidCredits)) * bp, 10000);
+    if (!prev || !renew || !prev.validTo || !renew.signedAt || renew.signedAt > addDays(prev.validTo, RENEW_GRACE_DAYS)) return { ok: false, credits: 0, limit, lapse: unused, reason: 'late' };
+    const credits = Math.min(unused, limit); return { ok: true, credits, limit, lapse: unused - credits, reason: '' }; }
+
+  /* 세금계산서(r3 C4, 부가가치세법 제15 · 17조): 계약 확정 = 「발행 대기」 레코드. 작성일 = 구매 확정일, 공급가액 = 이용권 가격(보너스 제외 — 무상 제공분은 공급가액 미포함), 부가세 10% 내림.
+     환불 확정 시 수정세금계산서(전액 = 계약 해제, 일부 = 공급가액 감소) — 작성일 = 환불 확정일, 금액은 음수, 원 세금계산서(fixOf)에 연결 */
+  function taxOf(supply, bonusCredits, day) { const sp = Math.max(0, int(supply)); const vat = fdiv(sp, 10);
+    return { status: 'wait', date: day, supply: sp, vat, total: sp + vat, bonusCredits: Math.max(0, int(bonusCredits || 0)), bonusInSupply: false, no: null, fixes: [] }; }
+  function taxFixOf(tax, refundAmount, day) { const amt = Math.min(Math.max(0, int(refundAmount)), int(tax && tax.supply)); if (!amt) return null; const vat = fdiv(amt, 10);
+    return { status: 'wait', kind: amt >= int(tax.supply) ? 'cancel' : 'reduce', date: day, supply: -amt, vat: -vat, total: -(amt + vat), fixOf: (tax && tax.no) || 'issue' }; }
+
   const rules = () => ({ won: WON, cpBp: CP_BP, santaBp: SANTA_BP, guardBp: GUARD_BP, bonus: { steps: BONUS_STEPS.map(s => ({ ...s })), bundleBp: BUNDLE_BP, maxBp: BONUS_MAX_BP }, validMonths: 12, carryMonths: 12, restore: { hours: RESTORE_HOURS, progLtPct: RESTORE_PROG_LT }, alertBp: ALERT_BP.slice() });
 
   const api = { WON, CP_BP, SANTA_BP, BONUS_MAX_BP, GUARD_BP, rules, credits, bonusBp, wallet, estimate, guard, partial, plan, discCredits, useCredits, deductMany, restorable, hoursBetween, cpOf, settle, sum,
     RATE, SLOT, ORIG_CAP_BP, PROMO_MAX_MONTHS, rateKindOf, rateCheck, rateAt, cpBpOf, settleLine, promoFee, promoCheck, promoDeduct, origCapOk, recognized, santaMix, nextMonth1: d => effectiveFrom(d),
-    expiry, validity, addDays, addMonths, lotOrder, useLots, capOk, needApproval, preNeeded, alertOf, alertLevel, effectiveFrom, priceAt, eligibleFrom, optinMinEnd, optinMode, singleCand, singleAuto, singleMin, singleGuard, broker, b2c, path };
+    expiry, validity, addDays, addMonths, lotOrder, useLots, capOk, needApproval, preNeeded, alertOf, alertLevel, effectiveFrom, priceAt, eligibleFrom, optinMinEnd, optinMode, singleCand, singleAuto, singleMin, singleGuard, broker, b2c, path, refundOf, carryOf, taxOf, taxFixOf, PENALTY_BP, CARRY_BP, CARRY_MAX_BP };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.marketCalc = api;
 })(typeof window !== 'undefined' ? window : globalThis);

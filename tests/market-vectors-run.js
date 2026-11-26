@@ -27,6 +27,10 @@ module.exports = function run(calc, c) {
     case 'broker': return calc.broker(i.amount);
     case 'b2c': return calc.b2c(i.vatPrice);
     case 'path': return calc.path(i.vatPrice);
+    case 'refundOf': return calc.refundOf(i.lots, i.day, i.o);
+    case 'carryOf': return calc.carryOf(i.prev, i.renew, i.o);
+    case 'taxOf': return calc.taxOf(i.supply, i.bonusCredits, i.day);
+    case 'taxFixOf': return calc.taxFixOf(i.tax, i.refundAmount, i.day);
     default: throw new Error('알 수 없는 fn: ' + c.fn);
   }
 };
