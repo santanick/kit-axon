@@ -657,3 +657,7 @@ html[data-theme="dark"] body:not(.lapp) :is(.shp-tabs a,.lc26kt button,.l26side 
 html[data-theme="dark"] body:not(.lapp) .lt-chip.pri,html[data-theme="dark"] body:not(.lapp) .shp-chip.on,html[data-theme="dark"] body:not(.lapp) .lctabs:not(.l26side .lctabs)>:is(a,button).on{background:var(--ink);border-color:var(--ink);color:var(--surface,#0E1A14)}
 html[data-theme="dark"] body:not(.lapp) :is(.hero,.sec.dark,.myh,.cp.big,.lgl,.lux-cc:not(.empty),.tk) .lbtn:where(:not(.ghost,.wht,.out,.line,.red,.warn,.sec,.pri)){color:var(--ink)}
 .lc-t-card .lc-slide{color:var(--ink,#2A2B2B)}
+/* QA49-7: 내 강의(#my) 프로필 카드 — 흰 카드 안 글자가 어두운 머리(section.myh)의 흰 글자 색을 물려받아 이름 · 기관명 · 수강번호 · 숫자가 안 보이던 문제(대비 1.0~1.8, 라이트 · 다크 공통) */
+html body .myh .myp.myp43{color:var(--ink)}
+html body .myh .myp.myp43 .mpi :is(small,span:not(.tg)),html body .myh .myp.myp43 .myp43s dt{color:var(--mute)}
+html body .myh .myp.myp43 .myp43s dd,html body .myh .myp.myp43 .myp43s dd b{color:var(--ink)}

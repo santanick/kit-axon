@@ -130,3 +130,7 @@ body:not(.lapp) .lq-leg{align-items:center;gap:8px;padding:12px 16px;margin-top:
 body:not(.lapp) .lq-leg .lq-legh,body.lapp .lq-leg .lq-legh{font-size:14px;margin-right:6px}
 body:not(.lapp) .lq-leg span{display:inline-flex;align-items:center;gap:2px;height:32px;padding:0 12px;border-radius:999px;background:var(--paper,#f6f3ec);font-weight:600}
 body:not(.lapp) .lq-leg span small{margin-left:6px;font-size:13px;color:var(--mute);font-weight:700}
+/* QA49-7: 「일정 없음」처럼 0인 칸은 초록 강조 없이 본문 색(밝은 초록 바탕 위 대비 4.2 → 본문 색), 다크에서는 첫 칸 바탕을 어두운 초록으로 */
+.lq-sn a b.lq-z{color:var(--ink)!important}
+html[data-theme="dark"] .lq-sn a:first-child{background:color-mix(in srgb,var(--pri) 16%,var(--surface,#0E1A14))}
+html[data-theme="dark"] .lq-sn a:first-child b{color:var(--pri-tx,#5FE08A)}

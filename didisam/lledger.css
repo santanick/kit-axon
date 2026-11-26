@@ -155,3 +155,20 @@ body:not(.lapp) .lg-old.lg43o>summary::-webkit-details-marker{display:none}
 .lg43o>summary em{font-style:normal;font-size:14px;font-weight:700;color:var(--pri-tx,#007200)}
 .lg43o[open]>summary em{opacity:.6}
 .lg43o[open]{padding-bottom:16px}
+
+/* QA49-7 다크 모드: 이 파일의 지역 색(--ink #212121 · --sf #fbfbfb 등)이 다크 테마 토큰을 덮어 결제 내역 글자 · 버튼이 어두운 바탕에 묻히던 문제(대비 1.1). 구조는 그대로, 지역 색만 다크 값으로 */
+html[data-theme="dark"] :is(.lg,.lg-due){--g:#00C53B;--gd:#5FE08A;--gl:#0F2A1B;--ink:#EAF2EC;--mu:#A7B8AD;--ln:#21332A;--sf:var(--canvas,#07110C);--y:#2A2110;--yd:#FFD46B;--r:#3A1418;--rd:#FF8A95}
+html[data-theme="dark"] .lg-btn{border-color:#2F4438}
+html[data-theme="dark"] :is(.lg-bill.is-paid,.lg-strip){background:var(--surface2,#13231B)}
+html[data-theme="dark"] .lg-tag{background:#21332A}
+html[data-theme="dark"] .lg-chip{background:rgba(255,255,255,.08)}
+html[data-theme="dark"] .lg-chip.on{background:#EAF2EC;color:#04140A}
+html[data-theme="dark"] .lg-cnt{color:#04140A}
+html[data-theme="dark"] .lg-form :is(select,textarea){border-color:#2F4438}
+html[data-theme="dark"] .lg-rd{border-color:#71867A}
+html[data-theme="dark"] body.lg-billon{background:var(--canvas,#07110C)}
+html[data-theme="dark"] body .lg .lg-btn.pri,html[data-theme="dark"] body .lg-bar .lg-btn.pri{color:#04140A!important}
+html[data-theme="dark"] body .lg .lg-btn.pri[disabled]{background:#2F4438!important;border-color:#2F4438!important;color:#A7B8AD!important}
+html[data-theme="dark"] .lg43c{background:var(--surface,#0E1A14);color:#5FE08A}
+html[data-theme="dark"] .lg43c.bad{color:#FF8A95}
+html[data-theme="dark"] .lg43oi{background:#0F2A1B;color:#5FE08A}

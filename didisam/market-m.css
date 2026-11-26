@@ -50,3 +50,5 @@
 .mk-ckl{display:flex;align-items:flex-start;gap:8px;margin:8px 0 0;font-size:13.5px;color:var(--g900);line-height:1.5;cursor:pointer}
 .mk-ckl input{width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:var(--pr)}
 .mk-ckl.req{font-weight:700}
+/* QA49-7 휴대폰: 시범 운영 켜기 · 끄기 칩(산타 운영) 누르는 자리 44px */
+@media (max-width:760px){.chip[data-act="mk-pilot-set"]{min-height:44px}}
