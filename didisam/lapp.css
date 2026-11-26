@@ -256,5 +256,3 @@ body.lapp .cwc.ph .cwh span{background:rgba(255,255,255,.92);color:#0B3B1E}
 body.lapp.ap-homeon:has(#lm>.ap-home) #lm{padding-bottom:0!important}
 body.lapp.ap-homeon:has(#lm>.ap-home) #lapp{padding-bottom:0}
 body.lapp.ap-homeon:has(#lm>.ap-home){padding-bottom:0}
-/* QA49-7: 꺼진(비활성) 앱 알림 [켜기]가 투명 바탕에 흐린 글자로 거의 안 보이던 문제(라이트 2.3 · 다크 1.1) — 비활성 모양을 분명하게, 아래 한 줄 이유는 그대로 */
-.ap-push .lbtn:disabled{background:var(--line2,#F3F0EA)!important;color:var(--mute,#5C554B)!important;box-shadow:inset 0 0 0 1px var(--line,#E7E2D9)!important;border-color:transparent!important;opacity:1!important}
