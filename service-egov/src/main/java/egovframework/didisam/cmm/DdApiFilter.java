@@ -38,7 +38,7 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** v30 학사 LMS 묶음 경로(/api/lms/**) — 기동 때 DdLmsRoutes가 @RequestMapping에서 자동 수집한다(묶음별 등록 불필요) */
     public static final Set<String> LMS = ConcurrentHashMap.newKeySet();
     /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */
-    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel)|ledger-(?:my|order|confirm|bill|bill-order|bill-confirm)|mile-(?:my|list|rewards|redeem|redeem-cancel|proof|guardian|streak-repair|notice-read))\\z");
+    public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel)|ledger-(?:my|order|confirm|bill|bill-order|bill-confirm)|mile-(?:my|list|rewards|redeem|redeem-cancel|proof|guardian|streak-repair|notice-read)|mk-(?:shelf|list|item|start|pre|path|order|earn))\\z");
     /** QA7 학습자 소셜 가입 · 로그인(Node loauth.handle) — 시작은 기관별, 콜백은 제공자별 하나 */
     public static final java.util.regex.Pattern LOAUTH = java.util.regex.Pattern.compile("^/api/pub/(?:[^/]+/loauth/(?:google|kakao|naver)/start|loauth/(?:google|kakao|naver)/callback)\\z");
     /** v41 통합 수납 원장 운영자 경로(/api/ledger/*, :id 포함) — Node ledger/mod-admin과 같은 목록(09 규격 3절) */
@@ -51,6 +51,8 @@ public class DdApiFilter extends OncePerRequestFilter {
     public static final java.util.regex.Pattern MEDIA = java.util.regex.Pattern.compile("^/api/media/(?:f/)?[^/]+\\z"); /* v35: 강의 파일 /api/media/f/{id} 포함 */
     /** v47 산타 관리: PUT /api/santa/orgs/{tid}/plan — Node santaPlan 경로와 같음 */
     /** 가디언 /api/security/* — 메서드 · 경로 세부 판정은 SecServiceImpl.route(없으면 404) */
+    /** 콘텐츠 마켓 v1.1 /api/market/* — 세부 경로 · 메서드는 MarketServiceImpl 경로 표가 판정(없으면 404) */
+    public static final java.util.regex.Pattern MARKET = java.util.regex.Pattern.compile("^/api/market/[\\w./:-]{1,160}\\z");
     public static final java.util.regex.Pattern SECURITY = java.util.regex.Pattern.compile("^/api/security/[\\w./:-]{1,140}\\z");
     public static final java.util.regex.Pattern SANTA = java.util.regex.Pattern.compile("^/api/santa/orgs/tn_[a-z0-9]{8,16}/plan\\z");
     static boolean mediaRoute(String m, String path) {
@@ -82,7 +84,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         if ("admin".equals(props.module) && !("GET".equals(m) && "/api/health".equals(path)) && !DdModule.ipAllowed(props.adminIps, web.ip(req))) { res.setHeader("cache-control", "no-store"); json(res, 403, "ip", "허용되지 않은 접속 위치입니다."); return; }
         if (path.startsWith("/api/")) {
             res.setHeader("cache-control", "no-store");
-            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !LOAUTH.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !MILEAGE.matcher(path).matches() && !mediaRoute(m, path) && !("PUT".equals(m) && SANTA.matcher(path).matches()) && !SECURITY.matcher(path).matches()) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
+            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !LOAUTH.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !MILEAGE.matcher(path).matches() && !MARKET.matcher(path).matches() && !mediaRoute(m, path) && !("PUT".equals(m) && SANTA.matcher(path).matches()) && !SECURITY.matcher(path).matches()) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
             if (!"GET".equals(m)) {
                 if (!"1".equals(req.getHeader("x-didisam"))) { json(res, 403, "csrf", "허용되지 않은 요청입니다."); return; }
                 String o = req.getHeader("origin");

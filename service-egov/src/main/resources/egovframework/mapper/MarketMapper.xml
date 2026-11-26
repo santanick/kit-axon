@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 디디쌤 콘텐츠 마켓 v1.1 — 표 정의는 service/server/market/sql/10_market.sql(Node 마이그레이션 소유).
+     mk_* 교차 표는 기관 역할 권한이 없어 MkDb가 Node와 같은 SQL 문장으로 다룬다(값 전달 · 결과 변환을 node-postgres와 같게 맞추기 위함).
+     여기에는 기관 범위(inTenant) 질의만 둔다: Node orgOf(tid)와 같은 값. -->
+<mapper namespace="egovframework.didisam.market.service.impl.MarketMapper">
+  <select id="selectOrgDoc" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">
+    select (doc->'plan')::text as plan, doc->'org'->>'name' as name, doc->'org'->>'type' as type, (doc->'org'->'mk')::text as mk from tenant_state where tenant_id = #{tid}
+  </select>
+  <select id="selectTenant" resultType="java.util.LinkedHashMap" flushCache="true" useCache="false">select name, type from tenants where id = #{tid}</select>
+  <update id="updatePilot">update tenant_state set doc = jsonb_set(jsonb_set(doc, '{org}', coalesce(doc->'org', '{}'::jsonb)), '{org,mk}', coalesce(doc->'org'->'mk', '{}'::jsonb) || jsonb_build_object('pilot', #{on}::boolean)) where tenant_id = #{tid}</update>
+</mapper>
