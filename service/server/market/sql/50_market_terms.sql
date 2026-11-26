@@ -1,6 +1,11 @@
--- v48.1 법무 · 세무 반영(M/l/code-changes.md C2 · C3, policy v1.2 제19 · 40조)
--- terms: 크레딧 이용 조건 동의 기록 {ver, at, by} · buyer_kind: general | public(공공 · 국공립 — 이월 없음, 계약 종료 정산)
+-- v48.1 법무 · 세무 반영(M/l/code-changes.md r3 C2 · C3 · C11, policy v1.3 제19 · 19조의2 · 40조)
+-- terms: 이용 조건 동의 기록 {ver, at, by, lapseAck, carryBp, penaltyBp, negotiated[]}
+-- buyer_mode: general(연간 이용권) | public_license(공공 B2a) | public_postpaid(공공 B2b 분기 후불) · cap_won: 후불 계약 한도
 alter table mk_contract add column if not exists terms jsonb;
-alter table mk_contract add column if not exists buyer_kind text not null default 'general';
-alter table mk_contract drop constraint if exists mk_contract_buyer_kind_check;
-alter table mk_contract add constraint mk_contract_buyer_kind_check check (buyer_kind in ('general','public'));
+alter table mk_contract add column if not exists buyer_mode text not null default 'general';
+alter table mk_contract drop constraint if exists mk_contract_buyer_mode_check;
+alter table mk_contract add constraint mk_contract_buyer_mode_check check (buyer_mode in ('general','public_license','public_postpaid'));
+alter table mk_contract add column if not exists cap_won integer;
+-- 소멸 인식(lapse) · 후불 청구(usage_bill) 장부 줄
+alter table mk_entry drop constraint if exists mk_entry_kind_check;
+alter table mk_entry add constraint mk_entry_kind_check check (kind in ('credit_sale','credit_bonus','platform_bundle','credit_use','credit_restore','cp_use','santa_use','credit_carry','credit_refund','single_sale','cp_single','santa_orig','promo_fee','promo_carry','payout','adj','lapse','usage_bill'));

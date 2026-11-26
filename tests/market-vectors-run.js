@@ -28,6 +28,7 @@ module.exports = function run(calc, c) {
     case 'b2c': return calc.b2c(i.vatPrice);
     case 'path': return calc.path(i.vatPrice);
     case 'refundOf': return calc.refundOf(i.lots, i.day, i.o);
+    case 'carryOf': return calc.carryOf(i.prev, i.renew, i.o);
     default: throw new Error('알 수 없는 fn: ' + c.fn);
   }
 };

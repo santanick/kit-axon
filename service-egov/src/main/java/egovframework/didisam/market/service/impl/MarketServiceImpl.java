@@ -212,7 +212,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     ObjectNode contractOfTid(String tid, String id) { ObjectNode k = db.q1(KSEL + " where id = $1", str(id, 20)); if (k == null || !s(k, "buyer_tid").equals(tid)) throw E(404, "contract", "없는 계약입니다."); return k; }
     static ObjectNode cp(JsonNode r, String... kv) { ObjectNode o = O(); for (int i = 0; i + 1 < kv.length; i += 2) o.set(kv[i], g(r, kv[i + 1])); return o; }
     static ObjectNode kOut(JsonNode k) { return cp(k, "id", "id", "buyerTid", "buyer_tid", "quoteId", "quote_id", "kind", "kind", "collections", "collections", "start", "s", "end", "e", "carryEnd", "ce", "supplyTotal", "supply_total", "bonusBp", "bonus_bp", "bundlePlatform", "bundle_platform",
-        "status", "status", "taxStatus", "tax_status", "taxInvNo", "tax_inv_no", "renewOf", "renew_of", "refund", "refund", "activatedAt", "activated_at", "buyerKind", "buyer_kind", "terms", "terms"); }
+        "status", "status", "taxStatus", "tax_status", "taxInvNo", "tax_inv_no", "renewOf", "renew_of", "refund", "refund", "activatedAt", "activated_at", "buyerMode", "buyer_mode", "terms", "terms"); }
     static JsonNode ctlOut(JsonNode t) { return t == null ? F.nullNode() : cp(t, "monthCap", "month_cap", "allowCols", "allow_cols", "allowGroups", "allow_groups", "preFrom", "pre_from", "alertBp", "alert_bp", "alertTo", "alert_to"); }
     static final class WS { List<ObjectNode> lots; ArrayNode wallet; long total, balance; ObjectNode ctl; String alert; }
     WS walletState(JsonNode k) {
@@ -443,16 +443,34 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
      *  유효 만료 → 이월(carry, credit_carry 장부) · 이월 만료 → ended(미사용분 자동 소멸 없음) · 견적 만료 · 사전 승인 요청 30일 만료. 월 집계 · 분기 마감은 산타 운영자가 실행(Node와 같음) */
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 3600000, initialDelayString = "${dd.market.tickMs:600000}")
     public void tick() { try { sweep(); } catch (Exception ignore) { /* 표가 없거나(마이그레이션 전) 일시 오류 — 다음 회차에 다시 */ } }
+    static final long[] NOTICE_DAYS = { 90, 30, 7 };
+    /** 오늘 보낼 만료 고지 단계(90 · 30 · 7, 주말이면 직전 금요일) — Node sweep.dueNotice와 같음 */
+    public static long dueNotice(String day, String end) { int dow = java.time.LocalDate.parse(day).getDayOfWeek().getValue() % 7;
+        for (long n : NOTICE_DAYS) { String t = DdMarketCalc.addDays(end, -n); if (t.equals(day)) return n; if (dow == 5 && (DdMarketCalc.addDays(day, 1).equals(t) || DdMarketCalc.addDays(day, 2).equals(t))) return n; } return 0; }
+    static String x1(long n, String end, long left, long bonus) { java.text.NumberFormat f = java.text.NumberFormat.getInstance(java.util.Locale.KOREA);
+        return "[디디쌤] 우리 기관 콘텐츠 패스 이용 기간이 " + n + "일 남았습니다(만료 " + end.replace('-', '.') + "). 남은 이용 한도 " + f.format(left) + "크레딧(보너스 " + f.format(bonus) + " 포함)은 만료일에 소멸하며 환불되지 않습니다. 만료 전 또는 만료 후 30일 안에 갱신하면 남은 유료 한도 중 일부(직전 유료 한도의 20%까지)를 새 계약으로 옮길 수 있습니다."; }
     public int sweep() throws Exception {
-        return db.txAs("", true, () -> { String day = today(); int n = 0;
-            List<ObjectNode> carry = db.q("update mk_contract set status = 'carry' where id in (select id from mk_contract where status = 'active' and kind = 'credit' and \"end\" < $1::date limit 200) returning id, buyer_tid", day);
+        List<Object[]> logs = new ArrayList<>();
+        int r0 = db.txAs("", true, () -> { String day = today(); int n = 0;
+            List<ObjectNode> carry = db.q("update mk_contract set status = 'carry' where id in (select id from mk_contract where status = 'active' and kind = 'credit' and \"end\" < $1::date and carry_end >= $1::date limit 200) returning id, buyer_tid", day);
             for (ObjectNode k : carry) { long r = n(db.q1("select coalesce(sum(remain), 0)::int n from mk_credit_wallet where contract_id = $1", s(k, "id")), "n");
                 db.x("insert into mk_entry (kind, contract_id, party_tid, credits, ref) values ('credit_carry', $1, $2, $3, $4)", s(k, "id"), s(k, "buyer_tid"), r, day); }
             n += carry.size();
-            n += db.x("update mk_contract set status = 'ended' where id in (select id from mk_contract where status in ('active','carry') and carry_end < $1::date limit 200)", day);
+            List<ObjectNode> ended = db.q("update mk_contract set status = 'ended' where id in (select id from mk_contract where status in ('active','carry') and carry_end < $1::date limit 200) returning id, buyer_tid", day);
+            for (ObjectNode k : ended) { ObjectNode w = db.q1("select coalesce(sum(remain) filter (where lot <> 'bonus'), 0)::int paid, coalesce(sum(remain) filter (where lot = 'bonus'), 0)::int bonus from mk_credit_wallet where contract_id = $1", s(k, "id"));
+                db.x("insert into mk_entry (kind, contract_id, party_tid, credits, amount, ref) values ('lapse', $1, $2, $3, $4, $5)", s(k, "id"), s(k, "buyer_tid"), n(w, "paid"), n(w, "paid") * DdMarketCalc.WON, day);
+                logs.add(new Object[]{ s(k, "buyer_tid"), "market.lapse", map("contract", s(k, "id"), "paid", n(w, "paid"), "bonus", n(w, "bonus")) }); }
+            n += ended.size();
+            for (ObjectNode k : db.q("select k.id, k.buyer_tid, to_char(k.carry_end, 'YYYY-MM-DD') ce, coalesce(k.terms, '{}'::jsonb) terms from mk_contract k where k.status = 'active' and k.kind = 'credit' and k.carry_end between $1::date and $1::date + 92 limit 200", day)) {
+                long d = dueNotice(day, s(k, "ce")); if (d == 0) continue; boolean sent = false; for (JsonNode x : arr(get(g(k, "terms"), "notices"))) if (String.valueOf(d).equals(x.asText())) sent = true; if (sent) continue;
+                ObjectNode w = db.q1("select coalesce(sum(remain), 0)::int lft, coalesce(sum(remain) filter (where lot = 'bonus'), 0)::int bonus from mk_credit_wallet where contract_id = $1", s(k, "id"));
+                db.x("update mk_contract set terms = jsonb_set(coalesce(terms, '{}'::jsonb), '{notices}', coalesce(terms->'notices', '[]'::jsonb) || to_jsonb($2::text)) where id = $1", s(k, "id"), String.valueOf(d));
+                logs.add(new Object[]{ s(k, "buyer_tid"), "market.lapse_notice", map("contract", s(k, "id"), "d", d, "text", x1(d, s(k, "ce"), n(w, "lft"), n(w, "bonus"))) }); n++; }
             n += db.x("update mk_quote set status = 'expired' where id in (select id from mk_quote where status in ('ready','sent','cp_wait') and valid_to < $1::date limit 200)", day);
             n += db.x("update mk_preapproval set status = 'expired' where id in (select id from mk_preapproval where status = 'asked' and at < now() - interval '30 days' limit 200)");
             return n; });
+        for (Object[] x : logs) log((String) x[0], "system", (String) x[1], x[2]);
+        return r0;
     }
 
     // 라우트 본문(MkRoutes)이 쓰는 접근자

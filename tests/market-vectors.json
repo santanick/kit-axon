@@ -439,8 +439,9 @@
    },
    "out": {
     "validTo": "2028-02-29",
-    "carryTo": "2029-02-28"
-   }
+    "carryTo": "2028-02-29"
+   },
+   "note": "r3: 자동 이월 폐지(carryTo = validTo)"
   },
   {
    "name": "T2",
@@ -1198,17 +1199,18 @@
    "out": [
     {
      "validTo": "2028-02-29",
-     "carryTo": "2029-02-28"
+     "carryTo": "2028-02-29"
     },
     {
      "validTo": "2029-02-28",
-     "carryTo": "2030-02-28"
+     "carryTo": "2029-02-28"
     },
     {
      "validTo": "2027-12-31",
-     "carryTo": "2028-12-31"
+     "carryTo": "2027-12-31"
     }
-   ]
+   ],
+   "note": "r3: 자동 이월 폐지(carryTo = validTo)"
   },
   {
    "name": "U4",
@@ -1254,7 +1256,7 @@
  "refund": [
   {
    "name": "R1",
-   "note": "시작 10일째 · 사용 0 → 전액",
+   "note": "보너스 0 · 10일째 · 사용 0 → 전액",
    "fn": "refundOf",
    "in": {
     "lots": [
@@ -1262,8 +1264,7 @@
       "lot": "paid",
       "credits": 30000,
       "remain": 30000,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
+      "validTo": "2028-02-29"
      }
     ],
     "day": "2027-03-10",
@@ -1276,15 +1277,13 @@
     "mode": "full",
     "paidUnused": 30000,
     "bonusUsed": 0,
-    "expiredPaid": 0,
-    "credits": 0,
-    "amount": 30000000,
-    "parts": []
+    "penalty": 0,
+    "amount": 30000000
    }
   },
   {
    "name": "R2",
-   "note": "30,000 + 보너스 2,100 · 12,000 사용 → 남은 유료 18,000",
+   "note": "보너스 2,100 · 12,000 사용 → 해지(위약금 10%)",
    "fn": "refundOf",
    "in": {
     "lots": [
@@ -1292,15 +1291,13 @@
       "lot": "paid",
       "credits": 30000,
       "remain": 18000,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
+      "validTo": "2028-02-29"
      },
      {
       "lot": "bonus",
       "credits": 2100,
       "remain": 2100,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
+      "validTo": "2028-02-29"
      }
     ],
     "day": "2027-09-01",
@@ -1310,24 +1307,16 @@
     }
    },
    "out": {
-    "mode": "unused",
+    "mode": "terminate",
     "paidUnused": 18000,
     "bonusUsed": 0,
-    "expiredPaid": 0,
-    "credits": 0,
-    "amount": 18000000,
-    "parts": [
-     {
-      "mode": "unused",
-      "remain": 18000,
-      "amount": 18000000
-     }
-    ]
+    "penalty": 1800000,
+    "amount": 16200000
    }
   },
   {
    "name": "R3",
-   "note": "31,000 사용 → 보너스 1,000 사용 · 음수는 0",
+   "note": "31,000 사용 → 남은 유료 0 · 사용 보너스 1,000 → 0원",
    "fn": "refundOf",
    "in": {
     "lots": [
@@ -1335,15 +1324,13 @@
       "lot": "paid",
       "credits": 30000,
       "remain": 0,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
+      "validTo": "2028-02-29"
      },
      {
       "lot": "bonus",
       "credits": 2100,
       "remain": 1100,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
+      "validTo": "2028-02-29"
      }
     ],
     "day": "2027-09-01",
@@ -1353,181 +1340,170 @@
     }
    },
    "out": {
-    "mode": "unused",
+    "mode": "terminate",
     "paidUnused": 0,
     "bonusUsed": 1000,
-    "expiredPaid": 0,
-    "credits": 0,
-    "amount": 0,
-    "parts": []
+    "penalty": 0,
+    "amount": 0
    }
   },
   {
    "name": "R4",
-   "note": "이월 만료 다음 날 · 남은 유료 5,000 → 95%(보너스 제외)",
+   "note": "R2 + 산타 귀책 → 남은 유료 전액",
    "fn": "refundOf",
    "in": {
     "lots": [
      {
       "lot": "paid",
       "credits": 30000,
-      "remain": 5000,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
+      "remain": 18000,
+      "validTo": "2028-02-29"
      },
      {
       "lot": "bonus",
       "credits": 2100,
       "remain": 2100,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
+      "validTo": "2028-02-29"
      }
     ],
-    "day": "2029-03-01",
+    "day": "2027-09-01",
     "o": {
      "start": "2027-03-01",
-     "usedTotal": 25000
+     "usedTotal": 12000,
+     "cause": "santa"
     }
    },
    "out": {
-    "mode": "expired95",
-    "paidUnused": 0,
+    "mode": "santa_fault",
+    "paidUnused": 18000,
     "bonusUsed": 0,
-    "expiredPaid": 5000,
-    "credits": 0,
-    "amount": 4750000,
-    "parts": [
-     {
-      "mode": "expired95",
-      "remain": 5000,
-      "amount": 4750000
-     }
-    ]
-   }
-  },
-  {
-   "name": "R4b",
-   "note": "R4 + 새 계약 전환 → 크레딧 100%",
-   "fn": "refundOf",
-   "in": {
-    "lots": [
-     {
-      "lot": "paid",
-      "credits": 30000,
-      "remain": 5000,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
-     },
-     {
-      "lot": "bonus",
-      "credits": 2100,
-      "remain": 2100,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
-     }
-    ],
-    "day": "2029-03-01",
-    "o": {
-     "start": "2027-03-01",
-     "usedTotal": 25000,
-     "convert": true
-    }
-   },
-   "out": {
-    "mode": "convert",
-    "paidUnused": 0,
-    "bonusUsed": 0,
-    "expiredPaid": 5000,
-    "credits": 5000,
-    "amount": 0,
-    "parts": [
-     {
-      "mode": "convert",
-      "remain": 5000,
-      "amount": 0
-     }
-    ]
+    "penalty": 0,
+    "amount": 18000000
    }
   },
   {
    "name": "R5",
-   "note": "최초 구매일 + 5년 다음 날 → 소멸",
+   "note": "기간 종료 다음 날 · 남은 유료 4,500 · 보너스 2,100 → 소멸(환불 없음)",
    "fn": "refundOf",
    "in": {
     "lots": [
      {
       "lot": "paid",
       "credits": 30000,
-      "remain": 5000,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
+      "remain": 4500,
+      "validTo": "2028-02-29"
      },
      {
       "lot": "bonus",
       "credits": 2100,
       "remain": 2100,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
-     }
-    ],
-    "day": "2032-03-01",
-    "o": {
-     "start": "2027-03-01",
-     "usedTotal": 25000
-    }
-   },
-   "out": {
-    "mode": "lapsed",
-    "paidUnused": 0,
-    "bonusUsed": 0,
-    "expiredPaid": 0,
-    "credits": 0,
-    "amount": 0,
-    "parts": [
-     {
-      "mode": "lapsed",
-      "remain": 5000,
-      "amount": 0
-     }
-    ]
-   }
-  },
-  {
-   "name": "R6",
-   "note": "공공 · 계약 종료 후 남은 유료 7,000 · 보너스 사용 500 → 정산",
-   "fn": "refundOf",
-   "in": {
-    "lots": [
-     {
-      "lot": "paid",
-      "credits": 30000,
-      "remain": 7000,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
-     },
-     {
-      "lot": "bonus",
-      "credits": 2100,
-      "remain": 1600,
-      "carryTo": "2029-02-28",
-      "bought": "2027-03-01"
+      "validTo": "2028-02-29"
      }
     ],
     "day": "2028-03-01",
     "o": {
      "start": "2027-03-01",
-     "usedTotal": 23500,
-     "buyerKind": "public"
+     "usedTotal": 25500
     }
    },
    "out": {
-    "mode": "public_settle",
-    "paidUnused": 7000,
-    "bonusUsed": 500,
-    "expiredPaid": 0,
+    "mode": "none",
+    "paidUnused": 0,
+    "bonusUsed": 0,
+    "penalty": 0,
+    "amount": 0
+   }
+  },
+  {
+   "name": "R6",
+   "note": "이월: 직전 유료 30,000 · 남은 4,500 · 갱신 30,000 · 종료 10일 전 → 4,500",
+   "fn": "carryOf",
+   "in": {
+    "prev": {
+     "paidCredits": 30000,
+     "paidUnused": 4500,
+     "validTo": "2028-02-29"
+    },
+    "renew": {
+     "paidCredits": 30000,
+     "signedAt": "2028-02-19"
+    }
+   },
+   "out": {
+    "ok": true,
+    "credits": 4500,
+    "limit": 6000,
+    "lapse": 0,
+    "reason": ""
+   }
+  },
+  {
+   "name": "R7",
+   "note": "이월 한도: 남은 9,000 · 갱신 30,000 → 6,000 · 소멸 3,000",
+   "fn": "carryOf",
+   "in": {
+    "prev": {
+     "paidCredits": 30000,
+     "paidUnused": 9000,
+     "validTo": "2028-02-29"
+    },
+    "renew": {
+     "paidCredits": 30000,
+     "signedAt": "2028-02-19"
+    }
+   },
+   "out": {
+    "ok": true,
+    "credits": 6000,
+    "limit": 6000,
+    "lapse": 3000,
+    "reason": ""
+   }
+  },
+  {
+   "name": "R8",
+   "note": "이월 축소: 남은 9,000 · 갱신 20,000 → 4,000",
+   "fn": "carryOf",
+   "in": {
+    "prev": {
+     "paidCredits": 30000,
+     "paidUnused": 9000,
+     "validTo": "2028-02-29"
+    },
+    "renew": {
+     "paidCredits": 20000,
+     "signedAt": "2028-02-19"
+    }
+   },
+   "out": {
+    "ok": true,
+    "credits": 4000,
+    "limit": 4000,
+    "lapse": 5000,
+    "reason": ""
+   }
+  },
+  {
+   "name": "R9",
+   "note": "늦은 갱신: 종료 후 31일째 → 0 · late",
+   "fn": "carryOf",
+   "in": {
+    "prev": {
+     "paidCredits": 30000,
+     "paidUnused": 9000,
+     "validTo": "2028-02-29"
+    },
+    "renew": {
+     "paidCredits": 30000,
+     "signedAt": "2028-03-31"
+    }
+   },
+   "out": {
+    "ok": false,
     "credits": 0,
-    "amount": 7000000,
-    "parts": []
+    "limit": 6000,
+    "lapse": 9000,
+    "reason": "late"
    }
   }
  ]
