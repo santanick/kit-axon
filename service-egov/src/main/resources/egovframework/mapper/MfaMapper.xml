@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<!-- 보안 4차 #1 관리자 추가 인증(Node service/server/mfa.js와 같은 SQL). 표는 Node 마이그레이션(core/mfa_v1)이 만든다 -->
+<!-- 보안 4차 #1 관리자 추가 인증(Node service/server/mfa.js와 같은 SQL). 표는 Node 마이그레이션(core/mfa_v1 · core/mfa_v2)이 만든다 -->
 <mapper namespace="egovframework.didisam.auth.service.impl.MfaMapper">
   <delete id="deleteOld">delete from mfa_tickets where user_id = cast(#{uid} as uuid) and (expires_at &lt; now() or created_at &lt; now() - interval '1 hour')</delete>
   <insert id="insertTicket">insert into mfa_tickets (id, user_id, tenant_id, kind, via, expires_at) values (#{id}, cast(#{uid} as uuid), #{tid}, #{kind}, #{via}, now() + interval '5 minutes')</insert>
@@ -17,4 +17,6 @@
   <select id="selectPolicy" resultType="string">select doc->'org'->'sec'->>'mfa' from tenant_state where tenant_id = #{tid}</select>
   <select id="selectTenantName" resultType="string">select name from tenants where id = #{tid}</select>
   <select id="selectPw" resultType="string">select pw from users where id = cast(#{uid} as uuid)</select>
+  <insert id="upsertFresh">insert into mfa_fresh (user_id, at) values (cast(#{uid} as uuid), now()) on conflict (user_id) do update set at = excluded.at</insert>
+  <select id="selectFresh" resultType="java.lang.Integer">select count(*)::int from mfa_fresh where user_id = cast(#{uid} as uuid) and at &gt; now() - make_interval(secs => cast(#{s} as float8))</select>
 </mapper>

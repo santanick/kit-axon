@@ -36,7 +36,15 @@ const MIGRATION = ['core/mfa_v1', `
     updated_at timestamptz not null default now()
   );
   do $$ begin if exists (select 1 from pg_roles where rolname = 'didisam_tenant') then revoke all on mfa_tickets from didisam_tenant; revoke all on user_totp from didisam_tenant; end if; end $$;`];
-const sqlMigrations = () => [MIGRATION];
+/* 최근 재인증(freshWithin): 2단계를 마지막으로 통과한 시각. 사용자당 한 줄, 서버 전용(기관 역할 권한 없음) */
+const MIGRATION_V2 = ['core/mfa_v2', `
+  create table if not exists mfa_fresh (
+    user_id uuid primary key references users(id) on delete cascade,
+    at timestamptz not null default now()
+  );
+  do $$ begin if exists (select 1 from pg_roles where rolname = 'didisam_tenant') then revoke all on mfa_fresh from didisam_tenant; end if; end $$;`];
+const sqlMigrations = () => [MIGRATION, MIGRATION_V2];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /* RFC 4648 base32(패딩 없음) */
 const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -118,6 +126,7 @@ function createMfa({ pool, env, inTenant, audit, HttpErr, readBody, limit, ip, s
     }
     const del = await pool.query('delete from mfa_tickets where id = $1 returning id', [id]); if (!del.rowCount) throw GONE(); /* 동시 요청도 1회만 */
     if (st) { const u = await pool.query('update user_totp set last_step = $2, updated_at = now() where user_id = $1 and last_step < $2', [r.user_id, st]); if (!u.rowCount) throw BAD(); }
+    await pool.query('insert into mfa_fresh (user_id, at) values ($1, now()) on conflict (user_id) do update set at = excluded.at', [r.user_id]); /* freshWithin 기준 시각 */
     if (cookies(req)[CK]) ticketCookie(res, '', 0);
     const pol = r.kind === 'email' ? await policy(r.tenant_id) : 'email';
     return { uid: r.user_id, tid: r.tenant_id, email: r.email, kind: r.kind, via: r.via, totpSetup: pol === 'totp' };
@@ -132,6 +141,16 @@ function createMfa({ pool, env, inTenant, audit, HttpErr, readBody, limit, ip, s
     if (r.soon) throw new HttpErr(429, '30초 뒤에 다시 보낼 수 있습니다.', 'mfa_wait');
     if (r.sends >= 4) throw new HttpErr(429, '인증번호를 너무 많이 요청했습니다. 처음부터 다시 로그인하십시오.', 'mfa_resend');
     return { ok: true, to: maskEmail(r.email), ...(await sendCode(id, r.email, r.tenant_id)) };
+  }
+
+  /* 최근 재인증 여부 — 통합 관리 서버(core/group-d1) 등 민감 작업 앞에서 쓴다. Java LoginMfa.freshWithin과 같은 동작.
+     user: 사용자 id(uuid 문자열) 또는 { uid } · { id } 객체(need(req) 결과 그대로). seconds: 몇 초 안에 2단계를 통과했는지(양의 정수, 소수는 버림).
+     → Promise<boolean>. 잘못된 user · seconds(0 이하 · 숫자 아님)는 false. MFA_OFF=1(시험 · 데모 전용)은 2단계 자체가 없으므로 true. */
+  async function freshWithin(user, seconds) {
+    const uid = String(typeof user === 'string' ? user : (user && (user.uid || user.id)) || ''); const s = Math.floor(Number(seconds));
+    if (!UUID_RE.test(uid) || !Number.isFinite(s) || s <= 0) return false;
+    if (off) return true;
+    return (await pool.query('select 1 from mfa_fresh where user_id = $1 and at > now() - make_interval(secs => $2::float8)', [uid, s])).rowCount > 0;
   }
 
   const pwAgain = async (a, b) => { limit('mfp:' + a.uid, 8, 600e3); const { rows } = await pool.query('select pw from users where id = $1', [a.uid]); if (!rows[0] || !(await checkPw(String(b.password || ''), rows[0].pw))) throw new HttpErr(401, '비밀번호가 올바르지 않습니다.', 'login'); };
@@ -162,7 +181,7 @@ function createMfa({ pool, env, inTenant, audit, HttpErr, readBody, limit, ip, s
       return { ok: true, method: 'email' };
     },
   });
-  return { off, start, verify, resend, routes, policy, CK };
+  return { off, start, verify, resend, routes, policy, freshWithin, CK };
 }
 
 module.exports = { createMfa, sqlMigrations, hotp, totpCheck, b32, unb32, maskEmail };
