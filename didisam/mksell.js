@@ -113,6 +113,8 @@
       if (g && !has(id) && typeof navAdd === 'function') navAdd(id, on);
       if (!g && has(id)) Object.keys(T).forEach(w => { T[w] = (T[w] || []).filter(x => x.id !== id); }); }); }
   window.mkNav = mkNav;
+  /* 통합: 간편 메뉴(slimEss)가 프리셋 off 메뉴를 꺼 두므로, 산타(시연판: 정운영자)에게는 「마켓 운영(산타)」을 간편 메뉴에 넣습니다(spec 4-4 upgradeState navAdd('mkops', true)) */
+  if (typeof window.slimEss === 'function') { const base = window.slimEss; window.slimEss = (...a) => { const E = base(...a) || []; try { if (S && S.org && Array.isArray(E) && !E.includes('mkops') && window.mkGate('mkops')) return [...E, 'mkops']; } catch (e) { } return E; }; }
   if (typeof upgradeState === 'function') { const base = upgradeState; upgradeState = (...a) => { const r = base(...a); try { mkNav(); } catch (e) { console.error('mk nav', e); } return r; }; } /* eslint-disable-line no-global-assign */
   if (typeof postSeed === 'function') { const base = postSeed; postSeed = (...a) => { const r = base(...a); try { mkNav(); } catch (e) { console.error('mk nav', e); } return r; }; } /* eslint-disable-line no-global-assign */
   if (typeof DICT !== 'undefined') Object.assign(DICT, { '마켓 판매': 'Market sales|マーケット販売|市场销售|Ventas|Ventes|Verkauf|Bán hàng|การขาย|Продажи', 'CP 파트너 포털': 'CP partner portal|CPパートナー|CP 合作门户|Portal CP|Portail CP|CP-Portal|Cổng CP|พอร์ทัล CP|Портал CP', '마켓 운영(산타)': 'Market ops (Santa)|マーケット運営|市场运营|Operación|Opérations|Betrieb|Vận hành|การดำเนินงาน|Операции' });

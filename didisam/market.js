@@ -218,7 +218,7 @@
       ${proxyOk() ? `<div class="mk-opt ${UI.mkProxy ? 'on' : ''}" role="checkbox" tabindex="0" aria-checked="${!!UI.mkProxy}" data-act="mk-proxy"><span class="mk-ck"></span><div><b style="font-size:14.5px">산타 운영 대리 작성</b><p class="mk-sub" style="font-size:13px">보너스율을 직접 넣습니다(최대 7%).</p></div></div>` : ''}
       ${proxy ? `<div class="mk-in"><label for="mkX">보너스율 <span class="tag">최대 7%</span></label><span class="mk-v"><input id="mkX" class="mk-inp" inputmode="decimal" data-chg="mk-bonus" value="${x.bonusBp != null ? x.bonusBp / 100 : ''}" placeholder="기본 규칙" aria-label="보너스율(%)"><small>%</small></span></div>` : ''}</div>`;
     /* 구매 기관 화면에는 산타 몫 · 실효 % · CP 지급액을 보이지 않습니다(통합 담당 지시). 가드 문구는 산타 대리 작성 때만 */
-    const err = !proxy ? '' : R.bonusBp > MAX_BP ? guard('', '보너스 크레딧은 구매 크레딧의 7%까지만 줄 수 있습니다.', '보너스를 포함한 산타 몫이 30% 미만이라 계약을 만들 수 없습니다. 보너스는 최대 7%까지 줄 수 있습니다.') : R.santaBp < GUARD_BP ? guard('', '보너스를 포함한 산타 몫이 30% 미만이라 계약 · 견적을 만들 수 없습니다.', '') : '';
+    const err = !proxy ? '' : (R.bonusOver || R.bonusBp > MAX_BP) ? guard('', '보너스 크레딧은 구매 크레딧의 7%까지만 줄 수 있습니다.', '보너스를 포함한 산타 몫이 30% 미만이라 계약을 만들 수 없습니다. 보너스는 최대 7%까지 줄 수 있습니다.') : R.santaBp < GUARD_BP ? guard('', '보너스를 포함한 산타 몫이 30% 미만이라 계약 · 견적을 만들 수 없습니다.', '') : '';
     const can = R.ok && R.budget > 0;
     const res = `<aside class="mk-aside" style="position:sticky;top:16px;display:flex;flex-direction:column;gap:14px"><div class="mk-res" data-calc="result" aria-live="polite"><p class="mk-eye">계산 결과</p>
       <div class="mk-price"><b style="font-size:36px;letter-spacing:-.03em" class="mk-num">${nf(R.total)}</b><small style="font-size:16px;font-weight:700">크레딧</small></div>
@@ -306,11 +306,11 @@
   ACT['mk-proxy'] = () => { UI.mkProxy = !UI.mkProxy; if (!UI.mkProxy) calcIn().bonusBp = null; render(); };
   ACT['mk-bonus'] = el => { const s = String(el.value).trim(); calcIn().bonusBp = s === '' ? null : Math.round(+s.replace(/[^\d.]/g, '') * 100); render(); };
   const calcBody = () => { const x = calcIn(); const R = planOf(x); return { R, body: { budget: R.budget, people: x.people || undefined, collections: x.cols, coursesPerPerson: x.cpp, bundle: !!x.bundle } }; };
-  ACT['mk-req'] = () => { const { R, body } = calcBody(); if (!R.ok) return toast(ERRN[R.err] || '계산 결과를 확인하십시오.', 'warn');
+  ACT['mk-req'] = () => { const { R, body } = calcBody(); if (!R.ok) return toast(ERRN[R.err || (R.bonusOver ? 'mk_bonus_max' : 'mk_margin')] || '계산 결과를 확인하십시오.', 'warn');
     if (LIVEON()) return liveDo('POST', '/api/market/quotes', { kind: 'credit', input: body, bonusBp: UI.mkProxy ? R.bonusBp : undefined, idem: idem() }, () => { toast('크레딧 패스 견적을 요청했습니다.', 'ok'); UI.market = 'cart'; }).catch(() => { });
     const D = M(); D.quotes.unshift({ id: 'Q-' + today().slice(2, 4) + today().slice(5, 7) + '-' + String(D.quotes.length + 15).padStart(3, '0'), kind: 'credit', title: `크레딧 패스 ${nf(R.budget / 10000)}만 원 · ${nf(R.total)}크레딧`, amount: R.budget, status: 'requested', at: today(), plan: R });
     if (typeof logAudit === 'function') logAudit(`콘텐츠 마켓: 크레딧 패스 견적 요청 ${won(R.budget)}`); save(); toast('크레딧 패스 견적을 요청했습니다. [장바구니 · 견적]에서 볼 수 있습니다.', 'ok'); UI.market = 'cart'; render(); };
-  ACT['mk-confirm'] = () => { if (!owner()) return toast('구매 확정은 정운영자만 할 수 있습니다.', 'warn'); const { R, body } = calcBody(); if (!R.ok) return toast(ERRN[R.err] || '계산 결과를 확인하십시오.', 'warn');
+  ACT['mk-confirm'] = () => { if (!owner()) return toast('구매 확정은 정운영자만 할 수 있습니다.', 'warn'); const { R, body } = calcBody(); if (!R.ok) return toast(ERRN[R.err || (R.bonusOver ? 'mk_bonus_max' : 'mk_margin')] || '계산 결과를 확인하십시오.', 'warn');
     const start = ymdL(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)); const V = MC('validity')(start);
     modal('크레딧 패스 구매 확정', `<p>아래 내용으로 계약을 만듭니다. 실제 결제는 하지 않으며, 산타가 세금계산서를 발행한 뒤 입금이 확인되면 크레딧이 들어옵니다.</p><ul class="mk-dl"><li>구매액 <b>${won(R.budget)}</b>(부가세 별도)</li><li>크레딧 <b>${nf(R.credits)} + 보너스 ${nf(R.bonusCredits)} = ${nf(R.total)}</b></li><li>기간 ${start} ~ ${V.validTo}(이월 ${V.carryTo}까지)</li><li>크레딧은 학습자가 과정을 시작할 때 CP 정가대로 차감됩니다. 무제한 이용권이 아닙니다.</li></ul>`,
       [{ id: 'no', label: '취소' }, { id: 'ok', label: '구매 확정', kind: 'pri', run: () => {
