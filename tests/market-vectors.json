@@ -1506,5 +1506,107 @@
     "reason": "late"
    }
   }
+ ],
+ "tax": [
+  {
+   "name": "X1",
+   "note": "계약 확정 3,000만 원 · 보너스 2,100 → 발행 대기, 공급가액 = 이용권 가격(보너스 제외)",
+   "fn": "taxOf",
+   "in": {
+    "supply": 30000000,
+    "bonusCredits": 2100,
+    "day": "2027-03-01"
+   },
+   "out": {
+    "status": "wait",
+    "date": "2027-03-01",
+    "supply": 30000000,
+    "vat": 3000000,
+    "total": 33000000,
+    "bonusCredits": 2100,
+    "bonusInSupply": false,
+    "no": null,
+    "fixes": []
+   }
+  },
+  {
+   "name": "X2",
+   "note": "일부 환불 16,200,000원 → 수정세금계산서(공급가액 감소)",
+   "fn": "taxFixOf",
+   "in": {
+    "tax": {
+     "status": "wait",
+     "date": "2027-03-01",
+     "supply": 30000000,
+     "vat": 3000000,
+     "total": 33000000,
+     "bonusCredits": 2100,
+     "bonusInSupply": false,
+     "no": "TX-0001",
+     "fixes": []
+    },
+    "refundAmount": 16200000,
+    "day": "2027-09-01"
+   },
+   "out": {
+    "status": "wait",
+    "kind": "reduce",
+    "date": "2027-09-01",
+    "supply": -16200000,
+    "vat": -1620000,
+    "total": -17820000,
+    "fixOf": "TX-0001"
+   }
+  },
+  {
+   "name": "X3",
+   "note": "전액 환불 → 수정세금계산서(계약 해제)",
+   "fn": "taxFixOf",
+   "in": {
+    "tax": {
+     "status": "wait",
+     "date": "2027-03-01",
+     "supply": 30000000,
+     "vat": 3000000,
+     "total": 33000000,
+     "bonusCredits": 2100,
+     "bonusInSupply": false,
+     "no": null,
+     "fixes": []
+    },
+    "refundAmount": 30000000,
+    "day": "2027-03-10"
+   },
+   "out": {
+    "status": "wait",
+    "kind": "cancel",
+    "date": "2027-03-10",
+    "supply": -30000000,
+    "vat": -3000000,
+    "total": -33000000,
+    "fixOf": "issue"
+   }
+  },
+  {
+   "name": "X4",
+   "note": "환불 0원 → 수정 없음",
+   "fn": "taxFixOf",
+   "in": {
+    "tax": {
+     "status": "wait",
+     "date": "2027-03-01",
+     "supply": 30000000,
+     "vat": 3000000,
+     "total": 33000000,
+     "bonusCredits": 2100,
+     "bonusInSupply": false,
+     "no": "TX-0001",
+     "fixes": []
+    },
+    "refundAmount": 0,
+    "day": "2027-09-01"
+   },
+   "out": null
+  }
  ]
 }

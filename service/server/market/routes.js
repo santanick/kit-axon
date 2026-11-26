@@ -49,7 +49,7 @@ module.exports = (ctx, S) => {
   const TERMS_VER = 'mk-pass-v2'; /* 이용권 이용 조건 판(화면 MK_TERMS.ver와 같음, r3) */
   const BUYER_MODES = ['general', 'public_license', 'public_postpaid'];
   const kOut = k => ({ id: k.id, buyerTid: k.buyer_tid, quoteId: k.quote_id, kind: k.kind, collections: k.collections, start: k.s, end: k.e, carryEnd: k.ce, supplyTotal: k.supply_total, bonusBp: k.bonus_bp, bundlePlatform: k.bundle_platform,
-    status: k.status, taxStatus: k.tax_status, taxInvNo: k.tax_inv_no, renewOf: k.renew_of, refund: k.refund, activatedAt: k.activated_at, buyerMode: k.buyer_mode || 'general', terms: k.terms || null });
+    status: k.status, taxStatus: k.tax_status, taxInvNo: k.tax_inv_no, renewOf: k.renew_of, refund: k.refund, activatedAt: k.activated_at, buyerMode: k.buyer_mode || 'general', terms: k.terms || null, tax: k.tax || null });
   const ctlOut = t => t ? { monthCap: t.month_cap, allowCols: t.allow_cols, allowGroups: t.allow_groups, preFrom: t.pre_from, alertBp: t.alert_bp, alertTo: t.alert_to } : null;
   async function walletState(c, k) {
     const L = await lotsOf(c, k.id); const live = liveLots(L, today()); const total = L.reduce((s, l) => s + l.credits, 0); const balance = live.reduce((s, l) => s + l.remain, 0);
@@ -106,6 +106,8 @@ module.exports = (ctx, S) => {
   async function activate(c, k, b, by) {
     if (k.status !== 'pending_pay') throw E(409, 'mk_contract_state', '결제 대기 계약만 활성화할 수 있습니다.');
     const qt = await q1(c, 'select * from mk_quote where id = $1', [k.quote_id]); const tax = str(b.taxInvNo, 40).trim();
+    if (tax) { const T0 = k.tax || calc.taxOf(k.supply_total, qt.bonus_credits || 0, kstDay(k.at)); const d = DAY_RE.test(b.taxInvDate || '') ? b.taxInvDate : T0.date; /* 작성일 기본 = 구매 확정일 */
+      await c.query('update mk_contract set tax = $2 where id = $1', [k.id, JSON.stringify({ ...T0, status: 'issued', no: tax, date: d })]); }
     if (k.kind === 'single') {
       await q1(c, "update mk_contract set status = 'active', activated_at = now(), tax_status = $2, tax_inv_no = $3 where id = $1", [k.id, tax ? 'issued' : 'waiting', tax || null]);
       await c.query("insert into mk_entry (kind, contract_id, party_tid, amount, ref) values ('single_sale', $1, $2, $3, $4)", [k.id, k.buyer_tid, k.supply_total, qt.id]);
@@ -233,8 +235,8 @@ module.exports = (ctx, S) => {
         let bk = BUYER_MODES.includes(b.buyerMode) ? b.buyerMode : 'general';
         if (inp.topupOf) { const o = await q1(c, 'select * from mk_contract where id = $1 and buyer_tid = $2', [inp.topupOf, a.tid]); if (!o) throw E(404, 'contract', '없는 계약입니다.'); renew = o.id; cols = o.collections; bk = o.buyer_mode || bk; }
         const terms = { ver: TERMS_VER, at: new Date().toISOString(), by: a.email, lapseAck: true, carryBp: calc.CARRY_BP, penaltyBp: calc.PENALTY_BP };
-        const k = await q1(c, `insert into mk_contract (id, buyer_tid, quote_id, kind, collections, start, "end", carry_end, supply_total, bonus_bp, bundle_platform, renew_of, by_email, terms, buyer_mode) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning *, to_char(start, 'YYYY-MM-DD') s, to_char("end", 'YYYY-MM-DD') e, to_char(carry_end, 'YYYY-MM-DD') ce`,
-          [rid('mk_'), a.tid, qt.id, qt.kind === 'single' ? 'single' : 'credit', cols, start, x.validTo, x.carryTo, qt.supply_total, qt.bonus_bp, !!inp.bundle, renew, a.email, JSON.stringify(terms), bk]) /* r3: 자동 이월 없음(carry_end = end) */.catch(e => { if (e.code === '23505') throw E(409, 'mk_quote_state'); throw e; });
+        const k = await q1(c, `insert into mk_contract (id, buyer_tid, quote_id, kind, collections, start, "end", carry_end, supply_total, bonus_bp, bundle_platform, renew_of, by_email, terms, buyer_mode, tax) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) returning *, to_char(start, 'YYYY-MM-DD') s, to_char("end", 'YYYY-MM-DD') e, to_char(carry_end, 'YYYY-MM-DD') ce`,
+          [rid('mk_'), a.tid, qt.id, qt.kind === 'single' ? 'single' : 'credit', cols, start, x.validTo, x.carryTo, qt.supply_total, qt.bonus_bp, !!inp.bundle, renew, a.email, JSON.stringify(terms), bk, JSON.stringify(calc.taxOf(qt.supply_total, qt.bonus_credits || 0, today()))]) /* C4 세금계산서 발행 대기: 작성일 = 구매 확정일 · 공급가액 = 이용권 가격(보너스 제외) */ /* r3: 자동 이월 없음(carry_end = end) */.catch(e => { if (e.code === '23505') throw E(409, 'mk_quote_state'); throw e; });
         await c.query("update mk_quote set status = 'accepted' where id = $1", [qt.id]);
         if (b.controls && typeof b.controls === 'object' && !renew) await putControl(c, k.id, b.controls, a.email);
         await log(a.tid, a.email, 'market.contract', { contract: k.id, quote: qt.id, supply: qt.supply_total }); await log(a.tid, a.email, 'market.terms', { contract: k.id, ver: TERMS_VER, lapseAck: true, buyerMode: bk }); return { ok: true, contract: kOut(k) }; }); }); },
@@ -439,7 +441,8 @@ module.exports = (ctx, S) => {
         const cause = b.cause === 'santa' && isSantaReq ? 'santa' : 'buyer'; const T0 = k.terms || {};
         const R = calc.refundOf(L.map(l => ({ lot: l.lot, credits: l.credits, remain: l.remain, validTo: l.vt })), today(), { start: k.s || kstDay(k.start), usedTotal: used, cause, penaltyBp: T0.penaltyBp, buyerMode: k.buyer_mode });
         const refund = { rule: 'mk-refund-v2', mode: R.mode, cause, paidUnused: R.paidUnused, bonusUsed: R.bonusUsed, penalty: R.penalty, amount: R.amount, reason: str(b.reason, 300), status: 'requested', at: new Date().toISOString() };
-        await c.query('update mk_contract set refund = $2 where id = $1', [k.id, JSON.stringify(refund)]); await log(k.buyer_tid, a.email, 'market.refund', { contract: k.id, amount: refund.amount, cause }); return { ok: true, refund, status: 'requested' }; }); }); }],
+        const TX0 = k.tax; const fix = TX0 && R.amount > 0 ? calc.taxFixOf(TX0, R.amount, today()) : null; if (fix) refund.taxFix = fix; /* C4-3 수정세금계산서 발행 대기(원 세금계산서에 연결) */
+        await c.query('update mk_contract set refund = $2' + (fix ? ', tax = $3' : '') + ' where id = $1', fix ? [k.id, JSON.stringify(refund), JSON.stringify({ ...TX0, fixes: [...(TX0.fixes || []).filter(x => x.status !== 'wait'), fix] })] : [k.id, JSON.stringify(refund)]); await log(k.buyer_tid, a.email, 'market.refund', { contract: k.id, amount: refund.amount, cause }); return { ok: true, refund, status: 'requested' }; }); }); }],
     ['POST', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})\/activate$/, async (req, id) => { const a = await needSanta(req); const b = await body(req);
       return T(async c => idem(c, a.tid, 'activate:' + id, b.idem, async () => { const k = await contractOf(c, a, id, true); const out = await activate(c, k, b, a.email); await log(k.buyer_tid, a.email, 'market.activate', { contract: id }); return { ok: true, ...out }; })); }],
     /* CP 상품 */

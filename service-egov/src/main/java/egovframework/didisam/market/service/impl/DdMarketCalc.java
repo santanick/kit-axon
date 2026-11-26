@@ -161,6 +161,12 @@ public final class DdMarketCalc {
         long cr = Math.min(unused, limit); return o().put("ok", true).put("credits", cr).put("limit", limit).put("lapse", unused - cr).put("reason", "");
     }
 
+    /* 세금계산서(r3 C4) — marketcalc.js taxOf · taxFixOf와 같음 */
+    public static ObjectNode taxOf(long supply, long bonusCredits, String day) { long sp = Math.max(0, supply), vat = Math.floorDiv(sp, 10);
+        ObjectNode t = o().put("status", "wait").put("date", day).put("supply", sp).put("vat", vat).put("total", sp + vat).put("bonusCredits", Math.max(0, bonusCredits)).put("bonusInSupply", false); t.putNull("no"); t.putArray("fixes"); return t; }
+    public static JsonNode taxFixOf(JsonNode tax, long refundAmount, String day) { long sup = I(get(tax, "supply")); long amt = Math.min(Math.max(0, refundAmount), sup); if (amt == 0) return F.nullNode(); long vat = Math.floorDiv(amt, 10);
+        return o().put("status", "wait").put("kind", amt >= sup ? "cancel" : "reduce").put("date", day).put("supply", -amt).put("vat", -vat).put("total", -(amt + vat)).put("fixOf", truthy(get(tax, "no")) ? str(get(tax, "no")) : "issue"); }
+
     /* 9) 기관 통제 — cap · th는 비어 있으면 제한 없음 */
     static boolean blank(JsonNode v) { return nullish(v) || (v.isTextual() && v.textValue().isEmpty()) || I(v) <= 0; }
     public static boolean capOk(long usedMonth, long course, JsonNode cap) { return blank(cap) || usedMonth + course <= I(cap); }
@@ -282,6 +288,8 @@ public final class DdMarketCalc {
             case "useLots": return useLots(get(i, "lots"), I(get(i, "n")));
             case "refundOf": return refundOf(get(i, "lots"), S(get(i, "day")), get(i, "o"));
             case "carryOf": return carryOf(get(i, "prev"), get(i, "renew"), get(i, "o"));
+            case "taxOf": return taxOf(I(get(i, "supply")), I(get(i, "bonusCredits")), S(get(i, "day")));
+            case "taxFixOf": return taxFixOf(get(i, "tax"), I(get(i, "refundAmount")), S(get(i, "day")));
             case "capOk": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(capOk(I(x.get(0)), I(x.get(1)), x.get(2))); return a; }
             case "needApproval": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(needApproval(I(x.get(0)), x.get(1))); return a; }
             case "alertOf": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(alertOf(I(x.get(0)), I(x.get(1)), x.get(2))); return a; }

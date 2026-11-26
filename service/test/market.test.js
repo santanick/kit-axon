@@ -12,7 +12,8 @@ test('계산 기준값(market-vectors.json) · 화면 공용 파일과 서버 �
   assert.equal(V.cases.length, 42); assert.equal(V.margin.length, 26);
   assert.equal(V.ui.length, 4);
   assert.equal(V.refund.length, 9); /* r3 C3 소멸 · 이월 · 해지 환불 R1~R9(policy v1.3 제19 · 19조의2 · 40조) */
-  for (const c of [...V.cases, ...V.margin, ...V.ui, ...V.refund]) assert.deepEqual(JSON.parse(JSON.stringify(run(calc, c))), c.out, c.name);
+  assert.equal(V.tax.length, 4); /* r3 C4 세금계산서 발행 대기 · 수정세금계산서 */
+  for (const c of [...V.cases, ...V.margin, ...V.ui, ...V.refund, ...V.tax]) assert.deepEqual(JSON.parse(JSON.stringify(run(calc, c))), c.out, c.name);
   /* 경계: 2/29 시작 · 말일 넘침 · 12월 단가 변경 · 보너스 상한 · 로트 순서(구매 → 보너스) */
   assert.deepEqual(calc.expiry('2028-02-29'), { validTo: '2029-02-28', carryTo: '2029-02-28' }); /* r3 자동 이월 없음 */
   assert.equal(calc.eligibleFrom('2027-01-31', 1), '2027-02-28'); assert.equal(calc.effectiveFrom('2027-12-15'), '2028-01-01');

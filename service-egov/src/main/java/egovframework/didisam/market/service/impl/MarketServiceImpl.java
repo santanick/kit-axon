@@ -212,7 +212,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     ObjectNode contractOfTid(String tid, String id) { ObjectNode k = db.q1(KSEL + " where id = $1", str(id, 20)); if (k == null || !s(k, "buyer_tid").equals(tid)) throw E(404, "contract", "없는 계약입니다."); return k; }
     static ObjectNode cp(JsonNode r, String... kv) { ObjectNode o = O(); for (int i = 0; i + 1 < kv.length; i += 2) o.set(kv[i], g(r, kv[i + 1])); return o; }
     static ObjectNode kOut(JsonNode k) { return cp(k, "id", "id", "buyerTid", "buyer_tid", "quoteId", "quote_id", "kind", "kind", "collections", "collections", "start", "s", "end", "e", "carryEnd", "ce", "supplyTotal", "supply_total", "bonusBp", "bonus_bp", "bundlePlatform", "bundle_platform",
-        "status", "status", "taxStatus", "tax_status", "taxInvNo", "tax_inv_no", "renewOf", "renew_of", "refund", "refund", "activatedAt", "activated_at", "buyerMode", "buyer_mode", "terms", "terms"); }
+        "status", "status", "taxStatus", "tax_status", "taxInvNo", "tax_inv_no", "renewOf", "renew_of", "refund", "refund", "activatedAt", "activated_at", "buyerMode", "buyer_mode", "terms", "terms", "tax", "tax"); }
     static JsonNode ctlOut(JsonNode t) { return t == null ? F.nullNode() : cp(t, "monthCap", "month_cap", "allowCols", "allow_cols", "allowGroups", "allow_groups", "preFrom", "pre_from", "alertBp", "alert_bp", "alertTo", "alert_to"); }
     static final class WS { List<ObjectNode> lots; ArrayNode wallet; long total, balance; ObjectNode ctl; String alert; }
     WS walletState(JsonNode k) {
@@ -280,6 +280,8 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     ObjectNode activate(ObjectNode k, JsonNode b) {
         if (!"pending_pay".equals(s(k, "status"))) throw E(409, "mk_contract_state", "결제 대기 계약만 활성화할 수 있습니다.");
         ObjectNode qt = db.q1("select * from mk_quote where id = $1", s(k, "quote_id")); String tax = trim(str(get(b, "taxInvNo"), 40)); String ts = tax.isEmpty() ? "waiting" : "issued"; String tn = tax.isEmpty() ? null : tax;
+        if (!tax.isEmpty()) { ObjectNode T0 = truthy(g(k, "tax")) ? ((ObjectNode) g(k, "tax")).deepCopy() : DdMarketCalc.taxOf(n(k, "supply_total"), n(qt, "bonus_credits"), kstDay(g(k, "at"))); String td = S(get(b, "taxInvDate")); /* 작성일 기본 = 구매 확정일 */
+            T0.put("status", "issued").put("no", tax).put("date", DAY_RE.matcher(td).matches() ? td : S(get(T0, "date"))); db.x("update mk_contract set tax = $2::jsonb where id = $1", s(k, "id"), T0.toString()); }
         String id = s(k, "id"), buyer = s(k, "buyer_tid");
         if ("single".equals(s(k, "kind"))) {
             db.q1("update mk_contract set status = 'active', activated_at = now(), tax_status = $2, tax_inv_no = $3 where id = $1", id, ts, tn);

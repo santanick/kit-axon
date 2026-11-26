@@ -9,3 +9,5 @@ alter table mk_contract add column if not exists cap_won integer;
 -- 소멸 인식(lapse) · 후불 청구(usage_bill) 장부 줄
 alter table mk_entry drop constraint if exists mk_entry_kind_check;
 alter table mk_entry add constraint mk_entry_kind_check check (kind in ('credit_sale','credit_bonus','platform_bundle','credit_use','credit_restore','cp_use','santa_use','credit_carry','credit_refund','single_sale','cp_single','santa_orig','promo_fee','promo_carry','payout','adj','lapse','usage_bill'));
+-- r3 C4 세금계산서 발행 대기 레코드 {status, date(작성일 = 구매 확정일), supply(보너스 제외), vat, total, bonusCredits, bonusInSupply:false, no, fixes[](수정세금계산서 · fixOf 연결)}
+alter table mk_contract add column if not exists tax jsonb;

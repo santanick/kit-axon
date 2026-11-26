@@ -209,10 +209,17 @@
     if (!prev || !renew || !prev.validTo || !renew.signedAt || renew.signedAt > addDays(prev.validTo, RENEW_GRACE_DAYS)) return { ok: false, credits: 0, limit, lapse: unused, reason: 'late' };
     const credits = Math.min(unused, limit); return { ok: true, credits, limit, lapse: unused - credits, reason: '' }; }
 
+  /* 세금계산서(r3 C4, 부가가치세법 제15 · 17조): 계약 확정 = 「발행 대기」 레코드. 작성일 = 구매 확정일, 공급가액 = 이용권 가격(보너스 제외 — 무상 제공분은 공급가액 미포함), 부가세 10% 내림.
+     환불 확정 시 수정세금계산서(전액 = 계약 해제, 일부 = 공급가액 감소) — 작성일 = 환불 확정일, 금액은 음수, 원 세금계산서(fixOf)에 연결 */
+  function taxOf(supply, bonusCredits, day) { const sp = Math.max(0, int(supply)); const vat = fdiv(sp, 10);
+    return { status: 'wait', date: day, supply: sp, vat, total: sp + vat, bonusCredits: Math.max(0, int(bonusCredits || 0)), bonusInSupply: false, no: null, fixes: [] }; }
+  function taxFixOf(tax, refundAmount, day) { const amt = Math.min(Math.max(0, int(refundAmount)), int(tax && tax.supply)); if (!amt) return null; const vat = fdiv(amt, 10);
+    return { status: 'wait', kind: amt >= int(tax.supply) ? 'cancel' : 'reduce', date: day, supply: -amt, vat: -vat, total: -(amt + vat), fixOf: (tax && tax.no) || 'issue' }; }
+
   const rules = () => ({ won: WON, cpBp: CP_BP, santaBp: SANTA_BP, guardBp: GUARD_BP, bonus: { steps: BONUS_STEPS.map(s => ({ ...s })), bundleBp: BUNDLE_BP, maxBp: BONUS_MAX_BP }, validMonths: 12, carryMonths: 12, restore: { hours: RESTORE_HOURS, progLtPct: RESTORE_PROG_LT }, alertBp: ALERT_BP.slice() });
 
   const api = { WON, CP_BP, SANTA_BP, BONUS_MAX_BP, GUARD_BP, rules, credits, bonusBp, wallet, estimate, guard, partial, plan, discCredits, useCredits, deductMany, restorable, hoursBetween, cpOf, settle, sum,
     RATE, SLOT, ORIG_CAP_BP, PROMO_MAX_MONTHS, rateKindOf, rateCheck, rateAt, cpBpOf, settleLine, promoFee, promoCheck, promoDeduct, origCapOk, recognized, santaMix, nextMonth1: d => effectiveFrom(d),
-    expiry, validity, addDays, addMonths, lotOrder, useLots, capOk, needApproval, preNeeded, alertOf, alertLevel, effectiveFrom, priceAt, eligibleFrom, optinMinEnd, optinMode, singleCand, singleAuto, singleMin, singleGuard, broker, b2c, path, refundOf, carryOf, PENALTY_BP, CARRY_BP, CARRY_MAX_BP };
+    expiry, validity, addDays, addMonths, lotOrder, useLots, capOk, needApproval, preNeeded, alertOf, alertLevel, effectiveFrom, priceAt, eligibleFrom, optinMinEnd, optinMode, singleCand, singleAuto, singleMin, singleGuard, broker, b2c, path, refundOf, carryOf, taxOf, taxFixOf, PENALTY_BP, CARRY_BP, CARRY_MAX_BP };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.marketCalc = api;
 })(typeof window !== 'undefined' ? window : globalThis);
