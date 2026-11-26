@@ -27,6 +27,7 @@ v37(대표님 2026-11-10 「외부 연결 등은 로고를 실제 해당 서비�
 | quizlet | Quizlet(복습 카드 내보내기) | quizlet.svg | 16.38.0 | #4255FF | https://quizlet.com |
 | notion | Notion | notion.svg | 16.37.0 | #000000 | https://www.notion.so |
 | microsoft | Microsoft | microsoft.svg | 10.4.0 + 공식 4색 | #F25022 · #7FBA00 · #00A4EF · #FFB900 | https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks |
+| teams(별칭) | Microsoft Teams | microsoft.svg(회사 심볼) | — | — | 13차: Teams 전용 아이콘은 Simple Icons에 없어 같은 회사 심볼을 씁니다(brand.js ALIAS teams → microsoft). 공식 Teams 아이콘은 Microsoft 파트너 · 앱 게시 후 받는 파일로 교체 |
 
 ## 사용 규칙(변형 금지)
 - 모양 · 비율 · 색을 바꾸지 않습니다(늘이기 · 기울이기 · 그림자 · 다른 색 금지). 한 가지 공식 색으로만 그립니다.

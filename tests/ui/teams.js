@@ -39,6 +39,9 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
     ok(run && run.some(s => /^teams:true:.*Slack과 함께/.test(s)), 'Slack 알림 단계와 같은 지점에서 Teams로도(시연) ' + JSON.stringify(run));
     ok(await p.evaluate(() => CN_TPL.some(x => x.k === 'approval-teams') && CN_TPL.some(x => x.k === 'report-teams') && ACTION.teams === 'Microsoft Teams 채널 알림'), '자동화 단계 · 레시피 2종');
     /* 수업: 라이브 항목 편집기 → Teams 회의 만들기 → 출석 가져오기 → 반영 */
+    await p.evaluate(() => { if ((S.classes || []).some(x => (x.learners || []).length >= 2)) return; /* 빈 기관: 학습자 3명 · 반 1개를 만든다 */
+      while (S.members.length < 3) S.members.push({ id: uid('m'), name: '점검 학습자 ' + (S.members.length + 1), grade: '정회원', joined: today() });
+      S.classes.push({ id: uid('c'), name: '점검 반', kind: 'period', sub: '', legal: false, level: 0, status: '운영중', price: 0, open: '전체', openTo: [], start: today(), end: addDays(today(), 60), teacher: '', group: '', learners: S.members.slice(0, 3).map(m => m.id), prog: {}, enr: {}, curriculum: [], criteria: { video: 60, exam: 20, assign: 20, threshold: 80 }, cert: 'manual', skip: false, speed: true, early: false, community: 'class', hours: 1, notices: [], desc: '' }); save(); });
     const cid = await p.evaluate(() => { const c = S.classes.find(x => (x.learners || []).length >= 2) || S.classes[0]; if (!c.learners || c.learners.length < 2) c.learners = S.members.slice(0, 3).map(m => m.id); c.curriculum = c.curriculum || []; if (!c.curriculum.some(i => i.type === 'live')) c.curriculum.push({ id: 'itlive1', type: 'live', title: '실시간 Q&A', url: '', at: '2026-12-02T19:00' }); save(); return c.id; });
     const idx = await p.evaluate(c0 => C(c0).curriculum.findIndex(i => i.type === 'live'), cid);
     await p.evaluate(([c0, i]) => openEditor(C(c0), i), [cid, idx]); await p.waitForTimeout(150);

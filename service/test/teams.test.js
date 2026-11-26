@@ -78,6 +78,9 @@ test('MS Teams 연동 — 시연 · 웹훅 · 조직 연결 · 회의 · 출석 
     assert.equal((await call(UD, 'D', 'DELETE', `/api/conn/teams/meetings/${m.j.id}`)).j.ok, true); assert.equal((await getDoc(UD, 'D')).classes[0].curriculum[0].url, '');
   });
   await t.test('T9 수업 시간 검사', async () => {
+    const k = await call(UD, 'D', 'POST', '/api/conn/teams/meetings', { classId: 'c1', itemId: 'it1', subject: '스튜디오 편집 중', start: '2026-12-09T19:00:00+09:00', end: '2026-12-09T20:00:00+09:00', docLink: false });
+    assert.equal(k.j.linked, false); assert.equal((await getDoc(UD, 'D')).classes[0].curriculum[0].url, '', 'docLink:false → 기관 문서 그대로(스튜디오가 저장)');
+    assert.equal((await call(UD, 'D', 'DELETE', `/api/conn/teams/meetings/${k.j.id}?doc=0`)).j.ok, true);
     for (const [s, e] of [['2026-12-02T20:00:00+09:00', '2026-12-02T19:00:00+09:00'], ['2026-12-02T10:00:00+09:00', '2026-12-03T11:00:00+09:00'], ['내일', '모레']]) assert.equal((await call(UD, 'D', 'POST', '/api/conn/teams/meetings', { subject: 'x', start: s, end: e })).j.error, 'teams_time');
   });
 
