@@ -1,5 +1,5 @@
 {
-  "_": "디디쌤 Ver2 통합 센터 /api/group/* 계약(Node service/server/group · Java service-egov group 공용). 기준: F/grp/spec.md 1 · 2절 + 통합 담당 판정 3건(BRIEF13 「개발 착수」). 응답 키 · 오류 코드 · HTTP 상태가 두 서버에서 같아야 합니다(tests/contract-group.js가 대조).",
+  "_": "(service/server/group/contract.json) 디디쌤 Ver2 통합 센터 /api/group/* 계약(Node service/server/group · Java service-egov group 공용). 기준: F/grp/spec.md 1 · 2절 + 통합 담당 판정 3건(BRIEF13 「개발 착수」). 응답 키 · 오류 코드 · HTTP 상태가 두 서버에서 같아야 합니다(tests/contract-group.js가 대조).",
   "version": "grp-api-1",
   "agreeVer": "grp-share-v1",
   "decisions": {
