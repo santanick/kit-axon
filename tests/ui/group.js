@@ -25,7 +25,7 @@ const md = fs.readFileSync(path.join(__dirname, 'market-dark.js'), 'utf8'); cons
   await new Promise(o => srv.listen(PORT, '127.0.0.1', o).once('error', () => srv.listen(0, '127.0.0.1', o))); const base = `http://127.0.0.1:${srv.address().port}`;
   if (SHOT) fs.mkdirSync(SHOT, { recursive: true });
   const browser = await chromium.launch(); let nScan = 0;
-  const open = async (w, th) => { const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, deviceScaleFactor: SHOT ? 2 : 1, colorScheme: th }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+  const open = async (w, th) => { const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, deviceScaleFactor: SHOT ? 2 : 1, colorScheme: th }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(process.env.DBG ? e.stack : e.message));
     await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort()); await p.addInitScript(t => { try { localStorage.setItem('didisam.theme', t); localStorage.setItem('didisam.emptyStart', '0'); } catch (e) { } }, th);
     await p.goto(`${base}/index.html`, { waitUntil: 'load' }); return { ctx, p, errs }; };
   const scan = async (p, name, w, th, sel) => { await p.waitForTimeout(60); const r = await p.evaluate(([s, d]) => (0, eval)('(' + s + ')')(d[0], d[1]), [SCAN_SRC, [sel, th === 'dark']]); nScan++;
@@ -96,8 +96,9 @@ const md = fs.readFileSync(path.join(__dirname, 'market-dark.js'), 'utf8'); cons
     const inv = await p.evaluate(() => ({ inv: !!document.querySelector('[data-st="invite"]'), tbl: /어떤 경우에도 가지 않음/.test(document.querySelector('#main').innerText), inbox: menuHid('grpinbox') }));
     ok(inv.inv && inv.tbl && inv.inbox, 'A-settings-grp @invite: 받은 초대 · 볼 수 있는 것/없는 것 표 · 수락 전 받은 콘텐츠 숨김(T-ISO-3)');
     await p.click('#main [data-act="grp-accept"]'); await p.waitForTimeout(80); const errShown = await p.evaluate(() => { const e = document.querySelector('.gp-err'); return e && !e.hidden; }); ok(errShown, '동의 없이 연결 → 체크박스 아래 빨간 안내(grp_terms)');
-    await p.evaluate(() => { const i = document.querySelector('#main .gp-agree input'); i.checked = true; }); await p.click('#main [data-act="grp-accept"]'); await p.waitForTimeout(120);
-    const lk2 = await p.evaluate(() => ({ linked: !!document.querySelector('[data-st="linked"]'), inbox: !menuHid('grpinbox') && wsTabs('learn').includes('grpinbox'), share: S.group.links[0].share }));
+    await p.evaluate(() => { const i = document.querySelector('#main .gp-agree input'); i.checked = true; }); await p.click('#main [data-act="grp-accept"]'); await p.waitForTimeout(300);
+    const lk2 = await p.evaluate(() => ({ linked: !!document.querySelector('[data-st="linked"]'), inbox: !menuHid('grpinbox') && wsTabs('learn').includes('grpinbox'), share: (S.group.links[0] || {}).share || {}, toast: (document.querySelector('#toasts') || {}).innerText, inv: document.querySelectorAll('[data-st=invite]').length, ag: (document.querySelector('#main .gp-agree input') || {}).checked }));
+    if (!lk2.linked) console.log('accept 실패', JSON.stringify(lk2));
     ok(lk2.linked && lk2.inbox && lk2.share.kpi === true && !('learnerDetail' in lk2.share), 'A-settings-grp @linked: 연결 · 받은 콘텐츠 탭 표시 · 지역 묶음은 개별 열람 항목 없음');
     const ib = await p.evaluate(() => { go('grpinbox'); render(); const req = S.group.inbox.find(x => x.required); let dec; try { GRP_DEMO('POST', `/api/group/my/inbox/${req.sid}/decline`, {}); dec = 'pass'; } catch (e) { dec = e.code; }
       const n0 = S.classes.length; ACT['grp-in']({ dataset: { v: req.sid, d: 'adopt' } }); return { dec, add: S.classes.length === n0 + 1 && S.classes[0].open === '비공개', btn: !!document.querySelector('#main [data-d="adopt"]') }; });
@@ -106,6 +107,30 @@ const md = fs.readFileSync(path.join(__dirname, 'market-dark.js'), 'utf8'); cons
     S_lock: { const lock = await p.evaluate(() => { const k = S.group.pol.find(x => x.lock === 'locked'); if (!k) return 'none'; try { GRP_DEMO('POST', `/api/group/my/policies/${k.key}`, { action: 'override' }); return 'pass'; } catch (e) { return e.code; } }); ok(lock === 'grp_locked', 'T-FN-8 잠긴 공통 설정 덮어쓰기 → grp_locked'); }
     const sub = await p.evaluate(() => { S.me.role = 'sub'; upgradeState(); ACT['grp-open-mine'](); render(); const r = !document.querySelector('#main [data-act="grp-share-save"]') && !document.querySelector('#main [data-act="grp-leave"]'); S.me.role = 'owner'; return r; }); ok(sub, '소속 부운영자: 공유 범위 · 해제 버튼 없음(정운영자만)');
     ok(!errs.length, `기능 pageerror 없음 ${errs.slice(0, 3).join(' / ')}`); await ctx.close(); }
+
+
+  /* ⑧ 운영 모드: 개발 1 계약(service/server/group/contract.json 예시) 응답으로 화면을 그립니다 */
+  { const CF = [path.resolve(__dirname, '../../service/server/group/contract.json'), process.env.GRP_CONTRACT || ''].find(f => f && fs.existsSync(f));
+    if (!CF) console.log('- 운영 모드 시험 건너뜀(계약 파일 없음: GRP_CONTRACT=<contract.json>)'); else { const EX = JSON.parse(fs.readFileSync(CF, 'utf8')).examples; const { ctx: c0, p: p0 } = await open(1440, 'light'); const seen = [];
+      const DASH = { range: { from: '2026-11-01', to: '2026-11-26', unit: 'week' }, asOf: '2026-11-27T03:00:00+09:00', kpis: ['lrn', 'act', 'enr', 'cmp', 'cmpRateBp', 'progBp', 'aiCalls', 'rev'], total: { lrn: 4210, act: 1830, enr: 6120, cmp: 2011, cmpRateBp: 3286, progBp: 5410, aiCalls: 18220, rev: null }, children: [{ tid: 'tn_ab12cd34', label: '해운대점', unit: 'branch', v: { lrn: 312, act: 140, enr: 401, cmp: 120, cmpRateBp: 2993, progBp: 5120, aiCalls: 900, rev: 18400000 }, masked: [], noConsent: [], rank: { cmpRateBp: 1 }, flags: [{ rule: 2, kpi: 'cmpRateBp', label: '수료율 30% 미만' }] }, { tid: 'tn_ef56gh78', label: '기장점', unit: 'branch', v: { lrn: '5명 미만', act: '5명 미만', enr: 6, cmp: '5명 미만', cmpRateBp: null, progBp: null, aiCalls: 40, rev: null }, masked: ['lrn', 'act', 'cmp', 'cmpRateBp', 'progBp'], noConsent: ['rev'], rank: {}, flags: [] }], series: [{ at: '2026-W45', lrn: 4100, act: 1700 }, { at: '2026-W46', lrn: 4180, act: 1790 }], stale: [] };
+      const doc = await p0.evaluate(() => { createOrg('adult', '디디 영어 본사'); return JSON.parse(JSON.stringify(S)); }); await c0.close(); if (doc.org.room) doc.org.room.tid = 'tn_owner01'; let rev = 1;
+      const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, x => x.abort());
+      await p.route(/\/index\.html$/, x => x.fulfill({ status: 200, contentType: 'text/html', body: fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/<script src="boot\.js(\?v=[^"]*)?"><\/script>/, m => '<script src="live.js"></script>\n' + m) })); /* build-public.js와 같이 live.js 주입 */
+      await p.route(/\/api\//, r => { const u = new URL(r.request().url()); const k = r.request().method() + ' ' + u.pathname; seen.push(k + u.search);
+        const body = u.pathname === '/api/config' ? { live: true, signup: true, ai: false, models: [] } : u.pathname === '/api/me' ? { user: { email: 'owner@example.com', role: 'owner' }, tenant: { tid: 'tn_owner01', name: doc.org.name, type: 'adult' } } : k === 'GET /api/state' ? { doc, rev } : u.pathname === '/api/state' ? { rev: ++rev, pending: 0 } :
+          k === 'GET /api/group/me' ? EX['GET /api/group/me (상위 기관)'] : k === 'GET /api/group/my' ? EX['GET /api/group/my'] : k === 'GET /api/group/dash' ? DASH : k === 'GET /api/group/links' ? EX['GET /api/group/links'] : k === 'GET /api/group/shares' ? EX['GET /api/group/shares'] : k === 'GET /api/group/policies' ? EX['GET /api/group/policies'] : k === 'GET /api/group/my/inbox' ? EX['GET /api/group/my/inbox'] : k === 'GET /api/group/my/audit' ? EX['GET /api/group/my/audit'] : k.startsWith('GET /api/group') ? { items: [] } : {};
+        r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }); });
+      await p.goto(`${base}/index.html`, { waitUntil: 'load' }); await p.waitForFunction(() => typeof LIVE !== 'undefined' && LIVE.tenant && S && S.org, null, { timeout: 8000 }).catch(() => { });
+      await p.waitForFunction(() => S.nav.ws.includes('grp'), null, { timeout: 5000 }).catch(() => { });
+      if (process.env.DBG) console.log(seen.join(' | '), await p.evaluate(() => JSON.stringify({ L: typeof LIVE !== 'undefined' && { u: LIVE.user, t: LIVE.tenant, e: LIVE.err }, S: !!S })), errs);
+      await p.evaluate(() => { go('grpdash'); render(); }); await p.waitForTimeout(400);
+      const r = await p.evaluate(() => ({ ws: S.nav.ws.includes('grp'), h: document.querySelector('#main').innerText, demo: !!document.querySelector('.gp-demo'), doc: 'group' in S }));
+      ok(r.ws && /가맹점 통합 관리/.test(r.h) && /5명 미만/.test(r.h) && /기장점/.test(r.h) && /수료율 30% 미만/.test(r.h) && !r.demo && !r.doc, '운영 모드: /api/group/me · dash 응답으로 통합 현황(시연 띠 없음 · 저장 문서에 묶음 자료 없음)');
+      ok(seen.some(x => /^GET \/api\/group\/dash\?/.test(x) && /from=\d{4}-\d\d-\d\d/.test(x)), '운영 모드: dash 질의에 from · to');
+      await p.evaluate(() => { ACT['grp-open-mine'](); render(); }); await p.waitForTimeout(400);
+      const m = await p.evaluate(() => document.querySelector('#main').innerText); ok(/부산 시민대학/.test(m) && /디디 영어 가맹/.test(m), '운영 모드 소속 기관 쪽: 받은 초대 · 연결된 묶음(/api/group/my) 표시');
+      await p.evaluate(() => { go('grpinbox'); render(); }); await p.waitForTimeout(400); const ib = await p.evaluate(() => document.querySelector('#main').innerText); ok(/신규 강사 OT/.test(ib) && /새 버전 있음/.test(ib) && seen.some(x => /my\/inbox\?linkId=/.test(x)), '운영 모드 받은 콘텐츠: 새 버전 있음 · linkId 질의');
+      ok(!errs.length, `운영 모드 pageerror 없음 ${errs.slice(0, 2).join(' / ')}`); await ctx.close(); } }
 
   /* ⑦ 화면 QA: 4종 × 탭 + 소속 기관 화면 × 라이트 · 다크 × 1440 · 390 */
   for (const th of ['light', 'dark']) for (const w of [1440, 390]) { const { ctx, p, errs } = await open(w, th); let good = 0, all = 0;

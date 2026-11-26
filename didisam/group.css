@@ -155,4 +155,5 @@ button.gp-chip.sel{background:var(--n900);color:var(--n0)}
   .gp-bars li{grid-template-columns:minmax(0,1fr) auto;row-gap:4px}
   .gp-bars li i{grid-column:1/-1;grid-row:2}
   .gp-hr{width:100%}
+  .gp-cr{grid-template-columns:minmax(0,1fr);gap:6px}.gp-cr>span:last-child{justify-self:start}.gp-cr.gp-gh{display:none}
 }
