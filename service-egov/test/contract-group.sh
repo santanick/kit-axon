@@ -19,7 +19,7 @@ OUT=${OUT:-/tmp/grp2-contract}; mkdir -p $OUT
 node -e '
 const C = require(process.argv[1]); const run = C.run; const fs = require("fs");
 (async () => { const [n, j] = [await run(process.argv[2], "n"), await run(process.argv[3], "j")]; fs.writeFileSync(process.argv[4] + "/node.json", JSON.stringify(n, null, 1)); fs.writeFileSync(process.argv[4] + "/java.json", JSON.stringify(j, null, 1));
-  const skip = new Set(["tids"]); let bad = 0, ok = 0;
+  const skip = new Set(["tids", "_t"]); /* 묶음 id · 접미사(실행마다 다름) */ let bad = 0, ok = 0;
   for (const k of [...new Set([...Object.keys(n), ...Object.keys(j)])]) { if (skip.has(k)) continue; const a = JSON.stringify(n[k]), b = JSON.stringify(j[k]); if (a === b) ok++; else { bad++; console.log("✗ " + k + "\n   Node " + a + "\n   Java " + b); } }
   for (const [w, R] of [["Node", n], ["Java", j]]) { const f = C.check ? C.check(R) : []; console.log((f.length ? "✗ " : "✓ ") + w + " 계약 기대값 " + (f.length ? f.length + "건 어긋남\n   " + f.join("\n   ") : "통과")); if (f.length) bad++; }
   console.log((bad ? "✗" : "✓") + " 통합 센터 대조 " + ok + "건 같음 · " + bad + "건 다름"); process.exit(bad ? 1 : 0); })().catch(e => { console.error(e); process.exit(2); });
