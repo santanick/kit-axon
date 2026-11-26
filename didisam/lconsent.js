@@ -14,9 +14,9 @@
   /* 학번 가입(비밀번호) 계정은 가입 때 동의했으므로 제외, 체험용 공용 샘플(tid sample)도 제외 */
   const need = () => { if (!SITE() || !LR.me || LR.mode === 'preview' || LR.tid === 'sample' || !isUniv()) return false; if (LR.me.acct) return false;
     if (LR.mode === 'live') return !!LR.me.needConsent; return !store()[LR.me.sid]; };
-  const FREE = ['privacy', 'login', 'consent']; /* v47: 로그인 후 첫 착지가 #home이라 홈도 동의 전에는 막는다(동의 없이 학습 화면이 열리던 것). 방문자(로그인 전)는 need()가 거짓이라 그대로 */
+  const FREE = ['privacy', 'login', 'consent', 'acct']; /* v49 9-5: 「나」(계정 · 로그아웃 · 탈퇴)는 학습 화면이 아니므로 동의 전에도 연다 — 앱 아래 탭 안내는 lapp.js gateNav */ /* v47: 로그인 후 첫 착지가 #home이라 홈도 동의 전에는 막는다(동의 없이 학습 화면이 열리던 것). 방문자(로그인 전)는 need()가 거짓이라 그대로 */
   const CN = { back: '' };
-  window.lcNeedConsent = need;
+  window.lcNeedConsent = need; window.lcFree = FREE;
 
   const rows = [['필수', '학번 · 학과', '학습자 식별 · 수강 · 학습 서비스 제공', '졸업 · 수강 종료 후 학교 요청 시 파기'], ['자동 생성', '학습 기록(진도 · 제출물 · 출결)', '학습 관리 · 이수 판정', '학교 학사 규정에 따름']];
   const view = () => { const org = SITE().org.name || ''; const pol = (SITE().acct && SITE().acct.policy) || {};

@@ -188,7 +188,9 @@ module.exports = (ctx, S) => {
       const sh = sidHash(tid, s.sid);
       const X = await tx(async c => { if (!(await pubGate(c, tid))) throw E(403, 'mk_learner_off'); const k0 = await liveContract(c, tid, today()); if (k0) await c.query('select id from mk_contract where id = $1 for update', [k0.id]);
         const X = await startOf(c, tid, sh, pid, 'start'); const er = ACCESS_ERR[X.access]; if (er) { const e = E(er[0], er[1]); if (X.access === 'pre_asked') e.extra = { access: 'pre_asked' }; throw e; } return X; })
-        .catch(e => { if (e && e.code === '23505') return { access: 'started', r: { id: pid } }; throw e; });
+        .catch(async e => { if (e && e.code === '23505') return { access: 'started', r: { id: pid } };
+          if (e && e.code === 'mk_balance') await log(tid, 'system', 'market.short', { product: pid }); /* policy v1.3 제17조 제5항: 한도 부족 — 학습자에게 「알려 드렸어요」를 보이므로 운영자 알림(감사 기록 · 화면 배지) 근거를 남긴다 */
+          throw e; });
       if (X.access === 'charged') { await log(tid, 'learner', 'market.use', { product: pid, credits: X.cr }); await tx(async c => { const W = await walletState(c, X.k); if (W.alert) await log(tid, 'system', 'market.alert', { contract: X.k.id, alert: W.alert, balance: W.balance }); }); }
       return { ok: true, courseRef: '#mk/' + pid, charged: X.access === 'charged', ...(X.cr && X.access === 'charged' ? { credits: X.cr } : {}) }; },
     'POST mk-pre': async (req, res, tid) => { const s = await who(req, tid); const b = await body(req); const pid = str(b.productId, 20); const sh = sidHash(tid, s.sid);
@@ -445,12 +447,28 @@ module.exports = (ctx, S) => {
         return idem(c, a.tid, 'topup', b.idem, async () => ({ ok: true, quote: quoteOut(await creditQuote(c, a.tid, { input: { budget: b.amount, collections: k.collections, topupOf: k.id } }, a.email, false), false) })); }); }],
     ['POST', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})\/refund$/, async (req, id) => { const b = await body(req); const isSantaReq = b.cause === 'santa'; const a = isSantaReq ? await needSanta(req) : await needOwner(req); /* 산타 귀책(cause:'santa')은 산타 운영자만 */
       return T(async c => { const k = await contractOf(c, a, id, true); if (!isSantaReq && k.buyer_tid !== a.tid) throw E(404, 'contract', '없는 계약입니다.'); return idem(c, a.tid, 'refund', b.idem, async () => {
+        if (!['active', 'carry'].includes(k.status) || (k.refund && k.refund.status === 'confirmed')) throw E(409, 'mk_refund_state', '이용 중인 계약만 해지 · 환불을 요청할 수 있습니다.'); /* QA5(v49): 확정 뒤 재요청이 확정 기록을 덮어쓰지 않게 */
         const L = await lotsOf(c, k.id); const used = (await q1(c, "select coalesce(sum(credits), 0)::int n from mk_credit_use where contract_id = $1 and kind = 'use' and not restored", [k.id])).n;
         const cause = b.cause === 'santa' && isSantaReq ? 'santa' : 'buyer'; const T0 = k.terms || {};
         const R = calc.refundOf(L.map(l => ({ lot: l.lot, credits: l.credits, remain: l.remain, validTo: l.vt })), today(), { start: k.s || kstDay(k.start), usedTotal: used, cause, penaltyBp: T0.penaltyBp, buyerMode: k.buyer_mode });
         const refund = { rule: 'mk-refund-v2', mode: R.mode, cause, paidUnused: R.paidUnused, bonusUsed: R.bonusUsed, penalty: R.penalty, amount: R.amount, reason: str(b.reason, 300), status: 'requested', at: new Date().toISOString() };
-        const TX0 = k.tax; const fix = TX0 && R.amount > 0 ? calc.taxFixOf(TX0, R.amount, today()) : null; if (fix) refund.taxFix = fix; /* C4-3 수정세금계산서 발행 대기(원 세금계산서에 연결) */
+        const TX0 = k.tax; const fix = TX0 && R.amount > 0 ? calc.taxFixOf(TX0, R.amount + (R.penalty || 0), today()) : null; /* policy v1.3 제46조의2 제3항: 환불 대상 전액(위약금 포함)을 감액, 위약금은 별도 손해배상금 */ if (fix) refund.taxFix = fix; /* C4-3 수정세금계산서 발행 대기(원 세금계산서에 연결) */
         await c.query('update mk_contract set refund = $2' + (fix ? ', tax = $3' : '') + ' where id = $1', fix ? [k.id, JSON.stringify(refund), JSON.stringify({ ...TX0, fixes: [...(TX0.fixes || []).filter(x => x.status !== 'wait'), fix] })] : [k.id, JSON.stringify(refund)]); await log(k.buyer_tid, a.email, 'market.refund', { contract: k.id, amount: refund.amount, cause }); return { ok: true, refund, status: 'requested' }; }); }); }],
+    /* QA5(v49) 해지 · 환불 확정(산타 운영, policy v1.3 제40조 제5항 · 제46조의2 제3항): 확정일 기준으로 다시 계산 → 남은 한도 0(이용 종료) · 계약 cancelled · 장부 credit_refund · 수정세금계산서 작성일 = 확정일 */
+    ['POST', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})\/refund\/confirm$/, async (req, id) => { const a = await needSanta(req); const b = await body(req);
+      return T(async c => idem(c, a.tid, 'refund-confirm:' + id, b.idem, async () => { const k = await contractOf(c, a, id, true); const RQ = k.refund || {}; if (RQ.status !== 'requested') throw E(409, 'mk_refund_state', '해지 · 환불 요청이 없거나 이미 처리한 계약입니다.');
+        const L = await lotsOf(c, k.id); const used = (await q1(c, "select coalesce(sum(credits), 0)::int n from mk_credit_use where contract_id = $1 and kind = 'use' and not restored", [k.id])).n; const T0 = k.terms || {}; const day = today();
+        const R = calc.refundOf(L.map(l => ({ lot: l.lot, credits: l.credits, remain: l.remain, validTo: l.vt })), day, { start: k.s || kstDay(k.start), usedTotal: used, cause: RQ.cause === 'santa' ? 'santa' : 'buyer', penaltyBp: T0.penaltyBp, buyerMode: k.buyer_mode });
+        const TX0 = k.tax; let rem = R.amount > 0 ? R.amount + (R.penalty || 0) : 0; const fix = TX0 && rem > 0 ? calc.taxFixOf(TX0, rem, day) : null; if (fix) rem += fix.supply;
+        const tops = []; for (const tp of (await c.query("select * from mk_contract where renew_of = $1 and status = 'merged' order by at", [k.id])).rows) { if (rem <= 0) break; /* 추가 구매분 세금계산서는 원 계약 다음에 감액 */
+          const t0 = tp.tax || calc.taxOf(tp.supply_total, 0, kstDay(tp.at)); const f = calc.taxFixOf(t0, rem, day); if (!f) continue; rem += f.supply; tops.push({ contract: tp.id, ...f });
+          await c.query('update mk_contract set tax = $2 where id = $1', [tp.id, JSON.stringify({ ...t0, fixes: [...(t0.fixes || []).filter(x => x.status !== 'wait'), f] })]); }
+        const refund = { ...RQ, mode: R.mode, paidUnused: R.paidUnused, bonusUsed: R.bonusUsed, penalty: R.penalty, amount: R.amount, status: 'confirmed', confirmedAt: new Date().toISOString(), confirmedBy: a.email, memo: str(b.memo, 300) };
+        delete refund.taxFix; if (fix) refund.taxFix = fix; if (tops.length) refund.taxFixTopups = tops;
+        await c.query('update mk_credit_wallet set remain = 0 where contract_id = $1', [k.id]);
+        await c.query("update mk_contract set status = 'cancelled', refund = $2" + (TX0 ? ', tax = $3' : '') + ' where id = $1', TX0 ? [k.id, JSON.stringify(refund), JSON.stringify({ ...TX0, fixes: [...(TX0.fixes || []).filter(x => x.status !== 'wait'), ...(fix ? [fix] : [])] })] : [k.id, JSON.stringify(refund)]);
+        await c.query("insert into mk_entry (kind, contract_id, party_tid, credits, amount, ref) values ('credit_refund', $1, $2, $3, $4, $5)", [k.id, k.buyer_tid, R.paidUnused, -R.amount, day]);
+        await log(k.buyer_tid, a.email, 'market.refund_confirm', { contract: k.id, amount: R.amount, penalty: R.penalty, mode: R.mode }); return { ok: true, refund, status: 'cancelled' }; })); }],
     ['POST', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})\/activate$/, async (req, id) => { const a = await needSanta(req); const b = await body(req);
       return T(async c => idem(c, a.tid, 'activate:' + id, b.idem, async () => { const k = await contractOf(c, a, id, true); const out = await activate(c, k, b, a.email); await log(k.buyer_tid, a.email, 'market.activate', { contract: id }); return { ok: true, ...out }; })); }],
     /* CP 상품 */

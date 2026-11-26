@@ -48,6 +48,8 @@ COPY service/server/fac ./server/fac
 COPY service/server/ledger ./server/ledger
 COPY service/server/mileage ./server/mileage
 COPY service/server/market ./server/market
+COPY service/server/group ./server/group
+COPY service/server/teams ./server/teams
 COPY --from=build /w/public ./public
 USER node
 EXPOSE 8080

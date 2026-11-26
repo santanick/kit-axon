@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-24",
+  "generated_at": "2026-11-26",
   "note": "AIBOM 잠금 — 모델 · MCP 도구 목록 · 플러그인 · 프롬프트 해시. 바뀌면 guard.js aibom --check 실패, 검토 후 --update-lock",
   "items": {
     "mcp:didisam-mcp": "228e6b97f9e2c5020f27ce277314892cef27f8a98327c51cadbd4dffea676b7e",
@@ -14,6 +14,7 @@
     "plugin:@capacitor/splash-screen": "e39722626b9c75d938ccdda5df66f462d77fe184d53586f5a3480097f1f61a1b",
     "plugin:@capacitor/status-bar": "728c84458fc225a123e3b2c79ae519ef7b9a44e80fb9d1a1acab92f23178ca6e",
     "prompt:didisam/agent.js#AG_SYS": "233627c0418a7e985bd434fdaa57573c135bc9d0300698d852f3257b62946e45",
+    "prompt:didisam/aiguard.js#fixSys": "1316123f7da08d32bd744b7b85fff38337cbad714ed92ef606df8bfccfe8d577",
     "prompt:didisam/claude.js#CL_SYS": "90e64cf2bda666ae683f2cdbe9addffb2768807334ab9eb464ec119bdbfa9c8e",
     "prompt:didisam/hpai.js#SYS": "87472033b9ddee01b41f39dd66be57df93039ae4cabdcbeedfe7e1a999236a53",
     "prompt:didisam/hpstudio.js#LH_SYS": "bcc23e1961f0e747d2d5b96e4200943f333235eb199fdaf5f1100aefa9b72185",

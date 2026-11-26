@@ -55,7 +55,7 @@
       [{ id: 'c', label: '취소' }, { id: 'ok', label: '합치기', kind: 'pri', run: w => { const d = (w.querySelector('[name=d]:checked') || {}).value; if (!d) { toast('합칠 회원을 고르세요.', 'warn'); return false; } const e = merge(m.id, d); if (e) { toast(e, 'warn'); return false; } save(); render(); toast('같은 사람으로 합쳤습니다. 청구서 · 출결 · 학습 기록이 한 사람으로 모였습니다.', 'ok'); } }], true); };
 
   /* ── 개인 초대 링크 복사 · 보내기 ── */
-  const copy = (u, msg) => (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast(msg || '초대 링크를 복사했습니다. 문자 · 카카오톡으로 보내 주세요.', 'ok'), () => { modal('초대 링크', `<label class="fl">링크<input readonly value="${esc(u)}" onfocus="this.select()"></label>`, [{ id: 'c', label: '닫기' }]); });
+  const copy = (u, msg) => (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast(msg || '초대 링크를 복사했습니다. 문자 · 카카오톡으로 보내 주세요.', 'ok'), () => { modal('초대 링크', `<label class="fl">링크<input readonly value="${esc(u)}" data-selall></label>`, [{ id: 'c', label: '닫기' }]); });
   ACT['al-inv'] = el => { mbEnsure(); const k = el.dataset.k || 'm'; const x = k === 'p' ? (S.parents || []).find(p => p.id === el.dataset.v) : M(el.dataset.v); if (!x || !x.itok) { toast('이미 가입해 연결된 사람입니다.', 'warn'); return; }
     S.inviteSent.unshift({ at: nowStr(), ch: '개인 초대 링크', kind: k === 'p' ? '보호자 초대' : '개인 초대', name: x.name || '', to: x.phone || x.email || '' }); logAudit(`개인 초대 링크 — ${x.name || ''}`); save(); copy(url((k === 'p' ? 'par-' : '') + x.itok)); };
   ACT['al-invall'] = () => { mbEnsure(); const L = S.members.filter(free); if (!L.length) { toast('가입 전인 등록 회원이 없습니다.', 'warn'); return; }
@@ -151,3 +151,6 @@
   if (typeof W2 === 'object' && W2.notify) { const base = W2.notify; W2.notify = (mids, title, body) => { const n = base(mids, title, body); try { [...new Set(mids)].forEach(mid => { const m = M(mid); if (!m) return; const txt = typeof body === 'function' ? body(m) : body;
     W2.parentsOf(mid).forEach(p => { if (p.acct) mbInbox(p.acct, title, txt, { child: m.name || m.nick || '' }); }); }); } catch (e) { console.error(e); } return n; }; }
 })();
+
+/* v49 9-4: 인라인 onfocus는 CSP(script-src, unsafe-inline 없음)가 막으므로 data-selall 칸은 위임 focusin으로 전체 선택(acctlink.js · cls2.js 공통, 한 번만 등록) */
+if (!window.__ddSelAll) { window.__ddSelAll = 1; document.addEventListener('focusin', e => { const t = e.target; if (t && t.matches && t.matches('input[data-selall], textarea[data-selall]')) { try { t.select(); } catch (x) { } } }); }

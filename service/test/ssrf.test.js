@@ -17,6 +17,7 @@ const INVENTORY = {
   'loauth.js': [2, 'env'],          // QA7 학습자 구글 · 카카오 · 네이버 고정 주소(시험은 OAUTH_MOCK)
   'mail.js': [1, 'env'],            // MAIL_WEBHOOK_URL
   'fac/pay.js': [1, 'env'],         // 토스 고정 주소(TOSS_URL)
+  'teams/index.js': [3, 'user'],    // v49 MS Teams: Microsoft 토큰 · Graph 고정 주소(시험은 OAUTH_MOCK) + 기관 워크플로 주소(checkHook: https · 443 · Azure 워크플로 호스트 허용 목록 · 사설/루프백 차단 · IP 표기 거부) — 3곳 모두 redirect: 'manual'
 };
 const TOOLS = /^lms\/tools\//; // 운영자 PC에서 돌리는 CLI(서버 경로 아님)
 
@@ -37,7 +38,7 @@ test('외부 요청 지점 전수 — 목록에 없는 새 지점 금지', () =>
 });
 
 test('서버 외부 요청은 리다이렉트를 따라가지 않음(Java HttpClient 기본 NEVER와 같게)', () => {
-  for (const f of ['lms/mod-o.js', 'aigw.js', 'oauth.js', 'loauth.js', 'mail.js']) {
+  for (const f of ['lms/mod-o.js', 'aigw.js', 'oauth.js', 'loauth.js', 'mail.js', 'teams/index.js']) {
     const s = fs.readFileSync(path.join(SRV, f), 'utf8');
     const calls = s.match(/await fetch\([^)]*?\{[^}]*/g) || [];
     assert.ok(calls.length > 0, f);

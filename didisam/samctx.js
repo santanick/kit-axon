@@ -24,7 +24,7 @@ const scxLabel = k => k === 'home' ? '홈' : k === 'dash' ? '현황' : k === 'se
 function scxName() { const k = scxKey(), s = scxSel(); return scxLabel(k) + (s ? ` › 「${s.name}」` : ''); }
 
 /* ── 응답 도우미 ── */
-const scxPlan = (title, text, run, o = {}) => { const pid = uid('p'); PLANS[pid] = { run, go: o.go || '' }; return { title, text, html: o.html || '', steps: o.steps, plan: pid, state: 'pending', cta: o.cta || '승인하고 실행' }; };
+const scxPlan = (title, text, run, o = {}) => { const pid = uid('p'); PLANS[pid] = { run, go: o.go || '', ...(o.risk && o.risk.length ? { risk: o.risk } : {}) }; return { title, text, html: o.html || '', steps: o.steps, plan: pid, state: 'pending', cta: o.cta || '승인하고 실행' }; };
 const scxInfo = (text, html, o = {}) => ({ text, html: html || '', ...o });
 const scxTbl = (cols, rows, empty) => table(cols, rows.map(r => r.map(v => typeof v === 'number' ? String(v) : esc(String(v ?? '')))), empty || '해당하는 항목이 없습니다.');
 const scxCls = () => { const s = scxSel(); return s && s.kind === 'cls' ? C(s.id) : null; };
@@ -38,7 +38,10 @@ function scxTry(fn, q) { const r = fn(q) || {}; if (!/이해하지 못했습니�
 const scxAsk = q => () => scxTry(SCX_BASE || answer, q);
 function scxMsgPlan(title, body, ids, to, ch = '알림함 + 앱 푸시') {
   const n = ids.length; if (!n) return scxInfo(`${title} 대상이 지금은 없습니다.`);
-  return scxPlan(`메시지 — ${to}`, `${to} ${n}명에게 아래 메시지를 보낼까요?`, () => { S.msgs = S.msgs || []; S.msgs.unshift({ id: uid('ms'), at: nowStr(), to, toIds: ids, title, body, ch, n, by: S.me.name }); S.inbox = S.inbox || {}; ids.forEach(id => { (S.inbox[id] = S.inbox[id] || []).unshift({ id: uid('ib'), at: nowStr(), title, body, read: false }); }); logAudit(`AI SAM 메시지 — ${title} · ${n}명`); return `${n}명에게 「${title}」을(를) 보냈습니다(데모 — 실제 발송은 운영 연동 후).`; }, { html: `<div class="pvmsg"><b>${esc(title)}</b><p>${esc(body)}</p></div>`, cta: `${n}명에게 보내기`, go: 'message' }); }
+  return scxPlan(`메시지 — ${to}`, `${to} ${n}명에게 아래 메시지를 보낼까요?`, () => { S.msgs = S.msgs || []; S.msgs.unshift({ id: uid('ms'), at: nowStr(), to, toIds: ids, title, body, ch, n, by: S.me.name }); S.inbox = S.inbox || {}; ids.forEach(id => { (S.inbox[id] = S.inbox[id] || []).unshift({ id: uid('ib'), at: nowStr(), title, body, read: false }); }); logAudit(`AI SAM 메시지 — ${title} · ${n}명`); return `${n}명에게 「${title}」을(를) 보냈습니다(데모 — 실제 발송은 운영 연동 후).`; }, { html: `<div class="pvmsg"><b>${esc(title)}</b><p>${esc(body)}</p></div>`, cta: `${n}명에게 보내기`, go: 'message', risk: [`발송 · ${to} ${n}명 · ${ch}`] }); }
+/* QA6(v49) P-AI-9 · P-AI-14: 발송이 들어간 화면 칩 계획 카드도 [승인하고 실행] 뒤 한 번 더 확인(실행 계획 카드 si와 같은 창) — 확인 전에는 데이터 변화 없음 */
+{ const base = ACT['plan-ok']; ACT['plan-ok'] = (el, ...r) => { const P = PLANS[el && el.dataset && el.dataset.v]; if (!P || !P.risk || P.ok) return base(el, ...r);
+  modal('실행 전 확인', `<p>아래 단계는 ${t('learner')}에게 발송됩니다. 실행할까요?</p><ul class="si-risk">${P.risk.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '확인하고 실행', kind: 'pri', run: () => { P.ok = true; setTimeout(() => base(el, ...r), 0); } }]); }; }
 
 /* 과정 변경(선택 과정 · 이거) — 규칙 엔진과 Claude 도구가 같이 씀 */
 function scxCourseChange(c, x) { if (!c) return { text: `어느 ${t('cls')}인지 찾지 못했습니다. ${t('cls')} 화면에서 하나를 연 뒤 '이거 종료일 바꿔줘'처럼 말씀해 주세요.`, nav: 'class' };

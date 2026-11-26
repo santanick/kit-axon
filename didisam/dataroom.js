@@ -192,3 +192,9 @@ if (typeof COVER !== 'undefined' && Array.isArray(COVER)) COVER.push(['[신규] 
       return { text: `이 기관의 데이터룸은 ${DRM[r.mode].n} 모델(${DRC[r.cloud]?.[0] || ''} · ${(DRC[r.cloud]?.[1] || {})[r.region] || r.region})로 구성되어 있습니다. 기관마다 데이터 · 파일 · 암호화 키 · AI 사용량 · 로그가 분리되며, 공유 SaaS · 전용 클라우드 · 고객 클라우드 · 설치형 중에서 바꿀 수 있습니다.`, go: 'settings' }; }
     return base(q); }; }
 ACT['dr-last'] = el => ACT['dr-switch'](el); /* v45 로그인 탭 「마지막 기관」 카드 */
+/* v49 QA1: 기관 전체에 영향을 주는 작업(전체 데이터 내보내기 · 설치 구성 파일 · 데이터룸 파기 · 기관 유형 변경 · 운영자 지정 · 권한 변경 · 삭제 · 위임)은 정운영자만 —
+   메뉴 구성(slMenuTry)과 같은 기준. 부운영자 · 교수자가 설정 머리 버튼 · AI SAM 등 어느 경로로 눌러도 막고 이유를 알린다.
+   (운영 모드 live.js의 reset-all은 자체 확인이 있으나 같은 감쌈이 한 번 더 걸려도 동작은 같다) */
+window.OWNER_ONLY_ACTS = { 'data-export': '전체 데이터 내보내기', 'dr-yaml': '설치 구성 파일 내려받기', 'reset-all': '데이터룸 파기', 'dr-drop': '데이터룸 파기', 'dr-new': '데이터룸 추가', 'type-chg': '기관 유형 변경', 'adm-new': '운영자 지정', 'adm-role': '운영자 권한 변경', 'f1-role': '운영자 권한 변경', 'adm-del': '운영자 권한 삭제', 'adm-owner': '정운영자 위임', 'mb-tcls': '담당 과정 지정' };
+document.addEventListener('DOMContentLoaded', () => { Object.entries(window.OWNER_ONLY_ACTS).forEach(([k, nm]) => { const base = ACT[k]; if (typeof base !== 'function' || base.__own) return;
+  const f = (...a) => { if (S && S.me && S.me.role !== 'owner') { toast(`${nm}은(는) 정운영자만 할 수 있습니다.`, 'warn'); return; } return base(...a); }; f.__own = 1; ACT[k] = f; }); });

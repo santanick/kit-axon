@@ -9,6 +9,7 @@
    운영: /api/pub/<tid>/otp · signup · login{via} · me · pii · withdraw · guardian · verify (service/server/pii.js). SNS OAuth · 이메일 발송 · 본인확인은 '운영:' 지점에서 연동. */
 'use strict';
 const LA_SOC = [['kakao', '카카오'], ['naver', '네이버'], ['google', '구글'], ['apple', '애플']];
+const LA_MS = ['microsoft', '학교(회사) Microsoft']; /* 13차 Entra 학습자 로그인 — 운영 서버가 ready에 microsoft를 줄 때만(대학 · 기업 · 공공 + 기관이 켬) */
 const LA_SN = Object.fromEntries([['email', '이메일'], ['univ', '학번'], ['facebook', '페이스북'], ...LA_SOC]);
 const LA = { j: null, f: null, dlg: null };
 const laHash = s => { let a = 0x811c9dc5, b = 0x9e3779b1; for (const ch of String(s)) { const c = ch.codePointAt(0); a = Math.imul(a ^ c, 16777619) >>> 0; b = Math.imul(b ^ (c + a), 2654435761) >>> 0; } return a.toString(36) + b.toString(36); };
@@ -17,6 +18,10 @@ const laRand = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); re
 const laNewSid = kind => (kind === 'parent' ? 'p' : 'u') + laRand(11); /* 가명 식별자: 이메일 · 전화번호에서 만들지 않는다(역추적 불가) */
 const LA_PW_RE = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[~!@#$%^&*])[A-Za-z\d~!@#$%^&*]{8,20}$/;
 const LA_NICK_RE = /^[가-힣A-Za-z0-9_-]{2,20}$/;
+/* v49 9-3 개인정보 최소 수집: 닉네임의 주민번호 · 휴대폰 · 유선 번호 형태(- · _ 무시)는 거절 — 서버 Node pii.js · Java PiiServiceImpl과 같은 규칙 · 코드(nickname_pii) · 문구 */
+const LA_NICK_PII = /(?<!\d)(?:\d{6}[1-8]\d{6}|01[016789]\d{7,8}|0(?:2|[3-6][1-5]|70)\d{7,8})(?!\d)/;
+const LA_NICK_PII_MSG = '닉네임에는 주민등록번호 · 휴대폰 · 전화번호 같은 개인정보를 쓸 수 없어요. 다른 닉네임을 정해 주세요.';
+const laNickPii = n => LA_NICK_PII.test(String(n || '').replace(/[-_]/g, ''));
 const LA_PHONE_RE = /^01\d-?\d{3,4}-?\d{4}$/;
 const LA_MAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const laPhone = p => { const d = String(p || '').replace(/\D/g, ''); return d.length === 11 ? `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}` : d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : String(p || ''); };
@@ -281,12 +286,12 @@ function laCreate(o) { const cfg = laCfg(); const J = LA.j; const U = laUniv(); 
 function laJoinSubmit(f) { const J = LA.j; const U = laUniv(); const err = m => { const e = $('#laJErr'); if (e) e.textContent = m; return false; }; const fd = n => (f.elements[n] && f.elements[n].value || '').trim();
   laJoinKeep(f); const c = laJoinCheck(f, err); if (!c) return; const X = () => laExtra(f, err); let extra;
   try {
-    if (U) { const stu = fd('sid'), dept = fd('dept'); let nick = fd('nick'); if (!/^\d{6,10}$/.test(stu)) return err('학번은 숫자 6~10자리입니다.'); if (!dept) return err('학과를 입력하세요.'); if (!nick) nick = stu.slice(-4) + '학번'; if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.');
+    if (U) { const stu = fd('sid'), dept = fd('dept'); let nick = fd('nick'); if (!/^\d{6,10}$/.test(stu)) return err('학번은 숫자 6~10자리입니다.'); if (!dept) return err('학과를 입력하세요.'); if (!nick) nick = stu.slice(-4) + '학번'; if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'); if (laNickPii(nick)) return err(LA_NICK_PII_MSG);
       const r = laRoom() || {}; if ((r.members || []).some(m => m.sid === stu && m.acct)) return err('이미 가입한 학번입니다. 로그인하거나 문의하세요.');
       if (J.sns && J.sns.oauth) { if (!(extra = X())) return; return laJoinLive(f, { via: 'sns', oauth: true, student_no: stu, dept, nickname: nick, consent: c.consent, age14: true, extra }, err); } /* QA7 대학 소셜 가입: 학번 · 학과만 */
       const p1 = f.elements.pw.value; if (!LA_PW_RE.test(p1)) return err('비밀번호는 영문 · 숫자 · 특수문자(~!@#$%^&*) 조합 8~20자입니다.'); if (p1 !== f.elements.pw2.value) return err('비밀번호가 서로 다릅니다.');
       if (!(extra = X())) return; if (laLive()) return laJoinLive(f, { via: 'univ', student_no: stu, dept, nickname: nick, pw: p1, consent: c.consent, age14: true, extra }, err); return laCreate({ stu, dept, nick, pw: p1, consent: c.consent, extra, age14: true }); }
-    const nick = fd('nick').replace(/(.{2,})님$/, '$1'); /* v32.9: 호칭 '님'은 화면이 붙임 */ if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.');
+    const nick = fd('nick').replace(/(.{2,})님$/, '$1'); /* v32.9: 호칭 '님'은 화면이 붙임 */ if (!LA_NICK_RE.test(nick)) return err('닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'); if (laNickPii(nick)) return err(LA_NICK_PII_MSG);
     if (J.sns) { if (!(extra = X())) return; if (J.sns.oauth) return laJoinLive(f, { via: 'sns', oauth: true, nickname: nick, consent: c.consent, age14: c.age14, ...(c.gcontact ? { guardian: { contact: c.gcontact } } : {}), extra }, err); return laCreate({ login: J.sns.prov, sub: J.sns.sub, nick, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact, gmatch: fd('gmatch') }); }
     const email = fd('email').toLowerCase(); if (!LA_MAIL_RE.test(email)) return err('이메일을 입력하세요. SNS로 가입하려면 위의 SNS 버튼을 누르세요.'); const s = LA.jv || {};
     const LV = laLive(); if (LV ? (!s.sent || s.email !== email) : (!s.code || s.email !== email)) return err('이메일 인증번호를 먼저 받으세요.'); if (LV ? !/^\d{6}$/.test(fd('vcode')) : fd('vcode') !== s.code) return err(LV ? '이메일로 받은 인증번호 6자리를 입력하세요.' : '인증번호가 올바르지 않습니다.');
@@ -393,7 +398,7 @@ async function laAcctSubmit(f) { const acc = laFind(LR.me.sid); if (!acc) return
   const err = (id, m) => { const e = $('#' + id); if (e) e.textContent = m; return false; };
   if (f.id === 'laProf') { const nick = fd('nick'); const ph = f.elements.photo && f.elements.photo.files[0]; let photo;
     if (ph) { if (!/^image\/(png|jpeg|webp)$/.test(ph.type) || ph.size > 200 * 1024) return err('laPErr', '사진은 PNG · JPG · WEBP, 200KB 이하만 올릴 수 있습니다.'); photo = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => ok(''); r.readAsDataURL(ph); }); }
-    const data = { sid: acc.sid }; if (nick && nick !== acc.nick) { if (!LA_NICK_RE.test(nick)) return err('laPErr', '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'); const mon = ymdL(new Date()).slice(0, 7); const log = [...(acc.nickLog || []), ...((laCache()[acc.sid] || {}).nickLog || [])].filter((x, i, A) => String(x).startsWith(mon) && A.indexOf(x) === i); if (log.length >= 5) return err('laPErr', '닉네임은 한 달에 5회까지 바꿀 수 있습니다.'); data.nick = nick; laCacheSet(acc.sid, { nick, nickAt: Date.now(), nickLog: [...((laCache()[acc.sid] || {}).nickLog || []), new Date().toISOString()] }); LR.me.nick = nick; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { } }
+    const data = { sid: acc.sid }; if (nick && nick !== acc.nick) { if (!LA_NICK_RE.test(nick)) return err('laPErr', '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'); if (laNickPii(nick)) return err('laPErr', LA_NICK_PII_MSG); const mon = ymdL(new Date()).slice(0, 7); const log = [...(acc.nickLog || []), ...((laCache()[acc.sid] || {}).nickLog || [])].filter((x, i, A) => String(x).startsWith(mon) && A.indexOf(x) === i); if (log.length >= 5) return err('laPErr', '닉네임은 한 달에 5회까지 바꿀 수 있습니다.'); data.nick = nick; laCacheSet(acc.sid, { nick, nickAt: Date.now(), nickLog: [...((laCache()[acc.sid] || {}).nickLog || []), new Date().toISOString()] }); LR.me.nick = nick; try { sessionStorage.setItem(SESS + LR.tid, JSON.stringify(LR.me)); } catch (e) { } }
     if (photo !== undefined) { data.photo = photo; laCacheSet(acc.sid, { photo }); }
     if (Object.keys(data).length < 2) { toast('바뀐 내용이 없습니다.'); return; } lpxPush('acct-profile', data); toast('저장했습니다.', 'ok'); lrender(); return; }
   if (f.id === 'laName') { const name = fd('name'); const purpose = fd('purpose'); if (!name || name.length > 30) return err('laNErr', '이름을 30자 이내로 입력하세요.'); const V = laV(); if (!V.ids[acc.sid]) return err('laNErr', '이 계정은 운영자가 관리합니다. 운영자에게 문의하세요.');
@@ -559,7 +564,7 @@ document.addEventListener('submit', async e => { const f = e.target; if (!f || !
     if (f.id === 'laLogin') { const b = f.querySelector('button[type=submit]'); b.disabled = true; $('#laErr').textContent = ''; try { await laLogin(f); } catch (x) { $('#laErr').textContent = x.message; b.disabled = false; } return; }
     if (f.id === 'laSoc') { const prov = f.dataset.v; const sub = f.elements.sub.value.trim(); const er = $('#laSocErr'); if (!/^[\w.-]{3,60}$/.test(sub)) { er.textContent = '계정 ID를 확인하세요.'; return; }
       const acc = laFind(`sns:${prov}:${sub}`);
-      if (f.dataset.mode === 'join') { if (acc) { er.textContent = `이미 가입한 ${LA_SN[prov]} 계정입니다. 로그인하세요.`; return; } const nick = f.elements.nick.value.trim().replace(/(.{2,})님$/, '$1'); if (!LA_NICK_RE.test(nick)) { er.textContent = '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'; return; }
+      if (f.dataset.mode === 'join') { if (acc) { er.textContent = `이미 가입한 ${LA_SN[prov]} 계정입니다. 로그인하세요.`; return; } const nick = f.elements.nick.value.trim().replace(/(.{2,})님$/, '$1'); if (!LA_NICK_RE.test(nick)) { er.textContent = '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.'; return; } if (laNickPii(nick)) { er.textContent = LA_NICK_PII_MSG; return; }
         const J = LA.j; const fj = $('#laJoin'); laJoinKeep(fj); const c = laJoinCheck(fj, m => { er.textContent = m; return false; }); if (!c) return; const extra = laExtra(fj, m => { er.textContent = m; return false; }); if (!extra) return;
         laDlgX(); J.sns = { prov, sub, nick }; try { laCreate({ login: prov, sub, nick, consent: c.consent, extra, age14: c.age14, gcontact: c.gcontact }); } catch (x) { J.sns = null; toast(x.message, 'warn'); lrender(); } return; }
       if (acc) { laDlgX(); try { laAfterAuth(acc, lLoginBack() || 'my'); /* v43.8 SNS 로그인도 #login/<경로>로 돌아감 */ } catch (x) { toast(x.message, 'warn'); } return; }
@@ -588,6 +593,8 @@ addEventListener('message', e => { try { if (!laPvJoin() || e.source !== window.
 LA.ready = null;
 function laReadyLoad() { if (!laLive() || LA.ready) return; LA.ready = []; api('GET', laP('loauth')).then(r => { LA.ready = (r && r.ready) || []; if (['login', 'join', 'find'].includes(route().a)) lrender(); }).catch(() => { }); }
 { const base = laCfg; laCfg = () => { const c = base(); if (laLive()) { const a = (SITE() && SITE().acct) || {}; c.social = (Array.isArray(a.social) ? a.social : []).filter(k => ['kakao', 'naver', 'google'].includes(k)); } return c; }; }
+{ if (!LA_SOC.some(x => x[0] === 'microsoft')) LA_SOC.push(LA_MS); LA_SN.microsoft = 'Microsoft';
+  const base = laCfg; laCfg = () => { const c = base(); c.social = (c.social || []).filter(k => k !== 'microsoft'); if (laLive() && (LA.ready || []).includes('microsoft')) c.social.push('microsoft'); return c; }; }
 const laPendOn = () => { try { return !!localStorage.getItem('didisam.app.pend.' + (LR.tid || '')); } catch (e) { return !!LA.pend; } };
 const laPendOff = () => { LA.pend = ''; LA.pinfo = null; try { localStorage.removeItem('didisam.app.pend.' + (LR.tid || '')); } catch (e) { } };
 function laNewHTML(cfg) { const can = cfg.mode === 'open' || (laUniv() && cfg.mode === 'open');
@@ -597,12 +604,12 @@ function laNewHTML(cfg) { const can = cfg.mode === 'open' || (laUniv() && cfg.mo
 { const base = laJoin; laJoin = r => { laReadyLoad(); if (LA.oj && laLive()) { LA.j = { tok: '', inv: null, kind: 'learner', sns: { prov: LA.oj, nick: '', oauth: true }, done: null, keep: {} }; LA.oj = ''; } return base(r); }; }
 LA_R.join = laJoin; /* 위 감싸기를 화면 표에도 */
 /* 소셜 로그인에서 돌아왔을 때 */
-const LA_OERR = { 'err-unset': '이 로그인 방식은 아직 준비 중이에요. 이메일로 가입 · 로그인해 주세요.', 'err-provider_off': '이 기관에서 쓰지 않는 로그인 방식이에요.', 'err-denied': '로그인을 취소했어요.', 'err-state': '로그인 시간이 지났어요. 다시 시도해 주세요.', 'err-provider': '로그인 서비스에서 정보를 받지 못했어요. 잠시 후 다시 시도해 주세요.', 'err-guardian_pending': '보호자 동의를 기다리고 있어요. 보호자에게 보낸 동의 링크를 확인해 주세요.' };
+const LA_OERR = { 'err-tenant': '기관에 연결된 Microsoft 조직 계정이 아니에요. 학교(회사) 계정으로 다시 로그인해 주세요.', 'err-msa': '개인 Microsoft 계정은 쓸 수 없어요. 학교(회사) 계정으로 로그인해 주세요.', 'err-unset': '이 로그인 방식은 아직 준비 중이에요. 이메일로 가입 · 로그인해 주세요.', 'err-provider_off': '이 기관에서 쓰지 않는 로그인 방식이에요.', 'err-denied': '로그인을 취소했어요.', 'err-state': '로그인 시간이 지났어요. 다시 시도해 주세요.', 'err-provider': '로그인 서비스에서 정보를 받지 못했어요. 잠시 후 다시 시도해 주세요.', 'err-guardian_pending': '보호자 동의를 기다리고 있어요. 보호자에게 보낸 동의 링크를 확인해 주세요.' };
 /* 다른 화면 코드가 결과(?oa=…)를 스크립트를 읽을 때 바로 걷어 둔다(운영 모드 판단 뒤 처리) */
 LA.oback = ''; { const m = /[?&]oa=([\w-]{1,40})/.exec(location.search); if (m) { LA.oback = m[1]; try { history.replaceState(null, '', location.pathname + location.search.replace(/([?&])oa=[\w-]+&?/, '$1').replace(/[?&]$/, '') + location.hash); } catch (e) { } } }
 function laOauthBack() { const v = LA.oback; if (!v) return false; LA.oback = ''; const go = h => { try { history.replaceState(null, '', h); } catch (e) { location.hash = h; } };
   if (v === 'ok') { go('#home'); laPendOff(); api('GET', laP('me')).then(r => { laLiveMe(r); toast(`${(LR.me && LR.me.nick) || '회원'}님, 반갑습니다.`, 'ok'); lrender(); }).catch(x => toast(typeof errMsg === 'function' ? errMsg(x) : '로그인하지 못했어요.', 'bad')); return true; }
-  const j = /^join-(kakao|google|naver)$/.exec(v); if (j) { LA.oj = j[1]; go('#join'); return true; }
+  const j = /^join-(kakao|google|naver|microsoft)$/.exec(v); if (j) { LA.oj = j[1]; go('#join'); return true; }
   if (v === 'pending' || v === 'rejected') { LA.pend = 'live'; LA.pinfo = null; laPendKeep('live'); go('#pending'); return true; }
   go('#login'); setTimeout(() => toast(LA_OERR[v] || '로그인하지 못했어요. 다시 시도해 주세요.', 'warn'), 0); return true; }
 /* 승인 대기 화면(운영) — 신청 정보 · 예상 안내 · 문의 · 승인 확인 */

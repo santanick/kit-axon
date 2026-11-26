@@ -40,7 +40,7 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** 학습자 포털: 메서드와 무관하게 경로가 맞으면 등록된 주소(Node pm 정규식과 같음) */
     public static final java.util.regex.Pattern PUB = java.util.regex.Pattern.compile("^/api/pub/([^/]+)/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-(?:list|avail|quote|book|pay|my|cancel|qr|rent|buy|pass-refund|rent-cancel)|ledger-(?:my|order|confirm|bill|bill-order|bill-confirm)|mile-(?:my|list|rewards|redeem|redeem-cancel|proof|guardian|streak-repair|notice-read)|mk-(?:shelf|list|item|start|pre))\\z");
     /** QA7 학습자 소셜 가입 · 로그인(Node loauth.handle) — 시작은 기관별, 콜백은 제공자별 하나 */
-    public static final java.util.regex.Pattern LOAUTH = java.util.regex.Pattern.compile("^/api/pub/(?:[^/]+/loauth/(?:google|kakao|naver)/start|loauth/(?:google|kakao|naver)/callback)\\z");
+    public static final java.util.regex.Pattern LOAUTH = java.util.regex.Pattern.compile("^/api/pub/(?:[^/]+/loauth/(?:google|kakao|naver|microsoft)/start|loauth/(?:google|kakao|naver|microsoft)/callback)\\z");
     /** v41 통합 수납 원장 운영자 경로(/api/ledger/*, :id 포함) — Node ledger/mod-admin과 같은 목록(09 규격 3절) */
     public static final java.util.regex.Pattern LEDGER = java.util.regex.Pattern.compile("^/api/ledger/(?:units|summary|entries|charges|charges/generate|receipts|receipts/[\\w-]{1,80}/correct|refunds|refunds/[\\w-]{1,80}/confirm|links|import|share|close|today|export|devices|device-push)\\z");
     /** v42 학습 마일리지 운영자 경로(/api/mileage/*, :id 포함) — Node mileage/mod-admin과 같은 목록(04-data-api 5.1) */
@@ -53,6 +53,8 @@ public class DdApiFilter extends OncePerRequestFilter {
     /** 가디언 /api/security/* — 메서드 · 경로 세부 판정은 SecServiceImpl.route(없으면 404) */
     /** 콘텐츠 마켓 v1.1 /api/market/* — 세부 경로 · 메서드는 MarketServiceImpl 경로 표가 판정(없으면 404) */
     public static final java.util.regex.Pattern MARKET = java.util.regex.Pattern.compile("^/api/market/[\\w./:-]{1,160}\\z");
+    /** 통합 센터 /api/group · /api/group/* · MS Teams /api/conn/teams · /api/conn/teams/* — 세부 경로 · 메서드는 각 서비스 경로 표가 판정(없으면 404) */
+    public static final java.util.regex.Pattern GROUP = java.util.regex.Pattern.compile("^/api/group(?:/[\\w./:-]{1,160})?\\z"), TEAMS = java.util.regex.Pattern.compile("^(?:/api/conn/teams(?:/[\\w./:-]{1,160})?|/api/oauth/microsoft/(?:start|callback|link-start))\\z");
     public static final java.util.regex.Pattern SECURITY = java.util.regex.Pattern.compile("^/api/security/[\\w./:-]{1,140}\\z");
     public static final java.util.regex.Pattern SANTA = java.util.regex.Pattern.compile("^/api/santa/orgs/tn_[a-z0-9]{8,16}/plan\\z");
     static boolean mediaRoute(String m, String path) {
@@ -84,7 +86,7 @@ public class DdApiFilter extends OncePerRequestFilter {
         if ("admin".equals(props.module) && !("GET".equals(m) && "/api/health".equals(path)) && !DdModule.ipAllowed(props.adminIps, web.ip(req))) { res.setHeader("cache-control", "no-store"); json(res, 403, "ip", "허용되지 않은 접속 위치입니다."); return; }
         if (path.startsWith("/api/")) {
             res.setHeader("cache-control", "no-store");
-            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !LOAUTH.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !MILEAGE.matcher(path).matches() && !MARKET.matcher(path).matches() && !mediaRoute(m, path) && !("PUT".equals(m) && SANTA.matcher(path).matches()) && !SECURITY.matcher(path).matches()) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
+            if ((!ROUTES.contains(m + " " + path) && !LMS.contains(m + " " + path) && !PUB.matcher(path).matches() && !LOAUTH.matcher(path).matches() && !FAC.matcher(path).matches() && !LEDGER.matcher(path).matches() && !MILEAGE.matcher(path).matches() && !MARKET.matcher(path).matches() && !GROUP.matcher(path).matches() && !TEAMS.matcher(path).matches() && !mediaRoute(m, path) && !("PUT".equals(m) && SANTA.matcher(path).matches()) && !SECURITY.matcher(path).matches()) || !DdModule.apiAllowed(props.module, m, path)) { json(res, 404, "not_found", "없는 주소입니다."); return; }
             if (!"GET".equals(m)) {
                 if (!"1".equals(req.getHeader("x-didisam"))) { json(res, 403, "csrf", "허용되지 않은 요청입니다."); return; }
                 String o = req.getHeader("origin");

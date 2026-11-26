@@ -12,7 +12,11 @@ const crypto = require('node:crypto');
 const { gcmDecipher } = require('./gcm');
 
 const PROVIDERS = ['kakao', 'naver', 'google', 'apple'];
+const SNS_TICKET = [...PROVIDERS, 'microsoft']; /* 13차 Entra 학습자 로그인 — 기관 기본 목록(PROVIDERS)에는 넣지 않고, 콜백이 기관 SSO 설정을 확인한 뒤 보류 쿠키를 준다 */
 const NICK_RE = /^[가-힣A-Za-z0-9_-]{2,20}$/;
+/* v49 9-3 개인정보 최소 수집: 닉네임에 주민번호 · 휴대폰 · 유선 번호 형태(- · _ 무시)는 받지 않는다 — 화면 lacct.js · Java PiiServiceImpl.NICK_PII와 같은 규칙 · 같은 코드(nickname_pii) */
+const NICK_PII = /(?<!\d)(?:\d{6}[1-8]\d{6}|01[016789]\d{7,8}|0(?:2|[3-6][1-5]|70)\d{7,8})(?!\d)/;
+const nickPii = n => NICK_PII.test(String(n || '').replace(/[-_]/g, ''));
 const STU_RE = /^[0-9]{6,10}$/;
 const MAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]{2,}$/;
 const PHONE_RE = /^01\d-?\d{3,4}-?\d{4}$/;
@@ -74,7 +78,7 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
      이메일 · 이름 · 프로필은 동의 항목에서 받지 않는다(닉네임만 선택 제공). */
   async function snsSub(b, req, tid) {
     /* QA7 학습자 OAuth: 콜백이 남긴 서명 쿠키(15분, 제공자 + sub 해시)로 가입 — 원문 sub는 서버도 다시 보지 않는다 */
-    if (b.oauth === true) { const o = tickets && req ? tickets.snsGet(req, tid) : null; if (!o || !PROVIDERS.includes(o.p)) throw new HttpErr(400, '소셜 로그인 정보가 만료되었어요. 다시 시도해 주세요.', 'oauth_pending'); return { prov: o.p, h: o.h }; }
+    if (b.oauth === true) { const o = tickets && req ? tickets.snsGet(req, tid) : null; if (!o || !SNS_TICKET.includes(o.p)) throw new HttpErr(400, '소셜 로그인 정보가 만료되었어요. 다시 시도해 주세요.', 'oauth_pending'); return { prov: o.p, h: o.h }; }
     const prov = String(b.provider || ''); if (!PROVIDERS.includes(prov)) throw new HttpErr(400, '지원하지 않는 로그인 방식입니다.', 'provider');
     /* 운영: const sub = await verifyOAuth(prov, b.token) */
     if (devOauth && /^[\w.-]{3,80}$/.test(String(b.dev_sub || ''))) return { prov, h: bidx(tid, 'sub:' + prov, String(b.dev_sub)) };
@@ -134,13 +138,13 @@ function createPii({ pool, env, HttpErr, readBody, limit, ip, audit, hashPw, che
       if (univ) { if (via !== 'univ' && via !== 'sns') throw new HttpErr(400, '대학 계정은 학번으로 가입합니다.', 'via');
         stu = String(b.student_no || '').trim(); dept = String(b.dept || '').trim().slice(0, 40);
         if (!STU_RE.test(stu)) throw new HttpErr(400, '학번은 숫자 6~10자리입니다.', 'student_no'); if (!dept) throw new HttpErr(400, '학과를 입력하세요.', 'dept');
-        if (via === 'sns') { /* QA7 대학 소셜 가입: 제공자 해시 + 학번 · 학과만(이메일 · 비밀번호 없음) */ const s = await snsSub(b, req, tid); if (!org.social.includes(s.prov)) throw new HttpErr(403, '이 기관에서 쓰지 않는 로그인 방식입니다.', 'provider'); login = s.prov; sub = s.h; b.pw = ''; }
+        if (via === 'sns') { /* QA7 대학 소셜 가입: 제공자 해시 + 학번 · 학과만(이메일 · 비밀번호 없음) */ const s = await snsSub(b, req, tid); if (s.prov !== 'microsoft' && !org.social.includes(s.prov)) throw new HttpErr(403, '이 기관에서 쓰지 않는 로그인 방식입니다.', 'provider'); login = s.prov; sub = s.h; b.pw = ''; }
         else { if (String(b.pw || '').length < 8) throw new HttpErr(400, '비밀번호는 8자 이상입니다.', 'pw'); if (org.strictPw && !pwRule(b.pw)) throw new HttpErr(400, '비밀번호는 영문 · 숫자 · 특수문자 중 2종 10자 이상 또는 3종 8자 이상입니다.', 'pw_rule'); sub = bidx(tid, 'univ', stu); login = 'univ'; }
         if (!nick) nick = stu.slice(-4) + '학번'; }
       else if (via === 'email') { email = String(b.email || '').trim().toLowerCase(); if (!MAIL_RE.test(email)) throw new HttpErr(400, '이메일 형식을 확인하세요.', 'email'); await useOtp(P, tid, bidx(tid, 'email', email), 'signup', b.code); }
-      else if (via === 'sns') { const s = await snsSub(b, req, tid); if (!org.social.includes(s.prov)) throw new HttpErr(403, '이 기관에서 쓰지 않는 로그인 방식입니다.', 'provider'); login = s.prov; sub = s.h; }
+      else if (via === 'sns') { const s = await snsSub(b, req, tid); if (s.prov !== 'microsoft' && !org.social.includes(s.prov)) throw new HttpErr(403, '이 기관에서 쓰지 않는 로그인 방식입니다.', 'provider'); login = s.prov; sub = s.h; }
       else throw new HttpErr(400, '가입 방법을 고르세요.', 'via');
-      if (!NICK_RE.test(nick)) throw new HttpErr(400, '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.', 'nickname');
+      if (!NICK_RE.test(nick)) throw new HttpErr(400, '닉네임은 2~20자 한글 · 영문 · 숫자 · - · _ 만 쓸 수 있습니다.', 'nickname'); if (nickPii(nick)) throw new HttpErr(400, '닉네임에는 주민등록번호 · 휴대폰 · 전화번호 같은 개인정보를 쓸 수 없어요. 다른 닉네임을 정해 주세요.', 'nickname_pii');
       const minor = !univ && kind !== 'parent' && b.age14 !== true; let gContact = '';
       if (minor) { if (!org.under14) throw new HttpErr(403, '이 기관은 만 14세 이상만 가입할 수 있습니다.', 'age');
         gContact = String((b.guardian && b.guardian.contact) || '').trim(); const ph = normPhone(gContact);

@@ -256,3 +256,12 @@ body.lapp .cwc.ph .cwh span{background:rgba(255,255,255,.92);color:#0B3B1E}
 body.lapp.ap-homeon:has(#lm>.ap-home) #lm{padding-bottom:0!important}
 body.lapp.ap-homeon:has(#lm>.ap-home) #lapp{padding-bottom:0}
 body.lapp.ap-homeon:has(#lm>.ap-home){padding-bottom:0}
+/* v49 9-5: 동의 · 승인 대기 화면의 막힌 아래 탭 · 안내 한 줄(lapp.js gateNav) */
+body.lapp .ap-nav a.ap-off{opacity:.38;cursor:not-allowed}
+body.lapp .ap-gnote{position:fixed;left:0;right:0;bottom:calc(var(--ap-nav,64px) + var(--ap-sb,0px));z-index:56;margin:0;padding:8px 16px;font-size:13px;line-height:1.4;text-align:center;color:var(--ap-mute,#4b5563);background:var(--surface,#fff);border-top:1px solid var(--ap-line,#e5e7eb)}
+body:not(.lapp) .ap-gnote{display:none}
+/* v49 9-1: 앱 홈은 화면 자체가 튜터 입력창이므로 떠 있는 튜터 버튼(#ltut)을 숨긴다 — 비로그인 홈에서 보내기 버튼을 덮던 문제 */
+html body.lapp.ap-homeon:has(#lm .ap-home .ap-send):not(#q7) #ltut .lt-fab{display:none!important}
+/* v49 9-6: 종료된 과정의 강좌 · 차시 안내(lapp.js) — 웹 · 앱 공통 */
+.lexp-note{display:flex;align-items:flex-start;gap:8px;margin:12px 16px;padding:10px 14px;border-radius:10px;font-size:14px;line-height:1.5;color:inherit;background:color-mix(in srgb,#f59e0b 14%,var(--surface,#fff));border:1px solid color-mix(in srgb,#f59e0b 45%,transparent)}
+.lexp-note svg{flex:none;margin-top:2px}

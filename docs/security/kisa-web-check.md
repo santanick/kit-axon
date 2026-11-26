@@ -50,6 +50,7 @@
 | OAuth(구글 · 카카오) | `oauth.js:12-13,51,55` | `auth/service/impl/OAuthServiceImpl.java:100,103` | 고정 주소(시험만 `OAUTH_MOCK`) | 양호 |
 | 메일 웹훅 | `mail.js:17` | `cmm/DdMail.java:46` | 환경변수 `MAIL_WEBHOOK_URL` | 양호(`redirect: 'error'`) |
 | 토스 결제 | `fac/pay.js:10` | `FacServiceImpl.java:400,751`, `LedgerServiceImpl.java:112`, `AiServiceImpl.java:188` | 고정 주소 · `TOSS_URL` | 양호 |
+| MS Teams(v49) | `service/server/teams/index.js` `checkHook` · `post` · 토큰 교환 · Graph(3곳, 모두 `redirect: 'manual'`) | `conn/service/impl/TeamsServiceImpl.java` `checkHook` · `HC` · `MS`(`Redirect.NEVER`) | Microsoft 고정 주소(시험만 `OAUTH_MOCK_URL`) + 기관 입력 워크플로 주소 | 워크플로 주소는 https · 443 · Azure 워크플로 호스트 허용 목록(`TEAMS_WEBHOOK_HOSTS`로만 추가) · 계정 정보 · IP 표기 거부 · DNS 결과 사설 · 루프백 차단, 2026년 5월 종료 커넥터 주소 거부 — 양호(QA8 v49 목록 편입) |
 | MCP | `mcp.js` — **수신 전용**(외부 AI가 디디쌤을 부름), 서버가 외부 MCP를 부르지 않음 | 같음 | — | 해당 없음 |
 | OG 미리보기 | `ogmeta.js` — 디디쌤 페이지에 메타 태그를 **넣기만** 함, 외부 주소를 읽지 않음 | 같음 | — | 해당 없음 |
 | AI 웹 검색 | Anthropic 서버 측 도구(디디쌤 서버가 직접 요청하지 않음) | 같음 | — | 해당 없음 |

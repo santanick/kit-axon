@@ -650,3 +650,7 @@ body:not(.lapp) #lm :is(small,time,.tag,.lhs-dt,.bprog span,.r4t small):not(nav 
   body:is([data-luxr=login],[data-luxr=join],[data-luxr=find]) #ltut .lt-fab{display:none!important}
   body.lapp #lapp{padding-bottom:calc(var(--ap-nav,64px) + 72px + env(safe-area-inset-bottom))}
 }
+/* QA49-7: 홈 「더 보기」(흰 카드) 안으로 옮겨진 어두운 히어로용 조각 — 학습 통계 알약 · [AI 튜터에게 묻기] · [앱 화면으로 보기]가 흰 글자 그대로라 보이지 않던 문제(대비 1.0~1.2, 라이트) */
+html body .lhb-more .lhb-mb .l47-sts,html body .lhb-more .lhb-mb .l47-sts :is(span,b){color:var(--ink)}
+html body .lhb-more .lhb-mt .lhb-btn.sc.dk{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);backdrop-filter:none}
+html body .lhb .lhb-more .tut .lhb-apb button{background:var(--surface);color:var(--ink);border-color:var(--line);min-height:44px}

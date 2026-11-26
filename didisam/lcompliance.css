@@ -7,3 +7,5 @@
 .cpl-mb h3{margin:0}
 .cpl-mb input,.cpl-mb textarea,.cpl-mb select{width:100%;box-sizing:border-box;padding:8px;font-size:16px}
 .cpl-mb .err{color:#b91c1c;margin:0;min-height:1em}
+/* v49 9-7: 유의사항 · 본인인증 창이 휴대폰에서 길어지면 「확인했습니다 · 나중에 볼게요」가 창 아래로 잘리던 것 — 버튼 줄을 창 아래에 붙여 늘 보이게(창 자체는 aria-modal이라 아래 탭을 덮는 것이 의도) */
+.cpl-mb>.cta{position:sticky;bottom:-20px;z-index:1;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin:0 -20px -20px;padding:12px 20px 16px;background:var(--surface,#fff);border-top:1px solid rgba(0,0,0,.08)}

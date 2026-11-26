@@ -43,6 +43,15 @@ test('서버 보안', async t => {
     assert.equal(r.status, 200); const sent = JSON.stringify(lastBody.messages); assert.ok(!sent.includes('010-9876') && !sent.includes('hong@ex.com')); assert.ok(sent.includes('가림'));
     assert.match(JSON.stringify(lastBody.system), /보안 원칙/); assert.equal(r.j.redacted.mobile, 1); assert.equal(r.j.redacted.email, 1);
   });
+  await t.test('v49 9-2 운영자 AI 프록시: system(문자열 · 블록 배열)의 개인정보도 가림(Java redactSystem과 같은 규칙)', async () => {
+    let r = await call('A', 'POST', '/api/ai/messages', { system: '학습자 메모: 주민 900101-1234567 · 연락 010-2222-3333', messages: [{ role: 'user', content: '요약해 줘' }] });
+    assert.equal(r.status, 200); let sy = JSON.stringify(lastBody.system); assert.ok(!sy.includes('900101-1234567') && !sy.includes('010-2222-3333'), sy); assert.match(sy, /주민등록번호 가림/); assert.match(sy, /보안 원칙/); assert.equal(r.j.redacted.rrn, 1); assert.equal(r.j.redacted.mobile, 1);
+    r = await call('A', 'POST', '/api/ai/messages', { system: [{ type: 'text', text: '회원 메일 kim@ex.com' }, { type: 'text', text: '전화 010-4444-5555', cache_control: { type: 'ephemeral' } }], messages: [{ role: 'user', content: '안녕' }] });
+    /* 서버 aiCache는 문자열 system만 보낸다(배열은 버림) — 어느 쪽이든 원문이 나가지 않으면 됨 */
+    assert.equal(r.status, 200); sy = JSON.stringify(lastBody.system || '') + JSON.stringify(lastBody.messages); assert.ok(!sy.includes('kim@ex.com') && !sy.includes('010-4444-5555'), sy); assert.equal(r.j.redacted.email, 1); assert.equal(r.j.redacted.mobile, 1);
+    const RS = G.redactSystem([{ type: 'text', text: '전화 010-4444-5555', cache_control: { type: 'ephemeral' } }, { type: 'image' }]); assert.equal(RS.system[0].text, '전화 [휴대폰 번호 가림]'); assert.deepEqual(RS.system[0].cache_control, { type: 'ephemeral' }); assert.deepEqual(RS.system[1], { type: 'image' }); assert.equal(RS.hits.mobile, 1);
+    assert.deepEqual(G.redactSystem(null), { system: null, hits: {} }); assert.equal(G.redactSystem('평범한 지시').system, '평범한 지시');
+  });
   await t.test('SEC-0004 운영자 AI 프록시: 도구 허용 목록(사용자 정의 · web_search만, web_search 최대 5회)', async () => {
     const tools = [{ name: 'studio_action', input_schema: { type: 'object' } }, { type: 'web_fetch_20250910', name: 'web_fetch' }, { type: 'code_execution_20250825', name: 'code_execution' }, { type: 'bash_20250124', name: 'bash' }, { type: 'web_search_20250305', name: 'web_search', max_uses: 50 }, 'x', null];
     const r = await call('A', 'POST', '/api/ai/messages', { messages: [{ role: 'user', content: 'x' }], tools }); assert.equal(r.status, 200);

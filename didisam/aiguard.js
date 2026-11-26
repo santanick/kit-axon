@@ -15,7 +15,7 @@
     ['acct', '계좌번호', /(?<!\d)\d{3,6}-\d{2,6}-\d{4,8}(?:-\d{1,3})?(?!\d)/g],
     ['email', '이메일', /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g],
     ['passport', '여권번호', /(?<![A-Za-z0-9])[MSRODG]\d{8}(?![A-Za-z0-9])/g],
-    ['key', 'API 키', /\b(?:sk-ant-|sk-|dd_live_|AKIA)[A-Za-z0-9_-]{12,}/g]
+    ['key', 'API 키', /\b(?:sk-ant-|sk-|dd_live_|dds_|AKIA)[A-Za-z0-9_-]{12,}/g]
   ];
   const INJ = [
     /ignore\s+(?:all\s+|any\s+|the\s+)?(?:previous|prior|above|earlier|system)\s+(?:instructions?|prompts?|rules?|messages?)/i,
@@ -57,6 +57,10 @@
     });
     const rule = learner ? LEARNER_RULE : STUDIO_RULE;
     let system = b.system;
+    /* v49 9-2: system 필드도 가림(서버 Node redactSystem · Java DdAiGuard.redactSystem과 같은 규칙) — 화면이 지시문에 붙이는 회원 · 학습 기록 속 개인정보 */
+    const fixSys = s => { const r = redact(s); red += Object.values(r.hits).reduce((x, y) => x + y, 0); return r.text; };
+    if (typeof system === 'string') system = fixSys(system);
+    else if (Array.isArray(system)) system = system.map(x => x && x.type === 'text' && typeof x.text === 'string' ? { ...x, text: fixSys(x.text) } : x);
     if (typeof system === 'string') system = system + '\n' + rule;
     else if (Array.isArray(system)) system = [...system, { type: 'text', text: rule }];
     else if (system == null && (b.max_tokens || 0) > 16) system = rule;

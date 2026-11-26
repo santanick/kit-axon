@@ -1,4 +1,5 @@
 'use strict';
+const { adminPool, closeAdmin, NEED } = require('./_admin'); // QA8: 비슈퍼유저 DB에서는 직접 조회만 슈퍼유저 연결로(서버는 RLS 아래 그대로)
 /* v47 요금제 기능 묶음 — 단계 판정(코드 · tier · TRIAL 14일) · 게이트웨이 403 plan_feature(정책 off · plan 없는 기관 영향 없음) · 공개 데이터에 plan 없음
    사용: node --test service/test/plan47.test.js (DATABASE_URL이 있으면 API 시험까지) */
 const test = require('node:test'); const assert = require('node:assert/strict'); const http = require('node:http');
@@ -31,9 +32,9 @@ test('API: 403 plan_feature · 기존 기관 · 정책 off · 공개 데이터',
   const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app');
   const ai = http.createServer((q, r) => { q.resume(); q.on('end', () => { r.writeHead(200, { 'content-type': 'application/json' }); r.end(JSON.stringify({ model: 'claude-haiku-5-5', content: [{ type: 'text', text: '좋아요' }], usage: { input_tokens: 3, output_tokens: 2 } })); }); });
   await new Promise(ok => ai.listen(0, ok));
-  const pool = poolFrom(process.env); await migrate(pool);
+  const pool = poolFrom(process.env); await migrate(pool); const adm = await adminPool(pool); if (!adm) { ai.close(); await pool.end(); t.skip(NEED); return; }
   const app = createApp({ pool, env: { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', ANTHROPIC_API_KEY: 'sk-ant-test', ANTHROPIC_URL: `http://127.0.0.1:${ai.address().port}/v1/messages` }, log: {} });
-  await new Promise(ok => app.listen(0, ok)); t.after(async () => { ai.close(); app.close(); await pool.end(); });
+  await new Promise(ok => app.listen(0, ok)); t.after(async () => { ai.close(); app.close(); await Promise.all([closeAdmin(adm, pool), pool.end()]); });
   const jar = {}; const call = async (who, method, path, body) => {
     const r = await fetch(`http://127.0.0.1:${app.address().port}` + path, { method, headers: { 'x-didisam': '1', ...(body ? { 'content-type': 'application/json' } : {}), ...(jar[who] ? { cookie: jar[who] } : {}) }, body: body ? JSON.stringify(body) : undefined });
     const c = r.headers.get('set-cookie'); if (c) jar[who] = c.split(';')[0]; return { status: r.status, j: await r.json().catch(() => ({})) }; };
@@ -43,7 +44,7 @@ test('API: 403 plan_feature · 기존 기관 · 정책 off · 공개 데이터',
   const pub = { org: { name: '산타' }, pages: [], classes: [{ id: 'c1', name: '실무', items }] };
   const doc = (x = {}) => ({ org: { name: 'A', type: 'corp', room: { mode: 'saas' } }, settings: { tutor: { enabled: true, daily: 200 } }, lsite: { pub }, codes: [{ sid: '20260001', dept: '영업', code: 'ABC234' }], members: [{ id: 'm1', sid: '20260001', name: '20260001' }], classes: [{ id: 'c1', name: '실무', items }], ...x });
   let rev = (await call('A', 'PUT', '/api/state', { doc: doc(), rev: 0 })).j.rev;
-  const put = async x => { const g = await call('A', 'GET', '/api/state'); rev = g.j.rev; const r = await call('A', 'PUT', '/api/state', { doc: doc(x), rev }); assert.equal(r.status, 200, JSON.stringify(r.j)); rev = r.j.rev; if (x.plan) await pool.query("update tenant_state set doc = jsonb_set(doc, '{plan}', $2::jsonb) where tenant_id = $1", [A.tid, JSON.stringify(x.plan)]); /* v47 통합: 요금제는 산타 관리(또는 서버)만 저장 — 기관 PUT으로 보낸 plan은 서버가 버림(keepPlan) */ };
+  const put = async x => { const g = await call('A', 'GET', '/api/state'); rev = g.j.rev; const r = await call('A', 'PUT', '/api/state', { doc: doc(x), rev }); assert.equal(r.status, 200, JSON.stringify(r.j)); rev = r.j.rev; if (x.plan) await adm.query("update tenant_state set doc = jsonb_set(doc, '{plan}', $2::jsonb) where tenant_id = $1", [A.tid, JSON.stringify(x.plan)]); /* v47 통합: 요금제는 산타 관리(또는 서버)만 저장 — 기관 PUT으로 보낸 plan은 서버가 버림(keepPlan) */ };
   assert.equal((await call('L', 'POST', `/api/pub/${A.tid}/login`, { sid: '20260001', code: 'abc234' })).status, 200);
   const tutor = key => call('L', 'POST', `/api/pub/${A.tid}/tutor`, { q: '어떻게 시작해요?', item: { key } });
   const grade = () => call('A', 'POST', '/api/ai/messages', { feature: 'grade', messages: [{ role: 'user', content: '채점' }] });
