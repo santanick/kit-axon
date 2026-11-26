@@ -32,7 +32,7 @@ const BAD = /문제가 생겼습니다|TypeError|ReferenceError|NaN|undefined|\[
         const m = document.querySelector('#main'); const tx = m ? m.innerText : '';
         if ((CUR.tab || CUR.ws) !== id && !(id === 'settings' && CUR.ws === 'settings')) o.dead.push(`${id} → ${CUR.ws}/${CUR.tab}`);
         /* 교수자 설정 = 내 계정만(session.js) — 메뉴 구성 · 플랜 · 데이터 같은 기관 설정이 보이면 누수 */
-        if (id === 'settings' && role === 'teacher' && (/메뉴 구성|플랜 · 결제|기관 유형|데이터 JSON/.test(tx) || document.querySelector('#main [data-act=sl-menu], #main [data-act=type-chg], #main [data-act=data-export]'))) o.leak.push('settings: 기관 설정 노출');
+        if (id === 'settings' && role === 'teacher') { const mm2 = tx.match(/메뉴 구성|플랜 · 결제|기관 유형|데이터 JSON/); const el2 = document.querySelector('#main [data-act=sl-menu], #main [data-act=type-chg], #main [data-act=data-export]'); if (mm2 || el2) o.leak.push('settings: 기관 설정 노출 ' + (mm2 ? '«' + tx.slice(Math.max(0, mm2.index - 60), mm2.index + 30).replace(/\s+/g, ' ') + '»' : el2.outerHTML.slice(0, 120))); }
         if (tx.trim().length < 20) o.empty.push(id);
         const mm = tx.match(BAD); if (mm) { const i = tx.indexOf(mm[0]); o.bad.push(`${id}: «${tx.slice(Math.max(0, i - 40), i + 30).replace(/\s+/g, ' ')}»`); }
         /* 화면 안 이동 버튼이 막힌 곳을 가리키는지 */

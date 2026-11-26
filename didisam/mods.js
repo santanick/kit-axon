@@ -307,7 +307,7 @@ VIEWS.lifelong = () => {
 ACT['ll-check'] = () => { S.llChecked = true; save(); render(); toast('점검 완료로 표시했습니다.', 'ok'); };
 ACT['ll-ins'] = () => { S.llIns = !S.llIns; save(); render(); };
 /* v49 QA1: 체크리스트 [설정]이 설정 첫 화면(메뉴 구성)으로만 가서 고칠 곳을 다시 찾아야 했음 — 항목별 고칠 화면으로 바로 보낸다(30시간 → 강좌 목록, 반환 기준 → 이용약관, 개인정보 → 처리방침, 6종 표시 → 홈페이지 설정 바닥글) */
-ACT['ll-fix'] = el => { const i = +el.dataset.v; if (i === 0) return go('class'); if (i === 1 || i === 5) { UI.trm = i === 5 ? 'privacy' : 'tos'; UI.trmV = null; return go('terms'); } UI.settings = 'home'; go('settings'); };
+ACT['ll-fix'] = el => { const i = +el.dataset.v; if (i === 0) return go('class'); if (i === 1 || i === 5) { UI.trm = i === 5 ? 'privacy' : 'tos'; UI.trmV = null; return go('terms'); } UI.settings = 'home'; if (typeof slSetOpen === 'function') slSetOpen('home', true); go('settings'); };
 
 /* ═════════ 유형 전용: 직업훈련원 HRD-Net ═════════ */
 VIEWS.hrd = () => {
