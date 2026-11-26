@@ -19,6 +19,10 @@ test('계산 기준값(market-vectors.json) · 화면 공용 파일과 서버 �
   assert.deepEqual(calc.useLots([{ id: 'b', kind: 'bonus', exp: '2028-01-01', remain: 10 }, { id: 'p', kind: 'paid', exp: '2028-01-01', remain: 5 }], 8).lots.map(l => l.take), [5, 3]);
   assert.equal(calc.useCredits(50000, 499, [{ fromN: 500, offBp: 1000 }]), 50); assert.equal(calc.useCredits(50000, 500, [{ fromN: 500, offBp: 1000 }]), 45);
   assert.equal(calc.settleLine(10, 7000).error, 'mk_cp_rate');
+  /* 모듈 게이트(MODULE=learner|tutor|admin, Java DdModule 같은 목록): 학습자 모듈은 mk-* 공개 경로만, 교강사는 카탈로그 조회만, 관리 모듈은 학습자 경로 차단 */
+  const M = require('../server/modules');
+  for (const a of ['mk-shelf', 'mk-list', 'mk-item', 'mk-start', 'mk-pre']) { assert.ok(M.apiAllowed('learner', 'GET', `/api/pub/tn_abcdefgh/${a}`), a); assert.ok(!M.apiAllowed('admin', 'POST', `/api/pub/tn_abcdefgh/${a}`), a); }
+  assert.ok(!M.apiAllowed('learner', 'GET', '/api/market/home')); assert.ok(M.apiAllowed('tutor', 'GET', '/api/market/home')); assert.ok(!M.apiAllowed('tutor', 'POST', '/api/market/quotes')); assert.ok(M.apiAllowed('admin', 'POST', '/api/market/quotes'));
 });
 
 test('운영 서버: 콘텐츠 마켓', { skip: !process.env.DATABASE_URL }, async t => {
@@ -28,6 +32,8 @@ test('운영 서버: 콘텐츠 마켓', { skip: !process.env.DATABASE_URL }, asy
   await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
   t.after(() => { app.close(); return pool.end(); });
 
+  /* 마켓 표는 FORCE RLS — 비슈퍼유저 앱 계정(표 소유자)도 직접 읽을 수 없으므로 시험은 산타 범위로 읽고 쓴다 */
+  const santa = async (sql, args) => { const c = await pool.connect(); try { await c.query('begin'); await c.query('set local role didisam_market'); await c.query("select set_config('app.santa', '1', true)"); const r = await c.query(sql, args); await c.query('commit'); return r; } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); } };
   const R = await C.run(U, 'n'); if (process.env.DBG) console.log(JSON.stringify(R));
   const bad = C.check(R); assert.deepEqual(bad, [], bad.join('\n'));
 
@@ -36,7 +42,8 @@ test('운영 서버: 콘텐츠 마켓', { skip: !process.env.DATABASE_URL }, asy
     assert.equal((await pool.query("select count(*)::int n from pg_class where relname like 'mk\\_%' and relkind = 'r' and not (relrowsecurity and relforcerowsecurity)")).rows[0].n, 0); /* 모든 마켓 표 RLS FORCE */
     const cols = (await pool.query("select table_name, column_name from information_schema.columns where table_name like 'mk\\_%'")).rows; assert.ok(cols.length > 100);
     assert.deepEqual(cols.filter(x => /phone|email$|^name$|card|sid$|student/.test(x.column_name) && x.column_name !== 'by_email'), []);
-    assert.equal((await pool.query("select count(*)::int n from mk_credit_use where sid_hash !~ '^[0-9a-f]{64}$'")).rows[0].n, 0);
+    assert.equal((await santa("select count(*)::int n from mk_credit_use where sid_hash !~ '^[0-9a-f]{64}$'")).rows[0].n, 0);
+    if (!(await pool.query('select rolsuper from pg_roles where rolname = current_user')).rows[0].rolsuper) assert.equal((await pool.query('select count(*)::int n from mk_contract')).rows[0].n, 0, '앱 계정(소유자)도 역할 없이 마켓 표를 볼 수 없음'); /* 슈퍼유저 실행이면 이 줄은 건너뜀 */
   });
   await t.test('C1 RLS: 마켓 역할로 다른 기관 세션이면 지갑 · 차감 · 견적 · 계약 · 정산서 0행, 산타 세션만 전체', async () => {
     const as = async (tid, santa, sql) => { const c = await pool.connect(); try { await c.query('begin'); await c.query('set local role didisam_market'); await c.query("select set_config('app.tenant', $1, true), set_config('app.santa', $2, true)", [tid, santa ? '1' : '0']); return (await c.query(sql)).rows[0].n; } finally { await c.query('rollback'); c.release(); } };
@@ -48,17 +55,17 @@ test('운영 서버: 콘텐츠 마켓', { skip: !process.env.DATABASE_URL }, asy
     await assert.rejects(as(T.D, false, `insert into mk_contract (id, buyer_tid, quote_id, start, "end", carry_end, supply_total) select 'mk_zzzzzzzzzzzz', '${T.B}', id, current_date, current_date, current_date, 1 from mk_quote limit 1 returning 1 n`));
   });
   await t.test('마진 가드는 DB 제약으로도 막힘 · 장부 줄', async () => {
-    await assert.rejects(pool.query("insert into mk_quote (id, buyer_tid, kind, supply_total, cp_max, santa_bp, valid_to) select 'mq_zzzzzzzzzzzz', id, 'credit', 1, 1, 2999, now() from tenants limit 1"));
-    const k = (await pool.query("select kind, count(*)::int n from mk_entry group by kind")).rows.map(r => r.kind).sort();
+    await assert.rejects(santa("insert into mk_quote (id, buyer_tid, kind, supply_total, cp_max, santa_bp, valid_to) select 'mq_zzzzzzzzzzzz', id, 'credit', 1, 1, 2999, now() from tenants limit 1"));
+    const k = (await santa("select kind, count(*)::int n from mk_entry group by kind")).rows.map(r => r.kind).sort();
     for (const x of ['credit_sale', 'credit_bonus', 'platform_bundle', 'credit_use', 'credit_restore', 'cp_use', 'santa_use', 'santa_orig', 'payout']) assert.ok(k.includes(x), x);
   });
   await t.test('상태 전환(tick): 유효 만료 → 이월 · 이월 만료 → ended', async () => {
-    const k = (await pool.query("select id from mk_contract where status = 'active' and kind = 'credit' order by at limit 1")).rows[0];
-    await pool.query("update mk_contract set \"end\" = current_date - 2 where id = $1", [k.id]); await app.marketTick();
-    assert.equal((await pool.query('select status from mk_contract where id = $1', [k.id])).rows[0].status, 'carry');
-    assert.equal((await pool.query("select count(*)::int n from mk_entry where kind = 'credit_carry' and contract_id = $1", [k.id])).rows[0].n, 1);
-    await pool.query("update mk_contract set carry_end = current_date - 1 where id = $1", [k.id]); await app.marketTick();
-    assert.equal((await pool.query('select status from mk_contract where id = $1', [k.id])).rows[0].status, 'ended');
+    const k = (await santa("select id from mk_contract where status = 'active' and kind = 'credit' order by at limit 1")).rows[0];
+    await santa("update mk_contract set \"end\" = current_date - 2 where id = $1", [k.id]); await app.marketTick();
+    assert.equal((await santa('select status from mk_contract where id = $1', [k.id])).rows[0].status, 'carry');
+    assert.equal((await santa("select count(*)::int n from mk_entry where kind = 'credit_carry' and contract_id = $1", [k.id])).rows[0].n, 1);
+    await santa("update mk_contract set carry_end = current_date - 1 where id = $1", [k.id]); await app.marketTick();
+    assert.equal((await santa('select status from mk_contract where id = $1', [k.id])).rows[0].status, 'ended');
   });
   await t.test('로그인 없이 401 · 없는 경로 404', async () => {
     assert.equal((await fetch(`${U}/api/market/home`)).status, 401);
