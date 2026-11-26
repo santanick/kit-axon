@@ -10,7 +10,7 @@ const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../../didisam'); const SHOT = process.env.SHOT || ''; const PORT = +process.env.PORT || 9970; const ONLY = process.env.ONLY || '';
 const WS = (process.env.W || '1440,1100,390').split(',').map(Number); const THS = (process.env.TH || 'light,dark').split(',');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.webp': 'image/webp', '.webmanifest': 'application/json', '.woff2': 'font/woff2' };
-const ALLOW_W = (process.env.STRICT ? [] : ['하면 좋겠습니다', '설정만 저장합니다', '할 일 3가지를 정리했']);
+const ALLOW_W = []; // 7-15 해소: 튜터 첫 인사 · 연결 안내를 해요체로 바꿈(통합 담당)
 const fails = []; const ok = (c, m) => { console.log(`${c ? '✓' : '✗'} ${m}`); if (!c) fails.push(m); };
 const md = fs.readFileSync(path.join(__dirname, 'market-dark.js'), 'utf8'); const SCAN_SRC = md.slice(md.indexOf('const SCAN = ') + 'const SCAN = '.length, md.indexOf('(async () =>')).trim().replace(/;\s*$/, '');
 
