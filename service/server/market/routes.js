@@ -2,10 +2,13 @@
 /* /api/market/*(spec v1.1 8장 + dev-addendum 3장) · /api/pub/<tid>/mk-*(8-5). 권한: need · needStaff(교수자 제외) · needOwner · needSanta · needCp(mk_party.kind='cp' + staff).
    쓰기 요청은 idem 필수(멱등), 금액 · 크레딧은 calc로 서버가 다시 계산. 교차 표는 로그인 계정으로 읽되 모든 질의에 기관 조건을 둔다. */
 module.exports = (ctx, S) => {
-  const { readBody, limit, need, needStaff, needOwner, lauth, pool, inTenant } = ctx;
+  const { readBody, limit, lauth, pool, inTenant } = ctx;
+  /* 권한 함수가 요청 범위(기관 · 산타)를 정한다 → tx()의 RLS 세션 변수. 산타 범위는 needSanta 경로에서만 */
+  const bind = f => async req => { const a = await f(req); S.scopeSet(a.tid, false); return a; };
+  const need = bind(ctx.need), needStaff = bind(ctx.needStaff), needOwner = bind(ctx.needOwner);
   const { E, calc, rid, str, int, kstDay, DAY_RE, tx, q1, log, idem, party, eligible, needPilot, needPaid, isCp, priceRows, priceNow, optinRow, lotsOf, lotOut, liveLots, liveContract, sidHash } = S;
   const isSanta = a => !!(ctx.isSanta && ctx.isSanta(a));
-  const needSanta = async req => { const a = await need(req); if (!isSanta(a)) throw E(403, 'santa', '산타 관리자만 쓸 수 있습니다.'); limit(`mk-santa:${a.email}`, 240, 60e3); return a; };
+  const needSanta = async req => { const a = await need(req); if (!isSanta(a)) throw E(403, 'santa', '산타 관리자만 쓸 수 있습니다.'); limit(`mk-santa:${a.email}`, 240, 60e3); S.scopeSet(a.tid, true); return a; };
   const needCp = async req => { const a = await needStaff(req); const p = await tx(c => party(c, a.tid)); if (!isCp(p)) throw E(403, 'mk_cp'); return a; };
   const Q = req => new URL(req.url, 'http://x').searchParams;
   const body = req => readBody(req, 32 * 1024);
@@ -154,7 +157,7 @@ module.exports = (ctx, S) => {
     return { access: 'charged', k, r, cr, u };
   }
   const ACCESS_ERR = { cap: [409, 'mk_cap'], balance: [409, 'mk_balance'], pre: [409, 'mk_pre'], pre_asked: [409, 'mk_pre'], out: [403, 'mk_scope'], empty: [409, 'mk_balance'], none: [404, 'product'] };
-  const who = async (req, tid) => { const s = await lauth(req, tid); if (!s) throw E(401, 'auth', '로그인이 필요해요.'); return s; };
+  const who = async (req, tid) => { const s = await lauth(req, tid); if (!s) throw E(401, 'auth', '로그인이 필요해요.'); S.scopeSet(tid, false); return s; };
   async function pubGate(c, tid) { const p = await party(c, tid); return !!p.pilot; }
 
   const pub = {
@@ -255,7 +258,7 @@ module.exports = (ctx, S) => {
     'GET /api/market/ops/reviews': async req => { await needSanta(req); const st = str(Q(req).get('status'), 12) || 'in_review';
       return T(async c => ({ items: (await c.query(PROD_SQL + ' where p.status = $2 order by p.created_at', [today(), st])).rows.map(r => ({ ...prodOut(r, today(), true), ownerTid: r.owner_tid, listPrice: r.list_price, memo: r.review_memo })) })); },
     'POST /api/market/ops/credit-quotes': async req => { const a = await needSanta(req); const b = await body(req); const buyer = str(b.buyerTid, 20);
-      return T(async c => { if (!(await q1(c, 'select 1 from tenants where id = $1', [buyer]))) throw E(404, 'tenant', '없는 기관입니다.');
+      return T(async c => { if (!(await pool.query('select 1 from tenants where id = $1', [buyer])).rowCount) throw E(404, 'tenant', '없는 기관입니다.');
         return idem(c, a.tid, 'ops-credit-quotes', b.idem, async () => ({ ok: true, quote: quoteOut(await creditQuote(c, buyer, b, a.email, true), true) })); }); },
     'GET /api/market/ops/contracts': async req => { await needSanta(req); const st = str(Q(req).get('status'), 12);
       return T(async c => { const K = (await c.query(`select *, to_char(start, 'YYYY-MM-DD') s, to_char("end", 'YYYY-MM-DD') e, to_char(carry_end, 'YYYY-MM-DD') ce from mk_contract` + (st ? ' where status = $1' : '') + ' order by at desc limit 500', st ? [st] : [])).rows; const items = [];
@@ -295,7 +298,7 @@ module.exports = (ctx, S) => {
     'GET /api/market/ops/quotes': async req => { await needSanta(req); const q = Q(req); const st = str(q.get('status'), 10);
       return T(async c => pageOf(q, (await c.query('select * from mk_quote' + (st ? ' where status = $1' : '') + ' order by at desc limit 1000', st ? [st] : [])).rows.map(x => quoteOut(x, true)))); },
     'POST /api/market/ops/quotes/auto': async req => { const a = await needSanta(req); const b = await body(req); const buyer = str(b.buyerTid, 20);
-      return T(async c => { if (!(await q1(c, 'select 1 from tenants where id = $1', [buyer]))) throw E(404, 'tenant', '없는 기관입니다.');
+      return T(async c => { if (!(await pool.query('select 1 from tenants where id = $1', [buyer])).rowCount) throw E(404, 'tenant', '없는 기관입니다.');
         return idem(c, a.tid, 'ops-quotes-auto', b.idem, async () => { const x = await singleQuote(c, buyer, b, a.email); return { ok: true, quote: quoteOut(x, true), auto: x.status === 'ready' }; }); }); },
     'GET /api/market/cp/requests': async req => { const a = await needCp(req); return T(async c => { const own = new Set((await c.query('select id from mk_product where owner_tid = $1', [a.tid])).rows.map(r => r.id));
       const items = (await c.query("select * from mk_quote where kind = 'single' and status = 'cp_wait' order by at")).rows.filter(x => (x.input.lines || []).some(l => own.has(l.productId)))
@@ -334,7 +337,7 @@ module.exports = (ctx, S) => {
   async function rateInfo(c, cp) { const rows = (await c.query("select rate_kind, cp_bp, to_char(effective_from, 'YYYY-MM-DD') ef from mk_cp_rate where cp_tid = $1 order by effective_from, id", [cp])).rows; const day = today();
     const cur = rows.filter(r => r.ef <= day).pop(); const nxt = rows.filter(r => r.ef > day).pop();
     return { current: cur ? { rateKind: cur.rate_kind, cpBp: cur.cp_bp, effectiveFrom: cur.ef } : { rateKind: 'standard', cpBp: calc.CP_BP, effectiveFrom: null }, ...(nxt ? { next: { rateKind: nxt.rate_kind, cpBp: nxt.cp_bp, effectiveFrom: nxt.ef } } : {}) }; }
-  async function activeOf(c, pid) { return (await c.query("select distinct k.id, to_char(k.carry_end, 'YYYY-MM-DD') ce from mk_credit_use u join mk_contract k on k.id = u.contract_id where u.product_id = $1 and u.kind = 'use' and k.status in ('active','carry')", [pid])).rows; }
+  async function activeOf(c, pid) { return S.txAs({ santa: true }, async c => (await c.query("select distinct k.id, to_char(k.carry_end, 'YYYY-MM-DD') ce from mk_credit_use u join mk_contract k on k.id = u.contract_id where u.product_id = $1 and u.kind = 'use' and k.status in ('active','carry')", [pid])).rows); }
   async function putControl(c, cid, b, by) {
     const n = v => v == null || v === '' ? null : Math.max(0, int(v)) || null;
     const cap = n(b.monthCap), pre = n(b.preFrom); const cols = b.allowCols == null ? null : arr(b.allowCols, 50, COL_RE); const grps = b.allowGroups == null ? null : arr(b.allowGroups, 100);

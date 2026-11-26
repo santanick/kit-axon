@@ -32,9 +32,19 @@ test('운영 서버: 콘텐츠 마켓', { skip: !process.env.DATABASE_URL }, asy
 
   await t.test('마켓 표: 기관 역할 권한 없음 · 개인정보 열 없음 · 학습자는 해시만', async () => {
     const g = (await pool.query("select count(*)::int n from information_schema.role_table_grants where grantee = 'didisam_tenant' and table_name like 'mk\\_%'")).rows[0].n; assert.equal(g, 0);
+    assert.equal((await pool.query("select count(*)::int n from pg_class where relname like 'mk\\_%' and relkind = 'r' and not (relrowsecurity and relforcerowsecurity)")).rows[0].n, 0); /* 모든 마켓 표 RLS FORCE */
     const cols = (await pool.query("select table_name, column_name from information_schema.columns where table_name like 'mk\\_%'")).rows; assert.ok(cols.length > 100);
     assert.deepEqual(cols.filter(x => /phone|email$|^name$|card|sid$|student/.test(x.column_name) && x.column_name !== 'by_email'), []);
     assert.equal((await pool.query("select count(*)::int n from mk_credit_use where sid_hash !~ '^[0-9a-f]{64}$'")).rows[0].n, 0);
+  });
+  await t.test('C1 RLS: 마켓 역할로 다른 기관 세션이면 지갑 · 차감 · 견적 · 계약 · 정산서 0행, 산타 세션만 전체', async () => {
+    const as = async (tid, santa, sql) => { const c = await pool.connect(); try { await c.query('begin'); await c.query('set local role didisam_market'); await c.query("select set_config('app.tenant', $1, true), set_config('app.santa', $2, true)", [tid, santa ? '1' : '0']); return (await c.query(sql)).rows[0].n; } finally { await c.query('rollback'); c.release(); } };
+    const T = R.tids; const tables = ['mk_credit_wallet', 'mk_credit_use', 'mk_control', 'mk_preapproval', 'mk_quote', 'mk_contract'];
+    for (const x of tables) { assert.equal(await as(T.D, false, `select count(*)::int n from ${x}`), 0, x + ' D'); assert.ok(await as(T.B, false, `select count(*)::int n from ${x}`) > 0, x + ' B'); }
+    assert.equal(await as(T.E, false, 'select count(*)::int n from mk_stmt'), 0); assert.ok(await as(T.C, false, 'select count(*)::int n from mk_stmt') > 0);
+    assert.equal(await as(T.B, false, 'select count(*)::int n from mk_stmt'), 0); assert.equal(await as(T.B, false, 'select count(*)::int n from mk_entry'), 0); assert.equal(await as(T.B, false, 'select count(*)::int n from mk_close'), 0);
+    assert.ok(await as('', true, 'select count(*)::int n from mk_credit_wallet') > 0); assert.equal(await as('', false, 'select count(*)::int n from mk_contract'), 0); /* 범위 없으면 0행 */
+    await assert.rejects(as(T.D, false, `insert into mk_contract (id, buyer_tid, quote_id, start, "end", carry_end, supply_total) select 'mk_zzzzzzzzzzzz', '${T.B}', id, current_date, current_date, current_date, 1 from mk_quote limit 1 returning 1 n`));
   });
   await t.test('마진 가드는 DB 제약으로도 막힘 · 장부 줄', async () => {
     await assert.rejects(pool.query("insert into mk_quote (id, buyer_tid, kind, supply_total, cp_max, santa_bp, valid_to) select 'mq_zzzzzzzzzzzz', id, 'credit', 1, 1, 2999, now() from tenants limit 1"));

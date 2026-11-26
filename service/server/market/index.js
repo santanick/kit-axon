@@ -9,6 +9,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const calc = require('./calc');
+const { AsyncLocalStorage } = require('node:async_hooks');
+const als = new AsyncLocalStorage(); /* 요청 범위 { tid, santa } — 라우트 권한 함수가 채우고 tx()가 RLS 세션 변수로 넘긴다 */
 const SQL = path.join(__dirname, 'sql');
 
 function sqlMigrations() {
@@ -53,12 +55,16 @@ function createMarket(ctx) {
   /* 학습자 가명 키: 기관별 솔트 SHA-256(마켓 표에는 학습자 ID를 두지 않는다) */
   const sidHash = (tid, sid) => crypto.createHmac('sha256', pepper).update(`mk|${tid}|${sid}`).digest('hex');
 
-  /* 로그인 계정 트랜잭션(마켓 교차 표). fn(c) */
-  async function tx(fn) {
-    const c = await pool.connect();
-    try { await c.query('begin'); const r = await fn(c); await c.query('commit'); return r; }
+  /* 마켓 트랜잭션: SET LOCAL ROLE didisam_market(RLS 강제) + app.tenant(요청 기관) + app.santa(산타 운영 경로만). 범위가 없으면 아무 행도 보이지 않는다 */
+  async function txIn(scope, fn) {
+    const c = await pool.connect(); const s = scope || {};
+    try { await c.query('begin'); await c.query('set local role didisam_market'); await c.query("select set_config('app.tenant', $1, true), set_config('app.santa', $2, true)", [String(s.tid || ''), s.santa ? '1' : '0']);
+      const r = await fn(c); await c.query('commit'); return r; }
     catch (e) { await c.query('rollback').catch(() => {}); throw e; } finally { c.release(); }
   }
+  const tx = fn => txIn(als.getStore(), fn);
+  const txAs = (scope, fn) => txIn(scope, fn); /* 시스템 집계(예: 철회 영향 기관 수)만 — 개인 단위 값을 돌려주지 않는 곳에서 */
+  const scopeSet = (tid, santa) => { const st = als.getStore(); if (st) { st.tid = tid; st.santa = !!santa; } };
   const q1 = async (c, sql, a) => (await c.query(sql, a)).rows[0];
   /* 기관 감사 기록(기관 audit_log, 실패해도 본 처리는 유지) */
   const log = (tid, actor, action, detail) => inTenant(pool, tid, c => audit(c, tid, actor, action, detail)).catch(() => {});
@@ -99,13 +105,13 @@ function createMarket(ctx) {
     return q1(c, "select *, to_char(start, 'YYYY-MM-DD') s, to_char(\"end\", 'YYYY-MM-DD') e, to_char(carry_end, 'YYYY-MM-DD') ce from mk_contract where buyer_tid = $1 and kind = 'credit' and status in ('active','carry') and carry_end >= $2::date and start <= $2::date order by start desc limit 1", [tid, day]);
   }
 
-  const shared = { E, MSG, calc, rid, str, int, kstDay, DAY_RE, YM_RE, Q_RE, quarterOf, monthsOf, tx, q1, log, idem, orgOf, party, paidPlan, eligible, needPilot, needPaid, isCp, priceRows, priceNow, optinRow, optinNow, lotsOf, lotOut, liveLots, liveContract, sidHash };
+  const shared = { E, MSG, calc, rid, str, int, kstDay, DAY_RE, YM_RE, Q_RE, quarterOf, monthsOf, tx, txAs, als, scopeSet, q1, log, idem, orgOf, party, paidPlan, eligible, needPilot, needPaid, isCp, priceRows, priceNow, optinRow, optinNow, lotsOf, lotOut, liveLots, liveContract, sidHash };
   shared.settle = require('./settle')(ctx, shared);
   const R = require('./routes')(ctx, shared);
   return {
-    pub: (req, res, tid, act) => { const fn = R.pub[`${req.method} ${act}`]; if (!fn) throw E(404, 'not_found', '없는 주소입니다.'); return fn(req, res, tid); },
-    match: (method, p) => R.match(method, p),
-    tick: () => require('./sweep').tick(pool, shared)
+    pub: (req, res, tid, act) => { const fn = R.pub[`${req.method} ${act}`]; if (!fn) throw E(404, 'not_found', '없는 주소입니다.'); return als.run({}, () => fn(req, res, tid)); },
+    match: (method, p) => { const fn = R.match(method, p); return fn && ((req, res) => als.run({}, () => fn(req, res))); },
+    tick: () => als.run({ tid: '', santa: true }, () => require('./sweep').tick(pool, shared))
   };
 }
 module.exports = { sqlMigrations, createMarket, MSG };
