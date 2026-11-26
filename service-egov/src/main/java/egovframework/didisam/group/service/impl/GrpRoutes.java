@@ -90,12 +90,27 @@ final class GrpRoutes {
     static final List<String> DROP = List.of("learners", "prog", "grades", "scores", "subs", "submissions", "board", "posts", "consults", "pays", "coupons", "teachers", "teacher", "owner", "att", "attendance", "crmDay", "k12Exams", "makeups", "done", "waits", "apply", "applicants", "reviews", "qna", "logs");
     static boolean isMk(JsonNode x) { return x != null && x.isObject() && (truthy(get(x, "mk")) || truthy(get(x, "mkProduct")) || truthy(get(x, "market")) || truthy(get(x, "mkId")) || "market".equals(S(get(x, "src")))); }
     static final class Src { String id, title; ObjectNode snap; }
+    static final List<String> PER = List.of("enr", "attT", "conn", "ask", "drop", "memo", "certs");
+    static void scrubIds(JsonNode o, java.util.Set<String> ids, int depth) {
+        if (o == null || depth > 6) return;
+        if (o.isArray()) { for (JsonNode v : o) scrubIds(v, ids, depth + 1); return; }
+        if (!o.isObject()) return; ObjectNode ob = (ObjectNode) o; if (depth == 0) for (String k : PER) ob.remove(k);
+        List<String> keys = new ArrayList<>(); ob.fieldNames().forEachRemaining(keys::add);
+        for (String k : keys) { JsonNode v = ob.get(k); boolean hit = false;
+            if (v.isObject()) { java.util.Iterator<String> it = v.fieldNames(); while (it.hasNext()) if (ids.contains(it.next())) { hit = true; break; } }
+            else if (v.isArray()) for (JsonNode e : v) if (e.isTextual() && ids.contains(e.textValue())) { hit = true; break; }
+            if (hit) { ob.remove(k); continue; } scrubIds(v, ids, depth + 1); }
+    }
     static Src sourceOf(GroupServiceImpl S, JsonNode doc, String kind, JsonNode src) {
         JsonNode s0 = truthy(src) ? src : O(); JsonNode idn = or(get(s0, "courseId"), get(s0, "pageId"), get(s0, "noticeId"), t("")); String id = egovframework.didisam.cmm.Js.str(idn); if (id.isEmpty()) throw S.E("grp_source");
         JsonNode list = "course".equals(kind) ? get(doc, "classes") : "page".equals(kind) ? get(get(get(doc, "lsite"), "pub"), "pages") : get(doc, "notices");
         JsonNode x = null; for (JsonNode y : arr(list)) if (truthy(y) && id.equals(key(get(y, "id")))) { x = y; break; } if (x == null) throw S.E("grp_source");
         boolean mk = isMk(x); if (!mk && get(x, "items") != null && get(x, "items").isArray()) for (JsonNode i : get(x, "items")) if (isMk(i)) mk = true; if (mk) throw S.E("grp_license");
         ObjectNode snap = ((ObjectNode) x).deepCopy(); for (String k : DROP) snap.remove(k); snap.remove("grpFrom"); snap.remove("grpRecalled");
+        /* QA49-3 #3: 학습자 ID를 키로 쓰는 값(enr · attT · conn · ask · drop 등)은 목록에 없어도 지운다(Node routes.js scrubIds와 같음) */
+        java.util.Set<String> ids = new java.util.HashSet<>(); for (JsonNode m : arr(get(doc, "members"))) if (truthy(m) && truthy(get(m, "id"))) ids.add(key(get(m, "id")));
+        for (JsonNode c : arr(get(doc, "classes"))) { if (!truthy(c)) continue; for (JsonNode l : arr(get(c, "learners"))) if (truthy(l)) ids.add(key(l)); JsonNode pg = get(c, "prog"); if (pg != null && pg.isObject()) pg.fieldNames().forEachRemaining(ids::add); }
+        scrubIds(snap, ids, 0);
         if (snap.get("items") != null && snap.get("items").isArray()) { ArrayNode it = F.arrayNode(); for (JsonNode i : snap.get("items")) { ObjectNode o = i.isObject() ? ((ObjectNode) i).deepCopy() : O(); for (String k : new String[]{ "subs", "submissions", "answers", "scores", "file", "blob" }) o.remove(k); it.add(o); } snap.set("items", it); }
         if (snap.toString().getBytes(StandardCharsets.UTF_8).length > 2097152) throw S.E("grp_size");
         Src r = new Src(); r.id = id; r.snap = snap; JsonNode tt = or(get(x, "name"), get(x, "title"), t("제목 없음")); r.title = str(tt, 80); return r;

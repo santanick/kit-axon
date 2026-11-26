@@ -64,6 +64,14 @@ module.exports = (ctx, S) => {
 
   /* ── 콘텐츠 사본(spec 5-3): 학습자 · 성적 · 수납 데이터를 뺀다. 마켓 콘텐츠는 409 grp_license ── */
   const DROP = ['learners', 'prog', 'grades', 'scores', 'subs', 'submissions', 'board', 'posts', 'consults', 'pays', 'coupons', 'teachers', 'teacher', 'owner', 'att', 'attendance', 'crmDay', 'k12Exams', 'makeups', 'done', 'waits', 'apply', 'applicants', 'reviews', 'qna', 'logs'];
+  const PER = ['enr', 'attT', 'conn', 'ask', 'drop', 'memo', 'certs'];
+  function scrubIds(o, ids, depth) { if (!o || typeof o !== 'object' || depth > 6) return;
+    if (Array.isArray(o)) { for (const v of o) scrubIds(v, ids, depth + 1); return; }
+    if (depth === 0) for (const k of PER) delete o[k];
+    for (const k of Object.keys(o)) { const v = o[k];
+      if (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).some(x => ids.has(x))) { delete o[k]; continue; }
+      if (Array.isArray(v) && v.some(x => typeof x === 'string' && ids.has(x))) { delete o[k]; continue; }
+      scrubIds(v, ids, depth + 1); } }
   const isMk = x => !!(x && typeof x === 'object' && (x.mk || x.mkProduct || x.market || x.mkId || x.src === 'market'));
   function sourceOf(doc, kind, src) {
     const s = src || {}; const id = String(s.courseId || s.pageId || s.noticeId || ''); if (!id) throw E('grp_source');
@@ -71,6 +79,9 @@ module.exports = (ctx, S) => {
     const x = (Array.isArray(list) ? list : []).find(y => y && String(y.id) === id); if (!x) throw E('grp_source');
     if (isMk(x) || (Array.isArray(x.items) && x.items.some(isMk))) throw E('grp_license');
     const snap = JSON.parse(JSON.stringify(x)); for (const k of DROP) delete snap[k]; delete snap.grpFrom; delete snap.grpRecalled;
+    /* QA49-3 #3: 학습자별 기록(enr · attT · conn · ask · drop 등 학습자 ID를 키로 쓰는 값)은 목록에 없는 키라도 지운다 */
+    const ids = new Set([...(Array.isArray(doc.members) ? doc.members : []).map(m => m && m.id), ...(Array.isArray(doc.classes) ? doc.classes : []).flatMap(c => (c && Array.isArray(c.learners) ? c.learners : []).concat(Object.keys((c && c.prog) || {})))].filter(Boolean).map(String));
+    scrubIds(snap, ids, 0);
     if (Array.isArray(snap.items)) snap.items = snap.items.map(i => { const o = { ...i }; for (const k of ['subs', 'submissions', 'answers', 'scores', 'file', 'blob']) delete o[k]; return o; });
     if (Buffer.byteLength(JSON.stringify(snap)) > 2097152) throw E('grp_size');
     return { id, snap, title: str(x.name || x.title || '제목 없음', 80) };

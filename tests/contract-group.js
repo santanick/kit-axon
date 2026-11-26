@@ -22,7 +22,7 @@ async function run(U, tag = 'g', hooks = {}) {
   R.tids = { F, A, B, U: Un, X, Y };
   const mem = (k, extra) => Array.from({ length: k }, (_, i) => ({ id: `m${i}`, name: `학습자${i}`, ...(extra ? extra(i) : {}) }));
   const cls = (id, ids, p, extra) => ({ id, name: `과정 ${id}`, status: '운영중', learners: ids, prog: Object.fromEntries(ids.map((x, i) => [x, { p: p(i), at: kst() }])), ...(extra || {}) });
-  await put('F', { org: { name: '디디 영어 본사', type: 'k12' }, classes: [cls('fc1', [], () => 0, { items: [{ id: 'it1', type: 'video', title: '1차시' }], learners: [], desc: '신규 강사 OT' }), cls('fmk', [], () => 0, { mk: { productId: 'mp_x' } })] });
+  await put('F', { org: { name: '디디 영어 본사', type: 'k12' }, classes: [cls('fc1', [], () => 0, { items: [{ id: 'it1', type: 'video', title: '1차시', seen: { fz1: 1 } }], learners: ['fz1'], prog: { fz1: { p: 10 } }, enr: { fz1: { at: '2026-11-01' } }, attT: { fz1: 3 }, ask: { fz1: '질문' }, desc: '신규 강사 OT' }), cls('fmk', [], () => 0, { mk: { productId: 'mp_x' } })] });
   await put('A', { org: { name: '해운대점', type: 'k12' }, members: mem(3), classes: [cls('a1', ['m0', 'm1', 'm2'], i => [100, 50, 20][i])] });
   await put('B', { org: { name: '기장점', type: 'k12' }, members: mem(20), classes: [cls('b1', mem(20).map(m => m.id), i => (i < 5 ? 100 : 40))], notices: [{ id: 'bn1', title: '기장점 공지', body: '알림' }] });
   await put('X', { org: { name: '평생교육원', type: 'univ' }, members: mem(6, i => ({ sid: `2023${String(1234 + i)}`, dept: i < 5 ? '기계공학과' : '경영학과' })), classes: [cls('x1', ['m0', 'm1', 'm2', 'm3', 'm4', 'm5'], i => i * 20, { term: '2026-2' })] });
@@ -115,7 +115,7 @@ async function run(U, tag = 'g', hooks = {}) {
   const inb = await call('A', 'GET', '/api/group/my/inbox'); R.inbox = ((inb.j.items || []).find(x => x.sid === SID) || {}).status;
   R.reqDecline = err(await call('A', 'POST', `/api/group/my/inbox/${SID}/decline`, { idem: I() }));
   const ad = await call('A', 'POST', `/api/group/my/inbox/${SID}/adopt`, { idem: I(), asDraft: true }); R.adopt = [ad.st, ad.j.ver];
-  const aDoc = (await call('A', 'GET', '/api/state')).j.doc || {}; const lc = (aDoc.classes || []).find(c => c.id === ad.j.localId) || {}; R.adoptDoc = [lc.status, (lc.learners || []).length, !!lc.grpFrom];
+  const aDoc = (await call('A', 'GET', '/api/state')).j.doc || {}; const lc = (aDoc.classes || []).find(c => c.id === ad.j.localId) || {}; R.adoptDoc = [lc.status, (lc.learners || []).length, !!lc.grpFrom, !JSON.stringify(lc).includes('fz1'), (lc.items || []).length]; /* QA49-3 #3 학습자별 기록 빠짐 */
   R.version = (await call('F', 'POST', `/api/group/shares/${SID}/version`, { idem: I(), note: '2판' })).j.share.ver;
   R.outdated = ((await call('A', 'GET', '/api/group/my/inbox')).j.items || []).find(x => x.sid === SID).outdated;
   R.update = (await call('A', 'POST', `/api/group/my/inbox/${SID}/update`, { idem: I() })).j.ver;
@@ -159,7 +159,7 @@ const WANT = {
   links: 'acceptedAt,childName,childTid,childType,endedAt,expiresAt,invitedAt,label,lastDay,linkId,share,status,unit',
   lsFr: '403:grp_consent', lsShort: '400:grp_range', ls: [200, 'studentNo', 6, 5, 2, '기계공학과:5|(5명 미만 학과 묶음):5명 미만'],
   lkRole: '403:grp_role', lkMfa: ['403:grp_mfa', 'required'], lkPurpose: '400:grp_purpose', lookup: [200, 1, 2, 'courses,dept,studentNo', false], myAudit: [true, true], santaLookup: '403:grp_off',
-  license: '409:grp_license', source: '404:grp_source', share: [200, 'draft'], publish: 2, inbox: 'offered', reqDecline: '409:grp_required', adopt: [200, 1], adoptDoc: ['준비중', 0, true],
+  license: '409:grp_license', source: '404:grp_source', share: [200, 'draft'], publish: 2, inbox: 'offered', reqDecline: '409:grp_required', adopt: [200, 1], adoptDoc: ['준비중', 0, true, true, 1],
   version: 2, outdated: true, update: 2, up: 'requested', approve: ['approved', 'published'], redist: true, recallShort: '400:grp_reason', recall: 'recalled', recallDoc: true,
   polKey: '400:grp_policy_key', polPut: 1, polVer: '409:grp_ver', polApply: 2, locked: '409:grp_locked', skipped: 'overridden', bPol: 'brand:applied,notice:overridden', audit: true, auditViewer: '403:grp_role',
   leaveShort: '400:grp_reason', leave: 'left', afterLeave: [false, 1], remove: 'removed', unauth: 401, nf: 404
