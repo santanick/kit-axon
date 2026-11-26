@@ -47,7 +47,7 @@ function indexHtml() { let h = fs.readFileSync(path.join(ROOT, 'index.html'), 'u
   await tab('mkcp', 'mkcp', 'price'); let t = await main(); ok(/= 50크레딧/.test(t) && /= 43크레딧/.test(t) && /500명째 수강부터 −10% → 45크레딧/.test(t) && /적용 요율 65%\(표준\)/.test(t), 'A7 단가표: 크레딧 환산 · 수량 할인 · 적용 요율 줄');
   await p.click('[data-act="mk-cp-price"][data-v="cp_p1"]'); await p.fill('#modal [name=lp]', '70000'); await mok(); ok(await p.evaluate(() => !!document.getElementById('modal') && S.mkcpD.products[0].listPrice === 50000), '정가 30% 초과 인상 → 막힘(mk_price_step)');
   await p.fill('#modal [name=lp]', '60000'); await mok(); const P1 = await p.evaluate(() => ({ ...S.mkcpD.products[0].pending, nm: MKX.calc('nextMonth1', today()) })); ok(P1 && P1.listPrice === 60000 && P1.from === P1.nm, '단가 변경은 다음 달 1일부터 ' + JSON.stringify(P1));
-  await tab('mkcp', 'mkcp', 'optin'); await p.click('[data-act="mk-cp-optin"][data-v="cp_p1"][data-m="single"]'); ok(/최소 참여 기간\(.+까지\) 안의 철회입니다.*3곳은 계약 기간 끝까지/.test(await p.innerText('#modal')), 'A7 참여 설정: 최소 기간 안 철회 확인 카드(이용 중 3곳)'); await mok();
+  await tab('mkcp', 'mkcp', 'optin'); await p.click('[data-act="mk-cp-withdraw"][data-v="cp_p1"][data-m="single"]'); ok(/최소 참여 기간\(.+까지\) 안의 철회입니다.*3곳은 계약 기간 끝까지/.test(await p.innerText('#modal')), 'A7 참여 설정: 최소 기간 안 철회 확인 카드(이용 중 3곳)'); await mok();
   ok(await p.evaluate(() => S.mkcpD.products[0].mode === 'single'), '철회 반영');
   await tab('mkcp', 'mkcp', 'settle'); t = await main(); ok(/순소진 1,740크레딧 · 지급 1,131,000원/.test(t) && /5건 미만/.test(t), 'A7 월 소진 정산서 M1 합계 · 5건 미만 가림');
   await tab('mkcp', 'mkcp', 'inbox'); await p.click('[data-act="mk-cp-decide"][data-v="rq_1"][data-ok="1"]'); await mok(); ok(await p.evaluate(() => S.mkcpD.requests[0].status === 'ok'), 'A7 승인 요청 수락(확인 카드)');
