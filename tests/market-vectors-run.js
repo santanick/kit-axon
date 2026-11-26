@@ -43,6 +43,10 @@ module.exports = function run(calc, c) {
     case 'promoCheck': return calc.promoCheck(i.slot, i.months, i.o);
     case 'promoDeduct': return calc.promoDeduct(i.total, i.fee, i.carryIn);
     case 'origCapOk': return calc.origCapOk(i.colCount, i.origCount);
+    case 'alertLevel': return i.cases.map(x => calc.alertLevel(...x));
+    case 'preNeeded': return i.cases.map(x => calc.preNeeded(...x));
+    case 'validity': return i.starts.map(x => calc.validity(x));
+    case 'capOkUi': return i.cases.map(x => calc.capOk(...x));
     default: return base(calc, c);
   }
 };
