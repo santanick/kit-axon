@@ -74,10 +74,10 @@ module.exports = (ctx, S) => {
     if (!(budget >= 1000000)) throw E(400, 'budget', '구매액은 100만 원 이상으로 입력하십시오.');
     const cols = arr(inp.collections || b.collections, 20, COL_RE); const bundle = !!(inp.bundle || b.bundle);
     const want = b.bonusBp == null ? null : int(b.bonusBp); if (want != null && !(want >= 0)) throw E(400, 'bonus', '보너스율을 확인하십시오.');
-    if (want != null && want > calc.BONUS_MAX_BP) throw E(422, 'mk_bonus_max', null, { santaBp: calc.guard(budget, want).santaBp });
+    if (want != null && want > calc.BONUS_MAX_BP) throw E(422, 'mk_bonus_max');
     const sched = calc.bonusBp(budget, bundle); const bp = want == null ? sched : santa ? want : Math.min(want, sched); /* 기관은 기준표 이하만, 산타는 상한 안에서 지정 */
     const avg = await avgOf(c, cols); const P = calc.plan({ budget, bundle, bonusBp: bp, avgCredits: avg, coursesPerPerson: inp.coursesPerPerson });
-    if (!P.ok) throw E(422, 'mk_margin', null, { santaBp: P.santaBp, alternatives: [{ bonusBp: calc.BONUS_MAX_BP, santaBp: calc.guard(budget, calc.BONUS_MAX_BP).santaBp }] });
+    if (!P.ok) throw E(422, 'mk_margin', null, { alternatives: [{ bonusBp: Math.min(sched, calc.BONUS_MAX_BP) }] });
     const input = { budget, collections: cols, coursesPerPerson: inp.coursesPerPerson || 1.5, bundle, ...(inp.topupOf ? { topupOf: str(inp.topupOf, 20) } : {}) };
     return q1(c, "insert into mk_quote (id, buyer_tid, kind, input, credits, bonus_bp, bonus_credits, est, supply_total, cp_max, santa_bp, valid_to, by_email) values ($1,$2,'credit',$3,$4,$5,$6,$7,$8,$9,$10,$11::date + 30,$12) returning *",
       [rid('mq_'), buyer, JSON.stringify(input), P.credits, P.bonusBp, P.bonusCredits, JSON.stringify({ avgCredits: P.avgCredits, enrollments: P.enrollments, people: P.people, total: P.total }), budget, P.cpMax, P.santaBp, today(), by]);
@@ -93,7 +93,9 @@ module.exports = (ctx, S) => {
       [rid('mq_'), buyer, JSON.stringify({ price, lines: L }), price, cand, auto ? 'ready' : 'cp_wait', JSON.stringify({ floorSum: floor, cand, minPrice: calc.singleMin(floor) }), today(), by]);
     return row;
   }
-  const quoteOut = q => ({ id: q.id, buyerTid: q.buyer_tid, kind: q.kind, input: q.input, credits: q.credits, bonusBp: q.bonus_bp, bonusCredits: q.bonus_credits, est: q.est, supplyTotal: q.supply_total, cpMax: q.cp_max, santaBp: q.santa_bp, status: q.status, validTo: q.valid_to, at: q.at });
+  /* 구매 기관 응답에는 산타 몫 · CP 지급액(santaBp · cpMax · floor · cand)을 넣지 않는다 — 산타 운영(full)만 */
+  const quoteOut = (q, full) => { const est = { ...(q.est || {}) }; const input = { ...(q.input || {}) }; if (!full) { delete est.floorSum; delete est.cand; delete est.minPrice; if (Array.isArray(input.lines)) input.lines = input.lines.map(({ floor, ...l }) => l); delete input.cpOk; }
+    return { id: q.id, buyerTid: q.buyer_tid, kind: q.kind, input, credits: q.credits, bonusBp: q.bonus_bp, bonusCredits: q.bonus_credits, est, supplyTotal: q.supply_total, ...(full ? { cpMax: q.cp_max, santaBp: q.santa_bp } : {}), status: q.status, validTo: q.valid_to, at: q.at }; };
 
   /* ── 계약 활성(산타) ── */
   async function activate(c, k, b, by) {
@@ -206,12 +208,12 @@ module.exports = (ctx, S) => {
     'POST /api/market/credit/plan': async req => { const a = await needStaff(req); const b = await body(req);
       return T(async c => { await needPilot(c, a.tid); const cols = arr(b.collections, 20, COL_RE); const avg = await avgOf(c, cols);
         const P = calc.plan({ budget: b.budget, people: b.people, bundle: !!b.bundle, bonusBp: b.bonusBp, avgCredits: avg, coursesPerPerson: b.coursesPerPerson });
-        const alternatives = P.ok ? [] : [{ bonusBp: calc.BONUS_MAX_BP, santaBp: calc.guard(P.budget, calc.BONUS_MAX_BP).santaBp }];
+        const alternatives = P.ok ? [] : [{ bonusBp: calc.BONUS_MAX_BP }];
         const notes = ['예상 인원은 선택 컬렉션 평균 과정 크레딧 기준 추정입니다.', ...(P.bonusOver ? [S.MSG.mk_bonus_max] : [])];
-        const { ok, bonusOver, ...rest } = P; return { ...rest, ok, alternatives, notes }; }); },
+        const { ok, bonusOver, santaBp, cpMax, ...rest } = P; return { ...rest, ok, alternatives, notes, ...(isSanta(a) ? { santaBp, cpMax } : {}) }; }); },
     'POST /api/market/quotes': async req => { const a = await needStaff(req); const b = await body(req); await needPaid(a.tid);
-      return T(async c => { await needPilot(c, a.tid); return idem(c, a.tid, 'quotes', b.idem, async () => { const q = b.kind === 'single' ? await singleQuote(c, a.tid, b, a.email) : await creditQuote(c, a.tid, b, a.email, false); return { ok: true, quote: quoteOut(q) }; }); }); },
-    'GET /api/market/quotes': async req => { const a = await needStaff(req); return T(async c => { await needPilot(c, a.tid); return pageOf(Q(req), (await c.query('select * from mk_quote where buyer_tid = $1 order by at desc', [a.tid])).rows.map(quoteOut)); }); },
+      return T(async c => { await needPilot(c, a.tid); return idem(c, a.tid, 'quotes', b.idem, async () => { const q = b.kind === 'single' ? await singleQuote(c, a.tid, b, a.email) : await creditQuote(c, a.tid, b, a.email, false); return { ok: true, quote: quoteOut(q, isSanta(a)) }; }); }); },
+    'GET /api/market/quotes': async req => { const a = await needStaff(req); return T(async c => { await needPilot(c, a.tid); return pageOf(Q(req), (await c.query('select * from mk_quote where buyer_tid = $1 order by at desc', [a.tid])).rows.map(q => quoteOut(q, false))); }); },
     'POST /api/market/contracts': async req => { const a = await needOwner(req); const b = await body(req); await needPaid(a.tid);
       return T(async c => { await needPilot(c, a.tid); return idem(c, a.tid, 'contracts', b.idem, async () => {
         const qt = await q1(c, 'select * from mk_quote where id = $1 and buyer_tid = $2 for update', [str(b.quoteId, 20), a.tid]); if (!qt) throw E(404, 'quote', '없는 견적입니다.');
@@ -254,7 +256,7 @@ module.exports = (ctx, S) => {
       return T(async c => ({ items: (await c.query(PROD_SQL + ' where p.status = $2 order by p.created_at', [today(), st])).rows.map(r => ({ ...prodOut(r, today(), true), ownerTid: r.owner_tid, listPrice: r.list_price, memo: r.review_memo })) })); },
     'POST /api/market/ops/credit-quotes': async req => { const a = await needSanta(req); const b = await body(req); const buyer = str(b.buyerTid, 20);
       return T(async c => { if (!(await q1(c, 'select 1 from tenants where id = $1', [buyer]))) throw E(404, 'tenant', '없는 기관입니다.');
-        return idem(c, a.tid, 'ops-credit-quotes', b.idem, async () => ({ ok: true, quote: quoteOut(await creditQuote(c, buyer, b, a.email, true)) })); }); },
+        return idem(c, a.tid, 'ops-credit-quotes', b.idem, async () => ({ ok: true, quote: quoteOut(await creditQuote(c, buyer, b, a.email, true), true) })); }); },
     'GET /api/market/ops/contracts': async req => { await needSanta(req); const st = str(Q(req).get('status'), 12);
       return T(async c => { const K = (await c.query(`select *, to_char(start, 'YYYY-MM-DD') s, to_char("end", 'YYYY-MM-DD') e, to_char(carry_end, 'YYYY-MM-DD') ce from mk_contract` + (st ? ' where status = $1' : '') + ' order by at desc limit 500', st ? [st] : [])).rows; const items = [];
         for (const k of K) { const W = await walletState(c, k); const used = (await q1(c, "select coalesce(sum(credits), 0)::int n from mk_credit_use where contract_id = $1", [k.id])).n;
@@ -285,6 +287,29 @@ module.exports = (ctx, S) => {
         collections: (await c.query('select collection_id from mk_collection_item where product_id = $1', [r.id])).rows.map(x => x.collection_id) }); return { items }; }); },
     'GET /api/market/ops/promos': async req => { await needSanta(req); const st = str(Q(req).get('status'), 10); return T(async c => ({ items: (await c.query('select * from mk_promo' + (st ? ' where status = $1' : '') + ' order by ym, at', st ? [st] : [])).rows.map(promoOut) })); },
     'GET /api/market/ops/revenue': async req => { await needSanta(req); return T(async c => revenue(c, Q(req))); },
+    'GET /api/market/ops/orgs': async req => { await needSanta(req); const q = Q(req); const t = str(q.get('q'), 60).trim();
+      const rows = (await pool.query(`select t.id, t.name, t.type, coalesce(p.kind, 'buyer') kind, coalesce(p.pilot, false) pilot, p.cp_name, p.pilot_by, p.pilot_at from tenants t left join mk_party p on p.tid = t.id
+        where ($1 = '' or t.name ilike '%' || $1 || '%' or t.id = $1) ${q.get('pilot') === '1' ? 'and p.pilot' : ''} ${q.get('kind') ? 'and coalesce(p.kind, \'buyer\') = $2' : ''} order by p.pilot desc nulls last, t.created_at desc limit 500`, q.get('kind') ? [t, str(q.get('kind'), 10)] : [t])).rows;
+      return pageOf(q, rows.map(r => ({ tid: r.id, name: r.name, type: r.type, kind: r.kind, cpName: r.cp_name, mk: { pilot: r.pilot, by: r.pilot_by, at: r.pilot_at } }))); },
+    'GET /api/market/settle/closes': async req => { await needSanta(req); return T(async c => ({ items: (await c.query('select * from mk_close order by quarter desc, at desc limit 40')).rows.map(z => ({ id: z.id, quarter: z.quarter, runBy: z.run_by, confirmBy: z.confirm_by, checks: z.checks, totals: z.totals, status: z.status, at: z.at, confirmedAt: z.confirmed_at })) })); },
+    'GET /api/market/ops/quotes': async req => { await needSanta(req); const q = Q(req); const st = str(q.get('status'), 10);
+      return T(async c => pageOf(q, (await c.query('select * from mk_quote' + (st ? ' where status = $1' : '') + ' order by at desc limit 1000', st ? [st] : [])).rows.map(x => quoteOut(x, true)))); },
+    'POST /api/market/ops/quotes/auto': async req => { const a = await needSanta(req); const b = await body(req); const buyer = str(b.buyerTid, 20);
+      return T(async c => { if (!(await q1(c, 'select 1 from tenants where id = $1', [buyer]))) throw E(404, 'tenant', '없는 기관입니다.');
+        return idem(c, a.tid, 'ops-quotes-auto', b.idem, async () => { const x = await singleQuote(c, buyer, b, a.email); return { ok: true, quote: quoteOut(x, true), auto: x.status === 'ready' }; }); }); },
+    'GET /api/market/cp/requests': async req => { const a = await needCp(req); return T(async c => { const own = new Set((await c.query('select id from mk_product where owner_tid = $1', [a.tid])).rows.map(r => r.id));
+      const items = (await c.query("select * from mk_quote where kind = 'single' and status = 'cp_wait' order by at")).rows.filter(x => (x.input.lines || []).some(l => own.has(l.productId)))
+        .map(x => { const L = x.input.lines.filter(l => own.has(l.productId)); return { id: x.id, price: x.supply_total, lines: L.map(l => ({ productId: l.productId, people: l.people, lic: l.lic, floor: l.floor })), cand: x.est.cand, floorSum: L.reduce((s, l) => s + (l.floor || 0), 0), decided: !!(x.input.cpOk || {})[a.tid], validTo: x.valid_to }; });
+      return { items }; }); },
+    'POST /api/market/cp/catalog/import': async req => { const a = await needCp(req); const b = await readBody(req, 512 * 1024);
+      return T(async c => idem(c, a.tid, 'cp-import', b.idem, async () => { const rows = (Array.isArray(b.rows) ? b.rows : []).slice(0, 500); const created = [], failed = []; const day = today();
+        for (let i = 0; i < rows.length; i++) { const r = rows[i] || {}; const title = str(r.title, 120).trim(); const lp = int(r.listPrice); const hx = Math.round(+r.hours * 10) || 0;
+          const bad = [...(!title ? ['title'] : []), ...(!(hx > 0) ? ['hours'] : []), ...(r.listPrice != null && !(lp > 0) ? ['listPrice'] : [])]; if (bad.length) { failed.push({ row: i + 1, failed: bad }); continue; }
+          const id = rid('mp_'); await c.query("insert into mk_product (id, owner_tid, owner_kind, kind, title, sector, level, hours_x10, launched_at) values ($1,$2,'cp',$3,$4,$5,$6,$7,$8)", [id, a.tid, ['course', 'item', 'path', 'book'].includes(r.kind) ? r.kind : 'course', title, str(r.sector, 40) || null, str(r.level, 20) || null, hx, DAY_RE.test(r.launchedAt || '') ? r.launchedAt : day]);
+          if (lp > 0) await c.query('insert into mk_price (product_id, list_price, credits, effective_from, by_email) values ($1,$2,$3,$4,$5)', [id, lp, calc.credits(lp), day, a.email]);
+          created.push(id); }
+        const jobId = rid('mj_'); const out = { ok: true, jobId, status: 'done', created: created.length, ids: created, failed };
+        await c.query('insert into mk_idem (tid, route, key, resp) values ($1,$2,$3,$4)', [a.tid, 'cp-import-job', jobId, JSON.stringify(out)]); return out; })); },
     'POST /api/market/ops/collections': async req => { const a = await needSanta(req); const b = await body(req);
       return T(async c => { const id = str(b.id, 30); if (!COL_RE.test(id)) throw E(400, 'id', '컬렉션 번호(mc_…)를 확인하십시오.'); const title = str(b.title, 80).trim(); if (!title) throw E(400, 'title', '이름을 입력하십시오.');
         const kind = ['basic', 'industry', 'campus', 'original'].includes(b.kind) ? b.kind : 'basic';
@@ -328,11 +353,16 @@ module.exports = (ctx, S) => {
       if (r.ok !== 'santa') { const k = calc.rateKindOf(bp) || 'standard'; const x = byRate[k] || (byRate[k] = { rateKind: k, cps: new Set(), credits: 0, santa: 0 }); x.cps.add(r.cp_tid); x.credits += r.cr; x.santa += calc.settleLine(r.cr, bp).santa; } }
     const fee = (await q1(c, "select coalesce(sum(amount), 0)::int n from mk_entry where kind = 'promo_fee' and to_char(at at time zone 'Asia/Seoul', 'YYYY-MM') between $1 and $2", [from, to])).n;
     const single = (await q1(c, "select coalesce(sum(amount), 0)::int n from mk_entry where kind = 'single_sale' and to_char(at at time zone 'Asia/Seoul', 'YYYY-MM') between $1 and $2", [from, to])).n;
+    if (fee) lines.push({ source: 'promo', amount: fee }); if (single) lines.push({ source: 'single', amount: single, cp: calc.singleCand(single) });
     const mix = calc.santaMix(lines); const bySource = mix.bySource.map(x => ({ source: x.source, gross: x.gross, cp: x.cp, santa: x.santa, santaBp: x.santaBp }));
-    if (fee) bySource.push({ source: 'promo', gross: fee, cp: 0, santa: fee, santaBp: 10000 }); if (single) { const s = single - calc.singleCand(single); bySource.push({ source: 'single', gross: single, cp: single - s, santa: s, santaBp: Math.floor(s * 10000 / single) }); }
+    /* 인식 매출(소진 기준 · 보너스 반영): 계약별 순소진 × 계약 구매액(추가 구매 포함) ÷ 계약 총크레딧, 반올림 */
+    const rk = (await c.query(`select u.contract_id, sum(u.credits)::int cr, (select coalesce(sum(credits), 0)::int from mk_credit_wallet w where w.contract_id = u.contract_id) tot,
+        (select coalesce(sum(supply_total), 0)::int from mk_contract x where (x.id = u.contract_id or x.renew_of = u.contract_id) and x.status in ('active','carry','ended','merged')) sup
+      from mk_credit_use u where u.kind in ('use','restore') and to_char(u.at at time zone 'Asia/Seoul', 'YYYY-MM') between $1 and $2 group by u.contract_id`, [from, to])).rows;
+    const recognized = rk.reduce((s, r) => s + calc.recognized(r.cr, r.sup, r.tot), 0) + fee + single;
     const minQ = (await q1(c, "select min(santa_bp)::int n, count(*) filter (where santa_bp < 3000)::int below from mk_quote where kind = 'credit' and to_char(at at time zone 'Asia/Seoul', 'YYYY-MM') between $1 and $2", [from, to]));
     return { from, to, bySource, byRate: Object.values(byRate).map(x => ({ rateKind: x.rateKind, cps: x.cps.size, credits: x.credits, santa: x.santa })),
-      trend: Object.keys(byM).sort().map(m => { const z = calc.santaMix(byM[m]); return { ym: m, santa: z.santa, santaBp: z.santaBp }; }), guard: { minQuoteBp: minQ.n, below: minQ.below }, totals: { gross: bySource.reduce((s, x) => s + x.gross, 0), santa: bySource.reduce((s, x) => s + x.santa, 0) } };
+      trend: Object.keys(byM).sort().map(m => { const z = calc.santaMix(byM[m]); return { ym: m, santa: z.santa, santaBp: z.santaBp }; }), guard: { minQuoteBp: minQ.n, below: minQ.below }, totals: { gross: mix.gross, cp: mix.cp, santa: mix.santa, santaBp: mix.santaBp, recognized, santaRecognized: recognized - mix.cp, santaRecognizedBp: recognized > 0 ? Math.floor((recognized - mix.cp) * 10000 / recognized) : 0 } };
   }
 
   /* 경로 매개변수 */
@@ -346,7 +376,7 @@ module.exports = (ctx, S) => {
           optin: { mode: modeOf(r, day), creditFrom: r.cf, ...(r.mode === 'single_until' ? { singleUntil: optinFromOf(r) } : {}) }, collections: cols, seller: r.owner_kind === 'santa' ? '산타 오리지널' : r.cp_name || '' }; }); }],
     ['GET', /^\/api\/market\/collections\/(mc_[a-z0-9]{3,24})$/, async (req, id) => { const a = await need(req); return T(async c => { await needPilot(c, a.tid); const [x] = await collections(c, today(), [id]); if (!x) throw E(404, 'collection', '없는 컬렉션입니다.');
       return { collection: { id: x.id, kind: x.kind, title: x.title, sector: x.sector }, items: x.rows.map(r => prodOut(r, today(), a.role !== 'teacher')), avgCredits: x.avgCredits, count: x.count }; }); }],
-    ['GET', /^\/api\/market\/quotes\/(mq_[a-z0-9]{12})$/, async (req, id) => { const a = await needStaff(req); return T(async c => { const q = await q1(c, 'select * from mk_quote where id = $1', [id]); if (!q || (q.buyer_tid !== a.tid && !isSanta(a))) throw E(404, 'quote', '없는 견적입니다.'); return { quote: quoteOut(q) }; }); }],
+    ['GET', /^\/api\/market\/quotes\/(mq_[a-z0-9]{12})$/, async (req, id) => { const a = await needStaff(req); return T(async c => { const q = await q1(c, 'select * from mk_quote where id = $1', [id]); if (!q || (q.buyer_tid !== a.tid && !isSanta(a))) throw E(404, 'quote', '없는 견적입니다.'); return { quote: quoteOut(q, isSanta(a)) }; }); }],
     ['GET', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})$/, async (req, id) => { const a = await needStaff(req); return T(async c => { const k = await contractOf(c, a, id); const W = await walletState(c, k);
       const byCp = (await c.query("select p.owner_kind ok, coalesce(pa.cp_name, '') cp, sum(u.credits)::int credits from mk_credit_use u join mk_product p on p.id = u.product_id left join mk_party pa on pa.tid = u.cp_tid where u.contract_id = $1 group by 1, 2 order by 3 desc", [k.id])).rows.map(r => ({ cp: r.ok === 'santa' ? '산타 오리지널' : r.cp, credits: r.credits }));
       const byGroup = (await c.query("select coalesce(grp, '') g, sum(credits)::int credits, count(distinct sid_hash)::int n from mk_credit_use where contract_id = $1 group by 1 order by 2 desc", [k.id])).rows.map(r => ({ group: r.g || null, credits: r.credits, learners: r.n < 5 ? '5명 미만' : r.n }));
@@ -376,7 +406,7 @@ module.exports = (ctx, S) => {
       const d = await q1(c, "insert into mk_dispute (id, kind, ref, from_tid, body) values ($1,'restore',$2,$3,$4) returning *", [rid('md_'), u.id, a.tid, str(b.reason, 500)]); return { ok: true, dispute: d }; }); }],
     ['POST', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})\/topup$/, async (req, id) => { const a = await needOwner(req); const b = await body(req); await needPaid(a.tid);
       return T(async c => { await needPilot(c, a.tid); const k = await contractOf(c, a, id); if (k.buyer_tid !== a.tid || !['active', 'carry'].includes(k.status)) throw E(409, 'mk_contract_state', '이용 중인 계약만 추가 구매할 수 있습니다.');
-        return idem(c, a.tid, 'topup', b.idem, async () => ({ ok: true, quote: quoteOut(await creditQuote(c, a.tid, { input: { budget: b.amount, collections: k.collections, topupOf: k.id } }, a.email, false)) })); }); }],
+        return idem(c, a.tid, 'topup', b.idem, async () => ({ ok: true, quote: quoteOut(await creditQuote(c, a.tid, { input: { budget: b.amount, collections: k.collections, topupOf: k.id } }, a.email, false), false) })); }); }],
     ['POST', /^\/api\/market\/contracts\/(mk_[a-z0-9]{12})\/refund$/, async (req, id) => { const a = await needOwner(req); const b = await body(req);
       return T(async c => { const k = await contractOf(c, a, id, true); if (k.buyer_tid !== a.tid) throw E(404, 'contract', '없는 계약입니다.'); return idem(c, a.tid, 'refund', b.idem, async () => {
         const L = liveLots(await lotsOf(c, k.id), today()); const paidUnused = L.filter(l => l.lot !== 'bonus').reduce((s, l) => s + l.remain, 0); const bonusUsed = (await lotsOf(c, k.id)).filter(l => l.lot === 'bonus').reduce((s, l) => s + l.credits - l.remain, 0);
@@ -421,6 +451,31 @@ module.exports = (ctx, S) => {
     ['POST', /^\/api\/market\/cp\/statements\/(ms_[a-z0-9]{12})\/dispute$/, async (req, id) => { const a = await needCp(req); const b = await body(req); return T(async c => {
       const s = await q1(c, "update mk_stmt set status = 'disputed' where id = $1 and cp_tid = $2 and status = 'draft' returning *", [id, a.tid]); if (!s) throw E(409, 'mk_stmt_state', '초안 정산서만 이의 신청할 수 있습니다.');
       await c.query("insert into mk_dispute (id, kind, ref, from_tid, body) values ($1,'stmt',$2,$3,$4)", [rid('md_'), id, a.tid, str(b.reason, 500)]); return { ok: true, stmt: S.settle.stmtOut(s) }; }); }],
+    ['GET', /^\/api\/market\/cp\/catalog\/import\/(mj_[a-z0-9]{12})$/, async (req, id) => { const a = await needCp(req); return T(async c => { const x = await q1(c, "select resp from mk_idem where tid = $1 and route = 'cp-import-job' and key = $2", [a.tid, id]); if (!x) throw E(404, 'job', '없는 작업입니다.'); return x.resp; }); }],
+    ['POST', /^\/api\/market\/cp\/requests\/(mq_[a-z0-9]{12})\/decide$/, async (req, id) => { const a = await needCp(req); const b = await body(req); return T(async c => {
+      const x = await q1(c, "select * from mk_quote where id = $1 and kind = 'single' and status = 'cp_wait' for update", [id]); if (!x) throw E(409, 'mk_quote_state');
+      const own = new Set((await c.query('select id from mk_product where owner_tid = $1', [a.tid])).rows.map(r => r.id)); const mine = (x.input.lines || []).filter(l => own.has(l.productId)); if (!mine.length) throw E(404, 'quote', '없는 요청입니다.');
+      const ok = Object.assign({}, x.input.cpOk || {}, { [a.tid]: !!b.ok }); const owners = new Set((await c.query('select distinct owner_tid from mk_product where id = any($1)', [(x.input.lines || []).map(l => l.productId)])).rows.map(r => r.owner_tid));
+      /* 승인 = CP 몫을 견적가 × 70%(CP 후보)로 받아들임 → 산타 30% 유지. 거절이면 견적 취소(최소 견적가 안내는 est.minPrice) */
+      const status = !b.ok ? 'cancelled' : [...owners].every(t => ok[t]) ? 'ready' : 'cp_wait';
+      const y = await q1(c, 'update mk_quote set input = $2, status = $3 where id = $1 returning *', [id, JSON.stringify({ ...x.input, cpOk: ok }), status]); await log(x.buyer_tid, a.email, 'market.cp_request', { quote: id, ok: !!b.ok });
+      return { ok: true, request: { id, status: y.status, decided: !!b.ok } }; }); }],
+    ['POST', /^\/api\/market\/ops\/quotes\/(mq_[a-z0-9]{12})\/send$/, async (req, id) => { const a = await needSanta(req); return T(async c => { const x = await q1(c, "update mk_quote set status = 'sent' where id = $1 and status = 'ready' returning *", [id]); if (!x) throw E(409, 'mk_quote_state');
+      await log(x.buyer_tid, a.email, 'market.quote.send', { quote: id }); return { ok: true, quote: quoteOut(x, true) }; }); }],
+    ['POST', /^\/api\/market\/ops\/quotes\/(mq_[a-z0-9]{12})\/adjust$/, async (req, id) => { const a = await needSanta(req); const b = await body(req); return T(async c => idem(c, a.tid, 'ops-adjust:' + id, b.idem, async () => {
+      const x = await q1(c, "select * from mk_quote where id = $1 and status in ('ready','sent','cp_wait') for update", [id]); if (!x) throw E(409, 'mk_quote_state');
+      /* 조정 = 새 견적 발행(가드 다시 검사) + 이전 견적 취소 */
+      const y = x.kind === 'single' ? await singleQuote(c, x.buyer_tid, { price: b.price != null ? b.price : x.supply_total, lines: b.lines || x.input.lines }, a.email)
+        : await creditQuote(c, x.buyer_tid, { input: { ...x.input, ...(b.budget != null ? { budget: b.budget } : {}) }, bonusBp: b.bonusBp != null ? b.bonusBp : x.bonus_bp }, a.email, true);
+      await c.query("update mk_quote set status = 'cancelled' where id = $1", [id]); return { ok: true, quote: quoteOut(y, true), replaced: id }; })); }],
+    ['GET', /^\/api\/market\/cp\/statements\/(ms_[a-z0-9]{12})\/pdf$/, async (req, id, res) => { const a = await needCp(req); const s0 = await T(c => q1(c, 'select * from mk_stmt where id = $1 and cp_tid = $2', [id, a.tid])); if (!s0) throw E(404, 'stmt', '없는 정산서입니다.');
+      const s = S.settle.stmtOut(s0); const h = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); const won = n => Number(n || 0).toLocaleString('ko-KR');
+      const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>월 소진 정산서 ${h(s.ym)}</title><style>body{font-family:sans-serif;margin:32px;color:#111}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px 8px;text-align:left}td.n{text-align:right}@media print{button{display:none}}</style></head><body>
+<h1>디디쌤 콘텐츠 패스 월 소진 정산서</h1><p>정산 월 ${h(s.ym)} · 분기 ${h(s.quarter)} · 상태 ${h(s.status)} · 적용 요율 ${h(s.rateKind)} ${s.cpBp / 100}%</p>
+<table><tr><th>차감</th><th>복원</th><th>순소진(크레딧)</th><th>CP 몫(원)</th><th>조정</th><th>합계</th></tr><tr><td class="n">${won(s.used)}</td><td class="n">${won(s.restored)}</td><td class="n">${won(s.net)}</td><td class="n">${won(s.cpAmount)}</td><td class="n">${won(s.adj)}</td><td class="n">${won(s.total)}</td></tr></table>
+<h2>기관별 집계(가명 · 5명 미만 가림)</h2><table><tr><th>기관</th><th>과정</th><th>수강</th><th>순소진</th></tr>${(s.lines || []).map(l => `<tr><td>${h(l.buyer)}</td><td>${h(l.title)}</td><td>${h(l.enrollments)}</td><td class="n">${won(l.net)}</td></tr>`).join('')}</table>
+<p>부가세 별도. 지급은 분기 마감 확정 후 지급 지시로 처리됩니다.</p><button onclick="print()">인쇄 · PDF 저장</button></body></html>`;
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'" }); res.end(html); }],
     ['DELETE', /^\/api\/market\/cp\/promos\/(mpr_[a-z0-9]{12})$/, async (req, id) => { const a = await needCp(req); return T(async c => { const p = await q1(c, 'select * from mk_promo where id = $1 and cp_tid = $2 for update', [id, a.tid]); if (!p) throw E(404, 'promo', '없는 신청입니다.');
       if (p.status !== 'asked') throw E(409, 'mk_promo_state', MSG2.mk_promo_state); const x = await q1(c, "update mk_promo set status = 'cancelled' where id = $1 returning *", [id]); return { ok: true, promo: promoOut(x) }; }); }],
     /* 산타 운영 */
@@ -456,6 +511,6 @@ module.exports = (ctx, S) => {
   return {
     pub,
     match(method, p) { if (!p.startsWith('/api/market/')) return null; const k = `${method} ${p}`; if (R[k]) return (req, res) => R[k](req, res);
-      for (const [m, re, fn] of P) { if (m !== method) continue; const x = re.exec(p); if (x) return req => fn(req, ...x.slice(1)); } return null; }
+      for (const [m, re, fn] of P) { if (m !== method) continue; const x = re.exec(p); if (x) return (req, res) => fn(req, ...x.slice(1), res); } return null; }
   };
 };

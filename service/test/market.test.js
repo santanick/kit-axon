@@ -1,5 +1,5 @@
 'use strict';
-/* 콘텐츠 마켓 v1.1 서버 — 계산 기준값(tests/market-vectors.json: spec 10장 42건 + dev-addendum margin 25건) · 계약 시나리오(tests/contract-market.js, 같은 프로세스 서버) · DB 확인.
+/* 콘텐츠 마켓 v1.1 서버 — 계산 기준값(tests/market-vectors.json: spec 10장 42건 + dev-addendum margin 26건) · 계약 시나리오(tests/contract-market.js, 같은 프로세스 서버) · DB 확인.
    DATABASE_URL=postgres://… node --test service/test/market.test.js */
 const test = require('node:test'); const assert = require('node:assert/strict'); const crypto = require('node:crypto'); const path = require('node:path'); const fs = require('node:fs');
 const ROOT = path.join(__dirname, '..', '..');
@@ -9,7 +9,7 @@ const run = require(path.join(ROOT, 'tests', 'market-vectors-run.js'));
 
 test('계산 기준값(market-vectors.json) · 화면 공용 파일과 서버 사본 동일', () => {
   assert.equal(fs.readFileSync(path.join(ROOT, 'didisam', 'marketcalc.js'), 'utf8'), fs.readFileSync(path.join(__dirname, '..', 'server', 'market', 'calc.js'), 'utf8'), 'service/server/market/calc.js는 didisam/marketcalc.js 사본이어야 합니다');
-  assert.equal(V.cases.length, 42); assert.equal(V.margin.length, 25);
+  assert.equal(V.cases.length, 42); assert.equal(V.margin.length, 26);
   for (const c of [...V.cases, ...V.margin]) assert.deepEqual(JSON.parse(JSON.stringify(run(calc, c))), c.out, c.name);
   /* 경계: 2/29 시작 · 말일 넘침 · 12월 단가 변경 · 보너스 상한 · 로트 순서(구매 → 보너스) */
   assert.deepEqual(calc.expiry('2028-02-29'), { validTo: '2029-02-28', carryTo: '2030-02-28' });

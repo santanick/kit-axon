@@ -1057,6 +1057,60 @@
     "santaBp": 3045,
     "ok": true
    }
+  },
+  {
+   "name": "R8b",
+   "fn": "santaMix",
+   "in": {
+    "lines": [
+     {
+      "source": "credit_cp",
+      "credits": 300,
+      "cpBp": 6500
+     },
+     {
+      "source": "promo",
+      "amount": 500000
+     },
+     {
+      "source": "single",
+      "amount": 30000000,
+      "cp": 21000000
+     }
+    ]
+   },
+   "out": {
+    "bySource": [
+     {
+      "source": "credit_cp",
+      "credits": 300,
+      "gross": 300000,
+      "cp": 195000,
+      "santa": 105000,
+      "santaBp": 3500
+     },
+     {
+      "source": "promo",
+      "credits": 0,
+      "gross": 500000,
+      "cp": 0,
+      "santa": 500000,
+      "santaBp": 10000
+     },
+     {
+      "source": "single",
+      "credits": 0,
+      "gross": 30000000,
+      "cp": 21000000,
+      "santa": 9000000,
+      "santaBp": 3000
+     }
+    ],
+    "gross": 30800000,
+    "cp": 21195000,
+    "santa": 9605000,
+    "santaBp": 3118
+   }
   }
  ]
 }

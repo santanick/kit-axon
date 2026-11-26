@@ -56,7 +56,7 @@ async function run(U, tag) {
   const home = await call('B', 'GET', '/api/market/home'); const hc = (home.j.collections || []).find(x => x.id === CID); R.home = [home.st, hc && hc.count, hc && hc.avgCredits, home.j.eligible && home.j.eligible.ok];
   const list = await call('B', 'GET', `/api/market/products?collection=${CID}`); R.list = [list.j.total, (list.j.items || []).map(x => x.credits).join(',')];
   const det = await call('B', 'GET', `/api/market/products/${pa}`); R.detail = [det.j.price && det.j.price.credits, det.j.price && det.j.price.nextPrice && det.j.price.nextPrice.credits, det.j.optin && det.j.optin.mode, JSON.stringify(det.j).includes('floor')];
-  const plan = await call('B', 'POST', '/api/market/credit/plan', { budget: 30000000, bundle: true, collections: [CID] }); R.plan = [plan.j.credits, plan.j.bonusCredits, plan.j.total, plan.j.santaBp, plan.j.cpMax, plan.j.ok];
+  const plan = await call('B', 'POST', '/api/market/credit/plan', { budget: 30000000, bundle: true, collections: [CID] }); R.plan = [plan.j.credits, plan.j.bonusCredits, plan.j.total, plan.j.santaBp === undefined && plan.j.cpMax === undefined, plan.j.ok];
   const plan8 = await call('B', 'POST', '/api/market/credit/plan', { budget: 30000000, bonusBp: 800 }); R.plan8 = [plan8.j.ok, plan8.j.bonusBp];
   const rules = await call('B', 'GET', '/api/market/credit/rules'); R.rules = [rules.j.won, rules.j.cpBp, rules.j.bonus.maxBp, rules.j.restore.hours];
   R.noPlan = (await call('B', 'POST', '/api/market/quotes', { kind: 'credit', input: { budget: 30000000, bundle: true, collections: [CID] }, idem: 'q0' })).j.error;
@@ -64,9 +64,18 @@ async function run(U, tag) {
   R.bonusMax = (await call('B', 'POST', '/api/market/quotes', { kind: 'credit', input: { budget: 30000000 }, bonusBp: 800, idem: 'q8' })).j.error;
   R.noIdem = (await call('B', 'POST', '/api/market/quotes', { kind: 'credit', input: { budget: 30000000 } })).j.error;
   const OCID = ocol.j.collection.id; const q1 = await call('B', 'POST', '/api/market/quotes', { kind: 'credit', input: { budget: 30000000, bundle: true, collections: [CID, OCID] }, idem: 'q1' }); const qid = q1.j.quote.id;
-  R.quote = [q1.st, q1.j.quote.credits, q1.j.quote.bonusBp, q1.j.quote.bonusCredits, q1.j.quote.santaBp, q1.j.quote.cpMax];
+  R.quote = [q1.st, q1.j.quote.credits, q1.j.quote.bonusBp, q1.j.quote.bonusCredits, q1.j.quote.santaBp === undefined && q1.j.quote.cpMax === undefined];
+  const oq = (await call('S1', 'GET', '/api/market/ops/quotes?size=100')).j.items || []; const oq1 = oq.find(x => x.id === qid); R.opsQuote = [oq1 && oq1.santaBp, oq1 && oq1.cpMax];
   R.quoteIdem = (await call('B', 'POST', '/api/market/quotes', { kind: 'credit', input: { budget: 10000000 }, idem: 'q1' })).j.quote.id === qid;
-  const sq = await call('B', 'POST', '/api/market/quotes', { kind: 'single', price: 30000000, lines: [{ productId: px, people: 1000 }], idem: 'qs' }); R.single = [sq.j.quote.status, sq.j.quote.est.floorSum, sq.j.quote.est.minPrice];
+  const sq = await call('B', 'POST', '/api/market/quotes', { kind: 'single', price: 30000000, lines: [{ productId: px, people: 1000 }], idem: 'qs' }); R.single = [sq.j.quote.status, sq.j.quote.est.floorSum === undefined, JSON.stringify(sq.j).includes('floor')];
+  const sqo = (await call('S1', 'GET', '/api/market/ops/quotes?status=cp_wait')).j.items.find(x => x.id === sq.j.quote.id); R.singleOps = [sqo.est.floorSum, sqo.est.minPrice];
+  const rq = (await call('C', 'GET', '/api/market/cp/requests')).j.items.find(x => x.id === sq.j.quote.id); R.cpReq = [rq && rq.cand, rq && rq.floorSum];
+  const rd = await call('C', 'POST', `/api/market/cp/requests/${sq.j.quote.id}/decide`, { ok: true }); R.cpReqOk = rd.j.request && rd.j.request.status;
+  R.send = (await call('S1', 'POST', `/api/market/ops/quotes/${sq.j.quote.id}/send`)).j.quote.status;
+  const adj = await call('S1', 'POST', `/api/market/ops/quotes/${sq.j.quote.id}/adjust`, { price: 40000000, idem: 'adj1' }); R.adjust = [adj.j.quote && adj.j.quote.status, adj.j.quote && adj.j.quote.cpMax, adj.j.replaced === sq.j.quote.id];
+  const aq = await call('S1', 'POST', '/api/market/ops/quotes/auto', { buyerTid: B, price: 30000000, lines: [{ productId: px, people: 100 }], idem: 'aq1' }); R.autoQuote = [aq.j.auto, aq.j.quote && aq.j.quote.santaBp];
+  const im = await call('C', 'POST', '/api/market/cp/catalog/import', { rows: [{ title: '가져온 과정', hours: 2, listPrice: 20000 }, { title: '', hours: 1 }], idem: 'im1' }); const ij = await call('C', 'GET', `/api/market/cp/catalog/import/${im.j.jobId}`); R.import = [im.j.created, im.j.failed.length, ij.j.status];
+  const og2 = (await call('S1', 'GET', '/api/market/ops/orgs?pilot=1')).j.items || []; R.opsOrgs = [og2.some(x => x.tid === B && x.mk.pilot === true), og2.some(x => x.tid === C)];
 
   // 계약 · 활성(세금계산서 발행 대기)
   const k1 = await call('B', 'POST', '/api/market/contracts', { quoteId: qid, start: kst(), idem: 'k1' }); const kid = k1.j.contract.id; R.contract = [k1.st, k1.j.contract.status];
@@ -131,6 +140,9 @@ async function run(U, tag) {
   R.close = [z2.st, z2.j.close && z2.j.close.status, zc && zc.cpAmount, zc && zc.deduct + zc.pay === zc.cpAmount, z2.j.totals && z2.j.totals.santaOrig];
   const ex = await call('S1', 'GET', `/api/market/ops/export?close=${zid}`); R.export = [ex.st, ex.ct.startsWith('text/csv'), (ex.j._text || '').includes('지급 지시(송금 전)')];
   const rv = await call('S1', 'GET', '/api/market/ops/revenue'); R.revenue = [rv.st, (rv.j.bySource || []).some(x => x.source === 'credit_orig'), rv.j.guard && rv.j.guard.below];
+  R.recognized = rv.j.totals && rv.j.totals.recognized - ((rv.j.bySource || []).find(x => x.source === 'promo') || { gross: 0 }).gross;
+  R.closes = ((await call('S1', 'GET', '/api/market/settle/closes')).j.items || []).some(z => z.id === zid && z.status === 'confirmed');
+  const pdf = await call('C', 'GET', `/api/market/cp/statements/${cst.id}/pdf`); R.stmtPdf = [pdf.st, pdf.ct.startsWith('text/html'), (pdf.j._text || '').includes('월 소진 정산서')];
 
   // 기관 격리
   const D = await join('D', `mkd_${sfx}@example.com`, '다른 대학', 'univ'); void D;
@@ -143,8 +155,8 @@ const EXPECT = {
   off: 'mk_off', notSanta: 403, pilot: [200, true, true], notCp: 'mk_cp', party: 'cp',
   floor: 'mk_floor', submitNoPrice: 'mk_check', price: [200, 50, true], priceNext: [true, 50], priceStep: 'mk_price_step', optin: [200, 'credit', true],
   col: [2, 1], origCap: 'mk_orig_cap', orig: [200, 15, 'santa', 'credit', null], colOrig: 'mk_orig_cap', colOrigKind: 1,
-  home: [200, 2, 46, false], list: [2, '50,43'], detail: [50, 60, 'credit', false], plan: [30000, 2100, 32100, 3045, 20865000, true], plan8: [false, 700], rules: [1000, 6500, 700, 168],
-  noPlan: 'mk_plan', bonusMax: 'mk_bonus_max', noIdem: 'idem', quote: [200, 30000, 700, 2100, 3045, 20865000], quoteIdem: true, single: ['cp_wait', 25000000, 35714286],
+  home: [200, 2, 46, false], list: [2, '50,43'], detail: [50, 60, 'credit', false], plan: [30000, 2100, 32100, true, true], plan8: [false, 700], rules: [1000, 6500, 700, 168],
+  noPlan: 'mk_plan', bonusMax: 'mk_bonus_max', noIdem: 'idem', quote: [200, 30000, 700, 2100, true], opsQuote: [3045, 20865000], quoteIdem: true, single: ['cp_wait', true, false], singleOps: [25000000, 35714286], cpReq: [21000000, 25000000], cpReqOk: 'ready', send: 'sent', adjust: ['ready', 28000000, true], autoQuote: [true, 3000], import: [1, 1, 'done'], opsOrgs: [true, false],
   contract: [200, 'pending_pay'], contractAgain: 'mk_quote_state', activateBuyer: 403, activate: [200, 'active', 'waiting', 'paid:30000,bonus:2100', 32100], controls: [200, 100, 46],
   shelf: [200, true, 2, 100, false], pre: 'mk_pre', preAsk: 'asked', preAsked: ['mk_pre', 'pre_asked'], preDecide: 'ok', start: [200, true, 50], startAgain: false, start2: [true, 43],
   cap: 'mk_cap', scope: ['mk_scope', 'out'], vol: [true, 45], guest: 401,
@@ -153,7 +165,7 @@ const EXPECT = {
   refund: [29890, 0, 29890000, 'requested'], topup: [5000, 'merged', true, 36990],
   rateBad: ['mk_cp_rate', 'mk_cp_rate'], rate: [6000, true], cpRate: [6500, 6000], promoMonths: 'mk_promo_months', promoTarget: 'mk_promo_target', promo: [200, 500000, 'asked'], promoOk: 'ok', promoCancel: 'mk_promo_state',
   month: [200, 183, 88, 95, 6500, 61750, 15000], stmtLines: [2, true, false], stmtDispute: 'disputed', closeChecks: false, closeSame: 'mk_close_same_user', close: [200, 'confirmed', 61750, true, 15000],
-  export: [200, true, true], revenue: [200, true, 0], isolation: ['mk_off', 404, 'mk_cp']
+  export: [200, true, true], revenue: [200, true, 0], recognized: 103774, closes: true, stmtPdf: [200, true, true], isolation: ['mk_off', 404, 'mk_cp']
 };
 function check(R) { const bad = []; for (const k of Object.keys(EXPECT)) { if (EXPECT[k] === null) continue; const e = JSON.stringify(EXPECT[k]); const g = JSON.stringify(Array.isArray(EXPECT[k]) && Array.isArray(R[k]) ? R[k].map((v, i) => EXPECT[k][i] === null ? null : v) : R[k]); if (e !== g) bad.push(`${k}: 기대 ${e} · 실제 ${g}`); } return bad; }
 

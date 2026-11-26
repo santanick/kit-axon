@@ -174,7 +174,10 @@
   const recognized = (credits, amount, totalCredits) => int(totalCredits) > 0 ? fdiv(2 * int(credits) * int(amount) + int(totalCredits), 2 * int(totalCredits)) : 0;
   /* lines [{source, credits, cpBp}] → { bySource[{source, credits, gross, cp, santa, santaBp}], gross, cp, santa, santaBp } */
   function santaMix(lines) {
-    const by = {}; for (const l of lines || []) { if (!l) continue; const k = String(l.source || 'credit_cp'); const x = by[k] || (by[k] = { source: k, credits: 0, gross: 0, cp: 0, santa: 0 }); const r = settleLine(l.credits, l.cpBp == null ? CP_BP : l.cpBp); if (r.error) continue;
+    /* 줄 두 모양: 크레딧 줄 {source, credits, cpBp} · 금액 줄 {source, amount, cp}(프로모션 수수료 · 개별 임대 · 중개 · B2C — cp는 CP · 판매자 지급액, 없으면 0) */
+    const by = {}; for (const l of lines || []) { if (!l) continue; const k = String(l.source || 'credit_cp'); const x = by[k] || (by[k] = { source: k, credits: 0, gross: 0, cp: 0, santa: 0 });
+      if (l.amount != null) { const g = int(l.amount), c = Math.min(g, Math.max(0, int(l.cp))); x.gross += g; x.cp += c; x.santa += g - c; continue; }
+      const r = settleLine(l.credits, l.cpBp == null ? CP_BP : l.cpBp); if (r.error) continue;
       x.credits += int(l.credits); x.gross += int(l.credits) * WON; x.cp += r.cp; x.santa += r.santa; }
     const L = Object.keys(by).sort().map(k => ({ ...by[k], santaBp: by[k].gross > 0 ? fdiv(by[k].santa * 10000, by[k].gross) : 0 }));
     const gross = L.reduce((s, x) => s + x.gross, 0), cp = L.reduce((s, x) => s + x.cp, 0); return { bySource: L, gross, cp, santa: gross - cp, santaBp: gross > 0 ? fdiv((gross - cp) * 10000, gross) : 0 };
