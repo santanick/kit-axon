@@ -207,7 +207,9 @@ public final class DdMarketCalc {
     /** lines [{source, credits, cpBp}] → {bySource[], gross, cp, santa, santaBp} */
     public static ObjectNode santaMix(JsonNode lines) {
         TreeMap<String, long[]> by = new TreeMap<>();
-        for (JsonNode l : arr(lines)) { if (!truthy(l)) continue; String k = truthy(get(l, "source")) ? str(get(l, "source")) : "credit_cp"; long c = I(get(l, "credits")); ObjectNode r = settleLine(c, nullish(get(l, "cpBp")) ? CP_BP : I(get(l, "cpBp"))); if (r.has("error")) continue;
+        for (JsonNode l : arr(lines)) { if (!truthy(l)) continue; String k = truthy(get(l, "source")) ? str(get(l, "source")) : "credit_cp";
+            if (!nullish(get(l, "amount"))) { long gg = I(get(l, "amount")), cc = Math.min(gg, Math.max(0, I(get(l, "cp")))); long[] x = by.computeIfAbsent(k, z -> new long[4]); x[1] += gg; x[2] += cc; x[3] += gg - cc; continue; } /* 금액 줄 {source, amount, cp} */
+            long c = I(get(l, "credits")); ObjectNode r = settleLine(c, nullish(get(l, "cpBp")) ? CP_BP : I(get(l, "cpBp"))); if (r.has("error")) continue;
             long[] x = by.computeIfAbsent(k, z -> new long[4]); x[0] += c; x[1] += c * WON; x[2] += r.get("cp").asLong(); x[3] += r.get("santa").asLong(); }
         ArrayNode L = F.arrayNode(); long gross = 0, cp = 0;
         for (Map.Entry<String, long[]> e : by.entrySet()) { long[] x = e.getValue(); gross += x[1]; cp += x[2]; L.addObject().put("source", e.getKey()).put("credits", x[0]).put("gross", x[1]).put("cp", x[2]).put("santa", x[3]).put("santaBp", x[1] > 0 ? fdiv(x[3] * 10000, x[1]) : 0); }

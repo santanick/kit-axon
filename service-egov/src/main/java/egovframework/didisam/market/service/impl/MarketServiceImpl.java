@@ -124,7 +124,8 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
 
     /** 기관 문서 값(plan · 이름 · 유형) — RLS 범위 안에서 읽는다 */
     ObjectNode orgOf(String tid) throws Exception {
-        return ttx.inTenant(tid, () -> { Map<String, Object> r = mapper.selectOrgDoc(tid); Map<String, Object> t = mapper.selectTenant(tid); if (t == null) t = new HashMap<>();
+        Map<String, Object> t0 = ttx.plain(() -> mapper.selectTenant(tid)); /* tenants는 기관 역할 밖(Node pool.query) */
+        return ttx.inTenant(tid, () -> { Map<String, Object> r = mapper.selectOrgDoc(tid); Map<String, Object> t = t0 == null ? new HashMap<>() : t0;
             ObjectNode o = O(); o.set("plan", r == null || r.get("plan") == null ? F.nullNode() : parse((String) r.get("plan")));
             String nm = r != null && r.get("name") != null && !((String) r.get("name")).isEmpty() ? (String) r.get("name") : t.get("name") != null && !String.valueOf(t.get("name")).isEmpty() ? String.valueOf(t.get("name")) : "";
             String ty = r != null && r.get("type") != null && !((String) r.get("type")).isEmpty() ? (String) r.get("type") : t.get("type") != null && !String.valueOf(t.get("type")).isEmpty() ? String.valueOf(t.get("type")) : "";
@@ -139,15 +140,20 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
 
     List<ObjectNode> priceRows(String pid) { return db.q("select *, to_char(effective_from, 'YYYY-MM-DD') ef from mk_price where product_id = $1 order by effective_from, id", pid); }
     static ObjectNode priceNow(List<ObjectNode> rows, String day) { ObjectNode best = null; for (ObjectNode r : rows) if (s(r, "ef").compareTo(day) <= 0 && (best == null || s(r, "ef").compareTo(s(best, "ef")) > 0 || (s(r, "ef").equals(s(best, "ef")) && n(r, "id") > n(best, "id")))) best = r; return best; }
-    List<ObjectNode> lotsOf(String cid) { return db.q("select *, to_char(valid_to, 'YYYY-MM-DD') vt, to_char(carry_to, 'YYYY-MM-DD') ct from mk_credit_wallet where contract_id = $1 order by carry_to, lot, id", cid); }
+    List<ObjectNode> lotsOf(String cid) { return db.q("select *, to_char(valid_to, 'YYYY-MM-DD') vt, to_char(carry_to, 'YYYY-MM-DD') ct from mk_credit_wallet where contract_id = $1 order by carry_to, (lot = 'bonus'), id", cid); }
     static ObjectNode lotOut(JsonNode l) { ObjectNode o = O(); o.set("id", g(l, "id")); o.set("lot", g(l, "lot")); o.set("credits", g(l, "credits")); o.set("remain", g(l, "remain")); o.set("validTo", g(l, "vt")); o.set("carryTo", g(l, "ct")); return o; }
     static List<ObjectNode> liveLots(List<ObjectNode> L, String day) { List<ObjectNode> o = new ArrayList<>(); for (ObjectNode l : L) if (s(l, "ct").compareTo(day) >= 0) o.add(l); return o; }
     static final String KSEL = "select *, to_char(start, 'YYYY-MM-DD') s, to_char(\"end\", 'YYYY-MM-DD') e, to_char(carry_end, 'YYYY-MM-DD') ce from mk_contract";
     ObjectNode liveContract(String tid, String day) { return db.q1(KSEL + " where buyer_tid = $1 and kind = 'credit' and status in ('active','carry') and carry_end >= $2::date and start <= $2::date order by start desc limit 1", tid, day); }
 
     // ── 권한 ───────────────────────────────────────────────
-    Map<String, Object> needSanta(HttpServletRequest req) throws Exception { Map<String, Object> a = auth.need(req); if (!isSanta(a)) throw E(403, "santa", "산타 관리자만 쓸 수 있습니다."); rl.limit("mk-santa:" + email(a), 240, 60000L); return a; }
-    Map<String, Object> needCp(HttpServletRequest req) throws Exception { Map<String, Object> a = auth.needStaff(req); ObjectNode p = T(() -> party(tid(a))); if (!isCp(p)) throw E(403, "mk_cp"); return a; }
+    /* 권한 함수가 요청 범위(기관 · 산타)를 정한다 → tx()의 RLS 세션 변수. 산타 범위는 needSanta 경로에서만 */
+    Map<String, Object> need(HttpServletRequest req) throws Exception { Map<String, Object> a = auth.need(req); MkDb.scopeSet(tid(a), false); return a; }
+    Map<String, Object> needStaff(HttpServletRequest req) throws Exception { Map<String, Object> a = auth.needStaff(req); MkDb.scopeSet(tid(a), false); return a; }
+    Map<String, Object> needOwner(HttpServletRequest req) throws Exception { Map<String, Object> a = auth.needOwner(req); MkDb.scopeSet(tid(a), false); return a; }
+    Map<String, Object> needSanta(HttpServletRequest req) throws Exception { Map<String, Object> a = need(req); if (!isSanta(a)) throw E(403, "santa", "산타 관리자만 쓸 수 있습니다."); rl.limit("mk-santa:" + email(a), 240, 60000L); MkDb.scopeSet(tid(a), true); return a; }
+    boolean tenantExists(String tid) throws Exception { return db.raw(() -> db.q1("select 1 from tenants where id = $1", tid)) != null; }
+    Map<String, Object> needCp(HttpServletRequest req) throws Exception { Map<String, Object> a = needStaff(req); ObjectNode p = T(() -> party(tid(a))); if (!isCp(p)) throw E(403, "mk_cp"); return a; }
     static String today() { return kstDay(); }
     static String ym() { return today().substring(0, 7); }
     static String qp(HttpServletRequest q, String k) { return q.getParameter(k); }
@@ -237,11 +243,11 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
         if (!(budget >= 1000000)) throw E(400, "budget", "구매액은 100만 원 이상으로 입력하십시오.");
         long B = (long) budget; List<String> cols = arrOf(truthy(get(inp, "collections")) ? get(inp, "collections") : get(b, "collections"), 20, COL_RE); boolean bundle = truthy(get(inp, "bundle")) || truthy(get(b, "bundle"));
         Double want = nullish(get(b, "bonusBp")) ? null : I(get(b, "bonusBp")); if (want != null && !(want >= 0)) throw E(400, "bonus", "보너스율을 확인하십시오.");
-        if (want != null && want > DdMarketCalc.BONUS_MAX_BP) throw E(422, "mk_bonus_max", null, map("santaBp", DdMarketCalc.guard(B, want.longValue()).get("santaBp").asLong()));
+        if (want != null && want > DdMarketCalc.BONUS_MAX_BP) throw E(422, "mk_bonus_max");
         long sched = DdMarketCalc.bonusBp(B, bundle); long bp = want == null ? sched : santa ? want.longValue() : Math.min(want.longValue(), sched);
         long avg = avgOf(cols); ObjectNode pin = O().put("budget", B).put("bundle", bundle).put("bonusBp", bp).put("avgCredits", avg); if (!undef(get(inp, "coursesPerPerson"))) pin.set("coursesPerPerson", get(inp, "coursesPerPerson"));
         ObjectNode P = DdMarketCalc.plan(pin);
-        if (!P.get("ok").asBoolean()) { List<Object> alt = List.of(map("bonusBp", DdMarketCalc.BONUS_MAX_BP, "santaBp", DdMarketCalc.guard(B, DdMarketCalc.BONUS_MAX_BP).get("santaBp").asLong())); throw E(422, "mk_margin", null, map("santaBp", P.get("santaBp").asLong(), "alternatives", alt)); }
+        if (!P.get("ok").asBoolean()) { List<Object> alt = List.of(map("bonusBp", Math.min(sched, DdMarketCalc.BONUS_MAX_BP))); throw E(422, "mk_margin", null, map("alternatives", alt)); }
         ObjectNode input = O().put("budget", B); input.set("collections", an(cols)); input.set("coursesPerPerson", truthy(get(inp, "coursesPerPerson")) ? get(inp, "coursesPerPerson") : F.numberNode(1.5)); input.put("bundle", bundle);
         if (truthy(get(inp, "topupOf"))) input.put("topupOf", str(get(inp, "topupOf"), 20));
         ObjectNode est = O(); est.set("avgCredits", P.get("avgCredits")); est.set("enrollments", P.get("enrollments")); est.set("people", P.get("people")); est.set("total", P.get("total"));
@@ -260,7 +266,13 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
         return db.q1("insert into mk_quote (id, buyer_tid, kind, input, supply_total, cp_max, santa_bp, status, est, valid_to, by_email) values ($1,$2,'single',$3,$4,$5,3000,$6,$7,$8::date + 30,$9) returning *",
             rid("mq_"), buyer, inp, price, cand, au ? "ready" : "cp_wait", O().put("floorSum", floor).put("cand", cand).put("minPrice", DdMarketCalc.singleMin(floor)), today(), by);
     }
-    static ObjectNode quoteOut(JsonNode q) { return cp(q, "id", "id", "buyerTid", "buyer_tid", "kind", "kind", "input", "input", "credits", "credits", "bonusBp", "bonus_bp", "bonusCredits", "bonus_credits", "est", "est", "supplyTotal", "supply_total", "cpMax", "cp_max", "santaBp", "santa_bp", "status", "status", "validTo", "valid_to", "at", "at"); }
+    /** 구매 기관 응답에는 산타 몫 · CP 지급액(santaBp · cpMax · floor · cand)을 넣지 않는다 — 산타 운영(full)만 */
+    static ObjectNode quoteOut(JsonNode q, boolean full) {
+        ObjectNode est = g(q, "est").isObject() ? ((ObjectNode) g(q, "est")).deepCopy() : O(); ObjectNode input = g(q, "input").isObject() ? ((ObjectNode) g(q, "input")).deepCopy() : O();
+        if (!full) { est.remove("floorSum"); est.remove("cand"); est.remove("minPrice"); if (input.get("lines") != null && input.get("lines").isArray()) { ArrayNode L = F.arrayNode(); for (JsonNode l : input.get("lines")) { ObjectNode x = l.isObject() ? ((ObjectNode) l).deepCopy() : O(); x.remove("floor"); L.add(x); } input.set("lines", L); } input.remove("cpOk"); }
+        ObjectNode o = cp(q, "id", "id", "buyerTid", "buyer_tid", "kind", "kind"); o.set("input", input); o.set("credits", g(q, "credits")); o.set("bonusBp", g(q, "bonus_bp")); o.set("bonusCredits", g(q, "bonus_credits")); o.set("est", est); o.set("supplyTotal", g(q, "supply_total"));
+        if (full) { o.set("cpMax", g(q, "cp_max")); o.set("santaBp", g(q, "santa_bp")); } o.set("status", g(q, "status")); o.set("validTo", g(q, "valid_to")); o.set("at", g(q, "at")); return o;
+    }
 
     // ── 계약 활성(산타) ─────────────────────────────────────
     ObjectNode activate(ObjectNode k, JsonNode b) {
@@ -326,8 +338,11 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     static ObjectNode itemOf(JsonNode r) { ObjectNode o = O(); o.set("id", g(r, "id")); o.set("title", g(r, "title")); o.set("hours", hours(r)); o.set("credits", g(r, "credits")); o.set("thumb", orNull(g(r, "thumb"))); if (santaOwn(r)) o.put("orig", true).put("badge", "orig"); return o; }
 
     @Override public Object pub(HttpServletRequest req, HttpServletResponse res, String tid, String key, byte[] body, LAuth lauth) throws Exception {
+        MkDb.scopeReset(); try { return pub0(req, res, tid, key, body, lauth); } finally { MkDb.scopeClear(); }
+    }
+    Object pub0(HttpServletRequest req, HttpServletResponse res, String tid, String key, byte[] body, LAuth lauth) throws Exception {
         Map<String, Object> s0 = lauth.get(); if (!List.of("GET mk-shelf", "GET mk-list", "GET mk-item", "POST mk-start", "POST mk-pre").contains(key)) throw E(404, "not_found", "없는 주소입니다.");
-        if (s0 == null) throw E(401, "auth", "로그인이 필요해요."); String sid = String.valueOf(s0.get("sid")); String sh = sidHash(tid, sid);
+        if (s0 == null) throw E(401, "auth", "로그인이 필요해요."); MkDb.scopeSet(tid, false); String sid = String.valueOf(s0.get("sid")); String sh = sidHash(tid, sid);
         switch (key) {
             case "GET mk-shelf": return T(() -> { if (!B(party(tid), "pilot")) { ObjectNode o = O().put("on", false); o.putArray("shelf"); return o; } String day = today(); ObjectNode k = liveContract(tid, day);
                 if (k == null) { ObjectNode o = O().put("on", true); o.putArray("shelf"); o.putObject("me").put("allowed", false); return o; }
@@ -371,7 +386,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
         ObjectNode o = O(); if (cur != null) { ObjectNode c = o.putObject("current"); c.set("rateKind", g(cur, "rate_kind")); c.set("cpBp", g(cur, "cp_bp")); c.set("effectiveFrom", g(cur, "ef")); } else o.putObject("current").put("rateKind", "standard").put("cpBp", DdMarketCalc.CP_BP).putNull("effectiveFrom");
         if (nxt != null) { ObjectNode c = o.putObject("next"); c.set("rateKind", g(nxt, "rate_kind")); c.set("cpBp", g(nxt, "cp_bp")); c.set("effectiveFrom", g(nxt, "ef")); } return o;
     }
-    List<ObjectNode> activeOf(String pid) { return db.q("select distinct k.id, to_char(k.carry_end, 'YYYY-MM-DD') ce from mk_credit_use u join mk_contract k on k.id = u.contract_id where u.product_id = $1 and u.kind = 'use' and k.status in ('active','carry')", pid); }
+    List<ObjectNode> activeOf(String pid) throws Exception { return db.txAs("", true, () -> db.q("select distinct k.id, to_char(k.carry_end, 'YYYY-MM-DD') ce from mk_credit_use u join mk_contract k on k.id = u.contract_id where u.product_id = $1 and u.kind = 'use' and k.status in ('active','carry')", pid)); }
     static Object nz(JsonNode v) { if (nullish(v) || (v.isTextual() && v.textValue().isEmpty())) return null; double d = Math.max(0, I(v)); return Double.isNaN(d) || d == 0 ? null : (long) d; }
     ObjectNode putControl(String cid, JsonNode b, String by) {
         Object cap = nz(get(b, "monthCap")), pre = nz(get(b, "preFrom")); List<String> cols = nullish(get(b, "allowCols")) ? null : arrOf(get(b, "allowCols"), 50, COL_RE); List<String> grps = nullish(get(b, "allowGroups")) ? null : arrOf(get(b, "allowGroups"), 100, null);
@@ -391,15 +406,20 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
             if (!sa) { String k = DdMarketCalc.rateKindOf(bp); if (k == null) k = "standard"; Object[] x = byRate.computeIfAbsent(k, z -> new Object[]{ new LinkedHashSet<String>(), new long[2] }); @SuppressWarnings("unchecked") LinkedHashSet<String> cs = (LinkedHashSet<String>) x[0]; cs.add(s(r, "cp_tid")); ((long[]) x[1])[0] += cr; ((long[]) x[1])[1] += DdMarketCalc.settleLine(cr, bp).path("santa").asLong(); } }
         long fee = n(db.q1("select coalesce(sum(amount), 0)::int n from mk_entry where kind = 'promo_fee' and to_char(at at time zone 'Asia/Seoul', 'YYYY-MM') between $1 and $2", from, to), "n");
         long single = n(db.q1("select coalesce(sum(amount), 0)::int n from mk_entry where kind = 'single_sale' and to_char(at at time zone 'Asia/Seoul', 'YYYY-MM') between $1 and $2", from, to), "n");
+        if (fee != 0) lines.addObject().put("source", "promo").put("amount", fee); if (single != 0) lines.addObject().put("source", "single").put("amount", single).put("cp", DdMarketCalc.singleCand(single));
         ObjectNode mix = DdMarketCalc.santaMix(lines); ArrayNode bySource = F.arrayNode(); for (JsonNode x : mix.get("bySource")) bySource.add(cp(x, "source", "source", "gross", "gross", "cp", "cp", "santa", "santa", "santaBp", "santaBp"));
-        if (fee != 0) bySource.addObject().put("source", "promo").put("gross", fee).put("cp", 0).put("santa", fee).put("santaBp", 10000);
-        if (single != 0) { long sv = single - DdMarketCalc.singleCand(single); bySource.addObject().put("source", "single").put("gross", single).put("cp", single - sv).put("santa", sv).put("santaBp", Math.floorDiv(sv * 10000, single)); }
+        /* 인식 매출(소진 기준 · 보너스 반영): 계약별 순소진 × 계약 구매액(추가 구매 포함) ÷ 계약 총크레딧, 반올림 */
+        long recognized = fee + single;
+        for (ObjectNode r : db.q("select u.contract_id, sum(u.credits)::int cr, (select coalesce(sum(credits), 0)::int from mk_credit_wallet w where w.contract_id = u.contract_id) tot,\n"
+            + "        (select coalesce(sum(supply_total), 0)::int from mk_contract x where (x.id = u.contract_id or x.renew_of = u.contract_id) and x.status in ('active','carry','ended','merged')) sup\n"
+            + "      from mk_credit_use u where u.kind in ('use','restore') and to_char(u.at at time zone 'Asia/Seoul', 'YYYY-MM') between $1 and $2 group by u.contract_id", from, to)) recognized += DdMarketCalc.recognized(n(r, "cr"), n(r, "sup"), n(r, "tot"));
         ObjectNode minQ = db.q1("select min(santa_bp)::int n, count(*) filter (where santa_bp < 3000)::int below from mk_quote where kind = 'credit' and to_char(at at time zone 'Asia/Seoul', 'YYYY-MM') between $1 and $2", from, to);
         ObjectNode o = O().put("from", from).put("to", to); o.set("bySource", bySource); ArrayNode br = o.putArray("byRate");
         for (Map.Entry<String, Object[]> e : byRate.entrySet()) { long[] v = (long[]) e.getValue()[1]; br.addObject().put("rateKind", e.getKey()).put("cps", ((LinkedHashSet<?>) e.getValue()[0]).size()).put("credits", v[0]).put("santa", v[1]); }
         ArrayNode tr = o.putArray("trend"); for (Map.Entry<String, ArrayNode> e : byM.entrySet()) { ObjectNode z = DdMarketCalc.santaMix(e.getValue()); ObjectNode t0 = tr.addObject().put("ym", e.getKey()); t0.set("santa", z.get("santa")); t0.set("santaBp", z.get("santaBp")); }
         ObjectNode gd = o.putObject("guard"); gd.set("minQuoteBp", g(minQ, "n")); gd.set("below", g(minQ, "below"));
-        long gs = 0, ss = 0; for (JsonNode x : bySource) { gs += x.get("gross").asLong(); ss += x.get("santa").asLong(); } o.putObject("totals").put("gross", gs).put("santa", ss); return o;
+        long mcp = mix.get("cp").asLong(); ObjectNode T = o.putObject("totals"); T.set("gross", mix.get("gross")); T.set("cp", mix.get("cp")); T.set("santa", mix.get("santa")); T.set("santaBp", mix.get("santaBp"));
+        T.put("recognized", recognized).put("santaRecognized", recognized - mcp).put("santaRecognizedBp", recognized > 0 ? Math.floorDiv((recognized - mcp) * 10000, recognized) : 0); return o;
     }
     static ObjectNode slotsJson() { ObjectNode o = O(); for (Map.Entry<String, long[]> e : DdMarketCalc.SLOT.entrySet()) { ObjectNode s = o.putObject(e.getKey()).put("cap", e.getValue()[0]).put("fee", e.getValue()[1]).put("label", DdMarketCalc.SLOT_LABEL.get(e.getKey())); if (e.getValue()[2] > 0) s.put("launchDays", e.getValue()[2]); } return o; }
     static boolean owner(Map<String, Object> a) { return "owner".equals(a.get("role")); }
@@ -410,7 +430,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
         String path = req.getRequestURI(), m = req.getMethod(); H h = R.get(m + " " + path); String[] grp = new String[0];
         if (h == null) for (Object[] x : P) { if (!m.equals(x[0])) continue; Matcher mt = ((Pattern) x[1]).matcher(path); if (mt.matches()) { h = (H) x[2]; grp = new String[mt.groupCount()]; for (int i = 0; i < grp.length; i++) grp[i] = mt.group(i + 1); break; } }
         if (h == null) throw E(404, "not_found", "없는 주소입니다.");
-        return h.go(req, res, body, grp); /* 본문은 각 경로가 권한 확인 뒤 읽는다(Node readBody 순서) */
+        MkDb.scopeReset(); try { return h.go(req, res, body, grp); } finally { MkDb.scopeClear(); } /* 본문은 각 경로가 권한 확인 뒤 읽는다(Node readBody 순서) */
     }
 
     // 라우트 본문(MkRoutes)이 쓰는 접근자

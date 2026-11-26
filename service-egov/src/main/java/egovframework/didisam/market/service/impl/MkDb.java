@@ -27,8 +27,19 @@ public class MkDb {
     static final Pattern PH = Pattern.compile("\\$(\\d+)");
     static final java.time.format.DateTimeFormatter ISO = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(java.time.ZoneOffset.UTC);
 
-    /** Node tx(fn): 한 트랜잭션(begin · commit · rollback) */
-    public <T> T tx(TenantTx.Work<T> fn) throws Exception { return tx.plain(fn); }
+    /** 요청 범위 { tid, santa } — 권한 함수가 채우고 tx()가 RLS 세션 변수로 넘긴다(Node AsyncLocalStorage als와 같음) */
+    static final ThreadLocal<Object[]> SCOPE = new ThreadLocal<>();
+    public static void scopeReset() { SCOPE.set(new Object[]{ "", false }); }
+    public static void scopeClear() { SCOPE.remove(); }
+    public static void scopeSet(String tid, boolean santa) { SCOPE.set(new Object[]{ tid == null ? "" : tid, santa }); }
+    /** Node tx(fn): 마켓 트랜잭션 — SET LOCAL ROLE didisam_market(RLS FORCE) + app.tenant + app.santa('1'은 산타 운영 경로만). 범위가 없으면 아무 행도 보이지 않는다 */
+    public <T> T tx(TenantTx.Work<T> fn) throws Exception { Object[] s = SCOPE.get(); return txAs(s == null ? "" : (String) s[0], s != null && (Boolean) s[1], fn); }
+    /** Node txAs(scope, fn): 시스템 집계만(개인 단위 값을 돌려주지 않는 곳) */
+    public <T> T txAs(String tid, boolean santa, TenantTx.Work<T> fn) throws Exception {
+        return tx.plain(() -> { x("set local role didisam_market"); q("select set_config('app.tenant', $1, true), set_config('app.santa', $2, true)", tid == null ? "" : tid, santa ? "1" : "0"); return fn.run(); });
+    }
+    /** 마켓 역할 밖(로그인 계정) — tenants 표 조회 전용(Node pool.query) */
+    public <T> T raw(TenantTx.Work<T> fn) throws Exception { return tx.plain(fn); }
 
     /** node-postgres prepareValue */
     static String lit(Object v) {
