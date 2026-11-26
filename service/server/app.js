@@ -743,6 +743,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   /* v41 통합 수납 원장(ledger/): 공개 ledger-* 와 운영자 /api/ledger/* */
   const ledger = require('./ledger').createLedger({ exportGate: (...x) => rec.exportGate(...x), pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log, mileage });
   const market = require('./market').createMarket({ pool, inTenant, need, needStaff, needOwner, isSanta, readBody, HttpErr, audit, limit, ip, lauth, env, log }); /* 콘텐츠 마켓 v1.1 /api/market/* · /api/pub/<tid>/mk-* (시범 기관 플래그) */
+  const group = require('./group').createGroup({ pool, inTenant, need, needStaff, needOwner, isSanta, readBody, HttpErr, audit, limit, ip, env, log }); /* 통합 센터(기관 묶음) /api/group/* — 시범 플래그 grp_group.pilot */
   const rec = REC.createRecords({ pool, inTenant, need, needOwner, readBody, HttpErr, audit, ip, env }); for (const [k, fn] of Object.entries(rec.routes)) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
 
   /* ── 정적 파일 ── */
@@ -799,7 +800,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
         if (url.pathname.includes('/loauth/') && url.pathname.startsWith('/api/pub/') && await loauth.handle(req, res, url)) return;
         const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?|mk-[a-z]{2,6})$/);
         const sp = req.method === 'PUT' && url.pathname.match(/^\/api\/santa\/orgs\/(tn_[a-z0-9]{8,16})\/plan$/);
-        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname) || market.match(req.method, url.pathname) || sec.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
+        const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname) || market.match(req.method, url.pathname) || group.match(req.method, url.pathname) || sec.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {
           // CSRF: SameSite=Strict 쿠키 + 사용자 정의 헤더 + 같은 출처
           if (req.headers['x-didisam'] !== '1') throw new HttpErr(403, '허용되지 않은 요청입니다.', 'csrf');
@@ -818,7 +819,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
       return send(res, 500, { error: 'server', message: '서버 오류가 발생했습니다.' });
     }
   });
-  srv.piiPurge = pii.purge; srv.recTick = rec.tick; srv.geoCheck = rec.geoCheck; srv.exportGate = rec.exportGate; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; srv.marketTick = market.tick; srv.secTick = sec.tick; /* 가디언 기능 끄기 TTL 자동 복구 기록 */ /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
+  srv.piiPurge = pii.purge; srv.recTick = rec.tick; srv.geoCheck = rec.geoCheck; srv.exportGate = rec.exportGate; srv.facTick = fac.tick; srv.ledgerTick = ledger.tick; srv.mileageTick = mileage.tick; srv.marketTick = market.tick; srv.groupTick = group.tick; srv.secTick = sec.tick; /* 가디언 기능 끄기 TTL 자동 복구 기록 */ /* v42 소멸 · 고지 · 캐시 대조 */ /* v41 결제창 이탈 ready → failed */ /* v40 노쇼 · 보류 만료 · 연체 · 선택 수집 삭제(1시간) */ // 보존 기간 정리(index.js가 매시간 호출)
   return srv;
 }
 
