@@ -58,10 +58,11 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
             "teams_limit", 409, "알림 채널은 기관당 10곳까지 등록할 수 있습니다.", "teams_time", 400, "수업 시간을 확인하세요(종료가 시작보다 늦고 24시간 이내).",
             "teams_report_none", 404, "출석 보고서가 아직 없습니다. 회의 종료 후 잠시 뒤 다시 시도하세요.", "teams_rate", 429, "Microsoft 요청 한도에 걸렸습니다. 잠시 뒤 다시 시도하세요.",
             "teams_provider", 502, "Microsoft 서버 응답에 문제가 있습니다.", "teams_phase2", 501, "다음 단계에서 제공합니다.", "teams_bad_event", 400, "보낼 수 없는 알림 종류입니다.",
-            "teams_input", 400, "입력값을 확인하세요.", "teams_none", 404, "없는 Teams 항목입니다.", "teams_item", 409, "반의 라이브 항목에 연결된 회의가 아닙니다." };
+            "teams_input", 400, "입력값을 확인하세요.", "teams_none", 404, "없는 Teams 항목입니다.", "teams_item", 409, "반의 라이브 항목에 연결된 회의가 아닙니다.", "teams_off", 403, "Microsoft Teams 연동은 시범 운영 기관에서만 사용할 수 있습니다.", "teams_class", 403, "담당한 반의 수업만 만들고 출석을 반영할 수 있습니다." };
         for (int i = 0; i < m.length; i += 3) MSG.put((String) m[i], new Object[]{ m[i + 1], m[i + 2] });
     }
     static final List<String> EVENTS = List.of("notice", "due", "approval", "report", "signup", "pay");
+    static final List<String> TEACHER_EV = List.of("notice", "due"); /* QA4 #2: 교수자는 공지 · 마감 알림만 */
     static final Map<String, String> EV_KO = Map.of("notice", "공지", "due", "마감 임박", "approval", "승인 요청", "report", "주간 리포트", "signup", "가입", "pay", "결제", "test", "연결 시험");
     static final List<String> ATT = List.of("출석", "지각", "결석"), SSO_TYPES = List.of("univ", "corp", "public");
     static final Pattern[] DEF_HOSTS = { Pattern.compile("\\.logic\\.azure\\.com$", Pattern.CASE_INSENSITIVE), Pattern.compile("\\.environment\\.api\\.powerplatform\\.com$", Pattern.CASE_INSENSITIVE), Pattern.compile("\\.api\\.powerplatform\\.com$", Pattern.CASE_INSENSITIVE) };
@@ -77,11 +78,11 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     static JsonNode g(JsonNode r, String k) { JsonNode v = r == null ? null : r.get(k); return v == null ? F.nullNode() : v; }
     static String s(JsonNode r, String k) { JsonNode v = g(r, k); return v.isNull() ? null : v.asText(); }
 
-    final MkDb db; final TenantTx ttx; final AuthService auth; final DdRateLimiter rl; final DdStateCrypto crypt; final boolean live, testHook; final List<String> extraHosts; final byte[] KEY, IDX; final long gap;
+    final MkDb db; final TenantTx ttx; final AuthService auth; final DdRateLimiter rl; final DdStateCrypto crypt; final boolean live, testHook; final String pilotRaw; final List<String> extraHosts; final byte[] KEY, IDX; final long gap;
     public TeamsServiceImpl(MkDb db, TenantTx ttx, AuthService auth, DdRateLimiter rl, DdStateCrypto crypt, @Value("${MS_CLIENT_ID:}") String msId, @Value("${NODE_ENV:}") String nodeEnv,
-                            @Value("${TEAMS_WEBHOOK_HOSTS:}") String hosts, @Value("${TEAMS_WEBHOOK_TEST:}") String th, @Value("${TEAMS_GAP_MS:1000}") String gapMs,
+                            @Value("${TEAMS_WEBHOOK_HOSTS:}") String hosts, @Value("${TEAMS_WEBHOOK_TEST:}") String th, @Value("${TEAMS_GAP_MS:1000}") String gapMs, @Value("${TEAMS_PILOT:}") String pilotV,
                             @Value("${PII_KEY:}") String piiKey, @Value("${SESSION_PEPPER:}") String pepper) {
-        this.db = db; this.ttx = ttx; this.auth = auth; this.rl = rl; this.crypt = crypt; this.live = msId != null && !msId.trim().isEmpty();
+        this.db = db; this.ttx = ttx; this.auth = auth; this.rl = rl; this.crypt = crypt; this.live = msId != null && !msId.trim().isEmpty(); this.pilotRaw = pilotV == null ? "" : pilotV.trim();
         this.testHook = !"production".equals(nodeEnv) && "1".equals(th); this.extraHosts = new ArrayList<>(); for (String x : (hosts == null ? "" : hosts).split(",")) if (!x.trim().isEmpty()) extraHosts.add(x.trim().toLowerCase(java.util.Locale.ROOT));
         long gp; try { gp = Math.max(0, Long.parseLong(gapMs.trim())); } catch (Exception e) { gp = 1000; } this.gap = gp;
         byte[] k = null; String raw = piiKey == null ? "" : piiKey.trim();
@@ -106,12 +107,23 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     DdException E(String code) { return E(code, null); }
     DdException E(String code, Map<String, Object> extra) { Object[] v = MSG.getOrDefault(code, new Object[]{ 400, "요청을 처리할 수 없습니다." }); DdException e = new DdException((Integer) v[0], (String) v[1], code); if (extra != null) e.extra(extra); return e; }
     static boolean isAdmin(Map<String, Object> a) { return "owner".equals(a.get("role")) || "sub".equals(a.get("role")); }
-    Map<String, Object> needAny(HttpServletRequest req) throws Exception { Map<String, Object> a = auth.need(req); rl.limit("teams:" + a.get("tid"), 120, 60000L); return a; }
-    Map<String, Object> needAdmin(HttpServletRequest req) throws Exception { Map<String, Object> a = auth.need(req); if (!isAdmin(a)) throw E("teams_role"); rl.limit("teams:" + a.get("tid"), 120, 60000L); return a; }
-    Map<String, Object> needOwner(HttpServletRequest req) throws Exception { Map<String, Object> a = auth.need(req); if (!"owner".equals(a.get("role"))) throw E("teams_role"); rl.limit("teams:" + a.get("tid"), 120, 60000L); return a; }
+    /* QA4 #5 시범 플래그(teams.md 4절): TEAMS_PILOT=all | 기관 id 목록(쉼표), 비우면 모두 꺼짐 — Node cfg.pilot과 같음 */
+    public boolean pilot(String t0) { if ("all".equals(pilotRaw)) return true; for (String x : pilotRaw.split(",")) if (!x.trim().isEmpty() && x.trim().equals(t0)) return true; return false; }
+    Map<String, Object> gate(Map<String, Object> a) throws Exception { if (!pilot(tid(a))) throw E("teams_off"); return a; }
+    Map<String, Object> needAny(HttpServletRequest req) throws Exception { Map<String, Object> a = gate(auth.need(req)); rl.limit("teams:" + a.get("tid"), 120, 60000L); return a; }
+    Map<String, Object> needAdmin(HttpServletRequest req) throws Exception { Map<String, Object> a = gate(auth.need(req)); if (!isAdmin(a)) throw E("teams_role"); rl.limit("teams:" + a.get("tid"), 120, 60000L); return a; }
+    Map<String, Object> needOwner(HttpServletRequest req) throws Exception { Map<String, Object> a = gate(auth.need(req)); if (!"owner".equals(a.get("role"))) throw E("teams_role"); rl.limit("teams:" + a.get("tid"), 120, 60000L); return a; }
     static String tid(Map<String, Object> a) { return (String) a.get("tid"); }
     static String email(Map<String, Object> a) { return (String) a.get("email"); }
     <T> T T(String tid, TenantTx.Work<T> fn) throws Exception { return ttx.inTenant(tid, fn); }
+    /* QA4 #1: 교수자는 담당 반(doc.admins[].classes — Node modules.scope와 같은 기준)의 회의 · 출석만 */
+    java.util.Set<String> myClasses(String t0, String em) throws Exception {
+        JsonNode doc = T(t0, () -> { ObjectNode r = db.q1("select doc from tenant_state where tenant_id = $1", t0); return r == null ? O() : crypt.open(g(r, "doc"), t0); });
+        java.util.Set<String> out = new java.util.HashSet<>(); String e0 = em == null ? "" : em.toLowerCase(java.util.Locale.ROOT);
+        for (JsonNode x : arr(get(doc, "admins"))) if (truthy(x) && S(get(x, "email")).toLowerCase(java.util.Locale.ROOT).equals(e0)) { for (JsonNode c : arr(get(x, "classes"))) out.add(S(c)); break; }
+        return out;
+    }
+    void needClass(Map<String, Object> a, String classId) throws Exception { if (isAdmin(a)) return; if (classId == null || classId.isEmpty() || !myClasses(tid(a), email(a)).contains(classId)) throw E("teams_class"); }
     void audit(String tid, String actor, String action, Object detail) { try { ttx.audit(tid, actor, action, DdWeb.JSON.valueToTree(detail).toString()); } catch (Exception e) { /* 본 처리는 유지 */ } }
     static Map<String, Object> map(Object... kv) { Map<String, Object> o = new LinkedHashMap<>(); for (int i = 0; i + 1 < kv.length; i += 2) o.put((String) kv[i], kv[i + 1]); return o; }
 
@@ -133,7 +145,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         String st = anyErr || reauth ? "점검 필요" : (org != null || demo || anyOk) ? "연결됨" : channels.size() > 0 ? "진행 중" : "미연결";
         ObjectNode sso = O(); if (org != null) { JsonNode so = g(org, "sso"); sso.put("operator", truthy(get(so, "operator"))).put("learner", truthy(get(so, "learner"))); sso.putArray("tids").add(maskTid(s(org, "ms_tid"))); } else { sso.put("operator", false).put("learner", false); sso.putArray("tids"); }
         List<String> nt = new ArrayList<>(); if (channels.size() > 0) nt.add("알림 채널 " + channels.size() + "곳"); if (accounts.size() > 0) nt.add("회의 계정 " + accounts.size() + "명"); if (sso.get("operator").asBoolean() || sso.get("learner").asBoolean()) nt.add("SSO 사용");
-        ObjectNode o = O().put("mode", live ? "live" : "demo").put("st", st).put("note", String.join(" · ", nt)).put("demo", demo);
+        ObjectNode o = O().put("pilot", true).put("mode", live ? "live" : "demo").put("st", st).put("note", String.join(" · ", nt)).put("demo", demo);
         if (org != null) { ObjectNode x = o.putObject("org"); x.put("msTid", maskTid(s(org, "ms_tid"))).put("domain", S(g(org, "domain"))).put("consentAt", kst(s(org, "consent_at"))); x.set("consentBy", g(org, "consent_by")); }
         else if (demoOrg) o.putObject("org").put("msTid", "").put("domain", "demo.onmicrosoft.com").put("consentAt", "").put("consentBy", "").put("demo", true); else o.putNull("org");
         o.putObject("features").put("notify", !(get(feat, "notify") != null && get(feat, "notify").isBoolean() && !get(feat, "notify").asBoolean())).put("meeting", !(get(feat, "meeting") != null && get(feat, "meeting").isBoolean() && !get(feat, "meeting").asBoolean()))
@@ -196,6 +208,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     /** 내부 발송 — Slack 알림과 같은 이벤트 지점에서 부른다. 반환: 대기열에 넣은 채널 수 */
     public int notify(String tid, String event, JsonNode payload) throws Exception {
         if (!EVENTS.contains(event)) throw E("teams_bad_event");
+        if (!pilot(tid)) return 0;
         Object[] L0 = T(tid, () -> load(tid)); JsonNode feat = get(g((JsonNode) L0[1], "cfg"), "features"); if (feat != null && get(feat, "notify") != null && get(feat, "notify").isBoolean() && !get(feat, "notify").asBoolean()) return 0;
         List<ObjectNode> L = T(tid, () -> db.q("select id, label, meta, enc from conn_secret where tenant_id = $1 and kind = 'teams_webhook'", tid)); int n = 0;
         for (ObjectNode ch : L) { boolean has = false; for (JsonNode e : arr(get(g(ch, "meta"), "events"))) if (event.equals(e.asText())) has = true; if (has) { enqueue(tid, ch, event, payload); n++; } } return n;
@@ -288,7 +301,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         Map<String, Object> a = needAny(req); JsonNode b = body(raw, 8192); String t0 = tid(a);
         String subject = trim(str(get(b, "subject"), 200)); if (subject.isEmpty() || subject.length() > 120) throw E("teams_input", map("field", "subject"));
         Instant s0 = parseT(get(b, "start")), e0 = parseT(get(b, "end")); if (s0 == null || e0 == null || !e0.isAfter(s0) || e0.toEpochMilli() - s0.toEpochMilli() > 24 * 3600e3) throw E("teams_time");
-        String classId = str(get(b, "classId"), 60), itemId = str(get(b, "itemId"), 60);
+        String classId = str(get(b, "classId"), 60), itemId = str(get(b, "itemId"), 60); needClass(a, classId);
         Object[] L0 = T(t0, () -> load(t0)); JsonNode md = get(get(g((JsonNode) L0[1], "cfg"), "meetingDefaults"), "lobby"); String lb = truthy(get(b, "lobby")) ? S(get(b, "lobby")) : S(md); String lobby = "everyone".equals(lb) ? "everyone" : "organization";
         String id = rid("tm_"), joinUrl, ms = ""; boolean demo = !live; ObjectNode acc = null;
         if (!demo) { acc = pickAccount(a, str(get(b, "accountId"), 40)); ObjectNode gb = O().put("subject", subject).put("startDateTime", iso(s0)).put("endDateTime", iso(e0)); gb.putObject("lobbyBypassSettings").put("scope", lobby); gb.put("allowRecording", get(b, "allowRecord") != null && get(b, "allowRecord").isBoolean() && get(b, "allowRecord").asBoolean()).put("recordAutomatically", false);
@@ -303,7 +316,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     }
     ObjectNode meetingOf(String t0, String id) throws Exception { ObjectNode m = T(t0, () -> db.q1("select * from conn_teams_meeting where tenant_id = $1 and id = $2", t0, id)); if (m == null) throw E("teams_none"); return m; }
     Object patchMeeting(HttpServletRequest req, byte[] raw, String id) throws Exception {
-        Map<String, Object> a = needAny(req); JsonNode b = body(raw, 4096); String t0 = tid(a); ObjectNode m = meetingOf(t0, id);
+        Map<String, Object> a = needAny(req); JsonNode b = body(raw, 4096); String t0 = tid(a); ObjectNode m = meetingOf(t0, id); needClass(a, S(g(m, "class_id")));
         String subject = !undef(get(b, "subject")) ? trim(str(get(b, "subject"), 200)) : s(m, "subject"); if (subject.isEmpty() || subject.length() > 120) throw E("teams_input", map("field", "subject"));
         Instant s0 = !undef(get(b, "start")) ? parseT(get(b, "start")) : Instant.parse(s(m, "start_at")), e0 = !undef(get(b, "end")) ? parseT(get(b, "end")) : Instant.parse(s(m, "end_at"));
         if (s0 == null || e0 == null || !e0.isAfter(s0) || e0.toEpochMilli() - s0.toEpochMilli() > 24 * 3600e3) throw E("teams_time");
@@ -312,7 +325,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         return O().put("ok", true).put("id", id).put("start", iso(s0)).put("end", iso(e0));
     }
     Object delMeeting(HttpServletRequest req, String id) throws Exception {
-        Map<String, Object> a = needAny(req); String t0 = tid(a); ObjectNode m = meetingOf(t0, id); ObjectNode acc = accOfMeeting(a, m);
+        Map<String, Object> a = needAny(req); String t0 = tid(a); ObjectNode m = meetingOf(t0, id); needClass(a, S(g(m, "class_id"))); ObjectNode acc = accOfMeeting(a, m);
         if (acc != null) graph(t0, acc, "DELETE", "/me/onlineMeetings/" + enc(s(m, "ms_id")).replace("+", "%20"), null); /* 이미 없으면(404) 그대로 진행 */
         T(t0, () -> { db.x("delete from conn_teams_meeting where tenant_id = $1 and id = $2", t0, id);
             if (truthy(g(m, "class_id")) && truthy(g(m, "item_id")) && !"0".equals(req.getParameter("doc"))) docEdit(t0, doc -> { ObjectNode[] x = itemOf(doc, s(m, "class_id"), s(m, "item_id")); if (x == null) return null; if (s(m, "join_url").equals(S(x[1].get("url")))) x[1].put("url", ""); x[1].remove("teams"); return F.booleanNode(true); });
@@ -323,7 +336,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     static String label(String tid, String mid) { byte[] h = sha(tid + "|" + mid); return "L-" + String.format("%02x%02x", h[0], h[1]); }
     static String hm(long ms) { return Instant.ofEpochMilli(ms).plusSeconds(9 * 3600).atOffset(ZoneOffset.UTC).toLocalTime().toString().substring(0, 5); }
     Object syncAttendance(HttpServletRequest req, String id) throws Exception {
-        Map<String, Object> a = needAny(req); String t0 = tid(a); ObjectNode m = meetingOf(t0, id);
+        Map<String, Object> a = needAny(req); String t0 = tid(a); ObjectNode m = meetingOf(t0, id); needClass(a, S(g(m, "class_id")));
         JsonNode doc = T(t0, () -> { ObjectNode r = db.q1("select doc from tenant_state where tenant_id = $1", t0); return r == null ? O() : crypt.open(g(r, "doc"), t0); });
         ObjectNode[] x = truthy(g(m, "class_id")) && truthy(g(m, "item_id")) ? itemOf(doc, s(m, "class_id"), s(m, "item_id")) : null;
         Object[] L0 = T(t0, () -> load(t0)); JsonNode ia = x == null ? null : x[1].get("attMin");
@@ -355,7 +368,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         o.set("matched", matched); o.put("unmatched", recs.size() - matched.size()).put("mode", "live"); return o;
     }
     Object applyAttendance(HttpServletRequest req, byte[] raw, String id) throws Exception {
-        Map<String, Object> a = needAny(req); JsonNode b = body(raw, 65536); String t0 = tid(a); ObjectNode m = meetingOf(t0, id);
+        Map<String, Object> a = needAny(req); JsonNode b = body(raw, 65536); String t0 = tid(a); ObjectNode m = meetingOf(t0, id); needClass(a, S(g(m, "class_id")));
         if (!truthy(g(m, "class_id")) || !truthy(g(m, "item_id"))) throw E("teams_item");
         List<JsonNode> rows = get(b, "rows") != null && get(b, "rows").isArray() ? arr(get(b, "rows")) : new ArrayList<>(); if (rows.size() > 1000) rows = rows.subList(0, 1000);
         for (JsonNode r : rows) if (!truthy(r) || get(r, "value") == null || !ATT.contains(S(get(r, "value"))) || !get(r, "value").isTextual() || get(r, "lid") == null || !get(r, "lid").isTextual()) throw E("teams_input", map("field", "rows"));
@@ -368,11 +381,13 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     }
     Object listMeetings(HttpServletRequest req) throws Exception {
         Map<String, Object> a = needAny(req); String t0 = tid(a); List<ObjectNode> L = T(t0, () -> db.q("select id, class_id, item_id, account_id, join_url, subject, start_at, end_at, demo from conn_teams_meeting where tenant_id = $1 order by start_at desc limit 100", t0));
-        ArrayNode ms = F.arrayNode(); for (ObjectNode m : L) { ObjectNode o = ms.addObject(); o.set("id", g(m, "id")); o.set("classId", g(m, "class_id")); o.set("itemId", g(m, "item_id")); o.set("accountId", g(m, "account_id")); o.set("joinUrl", g(m, "join_url")); o.set("subject", g(m, "subject")); o.set("start", g(m, "start_at")); o.set("end", g(m, "end_at")); o.put("mode", truthy(g(m, "demo")) ? "demo" : "live"); }
+        java.util.Set<String> mine = isAdmin(a) ? null : myClasses(t0, email(a));
+        ArrayNode ms = F.arrayNode(); for (ObjectNode m : L) { if (mine != null && !mine.contains(S(g(m, "class_id")))) continue; ObjectNode o = ms.addObject(); o.set("id", g(m, "id")); o.set("classId", g(m, "class_id")); o.set("itemId", g(m, "item_id")); o.set("accountId", g(m, "account_id")); o.set("joinUrl", g(m, "join_url")); o.set("subject", g(m, "subject")); o.set("start", g(m, "start_at")); o.set("end", g(m, "end_at")); o.put("mode", truthy(g(m, "demo")) ? "demo" : "live"); }
         return O().set("meetings", ms);
     }
     Object notifyRoute(HttpServletRequest req, byte[] raw) throws Exception {
         Map<String, Object> a = needAny(req); JsonNode b = body(raw, 8192); String event = S(get(b, "event")); if (!EVENTS.contains(event)) throw E("teams_bad_event");
+        if (!isAdmin(a) && !TEACHER_EV.contains(event)) throw E("teams_role");
         ObjectNode p = O(); p.set("title", get(b, "title") == null ? F.nullNode() : get(b, "title")); p.set("text", get(b, "text") == null ? F.nullNode() : get(b, "text")); p.set("link", get(b, "link") == null ? F.nullNode() : get(b, "link"));
         int q = notify(tid(a), event, p); if (q > 0) audit(tid(a), email(a), "teams.notify", map("event", event, "n", q)); return O().put("ok", true).put("queued", q);
     }
@@ -487,7 +502,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     String ip(HttpServletRequest req) { try { return web.ip(req); } catch (Exception e) { return ""; } }
     public void redirectRoute(String path, HttpServletRequest req, HttpServletResponse res) throws Exception {
         switch (path) {
-            case "/api/conn/teams/consent/start": { Map<String, Object> a = needOrNull(req); if (a == null) { hashGo(res, "err-auth"); return; } if (!"owner".equals(a.get("role"))) { hashGo(res, "err-role"); return; } if (!live) { hashGo(res, "err-unset"); return; }
+            case "/api/conn/teams/consent/start": { Map<String, Object> a = needOrNull(req); if (a == null) { hashGo(res, "err-auth"); return; } if (!pilot(tid(a))) { hashGo(res, "err-off"); return; } if (!"owner".equals(a.get("role"))) { hashGo(res, "err-role"); return; } if (!live) { hashGo(res, "err-unset"); return; }
                 rl.limit("teams:" + tid(a), 120, 60000L); String f0 = cut(req.getParameter("f") == null || req.getParameter("f").isEmpty() ? "meeting,sso" : req.getParameter("f"), 40); List<String> fl = new ArrayList<>(); for (String x : f0.split(",", -1)) if (x.equals("meeting") || x.equals("sso")) fl.add(x);
                 String[] s0 = begin(res, "c1", O().put("t", tid(a)).put("u", String.valueOf(a.get("uid"))).put("f", String.join(",", fl))); redirect(res, authorize(authority(), req, "/api/conn/teams/consent/whoami", "openid profile", s0)); return; }
             case "/api/conn/teams/consent/whoami": { Object[] r = resume(req, res, "c1"); if (r == null) { hashGo(res, "err-state"); return; } JsonNode st = (JsonNode) r[0];
@@ -502,7 +517,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
                     db.x("insert into conn_teams_cfg (tenant_id, demo) values ($1, false) on conflict (tenant_id) do update set demo = false, updated_at = now()", t0); return null; }); }
                 catch (org.springframework.dao.DuplicateKeyException e) { hashGo(res, "err-tenant_taken"); return; }
                 audit(t0, "user:" + st.path("u").asText(), "teams.connect", map("f", st.path("f").asText())); hashGo(res, "ok"); return; }
-            case "/api/conn/teams/account/start": { Map<String, Object> a = needOrNull(req); if (a == null) { hashGo(res, "err-auth"); return; } if (!live) { hashGo(res, "err-unset"); return; } String t0 = tid(a);
+            case "/api/conn/teams/account/start": { Map<String, Object> a = needOrNull(req); if (a == null) { hashGo(res, "err-auth"); return; } if (!pilot(tid(a))) { hashGo(res, "err-off"); return; } if (!live) { hashGo(res, "err-unset"); return; } String t0 = tid(a);
                 ObjectNode org = T(t0, () -> db.q1("select ms_tid::text ms_tid from conn_ms_org where tenant_id = $1", t0)); if (org == null) { hashGo(res, "err-consent"); return; } rl.limit("teams:" + t0, 120, 60000L);
                 String[] s0 = begin(res, "a", O().put("t", t0).put("u", String.valueOf(a.get("uid"))).put("r", String.valueOf(a.get("role")))); redirect(res, authorize(s(org, "ms_tid"), req, "/api/conn/teams/account/callback", SCOPE_ACCT, s0)); return; }
             case "/api/conn/teams/account/callback": { Object[] r = resume(req, res, "a"); if (r == null) { hashGo(res, "err-state"); return; } JsonNode st = (JsonNode) r[0];
@@ -541,18 +556,20 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         if (st.hasNonNull("l") && !st.path("l").asText().isEmpty()) { String t0 = st.path("t").asText(); ObjectNode o = orgTid(t0); if (o == null || !s(o, "ms_tid").toLowerCase(java.util.Locale.ROOT).equals(c[0])) { oaGo(res, "err:tenant"); return; }
             if (!ttx.plain(() -> oauth.msLink(sub, st.path("l").asText()))) { oaGo(res, "err:taken"); return; } audit(t0, "user:" + st.path("l").asText(), "oauth.link", map("provider", "microsoft")); oaGo(res, "linked"); return; }
         Map<String, Object> u = ttx.plain(() -> oauth.msUser(sub)); if (u == null) { oaGo(res, "err:ms_unlinked"); return; }
+        if (!oauth.msRoleOk(u.get("role"))) { oaGo(res, "err:module"); return; }
+        if (!pilot(String.valueOf(u.get("tenant_id")))) { oaGo(res, "err:tenant"); return; }
         String t0 = String.valueOf(u.get("tenant_id")); ObjectNode o = orgTid(t0); if (o == null || !s(o, "ms_tid").toLowerCase(java.util.Locale.ROOT).equals(c[0]) || !truthy(get(g(o, "sso"), "operator"))) { oaGo(res, "err:tenant"); return; }
         oaGo(res, oauth.msFinish(req, res, String.valueOf(u.get("id")), t0, String.valueOf(u.get("email"))));
     }
-    public Object opLinkStart(HttpServletRequest req, HttpServletResponse res) throws Exception { Map<String, Object> a = auth.need(req); if (!live) throw E("teams_unset"); rl.limit("oa:" + ip(req), 30, 600000L);
+    public Object opLinkStart(HttpServletRequest req, HttpServletResponse res) throws Exception { Map<String, Object> a = gate(auth.need(req)); if (!live) throw E("teams_unset"); rl.limit("oa:" + ip(req), 30, 600000L);
         String[] s0 = begin(res, "o", O().put("l", String.valueOf(a.get("uid"))).put("t", tid(a))); return O().put("url", authorize(authority(), req, "/api/oauth/microsoft/callback", "openid profile email", s0)); }
     ObjectNode learnerOrg(String t0) throws Exception { if (!TID_RE.matcher(t0).matches()) return null; ObjectNode t = ttx.plain(() -> db.q1("select type from tenants where id = $1", t0)); if (t == null) return null; ObjectNode o = orgTid(t0); if (o == null) return null; o.set("type", g(t, "type")); return o; }
-    public boolean learnerReady(String t0) { if (!live) return false; try { ObjectNode o = learnerOrg(t0); return o != null && truthy(get(g(o, "sso"), "learner")) && SSO_TYPES.contains(s(o, "type")); } catch (Exception e) { return false; } }
+    public boolean learnerReady(String t0) { if (!live || !pilot(t0)) return false; try { ObjectNode o = learnerOrg(t0); return o != null && truthy(get(g(o, "sso"), "learner")) && SSO_TYPES.contains(s(o, "type")); } catch (Exception e) { return false; } }
     void lCallback(HttpServletRequest req, HttpServletResponse res) throws Exception {
         Object[] r = resume(req, res, "l"); if (r == null) { lGo(res, "", "err-state", false); return; } JsonNode st = (JsonNode) r[0]; String t0 = st.path("t").asText(); boolean A = truthy(st.get("a")); rl.limit("loa:" + ip(req), 30, 600000L);
         if (has(req, "error") || !has(req, "code")) { lGo(res, t0, "err-denied", A); return; } String[] c;
         try { JsonNode j = exchange(authority(), req, "/api/pub/loauth/microsoft/callback", req.getParameter("code"), (String) r[1], "openid"); c = claims(j.get("id_token"), st.path("n").asText()); } catch (Grant e) { lGo(res, t0, e.msa ? "err-msa" : "err-provider", A); return; }
-        ObjectNode o = learnerOrg(t0); if (o == null || !truthy(get(g(o, "sso"), "learner")) || !SSO_TYPES.contains(s(o, "type"))) { lGo(res, t0, "err-provider_off", A); return; }
+        ObjectNode o = learnerOrg(t0); if (o == null || !truthy(get(g(o, "sso"), "learner")) || !SSO_TYPES.contains(s(o, "type")) || !pilot(t0)) { lGo(res, t0, "err-provider_off", A); return; }
         if (!s(o, "ms_tid").toLowerCase(java.util.Locale.ROOT).equals(c[0])) { lGo(res, t0, "err-tenant", A); return; }
         String out; try { out = pii.oauthLogin(req, res, t0, "microsoft", c[0] + ":" + c[1]); }
         catch (DdException e) { lGo(res, t0, "err-" + cut(String.valueOf(e.getCode()).replaceAll("[^\\w]", ""), 30), A); return; }
@@ -568,7 +585,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     public Object route(HttpServletRequest req, HttpServletResponse res, byte[] raw) throws Exception {
         String p = req.getRequestURI(), m = req.getMethod(), k = m + " " + p;
         switch (k) {
-            case "GET /api/conn/teams": return status(needAny(req));
+            case "GET /api/conn/teams": { Map<String, Object> a = auth.need(req); if (!pilot(tid(a))) return O().put("pilot", false).put("mode", live ? "live" : "demo").put("st", "미연결"); rl.limit("teams:" + tid(a), 120, 60000L); return status(a); }
             case "DELETE /api/conn/teams": return disconnect(req);
             case "PUT /api/conn/teams/settings": return putSettings(req, raw);
             case "PUT /api/conn/teams/demo": return putDemo(req, raw);

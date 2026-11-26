@@ -146,6 +146,8 @@ public class OAuthServiceImpl extends EgovAbstractServiceImpl implements OAuthSe
         try { tx.audit(tid, email, "login", DdWeb.JSON.createObjectNode().put("via", "microsoft").toString()); } catch (Exception ignore) { }
         return "ok";
     }
+    /** QA4 #3: 모듈 배포에서 허용된 역할인지(Google · 카카오 콜백과 같은 판정) */
+    public boolean msRoleOk(Object role) { return p.module.isEmpty() || DdModule.roleAllowed(p.module, role); }
     /** 13차 운영자 계정에 Microsoft 연결(user_oauth, 중복이면 false) */
     public boolean msLink(String sub, String uid) { try { mapper.insertOAuthStrict("microsoft", sub, uid); return true; } catch (org.springframework.dao.DuplicateKeyException e) { return false; } }
     public Map<String, Object> msUser(String sub) { return mapper.selectOAuthUser("microsoft", sub); }

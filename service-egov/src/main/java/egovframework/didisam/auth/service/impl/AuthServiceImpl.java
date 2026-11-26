@@ -140,7 +140,7 @@ public class AuthServiceImpl extends EgovAbstractServiceImpl implements AuthServ
         if (a != null && !p.module.isEmpty() && !DdModule.roleAllowed(p.module, a.get("role"))) return null;
         return a;
     }
-    @org.springframework.beans.factory.annotation.Value("#{'${MS_CLIENT_ID:}'.trim().length() > 0}") private boolean teamsLive;
+    @org.springframework.beans.factory.annotation.Value("#{'${MS_CLIENT_ID:}'.trim().length() > 0 && '${TEAMS_PILOT:}'.trim().length() > 0}") private boolean teamsLive; /* QA4 #5 키 + 시범 기관 설정(Node teams.live) */
     @Override public Map<String, Object> need(HttpServletRequest req) throws Exception {
         Map<String, Object> a = auth(req); if (a == null) throw processException("dd.401.auth"); String up = req.getRequestURI(); if (Boolean.TRUE.equals(a.get("pw_temp")) && !"/api/me".equals(up) && !"/api/password".equals(up)) throw processException("dd.403.pw_temp"); return a;
     }
