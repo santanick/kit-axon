@@ -10,6 +10,10 @@
   const CREDIT_WON = 1000, CP_BP = 6500, GUARD_BP = 3000, BONUS_MAX_BP = 700;
   const addMonths = (d, n) => { const [y, m, dd] = String(d).slice(0, 10).split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 + n, 1)); const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate(); t.setUTCDate(Math.min(dd, last)); return t.toISOString().slice(0, 10); };
   const addDays = (d, n) => { const t = new Date(String(d).slice(0, 10) + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+  const RATE = { standard: 6500, exclusive: 6000, agency: 5500, overseas: 5000 };
+  const RATEN = { standard: '표준', exclusive: '독점', agency: '영업 대행', overseas: '해외 IP' };
+  const SLOT = { home_top: { cap: 3, fee: 500000, label: '마켓 홈 추천' }, shelf_top: { cap: 3, fee: 300000, label: '학습자 진열대 첫 줄' }, new_launch: { cap: 10, fee: 200000, label: '신규 출시', launchDays: 90 } };
+  const ORIG_CAP_BP = 3000, PROMO_MAX_MONTHS = 3;
   const STUB = {
     creditsOf: listPrice => Math.ceil((+listPrice || 0) / CREDIT_WON),
     bonusBpOf: (amount, bundle) => (bundle || amount >= 50000000) ? 700 : amount >= 30000000 ? 300 : 0,
@@ -25,10 +29,19 @@
     creditFrom: (release, months) => addMonths(release, +months || 0),
     nextMonth1: d => addMonths(String(d).slice(0, 8) + '01', 1),
     restoreOk: (hours, progressPct) => hours <= 168 && progressPct < 10,
+    /* dev-addendum 1장(마진 개선 M1 · M2 · M3) */
+    cpBpOf: (product, rateRow) => (product && product.ownerKind === 'santa') ? 0 : (rateRow && rateRow.cpBp != null ? +rateRow.cpBp : CP_BP),
+    rateAt: (rows, ymd) => { const R = (rows || []).filter(r => String(r.effectiveFrom) <= String(ymd)).sort((a, b) => String(b.effectiveFrom).localeCompare(String(a.effectiveFrom))); return R[0] || { rateKind: 'standard', cpBp: CP_BP, effectiveFrom: '' }; },
+    settleLine: (netCredits, cpBp) => { const cp = netCredits * cpBp / 10; return { cp, santa: netCredits * CREDIT_WON - cp }; },
+    promoFee: (slot, months) => (SLOT[slot] ? SLOT[slot].fee : 0) * months,
+    promoDeduct: (stmtTotal, fee, carryIn) => { const deduct = Math.min(stmtTotal, fee + (carryIn || 0)); return { deduct, pay: stmtTotal - deduct, carryOut: fee + (carryIn || 0) - deduct }; },
+    origCapOk: (colCount, origCount) => (origCount + 1) * 10000 <= ORIG_CAP_BP * (colCount + 1),
+    santaMix: lines => { const by = {}; let santa = 0, cp = 0; (lines || []).forEach(l => { const g = l.amount != null ? +l.amount : (+l.credits || 0) * CREDIT_WON; const c = l.cp != null ? +l.cp : Math.floor(g * (+l.cpBp || 0) / 10000); const b = by[l.source] = by[l.source] || { source: l.source, gross: 0, cp: 0, santa: 0 }; b.gross += g; b.cp += c; b.santa += g - c; santa += g - c; cp += c; });
+      const tot = santa + cp; return { bySource: Object.values(by).map(b => ({ ...b, santaBp: b.gross ? Math.floor(b.santa * 10000 / b.gross) : 0 })), santa, cp, santaBp: tot ? Math.floor(santa * 10000 / tot) : 0 }; },
     priceStep: (oldP, newP, lastRaise, td) => { if (newP <= oldP) return ''; if (newP > Math.floor(oldP * 13000 / 10000)) return 'mk_price_step'; if (lastRaise && Math.floor((+lastRaise.slice(5, 7) - 1) / 3) === Math.floor((+td.slice(5, 7) - 1) / 3) && lastRaise.slice(0, 4) === td.slice(0, 4)) return 'mk_price_step'; return ''; }
   };
   /* marketcalc.js의 같은 뜻 함수 이름 후보 — 개발자 1의 최종 이름이 다르면 여기만 고칩니다 */
-  const ALIAS = { creditsOf: ['creditsOf', 'courseCredits', 'credits'], bonusBpOf: ['bonusBpOf', 'bonusBp'], creditQuote: ['creditQuote', 'quoteCredit', 'marginCredit'], volCharge: ['volCharge'], monthCp: ['monthCp', 'monthStmt'], singleQuote: ['singleQuote', 'quoteSingle'], optinMinUntil: ['optinMinUntil', 'minUntil'], creditFrom: ['creditFrom'], nextMonth1: ['nextMonth1', 'effectiveFrom'] };
+  const ALIAS = { creditsOf: ['creditsOf', 'courseCredits', 'credits'], bonusBpOf: ['bonusBpOf', 'bonusBp'], creditQuote: ['creditQuote', 'quoteCredit', 'marginCredit'], volCharge: ['volCharge'], monthCp: ['monthCp', 'monthStmt'], singleQuote: ['singleQuote', 'quoteSingle'], optinMinUntil: ['optinMinUntil', 'minUntil'], creditFrom: ['creditFrom'], nextMonth1: ['nextMonth1', 'effectiveFrom'], cpBpOf: ['cpBpOf'], rateAt: ['rateAt'], settleLine: ['settleLine'], promoFee: ['promoFee'], promoDeduct: ['promoDeduct'], origCapOk: ['origCapOk'], santaMix: ['santaMix'] };
   const calc = (name, ...a) => { const R = window.marketCalc; const C = R && (ALIAS[name] || [name]).map(k => R[k]).find(f => typeof f === 'function'); if (C) { try { const v = C(...a); if (v !== undefined && v !== null && !(typeof v === 'number' && isNaN(v))) return name === 'creditQuote' && v && v.santaBp == null ? { ...STUB.creditQuote(...a), ...v } : v; } catch (e) { console.warn('marketCalc', name, e); } } return STUB[name](...a); };
 
   /* ── 공용 ── */
@@ -47,6 +60,10 @@
     mk_plan: '디디쌤 유료 구독 기관만 구매 · 판매할 수 있습니다.', mk_margin: '보너스를 포함한 산타 몫이 30% 미만이라 계약 · 견적을 만들 수 없습니다. 아래 대안 중 하나를 고르십시오.',
     mk_bonus_max: '보너스 크레딧은 구매 크레딧의 7%까지만 줄 수 있습니다.', mk_floor: '최저가가 정가보다 높습니다. 최저가를 정가 이하로 입력하십시오.', mk_price_step: '정가는 분기에 한 번, 30% 이내로만 올릴 수 있습니다.',
     mk_check: '사전 검수를 통과하지 못한 항목이 있습니다. 표시된 항목을 고친 뒤 다시 제출하십시오.', mk_quote_state: '이 견적은 만료되었거나 CP 승인을 기다리고 있습니다.', mk_close_same_user: '마감 실행자와 다른 산타 운영자가 확정해야 합니다.',
+    mk_cp_rate: 'CP 요율은 표준 65% · 독점 60% · 영업 대행 55% · 해외 IP 50% 중에서만 고를 수 있고, CP 서면 동의 번호가 필요합니다.',
+    mk_promo_target: '크레딧에 참여하고 심사를 통과한 CP 상품만 추천 슬롯을 신청할 수 있습니다(산타 오리지널 · 신규 출시 90일이 지난 상품의 「신규 출시」 슬롯 제외).',
+    mk_promo_full: '선택한 달의 추천 슬롯이 모두 찼습니다. 다른 달이나 다른 슬롯을 고르십시오.', mk_promo_months: '한 번에 최대 3개월(신규 출시는 1개월)까지, 다음 달부터 신청할 수 있습니다.',
+    mk_promo_state: '이미 처리된 신청이라 취소할 수 없습니다.', mk_orig_cap: '이 컬렉션의 산타 오리지널 비중이 30%를 넘게 됩니다. 다른 컬렉션을 고르십시오.',
     mk_pilot: '시범 기관으로 지정된 기관만 마켓을 쓸 수 있습니다.', santa: '산타 관리자만 쓸 수 있습니다.', forbidden: '권한이 없습니다.'
   };
   const errOf = e => { const c = e && (e.code || e.error); return ERR[c] || (e && e.message) || '운영 서버의 마켓 기능에 연결하지 못했습니다. 잠시 뒤 다시 시도하십시오.'; };
@@ -72,7 +89,7 @@
   const LIC = { view: '열람', lms: 'LMS 탑재', adapt: '변형' };
   const OPT = { credit: ['크레딧 참여', 'g'], single: ['개별 판매 전용', ''], single_until: ['곧 크레딧 참여', 'b'] };
 
-  window.MKX = { cache: t => CACHE[t] || { d: {} }, calc, STUB, LIVEON, santa, pilot, staff, owner, idem, nf, cr, pct, pct1, man, ERR, errOf, pull, drop, send, rows, confirmCard, tg, guard, split, kp, tw, subTabs, pageHead, offPilot, liveErrBox, LIC, OPT, addDays, addMonths, GUARD_BP, BONUS_MAX_BP, CP_BP };
+  window.MKX = { cache: t => CACHE[t] || { d: {} }, calc, STUB, LIVEON, santa, pilot, staff, owner, idem, nf, cr, pct, pct1, man, ERR, errOf, pull, drop, send, rows, confirmCard, tg, guard, split, kp, tw, subTabs, pageHead, offPilot, liveErrBox, LIC, OPT, RATE, RATEN, SLOT, ORIG_CAP_BP, PROMO_MAX_MONTHS, addDays, addMonths, GUARD_BP, BONUS_MAX_BP, CP_BP };
   /* 메뉴 노출 판정(통합 담당이 core.js wsTabs 필터에 연결할 수 있게 공개 — C6): true면 보임 */
   window.mkGate = id => { try { if (!S || !S.org) return false; if (!['mksell', 'mkcp', 'mkops', 'market'].includes(id)) return true; if (S.me && S.me.role === 'teacher') return id === 'market' && pilot(); if (id === 'mkops') return santa(); if (!pilot()) return false; if (id === 'mkcp') return !LIVEON() || !!(S.org.mk && S.org.mk.cp); if (id === 'mksell') return !LIVEON() || !!(S.org.mk && S.org.mk.seller); return true; } catch (e) { return false; } };
 
@@ -82,7 +99,7 @@
   MENU.mkops = { label: '마켓 운영(산타)', ws: 'ops', mk: true, santa: true };
   if (typeof TEACH_NO !== 'undefined' && Array.isArray(TEACH_NO)) ['mksell', 'mkcp', 'mkops'].forEach(id => { if (!TEACH_NO.includes(id)) TEACH_NO.push(id); }); /* C5 — core.js 수정 전에도 교수자 직접 이동 차단 */
   Object.keys(PRESET).forEach(k => { const P = PRESET[k]; ['mksell', 'mkcp', 'mkops'].forEach(id => { if (!P.on.includes(id) && !P.off.includes(id)) P.off.push(id); }); });
-  if (typeof MENU_ALIAS !== 'undefined') { MENU_ALIAS.mkreview = () => { UI.mkops = 'review'; return 'mkops'; }; MENU_ALIAS.mkoptin = () => { UI.mkcp = 'optin'; return 'mkcp'; }; MENU_ALIAS.mkpilot = () => { UI.mkops = 'pilot'; return 'mkops'; }; }
+  if (typeof MENU_ALIAS !== 'undefined') { MENU_ALIAS.mkreview = () => { UI.mkops = 'review'; return 'mkops'; }; MENU_ALIAS.mkoptin = () => { UI.mkcp = 'optin'; return 'mkcp'; }; MENU_ALIAS.mkpilot = () => { UI.mkops = 'pilot'; return 'mkops'; }; MENU_ALIAS.mkpromo = () => { UI.mkcp = 'promo'; return 'mkcp'; }; MENU_ALIAS.mkrev = () => { UI.mkops = 'rev'; return 'mkops'; }; MENU_ALIAS.mkorig = () => { UI.mkops = 'orig'; return 'mkops'; }; }
   /* 메뉴 정리: 노출 조건(시범 · CP · 산타)을 만족하면 메뉴에 넣고, 아니면 이 3개 메뉴만 뺍니다(다른 메뉴는 건드리지 않음). 조건이 생기면 다음 불러오기 때 다시 들어갑니다 */
   function mkNav() { if (!S || !S.org || !S.nav || !S.nav.tabs) return; const T = S.nav.tabs; const has = id => Object.values(T).some(L => (L || []).some(x => x.id === id));
     [['mksell', false], ['mkcp', !!(S.org.mk && S.org.mk.cp)], ['mkops', true]].forEach(([id, on]) => { const g = window.mkGate(id);
