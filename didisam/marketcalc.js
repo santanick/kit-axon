@@ -188,10 +188,31 @@
     const gross = L.reduce((s, x) => s + x.gross, 0), cp = L.reduce((s, x) => s + x.cp, 0); return { bySource: L, gross, cp, santa: gross - cp, santaBp: gross > 0 ? fdiv((gross - cp) * 10000, gross) : 0 };
   }
 
+  /* 해지 · 만료 환불(policy v1.2 제19 · 40조, code-changes C3). lots [{lot:'paid'|'topup'|'carry'|'bonus', credits, remain, carryTo, bought}], o { start, usedTotal, buyerKind, convert }
+     ① 시작 14일 이내 · 사용 0 → full(유료 전액) ② 공공 → public_settle(남은 유료 × 1,000, 보너스 차감 없음)
+     ③ 이월 만료 전 유료 → unused: (남은 유료 − 사용한 보너스) × 1,000, 0 미만 0 ④ 이월 만료 뒤 ~ 최초 구매일 + 5년 − 1일 → expired95: ⌊남은 × 1,000 × 95 ÷ 100⌋(convert면 새 계약 크레딧 100%)
+     ⑤ 그 뒤 → lapsed 0. 보너스는 환불 · 전환 대상이 아니다. mode는 금액(전환이면 크레딧)이 가장 큰 부분의 모드. */
+  const REFUND_EXP_BP = 9500, REFUND_YEARS = 5, REFUND_FULL_DAYS = 14;
+  function refundOf(lots, day, o) { o = o || {}; const L = (lots || []).map(l => ({ lot: l.lot || l.kind || 'paid', credits: int(l.credits), remain: int(l.remain), carryTo: l.carryTo || l.exp, bought: l.bought || o.start }));
+    const P = L.filter(l => l.lot !== 'bonus'), B = L.filter(l => l.lot === 'bonus');
+    const bonusUsed = B.reduce((s, l) => s + Math.max(0, l.credits - l.remain), 0); const paidAll = P.reduce((s, l) => s + l.credits, 0);
+    if (o.start && int(o.usedTotal || 0) === 0 && day <= addDays(o.start, REFUND_FULL_DAYS - 1)) return { mode: 'full', paidUnused: P.reduce((s, l) => s + l.remain, 0), bonusUsed: 0, expiredPaid: 0, credits: 0, amount: paidAll * WON, parts: [] };
+    if (o.buyerKind === 'public') { const r = P.reduce((s, l) => s + l.remain, 0); return { mode: 'public_settle', paidUnused: r, bonusUsed, expiredPaid: 0, credits: 0, amount: r * WON, parts: [] }; }
+    let unused = 0, expired = 0; const parts = [];
+    for (const l of P) { if (!l.remain) continue; const last = addDays(addMonths(l.bought, REFUND_YEARS * 12), -1);
+      if (day <= l.carryTo) { unused += l.remain; parts.push({ mode: 'unused', remain: l.remain }); }
+      else if (day <= last) { expired += l.remain; parts.push({ mode: o.convert ? 'convert' : 'expired95', remain: l.remain }); }
+      else parts.push({ mode: 'lapsed', remain: l.remain }); }
+    const uAmt = Math.max(0, unused - bonusUsed) * WON; const eAmt = o.convert ? 0 : fdiv(expired * WON * REFUND_EXP_BP, 10000); const credits = o.convert ? expired : 0;
+    for (const x of parts) x.amount = x.mode === 'expired95' ? fdiv(x.remain * WON * REFUND_EXP_BP, 10000) : x.mode === 'unused' ? x.remain * WON : 0;
+    const mode = o.convert && expired > 0 && credits * WON >= uAmt ? 'convert' : eAmt > uAmt ? 'expired95' : uAmt > 0 || unused > 0 ? 'unused' : expired > 0 ? (o.convert ? 'convert' : 'expired95') : parts.length ? 'lapsed' : 'unused';
+    return { mode, paidUnused: unused, bonusUsed, expiredPaid: expired, credits, amount: uAmt + eAmt, parts };
+  }
+
   const rules = () => ({ won: WON, cpBp: CP_BP, santaBp: SANTA_BP, guardBp: GUARD_BP, bonus: { steps: BONUS_STEPS.map(s => ({ ...s })), bundleBp: BUNDLE_BP, maxBp: BONUS_MAX_BP }, validMonths: 12, carryMonths: 12, restore: { hours: RESTORE_HOURS, progLtPct: RESTORE_PROG_LT }, alertBp: ALERT_BP.slice() });
 
   const api = { WON, CP_BP, SANTA_BP, BONUS_MAX_BP, GUARD_BP, rules, credits, bonusBp, wallet, estimate, guard, partial, plan, discCredits, useCredits, deductMany, restorable, hoursBetween, cpOf, settle, sum,
     RATE, SLOT, ORIG_CAP_BP, PROMO_MAX_MONTHS, rateKindOf, rateCheck, rateAt, cpBpOf, settleLine, promoFee, promoCheck, promoDeduct, origCapOk, recognized, santaMix, nextMonth1: d => effectiveFrom(d),
-    expiry, validity, addDays, addMonths, lotOrder, useLots, capOk, needApproval, preNeeded, alertOf, alertLevel, effectiveFrom, priceAt, eligibleFrom, optinMinEnd, optinMode, singleCand, singleAuto, singleMin, singleGuard, broker, b2c, path };
+    expiry, validity, addDays, addMonths, lotOrder, useLots, capOk, needApproval, preNeeded, alertOf, alertLevel, effectiveFrom, priceAt, eligibleFrom, optinMinEnd, optinMode, singleCand, singleAuto, singleMin, singleGuard, broker, b2c, path, refundOf, REFUND_EXP_BP };
   if (typeof module === 'object' && module.exports) module.exports = api; else root.marketCalc = api;
 })(typeof window !== 'undefined' ? window : globalThis);

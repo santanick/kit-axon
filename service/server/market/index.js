@@ -45,7 +45,9 @@ const MSG = {
   mk_balance: '지금은 이 과정을 시작할 수 없어요. 담당 선생님께 알려 드렸어요.',
   mk_pre: '이 과정은 담당 선생님 승인 후 시작할 수 있어요.',
   mk_scope: '우리 학교 패스에 포함되지 않은 과정이에요.',
-  mk_learner_off: '지금은 콘텐츠 마켓을 이용할 수 없어요.'
+  mk_learner_off: '지금은 콘텐츠 마켓을 이용할 수 없어요.',
+  mk_terms: '크레딧 이용 조건에 동의해야 구매를 확정할 수 있습니다.',
+  mk_credit_scope: '크레딧은 산타가 공급하는 콘텐츠에만 쓸 수 있습니다.'
 };
 
 function createMarket(ctx) {

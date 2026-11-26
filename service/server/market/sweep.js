@@ -1,5 +1,5 @@
 'use strict';
-/* 마켓 상태 전환(1시간 tick): 유효 만료 → 이월(carry, credit_carry 장부) · 이월 만료 → ended(미사용분 처리는 검증 필요 — 기록만, 자동 소멸 없음) ·
+/* 마켓 상태 전환(1시간 tick): 유효 만료 → 이월(carry, credit_carry 장부) · 이월 만료 → ended(차감만 막고 남은 유료 크레딧은 그대로 둔다 — 최초 구매일부터 5년 안 95% 환불 · 100% 전환 근거, calc.refundOf · policy v1.2 제40조) ·
    견적 만료 · 사전 승인 요청 30일 만료. 한 번에 각 200건. */
 async function tick(pool, S) {
   return S.tx(async c => {

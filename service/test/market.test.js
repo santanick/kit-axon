@@ -11,7 +11,8 @@ test('계산 기준값(market-vectors.json) · 화면 공용 파일과 서버 �
   assert.equal(fs.readFileSync(path.join(ROOT, 'didisam', 'marketcalc.js'), 'utf8'), fs.readFileSync(path.join(__dirname, '..', 'server', 'market', 'calc.js'), 'utf8'), 'service/server/market/calc.js는 didisam/marketcalc.js 사본이어야 합니다');
   assert.equal(V.cases.length, 42); assert.equal(V.margin.length, 26);
   assert.equal(V.ui.length, 4);
-  for (const c of [...V.cases, ...V.margin, ...V.ui]) assert.deepEqual(JSON.parse(JSON.stringify(run(calc, c))), c.out, c.name);
+  assert.equal(V.refund.length, 7); /* C3 해지 · 만료 환불 R1~R6 · R4b(policy v1.2 제19 · 40조) */
+  for (const c of [...V.cases, ...V.margin, ...V.ui, ...V.refund]) assert.deepEqual(JSON.parse(JSON.stringify(run(calc, c))), c.out, c.name);
   /* 경계: 2/29 시작 · 말일 넘침 · 12월 단가 변경 · 보너스 상한 · 로트 순서(구매 → 보너스) */
   assert.deepEqual(calc.expiry('2028-02-29'), { validTo: '2029-02-28', carryTo: '2030-02-28' });
   assert.equal(calc.eligibleFrom('2027-01-31', 1), '2027-02-28'); assert.equal(calc.effectiveFrom('2027-12-15'), '2028-01-01');
@@ -66,6 +67,16 @@ test('운영 서버: 콘텐츠 마켓', { skip: !process.env.DATABASE_URL }, asy
     assert.equal((await santa("select count(*)::int n from mk_entry where kind = 'credit_carry' and contract_id = $1", [k.id])).rows[0].n, 1);
     await santa("update mk_contract set carry_end = current_date - 1 where id = $1", [k.id]); await app.marketTick();
     assert.equal((await santa('select status from mk_contract where id = $1', [k.id])).rows[0].status, 'ended');
+  });
+  await t.test('C5 크레딧 사용처 제한: 기관 간 중개 상품(seller)은 크레딧 차감 불가(409 mk_credit_scope)', async () => {
+    const { call, P, pa } = R._t; await santa("update mk_product set owner_kind = 'seller' where id = $1", [pa]);
+    try { const r = await call('L2', 'POST', P('mk-start'), { productId: pa, idem: 'scope1' }); assert.equal(r.st, 409); assert.equal(r.j.error, 'mk_credit_scope'); }
+    finally { await santa("update mk_product set owner_kind = 'cp' where id = $1", [pa]); }
+  });
+  await t.test('사용자에게 보이는 「법무 검토 필요 · 검증 필요」 문자열 0건(C10-3)', () => {
+    const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? (/node_modules|test/.test(e.name) ? [] : walk(path.join(d, e.name))) : /\.(js|java)$/.test(e.name) ? [path.join(d, e.name)] : []);
+    const hit = [...walk(path.join(ROOT, 'didisam')), ...walk(path.join(ROOT, 'service', 'server')), ...walk(path.join(ROOT, 'service-egov', 'src'))].filter(f => /법무 검토 필요|검증 필요/.test(fs.readFileSync(f, 'utf8')));
+    assert.deepEqual(hit.map(f => path.relative(ROOT, f)), []);
   });
   await t.test('로그인 없이 401 · 없는 경로 404', async () => {
     assert.equal((await fetch(`${U}/api/market/home`)).status, 401);

@@ -60,6 +60,8 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
             "mk_pre", "이 과정은 담당 선생님 승인 후 시작할 수 있어요.",
             "mk_scope", "우리 학교 패스에 포함되지 않은 과정이에요.",
             "mk_learner_off", "지금은 콘텐츠 마켓을 이용할 수 없어요.",
+            "mk_terms", "크레딧 이용 조건에 동의해야 구매를 확정할 수 있습니다.",
+            "mk_credit_scope", "크레딧은 산타가 공급하는 콘텐츠에만 쓸 수 있습니다.",
             /* dev-addendum 3장 */
             "mk_cp_rate", "CP 요율은 표준 65% · 독점 60% · 영업 대행 55% · 해외 IP 50% 중에서만 고를 수 있고, CP 서면 동의 번호가 필요합니다.",
             "mk_promo_target", "크레딧에 참여하고 심사를 통과한 CP 상품만 추천 슬롯을 신청할 수 있습니다(산타 오리지널 · 신규 출시 90일이 지난 상품의 「신규 출시」 슬롯 제외).",
@@ -210,7 +212,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     ObjectNode contractOfTid(String tid, String id) { ObjectNode k = db.q1(KSEL + " where id = $1", str(id, 20)); if (k == null || !s(k, "buyer_tid").equals(tid)) throw E(404, "contract", "없는 계약입니다."); return k; }
     static ObjectNode cp(JsonNode r, String... kv) { ObjectNode o = O(); for (int i = 0; i + 1 < kv.length; i += 2) o.set(kv[i], g(r, kv[i + 1])); return o; }
     static ObjectNode kOut(JsonNode k) { return cp(k, "id", "id", "buyerTid", "buyer_tid", "quoteId", "quote_id", "kind", "kind", "collections", "collections", "start", "s", "end", "e", "carryEnd", "ce", "supplyTotal", "supply_total", "bonusBp", "bonus_bp", "bundlePlatform", "bundle_platform",
-        "status", "status", "taxStatus", "tax_status", "taxInvNo", "tax_inv_no", "renewOf", "renew_of", "refund", "refund", "activatedAt", "activated_at"); }
+        "status", "status", "taxStatus", "tax_status", "taxInvNo", "tax_inv_no", "renewOf", "renew_of", "refund", "refund", "activatedAt", "activated_at", "buyerKind", "buyer_kind", "terms", "terms"); }
     static JsonNode ctlOut(JsonNode t) { return t == null ? F.nullNode() : cp(t, "monthCap", "month_cap", "allowCols", "allow_cols", "allowGroups", "allow_groups", "preFrom", "pre_from", "alertBp", "alert_bp", "alertTo", "alert_to"); }
     static final class WS { List<ObjectNode> lots; ArrayNode wallet; long total, balance; ObjectNode ctl; String alert; }
     WS walletState(JsonNode k) {
@@ -310,6 +312,7 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     SX startOf(String tid, String sh, String pid, String mode) {
         String day = today(); ObjectNode k = liveContract(tid, day); ObjectNode r = prod(pid, day);
         if (r == null || !"listed".equals(s(r, "status")) || !truthy(g(r, "credits"))) return new SX("none");
+        if ("seller".equals(s(r, "owner_kind"))) { SX z = new SX("scope"); z.r = r; return z; } /* C5 크레딧은 산타 공급 상품에만(기관 간 중개 상품 불가) */
         SX X = new SX("empty"); X.r = r; if (k == null) return X; X.k = k;
         ObjectNode ctl = db.q1("select * from mk_control where contract_id = $1", s(k, "id"));
         ObjectNode had = db.q1("select * from mk_credit_use where contract_id = $1 and product_id = $2 and sid_hash = $3 and kind = 'use' and not restored", s(k, "id"), pid, sh);
@@ -335,8 +338,8 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
     }
     /** L3 항목 상태(해요체 라벨) */
     static final Map<String, String> ACCESS_LABEL = Map.of("started", "이어서 학습해요", "credit", "크레딧으로 바로 시작할 수 있어요", "pre", "담당 선생님 승인 후 시작할 수 있어요", "pre_asked", "승인을 요청했어요", "cap", "이번 달 사용할 수 있는 크레딧을 모두 썼어요",
-        "empty", "지금은 시작할 수 없어요. 담당 선생님께 알려 주세요", "out", "우리 기관 패스에 포함되지 않은 과정이에요", "buy", "패스 밖 과정이라 따로 구매해야 해요", "none", "찾을 수 없는 과정이에요");
-    static final Map<String, Object[]> ACCESS_ERR = Map.of("buy", new Object[]{ 403, "mk_scope" }, "cap", new Object[]{ 409, "mk_cap" }, "balance", new Object[]{ 409, "mk_balance" }, "pre", new Object[]{ 409, "mk_pre" }, "pre_asked", new Object[]{ 409, "mk_pre" },
+        "empty", "지금은 시작할 수 없어요. 담당 선생님께 알려 주세요", "out", "우리 기관 패스에 포함되지 않은 과정이에요", "buy", "패스 밖 과정이라 따로 구매해야 해요", "none", "찾을 수 없는 과정이에요", "scope", "크레딧으로는 수강할 수 없는 과정이에요");
+    static final Map<String, Object[]> ACCESS_ERR = Map.of("scope", new Object[]{ 409, "mk_credit_scope" }, "buy", new Object[]{ 403, "mk_scope" }, "cap", new Object[]{ 409, "mk_cap" }, "balance", new Object[]{ 409, "mk_balance" }, "pre", new Object[]{ 409, "mk_pre" }, "pre_asked", new Object[]{ 409, "mk_pre" },
         "out", new Object[]{ 403, "mk_scope" }, "empty", new Object[]{ 409, "mk_balance" }, "none", new Object[]{ 404, "product" });
     static ObjectNode itemOf(JsonNode r) { ObjectNode o = O(); o.set("id", g(r, "id")); o.set("title", g(r, "title")); o.set("hours", hours(r)); o.set("credits", g(r, "credits")); o.set("thumb", orNull(g(r, "thumb"))); if (santaOwn(r)) o.put("orig", true).put("badge", "orig"); return o; }
 

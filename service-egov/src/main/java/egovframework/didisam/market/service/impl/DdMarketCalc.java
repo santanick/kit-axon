@@ -136,6 +136,27 @@ public final class DdMarketCalc {
         ObjectNode r = o(); r.set("lots", out); return r.put("short", Math.max(0, left));
     }
 
+    /* 해지 · 만료 환불(policy v1.2 제19 · 40조) — marketcalc.js refundOf와 같은 규칙 */
+    public static final long REFUND_EXP_BP = 9500, REFUND_YEARS = 5, REFUND_FULL_DAYS = 14;
+    public static ObjectNode refundOf(JsonNode lots, String day, JsonNode op) {
+        String start = truthy(get(op, "start")) ? str(get(op, "start")) : null; long usedTotal = I(get(op, "usedTotal")); boolean convert = truthy(get(op, "convert")); boolean pub = "public".equals(S(get(op, "buyerKind")));
+        long bonusUsed = 0, paidAll = 0, paidRemain = 0; List<long[]> P = new ArrayList<>(); List<String[]> PD2 = new ArrayList<>();
+        for (JsonNode l : arr(lots)) { if (!truthy(l)) continue; String k = kindOf(l); if (k == null) k = "paid"; long cr = I(get(l, "credits")), rm = I(get(l, "remain"));
+            if ("bonus".equals(k)) { bonusUsed += Math.max(0, cr - rm); continue; }
+            paidAll += cr; paidRemain += rm; P.add(new long[]{ cr, rm }); PD2.add(new String[]{ expOf(l), truthy(get(l, "bought")) ? str(get(l, "bought")) : start }); }
+        if (start != null && usedTotal == 0 && day.compareTo(addDays(start, REFUND_FULL_DAYS - 1)) <= 0)
+            { ObjectNode r = o().put("mode", "full").put("paidUnused", paidRemain).put("bonusUsed", 0).put("expiredPaid", 0).put("credits", 0).put("amount", paidAll * WON); r.putArray("parts"); return r; }
+        if (pub) { ObjectNode r = o().put("mode", "public_settle").put("paidUnused", paidRemain).put("bonusUsed", bonusUsed).put("expiredPaid", 0).put("credits", 0).put("amount", paidRemain * WON); r.putArray("parts"); return r; }
+        long unused = 0, expired = 0; ArrayNode parts = F.arrayNode();
+        for (int i = 0; i < P.size(); i++) { long rm = P.get(i)[1]; if (rm == 0) continue; String last = addDays(addMonths(PD2.get(i)[1], REFUND_YEARS * 12), -1); ObjectNode x = parts.addObject();
+            if (day.compareTo(PD2.get(i)[0]) <= 0) { unused += rm; x.put("mode", "unused").put("remain", rm).put("amount", rm * WON); }
+            else if (day.compareTo(last) <= 0) { expired += rm; x.put("mode", convert ? "convert" : "expired95").put("remain", rm).put("amount", convert ? 0 : Math.floorDiv(rm * WON * REFUND_EXP_BP, 10000)); }
+            else x.put("mode", "lapsed").put("remain", rm).put("amount", 0); }
+        long uAmt = Math.max(0, unused - bonusUsed) * WON, eAmt = convert ? 0 : Math.floorDiv(expired * WON * REFUND_EXP_BP, 10000), credits = convert ? expired : 0;
+        String mode = convert && expired > 0 && credits * WON >= uAmt ? "convert" : eAmt > uAmt ? "expired95" : (uAmt > 0 || unused > 0) ? "unused" : expired > 0 ? (convert ? "convert" : "expired95") : parts.size() > 0 ? "lapsed" : "unused";
+        ObjectNode r = o().put("mode", mode).put("paidUnused", unused).put("bonusUsed", bonusUsed).put("expiredPaid", expired).put("credits", credits).put("amount", uAmt + eAmt); r.set("parts", parts); return r;
+    }
+
     /* 9) 기관 통제 — cap · th는 비어 있으면 제한 없음 */
     static boolean blank(JsonNode v) { return nullish(v) || (v.isTextual() && v.textValue().isEmpty()) || I(v) <= 0; }
     public static boolean capOk(long usedMonth, long course, JsonNode cap) { return blank(cap) || usedMonth + course <= I(cap); }
@@ -255,6 +276,7 @@ public final class DdMarketCalc {
             case "sum": return F.numberNode(sum(get(i, "values")));
             case "expiry": return expiry(S(get(i, "start")));
             case "useLots": return useLots(get(i, "lots"), I(get(i, "n")));
+            case "refundOf": return refundOf(get(i, "lots"), S(get(i, "day")), get(i, "o"));
             case "capOk": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(capOk(I(x.get(0)), I(x.get(1)), x.get(2))); return a; }
             case "needApproval": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(needApproval(I(x.get(0)), x.get(1))); return a; }
             case "alertOf": { ArrayNode a = F.arrayNode(); for (JsonNode x : arr(get(i, "cases"))) a.add(alertOf(I(x.get(0)), I(x.get(1)), x.get(2))); return a; }
