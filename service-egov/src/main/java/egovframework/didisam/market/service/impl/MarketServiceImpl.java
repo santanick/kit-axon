@@ -436,6 +436,22 @@ public class MarketServiceImpl extends EgovAbstractServiceImpl implements Market
         MkDb.scopeReset(); try { return h.go(req, res, body, grp); } finally { MkDb.scopeClear(); } /* 본문은 각 경로가 권한 확인 뒤 읽는다(Node readBody 순서) */
     }
 
+    /** 마켓 상태 전환(1시간) — Node market/sweep.js tick과 같은 문장 · 순서(산타 범위, 각 200건).
+     *  유효 만료 → 이월(carry, credit_carry 장부) · 이월 만료 → ended(미사용분 자동 소멸 없음) · 견적 만료 · 사전 승인 요청 30일 만료. 월 집계 · 분기 마감은 산타 운영자가 실행(Node와 같음) */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 3600000, initialDelayString = "${dd.market.tickMs:600000}")
+    public void tick() { try { sweep(); } catch (Exception ignore) { /* 표가 없거나(마이그레이션 전) 일시 오류 — 다음 회차에 다시 */ } }
+    public int sweep() throws Exception {
+        return db.txAs("", true, () -> { String day = today(); int n = 0;
+            List<ObjectNode> carry = db.q("update mk_contract set status = 'carry' where id in (select id from mk_contract where status = 'active' and kind = 'credit' and \"end\" < $1::date limit 200) returning id, buyer_tid", day);
+            for (ObjectNode k : carry) { long r = n(db.q1("select coalesce(sum(remain), 0)::int n from mk_credit_wallet where contract_id = $1", s(k, "id")), "n");
+                db.x("insert into mk_entry (kind, contract_id, party_tid, credits, ref) values ('credit_carry', $1, $2, $3, $4)", s(k, "id"), s(k, "buyer_tid"), r, day); }
+            n += carry.size();
+            n += db.x("update mk_contract set status = 'ended' where id in (select id from mk_contract where status in ('active','carry') and carry_end < $1::date limit 200)", day);
+            n += db.x("update mk_quote set status = 'expired' where id in (select id from mk_quote where status in ('ready','sent','cp_wait') and valid_to < $1::date limit 200)", day);
+            n += db.x("update mk_preapproval set status = 'expired' where id in (select id from mk_preapproval where status = 'asked' and at < now() - interval '30 days' limit 200)");
+            return n; });
+    }
+
     // 라우트 본문(MkRoutes)이 쓰는 접근자
     MkDb db() { return db; }
     AuthService auth() { return auth; }
