@@ -246,3 +246,18 @@ header.top .mk-sp{flex:1}
 .mk-a-cols li:first-child{border-top:0}
 .mk-a-cols small{grid-column:1;color:var(--t-sub);font-size:12.5px}
 .mk-a-cols .mk-bd{grid-row:1/span 2;grid-column:2;align-self:center}
+
+/* v48.1 휴대폰 좁은 칸 정리(기획 캡처 점검) — 2단은 1단, 표는 가로 스크롤, 지표 값은 줄바꿈, 번호 중복 제거. 토큰만 사용 */
+.mk-steps{list-style:none;padding:0;margin:0}
+ul.mk-dl{display:flex;flex-direction:column;gap:6px;padding-left:18px;list-style:disc}
+.mk .kpi .val,.mk-m .kpi .val{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+@media (max-width:760px){
+  .mk [style*="grid-template-columns"],.mk-m [style*="grid-template-columns"],.mk .mk-side,.mk .mk-q,.mk .mk-g2,.mk .mk-g3,.mk .mk-calc{grid-template-columns:minmax(0,1fr)!important}
+  .mk .mk-side>*,.mk-m .mk-side>*{min-width:0}
+  .mk .tw,.mk-m .tw,#modal .mk-m .tw{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+  .mk .tw>table:not(.mcard),.mk-m .tw>table:not(.mcard){min-width:560px}
+  .mk .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mk .kpi .val{font-size:22px;line-height:1.25}
+  .mk-a-fn{grid-template-columns:56px minmax(0,1fr) 44px}
+  .mk-a-opt{grid-template-columns:20px minmax(0,1fr)}.mk-a-opt>:nth-child(n+3){grid-column:2;text-align:left}
+}

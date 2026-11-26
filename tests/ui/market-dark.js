@@ -47,6 +47,17 @@ const SCAN = (rootSel, dark) => {
     if (dark) for (const el of root.querySelectorAll('*')) { if (!vis(el) || imgish(el) || el.closest('svg')) continue; const c = px(getComputedStyle(el).backgroundColor); if (c.length > 3 && c[3] < .5) continue; const r = el.getBoundingClientRect(); if (r.width < 24 || r.height < 24) continue; if (el.matches('button,a,.btn,.lbtn,.tb-chip,[role=tab],[role=button]')) continue; /* 선택 칩 · 주 버튼의 반전 색은 설계(글자 대비는 위에서 검사) */
       if (L(c) > .6) out.light.push({ cls: String(el.className || el.tagName).slice(0, 40), bg: getComputedStyle(el).backgroundColor }); } }
   const seen = new Set(); out.low = out.low.filter(x => { const k = x.cls + x.fg + x.bg; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 12); out.light = out.light.slice(0, 8);
+  /* 좁은 칸 검사(휴대폰): ① 폭 48px 미만 칸에 2글자 이상이 여러 줄로 쌓임(또는 140px 미만 칸에 5줄 이상 — 2단이 남아 세로로 좁아짐) ② text-overflow로 잘린 글자 ③ ol 기본 번호 + 직접 쓴 번호 중복 */
+  out.narrow = []; out.cut = []; out.dup = [];
+  if (innerWidth <= 480) for (const root of roots) {
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n;
+    while ((n = w.nextNode())) { const t = n.textContent.trim(); if (t.length < 2) continue; const el = n.parentElement; if (!vis(el) || el.closest('svg')) continue;
+      const rg = document.createRange(); rg.selectNodeContents(n); const lines = new Set([...rg.getClientRects()].filter(r => r.width > 0).map(r => Math.round(r.top))).size; const box = el.getBoundingClientRect();
+      if ((lines >= 2 && box.width < 48) || (lines >= 5 && box.width < 140 && t.length >= 8)) out.narrow.push({ t: t.slice(0, 16), cls: String(el.className || el.tagName).slice(0, 36), w: Math.round(box.width) }); }
+    for (const el of root.querySelectorAll('*')) { if (!vis(el)) continue; const cs = getComputedStyle(el); if (cs.textOverflow === 'ellipsis' && el.scrollWidth > el.clientWidth + 1 && el.textContent.trim()) out.cut.push({ t: el.textContent.trim().slice(0, 16), cls: String(el.className || el.tagName).slice(0, 36) }); }
+  }
+  for (const root of roots) for (const li of root.querySelectorAll('ol > li')) { const cs = getComputedStyle(li); if (cs.listStyleType !== 'none' && vis(li) && /^\s*\d+[.)]\s/.test(li.textContent)) out.dup.push(li.textContent.trim().slice(0, 16)); }
+  out.narrow = out.narrow.slice(0, 8); out.cut = out.cut.slice(0, 8); out.dup = out.dup.slice(0, 4);
   out.over = document.documentElement.scrollWidth - innerWidth; return out; };
 
 (async () => {
@@ -55,8 +66,8 @@ const SCAN = (rootSel, dark) => {
   if (SHOT) fs.mkdirSync(SHOT, { recursive: true });
   const browser = await chromium.launch(); const sum = { n: 0 };
   const check = async (p, name, w, th, sel) => { await p.waitForTimeout(60); const r = await p.evaluate(([s, d]) => (0, eval)('(' + s + ')')(d[0], d[1]), [SCAN.toString(), [sel, th === 'dark']]); sum.n++;
-    const bad = r.low.length + r.light.length + (r.over > 0 ? 1 : 0);
-    if (bad) ok(false, `${name} ${w} ${th}: 대비 미달 ${r.low.length} · 밝은 바탕 ${r.light.length} · 넘침 ${r.over} ${JSON.stringify(r.low.slice(0, 4))} ${JSON.stringify(r.light.slice(0, 3))}`);
+    const bad = r.low.length + r.light.length + (r.over > 0 ? 1 : 0) + r.narrow.length + r.cut.length + r.dup.length;
+    if (bad) ok(false, `${name} ${w} ${th}: 대비 미달 ${r.low.length} · 밝은 바탕 ${r.light.length} · 넘침 ${r.over} · 좁은 칸 ${r.narrow.length} · 잘림 ${r.cut.length} · 번호 중복 ${r.dup.length} ${JSON.stringify(r.low.slice(0, 3))} ${JSON.stringify(r.light.slice(0, 2))} ${JSON.stringify(r.narrow.slice(0, 4))} ${JSON.stringify(r.cut.slice(0, 4))} ${JSON.stringify(r.dup)}`);
     if (SHOT) await p.screenshot({ path: path.join(SHOT, `${name}-${w}-${th}.png`), fullPage: true }); return !bad; };
   const STUDIO = { market: ['home', 'build', 'credit', 'ctrl', 'approve', 'cart'], mksell: ['items', 'new', 'settle', 'stat'], mkcp: ['home', 'catalog', 'price', 'optin', 'inbox', 'settle', 'promo'], mkops: ['review', 'quote', 'credit', 'close', 'dispute', 'promo', 'orig', 'rate', 'rev', 'pilot'] };
   for (const th of ['light', 'dark']) for (const w of [1440, 390]) {
