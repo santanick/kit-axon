@@ -95,3 +95,10 @@ test('서버 강제: /api/ai/messages · /api/ai/tool-confirm', { skip: !process
   });
   await new Promise(ok => app.close(ok)); mock.close(); await pool.end();
 });
+
+test('v48 콘텐츠 마켓 AI SAM 도구(quote_content_pass · open_pass_builder)는 0등급 등록 — 운영 Claude 경로 400 tool_unregistered 방지(Java DdAiTools 같은 표)', () => {
+  const T = require('../server/aitools'); const fs = require('node:fs'); const path = require('node:path');
+  for (const n of ['quote_content_pass', 'open_pass_builder']) { assert.equal(T.tierOf(n), 0, n); assert.ok(fs.readFileSync(path.join(__dirname, '..', '..', 'service-egov', 'src', 'main', 'java', 'egovframework', 'didisam', 'cmm', 'DdAiTools.java'), 'utf8').includes(`"${n}", 0`), 'Java ' + n); }
+  assert.equal(T.checkRequest({ tools: [{ name: 'quote_content_pass', input_schema: {} }, { name: 'open_pass_builder', input_schema: {} }], messages: [] }, { secret: 's', tid: 't', uid: 'u' }), null);
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'didisam', 'mksam.js'), 'utf8'); for (const m of src.matchAll(/\{ name: '([a-z_]+)', description/g)) assert.ok(T.tierOf(m[1]) >= 0, '화면 도구 등급 등록: ' + m[1]);
+});
