@@ -62,7 +62,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
       ok(await p.evaluate(() => S.market.credit[0].ctrl.monthCap === 120), '1440 기관 통제 월 상한 저장');
       /* 광고(추천 진열) 노출 선택(대표님 지시): 정운영자만 · 끄면 광고 0건 · 켜면 「광고」 배지 */
       { const sw = '[data-mk="ads"] [data-act="mk-ads"]'; ok(/CP가 비용을 내고 노출하는 추천 상품입니다\. 끄면 우리 기관 스튜디오와 학습자 앱에 보이지 않습니다\./.test(await T('[data-mk="ads"]')) && !(await p.evaluate(s => document.querySelector(s).disabled, sw)), '1440 광고 노출 스위치(정운영자) · 안내 문구');
-        await p.click(sw); await p.waitForTimeout(80); ok(await p.evaluate(() => S.org.mk.ads === false), '1440 광고 끔 저장');
+        await p.click(sw); await p.waitForTimeout(80); ok(await p.evaluate(() => S.org.mk.ads === false), '1440 광고 끔 저장'); ok(await p.evaluate(() => { try { const m = lsSnapshot().mk; return !!m && m.ads === false; } catch (e) { return 'err ' + e.message; } }) === true, 'QA5 v49 광고 끔이 학습자 게시본(pub.mk.ads)에 전달');
         await tab('home'); ok(await p.evaluate(() => document.querySelectorAll('.mk-ad').length) === 0 && !/광고 안내/.test(await T('#main')), '1440 광고 끈 기관: A1 광고 0건');
         for (const r of ['sub', 'teacher']) { const dis = await p.evaluate(r => { S.me.role = r; UI.market = 'ctrl'; go('market'); render(); const el = document.querySelector('[data-mk="ads"] [data-act="mk-ads"]'); const v = !el || el.disabled; S.me.role = 'owner'; return v; }, r); ok(dis, `1440 광고 노출: ${r === 'sub' ? '부운영자' : '교수자'}는 바꿀 수 없음`); }
         await tab('ctrl'); await p.click(sw); await p.waitForTimeout(80); await tab('home'); ok(await p.evaluate(() => S.org.mk.ads === true && [...document.querySelectorAll('.mk-pc .mk-ad')].map(x => x.textContent).join() === '광고'), '1440 광고 켠 기관: 「광고」 배지');
@@ -100,7 +100,10 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
     const me = await p.evaluate(() => !!(LR.me));
     if (!me) ok(false, '학습자 체험 로그인 실패'); else {
       await go(p, '#home'); const sh = await p.evaluate(() => (document.querySelector('[data-mk="pass-shelf"]') || {}).innerText || '');
-      ok(/우리 학교 패스/.test(sh) && /이번 달 2과정 더 시작할 수 있어요/.test(sh) && /크레딧으로 수강/.test(sh), `L1 진열대(${sh.replace(/\s+/g, ' ').slice(0, 60)})`); ok(!/\d+크레딧/.test(sh), 'L1 진열대에 크레딧 숫자 없음');
+      ok(/우리 (학교|기관|회사) 패스/.test(sh) && /이번 달 2과정 더 시작할 수 있어요/.test(sh) && /크레딧으로 수강/.test(sh), `L1 진열대(${sh.replace(/\s+/g, ' ').slice(0, 60)})`); ok(!/\d+크레딧/.test(sh), 'L1 진열대에 크레딧 숫자 없음');
+      { const t = await p.evaluate(() => (SITE() && SITE().org && SITE().org.type) || ''); const want = ['univ', 'univ_lms', 'k12'].includes(t) ? '우리 학교 패스' : t === 'corp' ? '우리 회사 패스' : '우리 기관 패스'; ok(sh.includes(want), `QA5 v49 진열대 이름이 기관 유형(${t})에 맞음(spec 13-3)`);
+        const corp = await p.evaluate(async () => { const o = LR.site.org; const t0 = o.type; o.type = 'corp'; location.hash = '#mk'; await new Promise(r => setTimeout(r, 300)); const x = (document.querySelector('#lm') || document.body).innerText; o.type = t0; location.hash = '#home'; await new Promise(r => setTimeout(r, 300)); return x; });
+        ok(/우리 회사 패스/.test(corp) && !/우리 학교 패스/.test(corp), 'QA5 v49 기업 학습자: 「우리 회사 패스」(학교 표현 없음)'); }
       { const adl = await p.evaluate(() => [...document.querySelectorAll('[data-mk="pass-shelf"] .mk-adl')].map(x => x.textContent)); ok(adl.length === 1 && adl[0] === '광고' && /광고 안내/.test(sh), `L1 C1 진열대 「광고」 ${JSON.stringify(adl)}`);
         await p.click('[data-mkl="adinfo"]'); ok(/추천 칸에만 표시되며/.test(await p.evaluate(() => document.getElementById('mkAdInfo').innerText)), 'L1 C1 광고 안내 A3(누르면 보임)'); }
       await go(p, '#mk'); ok(await p.evaluate(() => document.querySelectorAll('.mk-list .mk-li').length) === 6, 'L2 목록 6개');
@@ -122,7 +125,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
         ok(cr >= 4.5, `오리지널 배지 대비 ${th} ${cr}:1`); } }
     ok(!errs.length, `학습자 pageerror 없음 ${errs.slice(0, 2).join(' / ')}`); await ctx.close(); }
   { const { ctx, p, errs } = await openL('&mk=1&mkads=0'); await go(p, '#home'); const sh = await p.evaluate(() => (document.querySelector('[data-mk="pass-shelf"]') || {}).innerText || '');
-    ok(/우리 학교 패스/.test(sh) && !(await p.evaluate(() => document.querySelectorAll('.mk-adl,.mk-ad').length)) && !/광고 안내/.test(sh), '광고 끈 기관: 학습자 L1 진열대 광고 0건(일반 진열)');
+    ok(/우리 (학교|기관|회사) 패스/.test(sh) && !(await p.evaluate(() => document.querySelectorAll('.mk-adl,.mk-ad').length)) && !/광고 안내/.test(sh), '광고 끈 기관: 학습자 L1 진열대 광고 0건(일반 진열)');
     await go(p, '#mk'); ok(!(await p.evaluate(() => [...document.querySelectorAll('.mk-list .t')].some(x => /^광고/.test(x.textContent)))), '광고 끈 기관: L2 광고 표시 0건'); ok(!errs.length, '학습자(광고 끔) pageerror 없음'); await ctx.close(); }
   { const { ctx, p, errs } = await openL(''); await go(p, '#home'); ok(!(await p.evaluate(() => !!document.querySelector('[data-mk="pass-shelf"]'))), '시범 아님(?mk 없음): 진열대 없음'); ok(!errs.length, '학습자(꺼짐) pageerror 없음'); await ctx.close(); }
 

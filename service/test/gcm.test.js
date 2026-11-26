@@ -54,7 +54,7 @@ test('GCM 태그 16바이트 고정', async t => {
     const raw = files.filter(f => /createDecipheriv\(/.test(fs.readFileSync(f, 'utf8')) && path.basename(f) !== 'gcm.js');
     assert.deepEqual(raw.map(f => path.relative(SRV, f)), [], 'gcm.js 밖에서 createDecipheriv를 직접 쓰지 않는다');
     assert.match(fs.readFileSync(path.join(SRV, 'gcm.js'), 'utf8'), /authTagLength: TAG/);
-    for (const f of ['pii.js', 'mfa.js', 'statecrypt.js', 'aigw.js', 'ledger/index.js', 'lms/aria.js']) assert.match(fs.readFileSync(path.join(SRV, f), 'utf8'), /gcmDecipher\(/, f);
+    for (const f of ['pii.js', 'mfa.js', 'statecrypt.js', 'aigw.js', 'ledger/index.js', 'lms/aria.js', 'teams/index.js']) assert.match(fs.readFileSync(path.join(SRV, f), 'utf8'), /gcmDecipher\(/, f);
   });
 
   await t.test('Node↔Java 교차 복호화(GCMParameterSpec 128)', t2 => {

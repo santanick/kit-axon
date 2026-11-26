@@ -71,7 +71,9 @@ final class GrpKpi {
         for (String k : KPIS) { String ck = CONSENT.get(k); if (ck != null && !truthy(get(S, ck))) { o.v.putNull(k); o.noConsent.add(k); } }
         for (String k : PEOPLE) { double n = nz(get(R, k)); if (n >= 1 && n <= 4) { o.v.put(k, UNDER5); o.masked.add(k); } else o.v.set(k, numNode(n)); }
         boolean ended = nz(get(R, "cmpBase")) > 0; double base = ended ? num(get(R, "cmpBase")) : nz(get(R, "enr"));
-        if (base >= 1 && base <= 4) { o.v.putNull("cmpRateBp"); o.masked.add("cmpRateBp"); } else o.v.put("cmpRateBp", rate(ended ? nz(get(R, "cmpEnd")) : nz(get(R, "cmp")), base));
+        /* 역산 방지(QA49-3 #1): 분자(수료 수)가 1~4명이어도 비율을 가린다(Node kpi.js와 같음) */
+        double numr = ended ? nz(get(R, "cmpEnd")) : nz(get(R, "cmp"));
+        if ((base >= 1 && base <= 4) || (numr >= 1 && numr <= 4)) { o.v.putNull("cmpRateBp"); o.masked.add("cmpRateBp"); } else o.v.put("cmpRateBp", rate(numr, base));
         double pn = nz(get(R, "progN")); if (pn >= 1 && pn <= 4) { o.v.putNull("progBp"); o.masked.add("progBp"); } else o.v.put("progBp", pn != 0 ? Math.round(nz(get(R, "progSum")) / pn * 100) : 0);
         o.v.set("crs", numNode(nz(get(R, "crs"))));
         for (String k : new String[]{ "aiCalls", "aiTok", "rev" }) if (!o.noConsent.contains(k)) { JsonNode x = get(R, k); if (nullish(x)) o.v.putNull(k); else o.v.set(k, numNode(nz(x))); }
@@ -85,7 +87,14 @@ final class GrpKpi {
         ObjectNode sum = F.objectNode(); Set<String> nc = new LinkedHashSet<>();
         for (Object[] x : list) { JsonNode raw = (JsonNode) x[0]; if (raw != null && !raw.isNull()) { List<String> ks = new ArrayList<>(STATE); ks.addAll(FLOW); for (String k : ks) if (!nullish(get(raw, k))) sum.set(k, numNode(nz(get(sum, k)) + nz(get(raw, k)))); }
             @SuppressWarnings("unchecked") List<String> n = (List<String>) x[1]; nc.addAll(n); }
-        ObjectNode m = mask(sum, F.objectNode().put("ai", true).put("revenue", true)).v; for (String k : nc) m.putNull(k); return m;
+        ObjectNode m = mask(sum, F.objectNode().put("ai", true).put("revenue", true)).v; for (String k : nc) m.putNull(k);
+        /* 차이 공격 방지(QA49-3 #2): 가린 기관이 한 곳뿐이거나 가린 값의 합이 5명 미만이면 그 키 합계 null(Node kpi.js total과 같음) */
+        ObjectNode all = F.objectNode().put("ai", true).put("revenue", true); List<List<String>> each = new ArrayList<>(); for (Object[] x : list) each.add(mask((JsonNode) x[0], all).masked);
+        List<String> ks = new ArrayList<>(PEOPLE); ks.add("cmpRateBp"); ks.add("progBp");
+        for (String k : ks) { int cnt = 0; double s = 0; for (int i = 0; i < list.size(); i++) if (each.get(i).contains(k)) { cnt++; JsonNode raw = (JsonNode) list.get(i)[0]; s += raw == null ? 0 : nz(get(raw, k)); }
+            if (cnt == 0) continue; if (cnt == 1 || (PEOPLE.contains(k) && s < 5)) m.putNull(k); }
+        if (m.get("cmp").isNull() || m.get("enr").isNull()) m.putNull("cmpRateBp");
+        return m;
     }
     /** 순위(큰 값이 1등, 가림 · null 제외). children: [{v, rank}] */
     static void ranks(List<ObjectNode> children, List<String> kpis) {

@@ -6,3 +6,5 @@ export ANTHROPIC_API_KEY=sk-ant-test-contract-dummy ANTHROPIC_URL=http://127.0.0
 export PII_DEV_OTP=1 OAUTH_DEV=1 IDV_DEV=1
 # 보안 4차 #1: 기존 대조 시험은 로그인 직후 세션을 기대한다 → 2단계 건너뜀(시험 · 데모 전용, 운영 기본 아님). 2단계 대조는 contract-mfa.js가 MFA_OFF=0으로 따로 띄운다
 export MFA_OFF="${MFA_OFF:-1}"
+# QA4 #5: Teams 시범 플래그 — 대조 시험은 모든 기관 켬(운영 기본은 비움 = 꺼짐)
+export TEAMS_PILOT="${TEAMS_PILOT-all}"

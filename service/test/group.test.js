@@ -9,14 +9,28 @@ const CT = require('../server/group/contract.json');
 test('KPI 계산 · 가림(순수 함수) · 계약 파일 · 오류 문구 한 곳', () => {
   const doc = { members: [{ id: 'a' }, { id: 'b', withdrawn: true }], classes: [{ id: 'c', learners: ['a', 'x1', 'x2', 'x3', 'x4', 'x5'], prog: { a: { p: 100 }, x1: { p: 40 } } }] };
   const v = K.fromDoc(doc, '2026-11-27'); assert.equal(v.lrn, 6); assert.equal(v.enr, 6); assert.equal(v.cmp, 1);
-  const m = K.mask(v, {}); assert.equal(m.v.cmp, '5명 미만'); assert.ok(m.masked.includes('cmp')); assert.deepEqual(m.noConsent, ['aiCalls', 'aiTok', 'rev']); assert.equal(m.v.cmpRateBp, 1667);
+  const m = K.mask(v, {}); assert.equal(m.v.cmp, '5명 미만'); assert.ok(m.masked.includes('cmp')); assert.deepEqual(m.noConsent, ['aiCalls', 'aiTok', 'rev']); assert.equal(m.v.cmpRateBp, null, 'QA49-3 #1 분자(수료 1명) 5명 미만이면 비율도 가림(수강 6 × 16.7% 역산 방지)'); assert.ok(m.masked.includes('cmpRateBp'));
+  assert.equal(K.mask({ lrn: 10, enr: 10, cmp: 5 }, {}).v.cmpRateBp, 5000, '분자 · 분모 5명 이상이면 비율 표시');
+  { const T = K.total([{ raw: { lrn: 3, enr: 3 }, noConsent: [] }, { raw: { lrn: 20, enr: 20, cmp: 5 }, noConsent: [] }]); assert.equal(T.lrn, null, 'QA49-3 #2 가린 기관 1곳 → 합계 가림(차이 공격)'); assert.equal(T.cmpRateBp, null); assert.equal(T.cmp, 5); }
+  { const T = K.total([{ raw: { lrn: 3 }, noConsent: [] }, { raw: { lrn: 4 }, noConsent: [] }, { raw: { lrn: 20 }, noConsent: [] }]); assert.equal(T.lrn, 27, '가린 기관 2곳 · 합 7명이면 합계 표시(개별 값은 되살아나지 않음)'); }
+  { const T = K.total([{ raw: { lrn: 1 }, noConsent: [] }, { raw: { lrn: 2 }, noConsent: [] }, { raw: { lrn: 20 }, noConsent: [] }]); assert.equal(T.lrn, null, '가린 값 합 3명 → 합계 가림'); }
   assert.equal(K.mask({ lrn: 0, enr: 3, cmp: 0 }, {}).v.cmpRateBp, null, '분모 5명 미만 비율 가림'); assert.equal(K.mask({ lrn: 0 }, {}).v.lrn, 0, '0은 그대로');
-  assert.deepEqual(K.total([{ raw: { lrn: 3 }, noConsent: [] }, { raw: { lrn: 1 }, noConsent: ['rev'] }]).lrn, '5명 미만'); assert.equal(K.total([{ raw: { rev: 5 }, noConsent: ['rev'] }]).rev, null);
+  assert.deepEqual(K.total([{ raw: { lrn: 3 }, noConsent: [] }, { raw: { lrn: 1 }, noConsent: ['rev'] }]).lrn, null, '가린 값 합 4명 → 합계도 가림(null)'); assert.equal(K.total([{ raw: { rev: 5 }, noConsent: ['rev'] }]).rev, null);
   assert.deepEqual(K.combine([{ day: '2026-11-01', v: { lrn: 5, aiCalls: 2 } }, { day: '2026-11-02', v: { lrn: 7, aiCalls: 3 } }]), { lrn: 7, aiCalls: 5 });
   assert.equal(K.bucket('2026-01-01', 'week'), '2026-W01'); assert.equal(K.bucket('2026-11-27', 'month'), '2026-11');
   assert.deepEqual(K.fold([{ d: 'a', n: 7 }, { d: 'b', n: 2 }, { d: 'c', n: 1 }], 'd', 'n', '묶음'), [{ d: 'a', n: 7 }, { d: '묶음', n: '5명 미만' }]);
   const { MSG } = require('../server/group'); for (const [k, [st, msg]] of Object.entries(CT.errors)) { assert.equal(MSG[k], msg); assert.ok([400, 403, 404, 409, 410, 413, 429].includes(st), k); assert.ok(/(니다|십시오|\))\.$/.test(msg), '합니다체: ' + k); }
   const src = fs.readFileSync(path.join(ROOT, 'service', 'server', 'group', 'routes.js'), 'utf8'); for (const [m, p] of CT.routes) { const re = p.replace(/:[a-zA-Z]+/g, 'X'); assert.ok(src.includes(`['${m}'`), m); void re; }
+});
+
+test('QA49-3 #6 재인증 판정: mfa.freshWithin(user, 600) 기준, MFA_OFF면 세션 10분 안 발급도 필요', async () => {
+  const { freshRule } = require('../server/group/routes'); const calls = []; const m = (fresh, off) => ({ off, freshWithin: async (u, s) => { calls.push(s); return fresh; } });
+  assert.equal(await freshRule(m(false, false), { uid: 'u' }, async () => true), false, '2단계 10분 지남 → 거절(세션이 새것이어도)');
+  assert.equal(await freshRule(m(true, false), { uid: 'u' }, async () => false), true, '2단계 10분 안 → 통과(세션이 오래돼도)');
+  assert.equal(await freshRule(m(true, true), { uid: 'u' }, async () => false), false, 'MFA_OFF: 세션 오래됨 → 거절');
+  assert.equal(await freshRule(m(true, true), { uid: 'u' }, async () => true), true, 'MFA_OFF: 방금 다시 로그인 → 통과');
+  assert.equal(await freshRule(null, {}, async () => true), true); assert.ok(calls.every(s => s === 600), '600초');
+  const app = fs.readFileSync(path.join(ROOT, 'service', 'server', 'app.js'), 'utf8'); assert.ok(/createGroup\(\{[^}]*\bmfa\b/.test(app), 'app.js가 mfa를 통합 센터에 넘김');
 });
 
 test('운영 서버: 통합 센터', { skip: !process.env.DATABASE_URL }, async t => {

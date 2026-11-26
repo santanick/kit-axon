@@ -2,6 +2,8 @@
 /* /api/group/* (spec 1-3 · 1-4 · 1-5, 계약 group/contract.json). 권한 함수가 요청 범위(기관 · 묶음 · 산타)를 정하고 tx()가 RLS 세션 변수로 넘긴다.
    상위 기관 경로: 로그인 기관 = grp_group.owner_tid · pilot · active + 통합 센터 역할(정운영자 = grp_admin 자동).
    소속 기관 경로(/my): 로그인 기관 = grp_link.child_tid. 쓰기는 idem 필수. 상위 기관에 나가는 값은 kpi.mask로 가린 집계뿐이다. */
+/* 재인증 판정(시험용으로 따로 둠): mfa.freshWithin(user, 600) — MFA_OFF면 세션 10분 안 발급도 함께, mfa 없으면 세션만 */
+async function freshRule(m, a, sessFresh) { return m && typeof m.freshWithin === 'function' ? (await m.freshWithin(a, 600)) && (!m.off || await sessFresh(a)) : sessFresh(a); }
 module.exports = (ctx, S) => {
   const { readBody, pool, HttpErr } = ctx; const { E, K, C, rid, str, kstDay, sha, tx, txIn, scopeSet, q1, idem, gaudit, tlog, docOf, docEdit, tenantName, gkey } = S;
   const isSanta = a => !!(ctx.isSanta && ctx.isSanta(a));
@@ -31,7 +33,10 @@ module.exports = (ctx, S) => {
   const needChildOwner = async req => { const a = await needChild(req); if (a.role !== 'owner') throw E('grp_owner'); return a; };
   const needSanta = async req => { const a = await ctx.need(req); if (!isSanta(a)) throw new HttpErr(403, '산타 관리자만 쓸 수 있습니다.', 'santa'); scopeSet(a.tid, '', true); return a; };
   /* 재인증(임시: 세션이 10분 안에 만들어짐 — 로그인 · 2단계 인증 직후). mfa.js freshWithin 공개 시 교체(코어 요청 5) */
-  const needFresh = async a => { const r = (await pool.query("select created_at > now() - interval '10 minutes' ok from sessions where id = $1", [a.sid])).rows[0]; if (!r || !r.ok) throw E('grp_mfa', { mfa: 'required' }); };
+  /* 재인증(spec 1-2 needFresh): 최근 10분 안에 2단계 인증 통과 = mfa.freshWithin(user, 600)(코어 요청 5, 개발 5).
+     MFA_OFF(시험 · 시연 전용)는 freshWithin이 늘 true이므로, 그때는 비밀번호 재로그인(세션 10분 안 발급)을 재인증으로 본다 — 결정(QA49-3 #6: 재인증 단계 생략 금지) */
+  const sessFresh = async a => { const r = (await pool.query("select created_at > now() - interval '10 minutes' ok from sessions where id = $1", [a.sid])).rows[0]; return !!(r && r.ok); };
+  const needFresh = async a => { if (!(await freshRule(ctx.mfa, a, sessFresh))) throw E('grp_mfa', { mfa: 'required' }); };
   const ipOf = req => String((ctx.ip && ctx.ip(req)) || '');
 
   /* ── 출력 ── */
@@ -59,11 +64,25 @@ module.exports = (ctx, S) => {
     const ids = T.filter(x => x.local_id).map(x => x.local_id); if (ids.length) await docEdit(link.child_tid, d => hideLocal(d, ids)).catch(() => {});
     return T.length;
   }
-  function hideLocal(d, ids) { for (const k of ['classes', 'notices']) (Array.isArray(d[k]) ? d[k] : []).forEach(x => { if (x && ids.includes(x.id)) { x.grpRecalled = true; x.hidden = true; } });
-    const P = d.lsite && d.lsite.pub && Array.isArray(d.lsite.pub.pages) ? d.lsite.pub.pages : []; P.forEach(x => { if (x && ids.includes(x.id)) { x.grpRecalled = true; x.hidden = true; } }); }
+  /* QA49-3 #4: 회수(숨김)는 편집본 표시만이 아니라 학습자 사이트 게시본(lsite.pub)에서도 바로 빼야 학습자 화면에서 사라진다 */
+  function hideLocal(d, ids) { const gone = []; for (const k of ['classes', 'notices']) (Array.isArray(d[k]) ? d[k] : []).forEach(x => { if (x && ids.includes(x.id)) { x.grpRecalled = true; x.hidden = true; gone.push(x); } });
+    const ls = d.lsite || {}; for (const P of [ls.pages, d.grpPending && d.grpPending.pages]) (Array.isArray(P) ? P : []).forEach(x => { if (x && ids.includes(x.id)) { x.grpRecalled = true; x.hidden = true; x.on = false; } });
+    const pub = ls.pub; if (!pub || typeof pub !== 'object') return;
+    if (Array.isArray(pub.pages)) pub.pages = pub.pages.filter(x => !(x && ids.includes(x.id)));
+    if (Array.isArray(pub.classes)) pub.classes = pub.classes.filter(x => !(x && ids.includes(x.id)));
+    const nt = new Set(gone.filter(x => !x.curriculum).map(x => `${x.title || ''}|${x.at || ''}`)); const ct = new Set(gone.filter(x => x.curriculum || x.learners).map(x => x.name));
+    if (Array.isArray(pub.notices)) pub.notices = pub.notices.filter(x => !(x && (nt.has(`${x.title || ''}|${x.at || ''}`) || (x.cls && ct.has(x.cls))))); }
 
   /* ── 콘텐츠 사본(spec 5-3): 학습자 · 성적 · 수납 데이터를 뺀다. 마켓 콘텐츠는 409 grp_license ── */
   const DROP = ['learners', 'prog', 'grades', 'scores', 'subs', 'submissions', 'board', 'posts', 'consults', 'pays', 'coupons', 'teachers', 'teacher', 'owner', 'att', 'attendance', 'crmDay', 'k12Exams', 'makeups', 'done', 'waits', 'apply', 'applicants', 'reviews', 'qna', 'logs'];
+  const PER = ['enr', 'attT', 'conn', 'ask', 'drop', 'memo', 'certs'];
+  function scrubIds(o, ids, depth) { if (!o || typeof o !== 'object' || depth > 6) return;
+    if (Array.isArray(o)) { for (const v of o) scrubIds(v, ids, depth + 1); return; }
+    if (depth === 0) for (const k of PER) delete o[k];
+    for (const k of Object.keys(o)) { const v = o[k];
+      if (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).some(x => ids.has(x))) { delete o[k]; continue; }
+      if (Array.isArray(v) && v.some(x => typeof x === 'string' && ids.has(x))) { delete o[k]; continue; }
+      scrubIds(v, ids, depth + 1); } }
   const isMk = x => !!(x && typeof x === 'object' && (x.mk || x.mkProduct || x.market || x.mkId || x.src === 'market'));
   function sourceOf(doc, kind, src) {
     const s = src || {}; const id = String(s.courseId || s.pageId || s.noticeId || ''); if (!id) throw E('grp_source');
@@ -71,6 +90,9 @@ module.exports = (ctx, S) => {
     const x = (Array.isArray(list) ? list : []).find(y => y && String(y.id) === id); if (!x) throw E('grp_source');
     if (isMk(x) || (Array.isArray(x.items) && x.items.some(isMk))) throw E('grp_license');
     const snap = JSON.parse(JSON.stringify(x)); for (const k of DROP) delete snap[k]; delete snap.grpFrom; delete snap.grpRecalled;
+    /* QA49-3 #3: 학습자별 기록(enr · attT · conn · ask · drop 등 학습자 ID를 키로 쓰는 값)은 목록에 없는 키라도 지운다 */
+    const ids = new Set([...(Array.isArray(doc.members) ? doc.members : []).map(m => m && m.id), ...(Array.isArray(doc.classes) ? doc.classes : []).flatMap(c => (c && Array.isArray(c.learners) ? c.learners : []).concat(Object.keys((c && c.prog) || {})))].filter(Boolean).map(String));
+    scrubIds(snap, ids, 0);
     if (Array.isArray(snap.items)) snap.items = snap.items.map(i => { const o = { ...i }; for (const k of ['subs', 'submissions', 'answers', 'scores', 'file', 'blob']) delete o[k]; return o; });
     if (Buffer.byteLength(JSON.stringify(snap)) > 2097152) throw E('grp_size');
     return { id, snap, title: str(x.name || x.title || '제목 없음', 80) };
@@ -82,7 +104,10 @@ module.exports = (ctx, S) => {
     for (const t of set) { const r = rows.find(x => x.child_tid === t); if (!r || r.status === 'offered') st.pending++; else st[r.status]++; if (r && r.status === 'adopted' && r.ver < s.ver) st.outdated++; } return st;
   }
   const docItem = (d, kind) => { if (kind === 'course') return (d.classes = Array.isArray(d.classes) ? d.classes : []); if (kind === 'notice') return (d.notices = Array.isArray(d.notices) ? d.notices : []);
-    d.lsite = d.lsite || {}; d.lsite.pub = d.lsite.pub || {}; return (d.lsite.pub.pages = Array.isArray(d.lsite.pub.pages) ? d.lsite.pub.pages : []); };
+    /* QA49-3 #5: 페이지는 게시본(pub)이 아니라 편집본(lsite.pages, 꺼짐)에 넣는다 — 게시본에 넣으면 「비공개 초안」이 학습자 사이트에 바로 보인다.
+       사이트 편집본이 아직 없으면 grpPending.pages에 두고, 화면(group.js)이 사이트 편집본을 만들 때 옮긴다 */
+    d.lsite = d.lsite || {}; if (Array.isArray(d.lsite.pages)) return d.lsite.pages; d.grpPending = d.grpPending || {}; return (d.grpPending.pages = Array.isArray(d.grpPending.pages) ? d.grpPending.pages : []); };
+  const pageDraft = item => { item.on = false; item.draft = true; item.sections = (Array.isArray(item.sections) ? item.sections : []).map(x => ({ ...(x || {}), on: true })); return item; };
 
   /* ── 대시보드 계산(1-7) ── */
   const DEF_KPI = { franchise: ['lrn', 'act', 'cmpRateBp', 'rev', 'aiCalls', 'new'], univ: ['lrn', 'cmpRateBp', 'progBp', 'aiCalls', 'crs', 'act'], region: ['lrn', 'crs', 'cmpRateBp', 'new', 'aiCalls', 'act'] };
@@ -193,7 +218,9 @@ module.exports = (ctx, S) => {
       const agreed = links.filter(l => l.share && l.share.learnerAgg); await tx(c => gaudit(c, { gid: g.id, actor: a.email, actorTid: a.tid, action: 'grp.learners', target: `${rg.from}~${rg.to}`, ok: agreed.length > 0, ip: ipOf(req) }));
       if (!agreed.length) throw E('grp_consent');
       const ok = new Set(agreed.map(l => l.child_tid)); const X = lx.filter(r => ok.has(r.child_tid)); const M = (n) => (n >= 1 && n <= 4 ? K.UNDER5 : n);
-      if (g.kind === 'region') return { range: rg, basis: 'unifiedId', unified: null, multi: null, byChild: agreed.map(l => ({ tid: l.child_tid, label: l.label, lrn: M(X.filter(r => r.child_tid === l.child_tid).length), shared: null })), byDept: [], flows: [], consent: { agreed: agreed.length, total: links.length } };
+      /* QA49-3 #7: 지자체 · 교육청은 학번이 없어 grp_lx가 비므로, 기관별 학습자 수는 기간 마지막 하루 집계(lrn)로 냅니다(통합 학습 ID는 2차) */
+      if (g.kind === 'region') { const kd = (await tx(c => c.query("select distinct on (child_tid) child_tid, v from grp_kpi_day where group_id = $1 and day between $2::date and $3::date order by child_tid, day desc", [g.id, rg.from, rg.to]))).rows; const lv = new Map(kd.map(r => [r.child_tid, +((r.v || {}).lrn) || 0]));
+        return { range: rg, basis: 'unifiedId', unified: null, multi: null, byChild: agreed.map(l => ({ tid: l.child_tid, label: l.label, lrn: M(lv.get(l.child_tid) || 0), shared: null })), byDept: [], flows: [], consent: { agreed: agreed.length, total: links.length } }; }
       const by = new Map(); for (const r of X) { const s = by.get(r.gkey) || new Set(); s.add(r.child_tid); by.set(r.gkey, s); }
       const multi = { 1: 0, 2: 0, '3+': 0 }; for (const s of by.values()) multi[s.size >= 3 ? '3+' : s.size]++;
       const byChild = agreed.map(l => { const mine = X.filter(r => r.child_tid === l.child_tid); return { tid: l.child_tid, label: l.label, lrn: M(mine.length), shared: M(mine.filter(r => by.get(r.gkey).size > 1).length) }; });
@@ -341,6 +368,7 @@ module.exports = (ctx, S) => {
       if (out._s && !out.again) { const { kind, snap, gid, ver } = out._s; await docEdit(a.tid, d => { const L = docItem(d, kind); const i = L.findIndex(x => x && x.id === out.localId);
         const keep = i >= 0 ? L[i] : null; const item = { ...JSON.parse(JSON.stringify(snap)), id: out.localId, grpFrom: { gid, sid, ver } };
         if (kind === 'course') { item.learners = keep ? keep.learners || [] : []; item.prog = keep ? keep.prog || {} : {}; if (!keep) item.status = '준비중'; else item.status = keep.status; }
+        else if (kind === 'page') { pageDraft(item); if (keep && keep.on) { item.on = true; item.draft = false; } }
         else if (!keep) item.draft = true; else item.draft = keep.draft;
         if (i >= 0) L[i] = item; else L.push(item); }); }
       delete out._s; return out; }],
@@ -378,3 +406,4 @@ module.exports = (ctx, S) => {
       for (const [m, re, fn] of P) { if (m !== method) continue; const x = re.exec(p); if (x) return (req, res) => fn(req, ...x.slice(1), res); } return null; }
   };
 };
+module.exports.freshRule = freshRule;

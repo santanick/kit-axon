@@ -745,7 +745,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
   /* v41 통합 수납 원장(ledger/): 공개 ledger-* 와 운영자 /api/ledger/* */
   const ledger = require('./ledger').createLedger({ exportGate: (...x) => rec.exportGate(...x), pool, inTenant, need, needStaff, needOwner, readBody, HttpErr, audit, limit, ip, lauth, crypt, env, log, mileage });
   const market = require('./market').createMarket({ pool, inTenant, need, needStaff, needOwner, isSanta, readBody, HttpErr, audit, limit, ip, lauth, env, log }); /* 콘텐츠 마켓 v1.1 /api/market/* · /api/pub/<tid>/mk-* (시범 기관 플래그) */
-  const group = require('./group').createGroup({ pool, inTenant, need, needStaff, needOwner, isSanta, readBody, HttpErr, audit, limit, ip, env, log }); /* 통합 센터(기관 묶음) /api/group/* — 시범 플래그 grp_group.pilot */
+  const group = require('./group').createGroup({ pool, inTenant, need, needStaff, needOwner, isSanta, readBody, HttpErr, audit, limit, ip, env, log, mfa }); /* 통합 센터(기관 묶음) /api/group/* — 시범 플래그 grp_group.pilot */
   const rec = REC.createRecords({ pool, inTenant, need, needOwner, readBody, HttpErr, audit, ip, env }); for (const [k, fn] of Object.entries(rec.routes)) { if (routes[k]) throw new Error('라우트 중복: ' + k); routes[k] = fn; }
 
   /* ── 정적 파일 ── */

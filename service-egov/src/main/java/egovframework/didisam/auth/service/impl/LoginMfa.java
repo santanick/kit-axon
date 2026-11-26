@@ -100,6 +100,7 @@ public class LoginMfa extends EgovAbstractServiceImpl {
         }
         if (m.deleteTicket(id) == 0) throw processException("dd.401.mfa_expired");
         if (st > 0 && m.updateStep(uid, st) == 0) throw processException("dd.401.mfa_code");
+        m.upsertFresh(uid); /* freshWithin 기준 시각 */
         if (!ticketOfCookie(req).isEmpty()) cookie(res, "", 0);
         Map<String, Object> o = new LinkedHashMap<>(); o.put("uid", uid); o.put("tid", tid); o.put("email", email); o.put("kind", kind); o.put("via", Objects.toString(r.get("via"), ""));
         o.put("totpSetup", "email".equals(kind) && "totp".equals(policy(tid))); return o;
@@ -114,6 +115,18 @@ public class LoginMfa extends EgovAbstractServiceImpl {
         if (Boolean.TRUE.equals(r.get("soon"))) throw processException("dd.429.mfa_wait");
         if (((Number) r.get("sends")).intValue() >= 4) throw processException("dd.429.mfa_resend");
         Map<String, Object> o = new LinkedHashMap<>(); o.put("ok", true); o.put("to", mask((String) r.get("email"))); o.putAll(sendCode(id, (String) r.get("email"), (String) r.get("tenant_id"))); return o;
+    }
+
+    static final java.util.regex.Pattern UUID_RE = java.util.regex.Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+    /** 최근 재인증 여부 — Node mfa.freshWithin(user, seconds)과 같은 동작.
+     *  user: 사용자 id(uuid 문자열) 또는 "uid" · "id" 키가 있는 Map(인증 결과 그대로). seconds: 몇 초 안에 2단계를 통과했는지(양수).
+     *  잘못된 user · seconds(0 이하)는 false. MFA_OFF=1(시험 · 데모 전용)은 2단계 자체가 없으므로 true. */
+    public boolean freshWithin(Object user, long seconds) {
+        Object v = user instanceof Map ? (((Map<?, ?>) user).get("uid") != null ? ((Map<?, ?>) user).get("uid") : ((Map<?, ?>) user).get("id")) : user;
+        String uid = v == null ? "" : String.valueOf(v);
+        if (!UUID_RE.matcher(uid).matches() || seconds <= 0) return false;
+        if (off) return true;
+        Integer n = m.selectFresh(uid, seconds); return n != null && n > 0;
     }
 
     void pwAgain(Map<String, Object> a, JsonNode b) throws Exception {

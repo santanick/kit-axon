@@ -81,21 +81,42 @@ final class GrpRoutes {
         if (!ids.isEmpty()) try { S.docEdit(s(link, "child_tid"), d -> { hideLocal(d, ids); return null; }); } catch (Exception e) { /* Node catch */ }
         return T0.size();
     }
+    /** QA49-3 #4: 회수(숨김) — 편집본 표시 + 학습자 사이트 게시본(lsite.pub)에서 바로 뺀다(Node hideLocal과 같음) */
     static void hideLocal(ObjectNode d, List<String> ids) {
-        for (String k : new String[]{ "classes", "notices" }) for (JsonNode x : arr(get(d, k))) if (x != null && x.isObject() && ids.contains(key(get(x, "id")))) ((ObjectNode) x).put("grpRecalled", true).put("hidden", true);
-        JsonNode P = get(get(get(d, "lsite"), "pub"), "pages"); for (JsonNode x : arr(P)) if (x != null && x.isObject() && ids.contains(key(get(x, "id")))) ((ObjectNode) x).put("grpRecalled", true).put("hidden", true);
+        java.util.Set<String> nt = new java.util.HashSet<>(), ct = new java.util.HashSet<>();
+        for (String k : new String[]{ "classes", "notices" }) for (JsonNode x : arr(get(d, k))) if (x != null && x.isObject() && ids.contains(key(get(x, "id")))) { ((ObjectNode) x).put("grpRecalled", true).put("hidden", true);
+            if (truthy(get(x, "curriculum")) || truthy(get(x, "learners"))) ct.add(S(get(x, "name"))); if (!truthy(get(x, "curriculum"))) nt.add(S(get(x, "title")) + "|" + S(get(x, "at"))); }
+        for (JsonNode P : new JsonNode[]{ get(get(d, "lsite"), "pages"), get(get(d, "grpPending"), "pages") }) for (JsonNode x : arr(P)) if (x != null && x.isObject() && ids.contains(key(get(x, "id")))) ((ObjectNode) x).put("grpRecalled", true).put("hidden", true).put("on", false);
+        JsonNode pub = get(get(d, "lsite"), "pub"); if (pub == null || !pub.isObject()) return; ObjectNode pb = (ObjectNode) pub;
+        for (String k : new String[]{ "pages", "classes" }) if (pb.get(k) instanceof ArrayNode) { ArrayNode out = F.arrayNode(); for (JsonNode x : pb.get(k)) if (!(x != null && x.isObject() && ids.contains(key(get(x, "id"))))) out.add(x); pb.set(k, out); }
+        if (pb.get("notices") instanceof ArrayNode) { ArrayNode out = F.arrayNode(); for (JsonNode x : pb.get("notices")) { boolean drop = x != null && x.isObject() && (nt.contains(S(get(x, "title")) + "|" + S(get(x, "at"))) || (truthy(get(x, "cls")) && ct.contains(S(get(x, "cls"))))); if (!drop) out.add(x); } pb.set("notices", out); }
     }
 
     // ── 콘텐츠 사본(spec 5-3) ──
     static final List<String> DROP = List.of("learners", "prog", "grades", "scores", "subs", "submissions", "board", "posts", "consults", "pays", "coupons", "teachers", "teacher", "owner", "att", "attendance", "crmDay", "k12Exams", "makeups", "done", "waits", "apply", "applicants", "reviews", "qna", "logs");
     static boolean isMk(JsonNode x) { return x != null && x.isObject() && (truthy(get(x, "mk")) || truthy(get(x, "mkProduct")) || truthy(get(x, "market")) || truthy(get(x, "mkId")) || "market".equals(S(get(x, "src")))); }
     static final class Src { String id, title; ObjectNode snap; }
+    static final List<String> PER = List.of("enr", "attT", "conn", "ask", "drop", "memo", "certs");
+    static void scrubIds(JsonNode o, java.util.Set<String> ids, int depth) {
+        if (o == null || depth > 6) return;
+        if (o.isArray()) { for (JsonNode v : o) scrubIds(v, ids, depth + 1); return; }
+        if (!o.isObject()) return; ObjectNode ob = (ObjectNode) o; if (depth == 0) for (String k : PER) ob.remove(k);
+        List<String> keys = new ArrayList<>(); ob.fieldNames().forEachRemaining(keys::add);
+        for (String k : keys) { JsonNode v = ob.get(k); boolean hit = false;
+            if (v.isObject()) { java.util.Iterator<String> it = v.fieldNames(); while (it.hasNext()) if (ids.contains(it.next())) { hit = true; break; } }
+            else if (v.isArray()) for (JsonNode e : v) if (e.isTextual() && ids.contains(e.textValue())) { hit = true; break; }
+            if (hit) { ob.remove(k); continue; } scrubIds(v, ids, depth + 1); }
+    }
     static Src sourceOf(GroupServiceImpl S, JsonNode doc, String kind, JsonNode src) {
         JsonNode s0 = truthy(src) ? src : O(); JsonNode idn = or(get(s0, "courseId"), get(s0, "pageId"), get(s0, "noticeId"), t("")); String id = egovframework.didisam.cmm.Js.str(idn); if (id.isEmpty()) throw S.E("grp_source");
         JsonNode list = "course".equals(kind) ? get(doc, "classes") : "page".equals(kind) ? get(get(get(doc, "lsite"), "pub"), "pages") : get(doc, "notices");
         JsonNode x = null; for (JsonNode y : arr(list)) if (truthy(y) && id.equals(key(get(y, "id")))) { x = y; break; } if (x == null) throw S.E("grp_source");
         boolean mk = isMk(x); if (!mk && get(x, "items") != null && get(x, "items").isArray()) for (JsonNode i : get(x, "items")) if (isMk(i)) mk = true; if (mk) throw S.E("grp_license");
         ObjectNode snap = ((ObjectNode) x).deepCopy(); for (String k : DROP) snap.remove(k); snap.remove("grpFrom"); snap.remove("grpRecalled");
+        /* QA49-3 #3: 학습자 ID를 키로 쓰는 값(enr · attT · conn · ask · drop 등)은 목록에 없어도 지운다(Node routes.js scrubIds와 같음) */
+        java.util.Set<String> ids = new java.util.HashSet<>(); for (JsonNode m : arr(get(doc, "members"))) if (truthy(m) && truthy(get(m, "id"))) ids.add(key(get(m, "id")));
+        for (JsonNode c : arr(get(doc, "classes"))) { if (!truthy(c)) continue; for (JsonNode l : arr(get(c, "learners"))) if (truthy(l)) ids.add(key(l)); JsonNode pg = get(c, "prog"); if (pg != null && pg.isObject()) pg.fieldNames().forEachRemaining(ids::add); }
+        scrubIds(snap, ids, 0);
         if (snap.get("items") != null && snap.get("items").isArray()) { ArrayNode it = F.arrayNode(); for (JsonNode i : snap.get("items")) { ObjectNode o = i.isObject() ? ((ObjectNode) i).deepCopy() : O(); for (String k : new String[]{ "subs", "submissions", "answers", "scores", "file", "blob" }) o.remove(k); it.add(o); } snap.set("items", it); }
         if (snap.toString().getBytes(StandardCharsets.UTF_8).length > 2097152) throw S.E("grp_size");
         Src r = new Src(); r.id = id; r.snap = snap; JsonNode tt = or(get(x, "name"), get(x, "title"), t("제목 없음")); r.title = str(tt, 80); return r;
@@ -118,8 +139,10 @@ final class GrpRoutes {
     static ArrayNode docItem(ObjectNode d, String kind) {
         if ("course".equals(kind)) { if (!(d.get("classes") instanceof ArrayNode)) d.putArray("classes"); return (ArrayNode) d.get("classes"); }
         if ("notice".equals(kind)) { if (!(d.get("notices") instanceof ArrayNode)) d.putArray("notices"); return (ArrayNode) d.get("notices"); }
-        if (!truthy(d.get("lsite")) || !d.get("lsite").isObject()) d.putObject("lsite"); ObjectNode ls = (ObjectNode) d.get("lsite"); if (!truthy(ls.get("pub")) || !ls.get("pub").isObject()) ls.putObject("pub"); ObjectNode pb = (ObjectNode) ls.get("pub");
-        if (!(pb.get("pages") instanceof ArrayNode)) pb.putArray("pages"); return (ArrayNode) pb.get("pages");
+        /* QA49-3 #5: 페이지는 편집본(lsite.pages, 꺼짐) — 없으면 grpPending.pages(Node docItem과 같음) */
+        if (!truthy(d.get("lsite")) || !d.get("lsite").isObject()) d.putObject("lsite"); ObjectNode ls = (ObjectNode) d.get("lsite"); if (ls.get("pages") instanceof ArrayNode) return (ArrayNode) ls.get("pages");
+        if (!truthy(d.get("grpPending")) || !d.get("grpPending").isObject()) d.putObject("grpPending"); ObjectNode gp = (ObjectNode) d.get("grpPending");
+        if (!(gp.get("pages") instanceof ArrayNode)) gp.putArray("pages"); return (ArrayNode) gp.get("pages");
     }
 
     // ── 대시보드(1-7) ──
@@ -284,7 +307,10 @@ final class GrpRoutes {
             Set<String> ok = new LinkedHashSet<>(tidsOf(agreed)); List<ObjectNode> X = new ArrayList<>(); for (ObjectNode r : lx) if (ok.contains(s(r, "child_tid"))) X.add(r);
             ObjectNode o = O(); o.putObject("range").put("from", rg[0]).put("to", rg[1]);
             if ("region".equals(s(x.g, "kind"))) { o.put("basis", "unifiedId").putNull("unified"); o.putNull("multi"); ArrayNode bc = o.putArray("byChild");
-                for (ObjectNode l : agreed) { long c = 0; for (ObjectNode r : X) if (s(l, "child_tid").equals(s(r, "child_tid"))) c++; ObjectNode e = bc.addObject(); e.set("tid", g(l, "child_tid")); e.set("label", g(l, "label")); e.set("lrn", M(c)); e.putNull("shared"); }
+                /* QA49-3 #7: 기관별 학습자 수 = 기간 마지막 하루 집계 lrn(Node와 같음) */
+                List<ObjectNode> kd = S.T(() -> db.q("select distinct on (child_tid) child_tid, v from grp_kpi_day where group_id = $1 and day between $2::date and $3::date order by child_tid, day desc", x.gid(), rg[0], rg[1]));
+                Map<String, Long> lv = new LinkedHashMap<>(); for (ObjectNode r : kd) lv.put(s(r, "child_tid"), (long) GrpKpi.nz(get(g(r, "v"), "lrn")));
+                for (ObjectNode l : agreed) { long c = lv.getOrDefault(s(l, "child_tid"), 0L); ObjectNode e = bc.addObject(); e.set("tid", g(l, "child_tid")); e.set("label", g(l, "label")); e.set("lrn", M(c)); e.putNull("shared"); }
                 o.putArray("byDept"); o.putArray("flows"); o.putObject("consent").put("agreed", agreed.size()).put("total", links.size()); return o; }
             Map<String, LinkedHashSet<String>> by = new LinkedHashMap<>(); for (ObjectNode r : X) by.computeIfAbsent(s(r, "gkey"), k -> new LinkedHashSet<>()).add(s(r, "child_tid"));
             long m1 = 0, m2 = 0, m3 = 0; for (Set<String> st : by.values()) { if (st.size() >= 3) m3++; else if (st.size() == 2) m2++; else m1++; }
@@ -470,6 +496,8 @@ final class GrpRoutes {
                 S.docEdit(tid(a), d -> { ArrayNode L = docItem(d, kind); int i = -1; for (int k = 0; k < L.size(); k++) if (truthy(L.get(k)) && localId.equals(key(get(L.get(k), "id")))) { i = k; break; }
                     JsonNode keep = i >= 0 ? L.get(i) : null; ObjectNode item = g(s0, "snap").isObject() ? ((ObjectNode) g(s0, "snap")).deepCopy() : O(); item.put("id", localId); ObjectNode gf = item.putObject("grpFrom"); gf.set("gid", g(s0, "group_id")); gf.put("sid", sid); gf.set("ver", g(s0, "ver"));
                     if ("course".equals(kind)) { item.set("learners", keep != null && truthy(get(keep, "learners")) ? get(keep, "learners") : F.arrayNode()); item.set("prog", keep != null && truthy(get(keep, "prog")) ? get(keep, "prog") : O()); if (keep == null) item.put("status", "준비중"); else if (undef(get(keep, "status"))) item.remove("status"); else item.set("status", get(keep, "status")); }
+                    else if ("page".equals(kind)) { item.put("on", false).put("draft", true); ArrayNode secs = F.arrayNode(); for (JsonNode x : arr(get(item, "sections"))) { ObjectNode o = x != null && x.isObject() ? ((ObjectNode) x).deepCopy() : O(); o.put("on", true); secs.add(o); } item.set("sections", secs);
+                        if (keep != null && truthy(get(keep, "on"))) item.put("on", true).put("draft", false); }
                     else if (keep == null) item.put("draft", true); else { if (undef(get(keep, "draft"))) item.remove("draft"); else item.set("draft", get(keep, "draft")); }
                     if (i >= 0) L.set(i, item); else L.add(item); return null; }); }
             return out; });

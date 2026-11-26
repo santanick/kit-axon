@@ -8,7 +8,7 @@ test('디디쌤 스튜디오 API', async t => {
   const pool = poolFrom(process.env); await migrate(pool);
   let upstream = 0; const mock = http.createServer((q, r) => { let b = ''; q.on('data', c => b += c); q.on('end', () => { upstream++; r.setHeader('content-type', 'application/json'); r.end(JSON.stringify({ model: JSON.parse(b).model, content: [{ type: 'text', text: 'ok' }], usage: { input_tokens: 5, output_tokens: 1 } })); }); });
   await new Promise(ok => mock.listen(0, ok));
-  const app = createApp({ pool, env: { COOKIE_SECURE: '0', ANTHROPIC_API_KEY: 'sk-ant-test', ANTHROPIC_URL: `http://127.0.0.1:${mock.address().port}/`, SIGNUP_CODE: 'C0DE', AI_DAILY_CALLS: '3' }, log: {} });
+  const app = createApp({ pool, env: { COOKIE_SECURE: '0', ANTHROPIC_API_KEY: 'sk-ant-test', ANTHROPIC_URL: `http://127.0.0.1:${mock.address().port}/`, SIGNUP_CODE: 'C0DE', AI_DAILY_CALLS: '3', MFA_OFF: '1' /* QA4 #7: 보안 4차 이후 기본 2단계 — 이 시험은 로그인 직후 세션을 기대(2단계는 mfa.test) */ }, log: {} });
   await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
   const jar = {}; const call = async (who, method, path, body, hdr = { 'x-didisam': '1' }) => {
     const r = await fetch(U + path, { method, headers: { ...hdr, ...(body ? { 'content-type': 'application/json' } : {}), ...(jar[who] ? { cookie: jar[who] } : {}) }, body: body ? JSON.stringify(body) : undefined });

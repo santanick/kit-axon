@@ -1,4 +1,5 @@
 'use strict';
+const { adminPool, closeAdmin, NEED } = require('./_admin'); // QA8: 비슈퍼유저 DB에서는 직접 조회만 슈퍼유저 연결로(서버는 RLS 아래 그대로)
 /* QA7 학습자 회원가입 · 연동 로그인 · 가입 승인 — 이메일 · 소셜(모의 OAuth: 구글 · 카카오 · 네이버) · 누구나 가입(open) · 기관 승인(approval) · 승인/거절 · 대학 PII 최소.
    사용: DATABASE_URL=… node --test service/test/learner-signup.test.js (키 · 비밀값 없음 — 제공자는 이 시험 안의 모의 서버) */
 const test = require('node:test'); const assert = require('node:assert/strict'); const http = require('node:http'); const crypto = require('node:crypto');
@@ -15,12 +16,12 @@ test('QA7 학습자 가입 · 소셜 로그인 · 승인', { skip: !process.env.
       return out(p === 'google' ? { sub } : p === 'naver' ? { resultcode: '00', message: 'success', response: { id: sub } } : { id: sub }); }
     r.writeHead(404); r.end(); }); }).listen(0, '127.0.0.1');
   await new Promise(ok => mock.once('listening', ok)); const MU = `http://127.0.0.1:${mock.address().port}`;
-  const pool = poolFrom(process.env); await migrate(pool);
+  const pool = poolFrom(process.env); await migrate(pool); const adm = await adminPool(pool); if (!adm) { mock.close(); await pool.end(); t.skip(NEED); return; }
   const env = { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', MFA_OFF: '1', PII_KEY: crypto.randomBytes(32).toString('hex'), PII_DEV_OTP: '1', OAUTH_MOCK_URL: MU,
     LEARNER_OAUTH_KAKAO_ID: 'lk-id', LEARNER_OAUTH_NAVER_ID: 'ln-id', LEARNER_OAUTH_NAVER_SECRET: 'ln-sec', OAUTH_GOOGLE_ID: 'op-g-id', OAUTH_GOOGLE_SECRET: 'op-g-sec' };
   const app = createApp({ pool, env, log: {} });
   await new Promise(ok => app.listen(0, ok)); const U = `http://127.0.0.1:${app.address().port}`;
-  t.after(() => { app.close(); mock.close(); return pool.end(); });
+  t.after(() => { app.close(); mock.close(); return Promise.all([closeAdmin(adm, pool), pool.end()]); });
   /* 쿠키 여러 개 보관 */
   const jar = {}; const keep = (who, r) => { const L = typeof r.headers.getSetCookie === 'function' ? r.headers.getSetCookie() : []; const J = jar[who] = jar[who] || {}; for (const c of L) { const [kv, ...a] = c.split(';'); const [k, ...v] = kv.split('='); if (/max-age=0/i.test(a.join(';'))) delete J[k.trim()]; else J[k.trim()] = v.join('='); } };
   const ck = who => Object.entries(jar[who] || {}).map(([k, v]) => `${k}=${v}`).join('; ');
@@ -60,8 +61,8 @@ test('QA7 학습자 가입 · 소셜 로그인 · 승인', { skip: !process.env.
       assert.equal((await call('S' + p, 'POST', `/api/pub/${OPEN.tid}/signup`, { via: 'sns', oauth: true, nickname: p + '두번', consent, age14: true })).j.error, 'oauth_pending', '보류 쿠키는 한 번만');
       assert.equal(await social('S2' + p, OPEN.tid, p, code, 'login'), 'ok'); assert.equal((await call('S2' + p, 'GET', `/api/pub/${OPEN.tid}/me`)).j.me.sid, s.j.me.sid);
     }
-    const raw = (await pool.query("select count(*)::int n from pii.identity where provider_sub_hash like $1 or provider_sub_hash = $2", ['%Sk1' + sfx + '%', 'Sk1' + sfx])).rows[0].n; assert.equal(raw, 0, '원문 sub 저장 금지');
-    assert.equal((await pool.query("select email_enc from pii.identity where tid = $1 and provider = 'kakao'", [OPEN.tid])).rows[0].email_enc, null);
+    const raw = (await adm.query("select count(*)::int n from pii.identity where provider_sub_hash like $1 or provider_sub_hash = $2", ['%Sk1' + sfx + '%', 'Sk1' + sfx])).rows[0].n; assert.equal(raw, 0, '원문 sub 저장 금지');
+    assert.equal((await adm.query("select email_enc from pii.identity where tid = $1 and provider = 'kakao'", [OPEN.tid])).rows[0].email_enc, null);
     assert.ok(seen.includes('POST naver/token') && seen.includes('GET naver/me'));
   });
   await t.test('소셜 보안: state 위조 · 다른 브라우저 콜백 · 꺼진 제공자 · 제공자 오류', async () => {
@@ -96,7 +97,7 @@ test('QA7 학습자 가입 · 소셜 로그인 · 승인', { skip: !process.env.
     const pa = await call('A1', 'GET', `/api/pub/${APR.tid}/pending`); assert.equal(pa.j.status, 'active'); assert.equal((await call('A1', 'GET', `/api/pub/${APR.tid}/me`)).j.me.sid, lidA);
     assert.equal((await call('A1', 'GET', `/api/pub/${APR.tid}/pending`)).status, 404, '표는 한 번 쓰고 지움');
     assert.equal(await social('K3', APR.tid, 'kakao', 'ka' + sfx, 'login'), 'ok');
-    const au = (await pool.query("select action, detail from audit_log where tenant_id = $1 and action like 'learner.%' and action <> 'learner.signup' order by at", [APR.tid])).rows;
+    const au = (await adm.query("select action, detail from audit_log where tenant_id = $1 and action like 'learner.%' and action <> 'learner.signup' order by at", [APR.tid])).rows;
     assert.deepEqual(au.map(x => x.action).sort(), ['learner.approve', 'learner.approve', 'learner.reject']);
     /* 거절 뒤 다시 승인 */ await call('APR', 'POST', '/api/learners/decide', { sids: [lidB], ok: true }); assert.equal((await call('B2', 'POST', `/api/pub/${APR.tid}/login`, { via: 'email', email: `b1${sfx}@ex.com`, pw: 'Learn!ng123' })).status, 200);
   });
@@ -104,8 +105,8 @@ test('QA7 학습자 가입 · 소셜 로그인 · 승인', { skip: !process.env.
     assert.equal(await social('U1', UNI.tid, 'kakao', 'u1' + sfx), 'join-kakao');
     assert.equal((await call('U1', 'POST', `/api/pub/${UNI.tid}/signup`, { via: 'sns', oauth: true, consent })).j.error, 'student_no');
     const s = await call('U1', 'POST', `/api/pub/${UNI.tid}/signup`, { via: 'sns', oauth: true, student_no: '20269001', dept: '컴퓨터공학과', email: 'leak@ex.com', consent }); assert.equal(s.status, 200, JSON.stringify(s.j)); assert.equal(s.j.me.login, 'kakao');
-    const id = (await pool.query('select email_enc, email_bidx, pw_hash, provider from pii.identity where tid = $1 and learner_id = $2', [UNI.tid, s.j.me.sid])).rows[0]; assert.deepEqual([id.email_enc, id.email_bidx, id.pw_hash, id.provider], [null, null, null, 'kakao']);
-    assert.equal((await pool.query('select student_no from learner_accounts where tenant_id = $1 and learner_id = $2', [UNI.tid, s.j.me.sid])).rows[0].student_no, '20269001');
+    const id = (await adm.query('select email_enc, email_bidx, pw_hash, provider from pii.identity where tid = $1 and learner_id = $2', [UNI.tid, s.j.me.sid])).rows[0]; assert.deepEqual([id.email_enc, id.email_bidx, id.pw_hash, id.provider], [null, null, null, 'kakao']);
+    assert.equal((await adm.query('select student_no from learner_accounts where tenant_id = $1 and learner_id = $2', [UNI.tid, s.j.me.sid])).rows[0].student_no, '20269001');
     assert.equal(await social('U2', UNI.tid, 'kakao', 'u1' + sfx, 'login'), 'ok');
     assert.equal((await call('U3', 'POST', `/api/pub/${UNI.tid}/signup`, { via: 'univ', student_no: '20269002', dept: '경영학과', pw: 'Learn!ng123', consent })).status, 200, '학번 가입은 그대로');
   });

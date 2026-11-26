@@ -276,6 +276,7 @@ final class MkRoutes {
                     ObjectNode o = O().put("ok", true); o.set("quote", quoteOut(S.creditQuote(tid(a), in, email(a), false), false)); return o; }); }); });
         S.p("POST", "^/api/market/contracts/(mk_[a-z0-9]{12})/refund$", (req, res, raw, p) -> { JsonNode b = body(raw); final boolean santaCause = "santa".equals(S(get(b, "cause"))); Map<String, Object> a = santaCause ? S.needSanta(req) : S.needOwner(req); /* 산타 귀책은 산타 운영자만 */
             return S.T(() -> { ObjectNode k = S.contractOf(a, p[0], true); if (!santaCause && !s(k, "buyer_tid").equals(tid(a))) throw S.E(404, "contract", "없는 계약입니다."); return S.idem(tid(a), "refund", get(b, "idem"), () -> {
+                if (!List.of("active", "carry").contains(s(k, "status")) || (truthy(g(k, "refund")) && "confirmed".equals(S(get(g(k, "refund"), "status"))))) throw S.E(409, "mk_refund_state", "이용 중인 계약만 해지 · 환불을 요청할 수 있습니다."); /* QA5(v49) */
                 List<ObjectNode> all = S.lotsOf(s(k, "id")); long used = n(db.q1("select coalesce(sum(credits), 0)::int n from mk_credit_use where contract_id = $1 and kind = 'use' and not restored", s(k, "id")), "n");
                 ArrayNode L = F.arrayNode(); for (ObjectNode l : all) L.addObject().put("lot", s(l, "lot")).put("credits", n(l, "credits")).put("remain", n(l, "remain")).put("validTo", s(l, "vt"));
                 String cause = santaCause ? "santa" : "buyer"; JsonNode T0 = truthy(g(k, "terms")) ? g(k, "terms") : O();
@@ -283,11 +284,33 @@ final class MkRoutes {
                 ObjectNode R = DdMarketCalc.refundOf(L, today(), op);
                 ObjectNode refund = O().put("rule", "mk-refund-v2").put("mode", R.get("mode").asText()).put("cause", cause).put("paidUnused", R.get("paidUnused").asLong()).put("bonusUsed", R.get("bonusUsed").asLong()).put("penalty", R.get("penalty").asLong()).put("amount", R.get("amount").asLong());
                 refund.put("reason", str(get(b, "reason"), 300)).put("status", "requested").put("at", isoNow());
-                JsonNode TX0 = g(k, "tax"); JsonNode fix = truthy(TX0) && refund.get("amount").asLong() > 0 ? DdMarketCalc.taxFixOf(TX0, refund.get("amount").asLong(), today()) : F.nullNode();
+                JsonNode TX0 = g(k, "tax"); JsonNode fix = truthy(TX0) && refund.get("amount").asLong() > 0 ? DdMarketCalc.taxFixOf(TX0, refund.get("amount").asLong() + refund.get("penalty").asLong(), today()) /* policy v1.3 제46조의2 제3항: 환불 대상 전액(위약금 포함) 감액 */ : F.nullNode();
                 if (!fix.isNull()) { refund.set("taxFix", fix); ObjectNode T1 = ((ObjectNode) TX0).deepCopy(); ArrayNode fx = F.arrayNode(); for (JsonNode x : arr(get(TX0, "fixes"))) if (!"wait".equals(S(get(x, "status")))) fx.add(x); fx.add(fix); T1.set("fixes", fx);
                     db.x("update mk_contract set refund = $2, tax = $3::jsonb where id = $1", s(k, "id"), refund.toString(), T1.toString()); }
                 else db.x("update mk_contract set refund = $2 where id = $1", s(k, "id"), refund.toString()); S.log(s(k, "buyer_tid"), email(a), "market.refund", map("contract", s(k, "id"), "amount", refund.get("amount").asLong(), "cause", cause));
                 ObjectNode o = O().put("ok", true); o.set("refund", refund); o.put("status", "requested"); return o; }); }); });
+        /* QA5(v49) 해지 · 환불 확정(산타 운영) — Node routes.js refund/confirm과 같음(policy v1.3 제40조 제5항 · 제46조의2 제3항) */
+        S.p("POST", "^/api/market/contracts/(mk_[a-z0-9]{12})/refund/confirm$", (req, res, raw, p) -> { Map<String, Object> a = S.needSanta(req); JsonNode b = body(raw);
+            return S.T(() -> S.idem(tid(a), "refund-confirm:" + p[0], get(b, "idem"), () -> { ObjectNode k = S.contractOf(a, p[0], true); JsonNode RQ = truthy(g(k, "refund")) ? g(k, "refund") : O();
+                if (!"requested".equals(S(get(RQ, "status")))) throw S.E(409, "mk_refund_state", "해지 · 환불 요청이 없거나 이미 처리한 계약입니다.");
+                List<ObjectNode> all = S.lotsOf(s(k, "id")); long used = n(db.q1("select coalesce(sum(credits), 0)::int n from mk_credit_use where contract_id = $1 and kind = 'use' and not restored", s(k, "id")), "n"); String day = today();
+                ArrayNode L = F.arrayNode(); for (ObjectNode l : all) L.addObject().put("lot", s(l, "lot")).put("credits", n(l, "credits")).put("remain", n(l, "remain")).put("validTo", s(l, "vt"));
+                JsonNode T0 = truthy(g(k, "terms")) ? g(k, "terms") : O(); ObjectNode op = O().put("start", s(k, "s")).put("usedTotal", used).put("cause", "santa".equals(S(get(RQ, "cause"))) ? "santa" : "buyer").put("buyerMode", s(k, "buyer_mode")); if (!nullish(get(T0, "penaltyBp"))) op.set("penaltyBp", get(T0, "penaltyBp"));
+                ObjectNode R = DdMarketCalc.refundOf(L, day, op); long amount = R.get("amount").asLong(), penalty = R.get("penalty").asLong(); long rem = amount > 0 ? amount + penalty : 0;
+                JsonNode TX0 = g(k, "tax"); JsonNode fix = truthy(TX0) && rem > 0 ? DdMarketCalc.taxFixOf(TX0, rem, day) : F.nullNode(); if (!fix.isNull()) rem += fix.get("supply").asLong();
+                ArrayNode tops = F.arrayNode(); for (ObjectNode tp : db.q("select * from mk_contract where renew_of = $1 and status = 'merged' order by at", s(k, "id"))) { if (rem <= 0) break; /* 추가 구매분 세금계산서는 원 계약 다음에 감액 */
+                    JsonNode t0 = truthy(g(tp, "tax")) ? g(tp, "tax") : DdMarketCalc.taxOf(n(tp, "supply_total"), 0, MarketServiceImpl.kstDay(g(tp, "at"))); JsonNode f = DdMarketCalc.taxFixOf(t0, rem, day); if (f.isNull()) continue; rem += f.get("supply").asLong();
+                    ObjectNode tf = O().put("contract", s(tp, "id")); tf.setAll((ObjectNode) f); tops.add(tf); ObjectNode T1 = ((ObjectNode) t0).deepCopy(); ArrayNode fx = F.arrayNode(); for (JsonNode x : arr(get(t0, "fixes"))) if (!"wait".equals(S(get(x, "status")))) fx.add(x); fx.add(f); T1.set("fixes", fx);
+                    db.x("update mk_contract set tax = $2::jsonb where id = $1", s(tp, "id"), T1.toString()); }
+                ObjectNode refund = ((ObjectNode) RQ).deepCopy(); refund.put("mode", R.get("mode").asText()).put("paidUnused", R.get("paidUnused").asLong()).put("bonusUsed", R.get("bonusUsed").asLong()).put("penalty", penalty).put("amount", amount)
+                    .put("status", "confirmed").put("confirmedAt", isoNow()).put("confirmedBy", email(a)).put("memo", str(get(b, "memo"), 300)); refund.remove("taxFix"); if (!fix.isNull()) refund.set("taxFix", fix); if (tops.size() > 0) refund.set("taxFixTopups", tops);
+                db.x("update mk_credit_wallet set remain = 0 where contract_id = $1", s(k, "id"));
+                if (truthy(TX0)) { ObjectNode T1 = ((ObjectNode) TX0).deepCopy(); ArrayNode fx = F.arrayNode(); for (JsonNode x : arr(get(TX0, "fixes"))) if (!"wait".equals(S(get(x, "status")))) fx.add(x); if (!fix.isNull()) fx.add(fix); T1.set("fixes", fx);
+                    db.x("update mk_contract set status = 'cancelled', refund = $2::jsonb, tax = $3::jsonb where id = $1", s(k, "id"), refund.toString(), T1.toString()); }
+                else db.x("update mk_contract set status = 'cancelled', refund = $2::jsonb where id = $1", s(k, "id"), refund.toString());
+                db.x("insert into mk_entry (kind, contract_id, party_tid, credits, amount, ref) values ('credit_refund', $1, $2, $3, $4, $5)", s(k, "id"), s(k, "buyer_tid"), R.get("paidUnused").asLong(), -amount, day);
+                S.log(s(k, "buyer_tid"), email(a), "market.refund_confirm", map("contract", s(k, "id"), "amount", amount, "penalty", penalty, "mode", R.get("mode").asText()));
+                ObjectNode o = O().put("ok", true); o.set("refund", refund); o.put("status", "cancelled"); return o; })); });
         S.p("POST", "^/api/market/contracts/(mk_[a-z0-9]{12})/activate$", (req, res, raw, p) -> { Map<String, Object> a = S.needSanta(req); JsonNode b = body(raw);
             return S.T(() -> S.idem(tid(a), "activate:" + p[0], get(b, "idem"), () -> { ObjectNode k = S.contractOf(a, p[0], true); ObjectNode out = S.activate(k, b); S.log(s(k, "buyer_tid"), email(a), "market.activate", map("contract", p[0])); ObjectNode o = O().put("ok", true); o.setAll(out); return o; })); });
         /* CP 상품 */

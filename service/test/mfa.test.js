@@ -1,8 +1,9 @@
 'use strict';
+const { adminPool, closeAdmin, NEED } = require('./_admin'); // QA8: 비슈퍼유저 DB에서는 직접 조회만 슈퍼유저 연결로(서버는 RLS 아래 그대로)
 /* 보안 4차 #1 관리자 추가 인증(이메일 인증번호 · 인증 앱 TOTP · 기관 정책 · MFA_OFF 시험 예외)
    DATABASE_URL=postgresql://… node --test service/test/mfa.test.js */
 const test = require('node:test'); const assert = require('node:assert/strict'); const http = require('node:http');
-const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app'); const { hotp, totpCheck, b32, unb32, maskEmail } = require('../server/mfa');
+const { poolFrom, migrate } = require('../server/db'); const { createApp } = require('../server/app'); const { hotp, totpCheck, b32, unb32, maskEmail, createMfa } = require('../server/mfa');
 
 test('TOTP RFC 6238 시험 벡터 · base32 · 재사용 방지', () => {
   const key = Buffer.from('12345678901234567890');
@@ -15,13 +16,13 @@ test('TOTP RFC 6238 시험 벡터 · base32 · 재사용 방지', () => {
 });
 
 test('운영자 2단계 인증', async t => {
-  const pool = poolFrom(process.env); await migrate(pool);
+  const pool = poolFrom(process.env); await migrate(pool); const adm = await adminPool(pool); if (!adm) { await pool.end(); t.skip(NEED); return; }
   const mails = []; const mock = http.createServer((q, r) => { let b = ''; q.on('data', c => b += c); q.on('end', () => { mails.push(JSON.parse(b)); r.end('{}'); }); });
   await new Promise(ok => mock.listen(0, ok));
   const env = { COOKIE_SECURE: '0', SIGNUP_CODE: 'C0DE', MFA_OFF: '0', MAIL_PROVIDER: 'webhook', MAIL_WEBHOOK_URL: `http://127.0.0.1:${mock.address().port}/` };
   const app = createApp({ pool, env, log: {} }); await new Promise(ok => app.listen(0, ok));
   const appOff = createApp({ pool, env: { COOKIE_SECURE: '0', MFA_OFF: '1' }, log: {} }); await new Promise(ok => appOff.listen(0, ok));
-  t.after(() => { app.close(); appOff.close(); mock.close(); pool.end(); });
+  t.after(() => { app.close(); appOff.close(); mock.close(); Promise.all([closeAdmin(adm, pool), pool.end()]); });
   const jars = {}; const call = async (who, method, path, body, U = `http://127.0.0.1:${app.address().port}`) => {
     const J = jars[who] || (jars[who] = {});
     const r = await fetch(U + path, { method, headers: { 'x-didisam': '1', ...(body ? { 'content-type': 'application/json' } : {}), cookie: Object.entries(J).map(([k, v]) => `${k}=${v}`).join('; ') }, body: body ? JSON.stringify(body) : undefined });
@@ -40,17 +41,30 @@ test('운영자 2단계 인증', async t => {
     assert.equal(l.status, 200); assert.equal(l.j.mfa, 'email'); assert.match(l.j.ticket, /^[A-Za-z0-9_-]{43}$/); assert.equal(l.j.to, 'mf******@d.kr'); assert.ok(!l.j.user, '사용자 정보 없음'); assert.ok(!l.j.devCode, '메일 설정 시 devCode 없음');
     assert.ok(!jars.B.dd_sid, '세션 쿠키 없음'); assert.equal((await call('B', 'GET', '/api/me')).status, 401);
     const code = lastCode(OW); assert.match(code, /^\d{6}$/);
-    const row = (await pool.query("select code_hash from mfa_tickets t join users u on u.id = t.user_id where u.email = $1", [OW])).rows[0]; assert.ok(row.code_hash && !row.code_hash.includes(code), '해시만 저장');
+    const row = (await adm.query("select code_hash from mfa_tickets t join users u on u.id = t.user_id where u.email = $1", [OW])).rows[0]; assert.ok(row.code_hash && !row.code_hash.includes(code), '해시만 저장');
     const bad = await call('B', 'POST', '/api/login/mfa', { ticket: l.j.ticket, code: code === '000000' ? '111111' : '000000' }); assert.equal(bad.status, 401); assert.equal(bad.j.error, 'mfa_code');
     const ok = await call('B', 'POST', '/api/login/mfa', { ticket: l.j.ticket, code }); assert.equal(ok.status, 200); assert.equal(ok.j.user.email, OW); assert.ok(jars.B.dd_sid);
     assert.equal((await call('B', 'GET', '/api/me')).status, 200);
     const again = await call('C', 'POST', '/api/login/mfa', { ticket: l.j.ticket, code }); assert.equal(again.status, 401); assert.equal(again.j.error, 'mfa_expired', '1회용');
-    const au = (await pool.query("select action, detail::text d from audit_log where actor = $1 and action in ('login', 'mfa.fail') order by id", [OW])).rows;
+    const au = (await adm.query("select action, detail::text d from audit_log where actor = $1 and action in ('login', 'mfa.fail') order by id", [OW])).rows;
     assert.deepEqual(au.map(r => r.action), ['mfa.fail', 'login']); assert.ok(!au.some(r => r.d && r.d.includes(code)), '인증번호는 기록에 없음');
+  });
+
+  await t.test('freshWithin(user, seconds) — 최근 2단계 통과 여부(통합 관리 서버용 공개 함수)', async () => {
+    const m = createMfa({ pool, env: { MFA_OFF: '0' }, log: {} }); const mOff = createMfa({ pool, env: { MFA_OFF: '1' }, log: {} });
+    const uid = (await adm.query('select id::text id from users where email = $1', [OW])).rows[0].id;
+    assert.equal(await m.freshWithin(uid, 60), true, '방금 통과 → 60초 안'); assert.equal(await m.freshWithin({ uid }, 60), true, '{ uid }'); assert.equal(await m.freshWithin({ id: uid }, 60), true, '{ id }');
+    await adm.query("update mfa_fresh set at = now() - interval '120 seconds' where user_id = $1", [uid]);
+    assert.equal(await m.freshWithin(uid, 60), false, '120초 전 통과 → 60초 기준 아님'); assert.equal(await m.freshWithin(uid, 300), true, '300초 기준은 통과');
+    for (const bad of [0, -5, NaN, 'x', null]) assert.equal(await m.freshWithin(uid, bad), false, `seconds ${bad}`);
+    for (const bad of ['', 'not-a-uuid', null, {}, { uid: "1' or '1'='1" }]) assert.equal(await m.freshWithin(bad, 60), false, `user ${JSON.stringify(bad)}`);
+    const other = '00000000-0000-4000-8000-000000000000'; assert.equal(await m.freshWithin(other, 3600), false, '2단계를 한 적 없는 사용자');
+    assert.equal(await mOff.freshWithin(uid, 1), true, 'MFA_OFF=1(시험 · 데모)은 true'); assert.equal(await mOff.freshWithin('bad', 1), false, 'MFA_OFF여도 잘못된 user는 false');
+    await adm.query("update mfa_fresh set at = now() where user_id = $1", [uid]);
   });
   await t.test('5번 틀리면 무효 · 재발송 30초 간격', async () => {
     const l = await login('D', OW, PW); const rs = await call('D', 'POST', '/api/login/mfa/resend', { ticket: l.j.ticket }); assert.equal(rs.status, 429); assert.equal(rs.j.error, 'mfa_wait');
-    await pool.query("update mfa_tickets set sent_at = now() - interval '1 minute' where id = encode(sha256($1::bytea), 'hex')", [l.j.ticket]);
+    await adm.query("update mfa_tickets set sent_at = now() - interval '1 minute' where id = encode(sha256($1::bytea), 'hex')", [l.j.ticket]);
     const r2 = await call('D', 'POST', '/api/login/mfa/resend', { ticket: l.j.ticket }); assert.equal(r2.status, 200); const code = lastCode(OW);
     const wrong = code === '000000' ? '111111' : '000000';
     for (let i = 0; i < 4; i++) assert.equal((await call('D', 'POST', '/api/login/mfa', { ticket: l.j.ticket, code: wrong })).j.error, 'mfa_code');
@@ -62,7 +76,7 @@ test('운영자 2단계 인증', async t => {
     assert.equal((await call('B', 'POST', '/api/me/mfa', { password: 'wrong' })).status, 401);
     const s = await call('B', 'POST', '/api/me/mfa', { password: PW }); assert.equal(s.status, 200); secret = s.j.secret;
     assert.match(s.j.uri, /^otpauth:\/\/totp\/DIDISAM:mfa.+%40d\.kr\?secret=[A-Z2-7]{32}&issuer=DIDISAM&algorithm=SHA1&digits=6&period=30$/);
-    const stored = (await pool.query('select pend from user_totp t join users u on u.id = t.user_id where u.email = $1', [OW])).rows[0].pend; assert.ok(stored.startsWith('v1:') && !stored.includes(secret), '암호화 저장');
+    const stored = (await adm.query('select pend from user_totp t join users u on u.id = t.user_id where u.email = $1', [OW])).rows[0].pend; assert.ok(stored.startsWith('v1:') && !stored.includes(secret), '암호화 저장');
     const key = unb32(secret); const st = Math.floor(Date.now() / 30000);
     assert.equal((await call('B', 'POST', '/api/me/mfa', { code: '000000' === hotp(key, st) ? '111111' : '000000' })).status, 400);
     assert.equal((await call('B', 'POST', '/api/me/mfa', { code: hotp(key, st - 1) })).j.method, 'totp');
@@ -81,7 +95,7 @@ test('운영자 2단계 인증', async t => {
     let r = await sec('B', { mfa: 'sms' }); assert.equal(r.status, 400); assert.equal(r.j.error, 'sec_mfa');
     r = await sec('S', { mfa: 'totp' }); assert.equal(r.status, 403);
     r = await sec('B', { mfa: 'totp' }); assert.equal(r.status, 200);
-    const au = (await pool.query("select detail from audit_log where actor = $1 and action = 'org.sec'", [OW])).rows; assert.equal(au.length, 1); assert.deepEqual(au[0].detail.set, { mfa: 'totp' });
+    const au = (await adm.query("select detail from audit_log where actor = $1 and action = 'org.sec'", [OW])).rows; assert.equal(au.length, 1); assert.deepEqual(au[0].detail.set, { mfa: 'totp' });
     assert.equal((await call('B', 'GET', '/api/me/mfa')).j.policy, 'totp');
     assert.equal((await call('B', 'DELETE', '/api/me/mfa', { password: PW })).j.error, 'mfa_policy', '정책상 해제 불가');
     const l = await login('S2', SUB, 'Passw0rd-sub1'); assert.equal(l.j.mfa, 'email'); assert.equal(l.j.totpSetup, true, '미등록자는 이메일로 들어온 뒤 등록 안내');
