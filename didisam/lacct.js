@@ -213,6 +213,8 @@ function laJoinState(tok, inv) { if (!LA.j || LA.j.tok !== tok) LA.j = { tok, in
 function laXQNames(J, U) { try { if (J && J.kind === 'parent') return []; return laCfg().extraQ.filter(q => !(U && ['학번', '학과'].includes(q.q))).map(q => String(q.q || '').trim()).filter(Boolean).slice(0, 8); } catch (e) { return []; } }
 function laJoinNote(J, U) { const X = laXQNames(J, U); const bio = X.filter(x => /생년월일|성별/.test(x)); const not = ['실명', '휴대폰 번호', '생년월일', '성별'].filter(x => !X.some(q => q.includes(x))).join(' · ');
   return `가입할 때 ${not ? `${not}${(c => c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '은' : '는')(not.charCodeAt(not.length - 1))} 받지 않습니다.` : ''}${X.length ? ` 이 기관은 ${X.join(' · ')}${bio.length && /^moel-/.test(String((SITE().cpl || {}).profile || '')) ? '(고용노동부 훈련 신고 · HRD-Net 명단 대조용)' : ''}을 추가로 받습니다.` : ''}`; } /* qa8 심플: 「필요할 때만 따로 요청」 설명은 처리방침 요약에 있다 */
+/* v49.1 P-AI-60(인공지능기본법 제31조 투명성): 가입 · 첫 로그인 동의 화면에 생성형 AI 사전 고지 한 줄 — 기관 유형과 상관없이 같은 문장(lconsent.js도 이 함수를 씀) */
+function laAiNote() { return '<p class="mini la-ainote">디디쌤은 생성형 AI(Claude)를 써요. AI 튜터의 답과 「AI 생성」 · 「AI 초안」 표시가 붙은 내용은 AI가 만든 것이라 틀릴 수 있어요.</p>'; }
 function laConsentHTML(J, U) { const k = J.keep || {}; const ck = n => k[n] ? 'checked' : ''; const XQ = laXQNames(J, U);
   /* qa8(2026-11-25) 대표님 「회원가입 · 로그인 심플하게」: 한 줄 「약관 전체 동의」 + 항목별 체크 · 전문은 「항목별로 보기」 안에. 고용노동부 훈련(제3자 제공)은 따로 보이게 둔다 */
   return `<fieldset class="la-terms la-tc"><legend class="sr">약관 동의</legend><label class="ckl all"><input type="checkbox" data-ac="jall" ${k.tos && k.privacy && (U || k.mkt) ? 'checked' : ''}> <span><b>약관 전체 동의</b><small>이용약관 · 개인정보 수집 · 이용(필수)${U ? '' : ' · 마케팅 수신(선택)'}</small></span></label>
@@ -220,7 +222,7 @@ function laConsentHTML(J, U) { const k = J.keep || {}; const ck = n => k[n] ? 'c
     <details class="la-tdet"><summary>항목별로 보기</summary>
     <label class="ckl"><input type="checkbox" name="tos" ${ck('tos')}> [필수] 이용약관 동의</label><details><summary>전문 보기</summary><pre>${esc(laCfg().tos || '이용약관은 기관 홈페이지 하단에서 확인할 수 있습니다.')}</pre></details>
     <label class="ckl"><input type="checkbox" name="privacy" ${ck('privacy')}> [필수] 개인정보 수집 · 이용 동의</label><details><summary>받는 항목: 로그인 수단(이메일 또는 SNS 식별값) · 닉네임${XQ.length ? ` · ${esc(XQ.join(' · '))}(기관 추가 항목)` : ''} / 목적: 회원 식별 · 학습 서비스${XQ.length ? ' · 기관 운영' : ''} / 보유: 탈퇴 시 파기 <u>자세히</u></summary>${laPolicyHTML(U, true)}</details>
-    ${U ? '' : `<label class="ckl"><input type="checkbox" name="mkt" ${ck('mkt')}> [선택] 마케팅 정보 수신 동의 <small>— 동의하지 않아도 가입할 수 있습니다</small></label>`}</details></fieldset>`; }
+    ${U ? '' : `<label class="ckl"><input type="checkbox" name="mkt" ${ck('mkt')}> [선택] 마케팅 정보 수신 동의 <small>— 동의하지 않아도 가입할 수 있습니다</small></label>`}</details></fieldset>${laAiNote()}`; }
 function laJoin(r) { const cfg = laCfg(); const tok = (r.b || '').replace(/[^\w-]/g, ''); const U = laUniv();
   if (LR.me && !(LA.j && LA.j.done)) return laSec('이미 로그인했습니다', `<div class="cta">${btn('마이페이지', '#my', 'pri')}</div>`);
   if (!laAcctOn() && !laPvJoin()) return laGate('회원가입', LR.mode === 'preview' ? '미리보기에서는 가입할 수 없습니다. 게시한 학습자 사이트에서 가입해 보세요.' : '게시된 학습자 사이트에서 가입할 수 있습니다.');

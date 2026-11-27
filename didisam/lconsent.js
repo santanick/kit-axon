@@ -27,7 +27,7 @@
       <label class="ckl"><input type="checkbox" name="tos"> [필수] 이용약관 동의</label><details><summary>전문 보기</summary><pre>${esc(pol.tos || '이용약관은 학교 홈페이지에서 확인할 수 있어요.')}</pre></details>
       <label class="ckl"><input type="checkbox" name="privacy"> [필수] 개인정보 수집 · 이용 동의</label>
       <details open><summary>받는 항목: 학번 · 학과</summary><table class="la-pol"><thead><tr><th>구분</th><th>수집 항목</th><th>목적</th><th>보유 기간</th></tr></thead><tbody>${rows.map(r => `<tr>${r.map((x, i) => `<td${i === 0 ? ' class="k"' : ''}>${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table>
-      <p class="mini">이름 · 연락처 · 이메일 · 생년월일은 받지 않아요. 비밀번호도 만들지 않고, 학교에서 받은 접근코드로 로그인해요(학교 SSO 연동 예정).</p>${typeof laXferHTML === 'function' ? laXferHTML() : ''}</details></fieldset>
+      <p class="mini">이름 · 연락처 · 이메일 · 생년월일은 받지 않아요. 비밀번호도 만들지 않고, 학교에서 받은 접근코드로 로그인해요(학교 SSO 연동 예정).</p>${typeof laXferHTML === 'function' ? laXferHTML() : ''}</details></fieldset>${typeof laAiNote === 'function' ? laAiNote() : ''}
       <p class="err" id="lcCnErr" role="alert"></p><button class="lbtn pri blk" type="submit">동의하고 시작하기</button></form>
     <p class="la-links"><a href="#home" data-cn="out">동의하지 않고 로그아웃</a> · <a href="#privacy">개인정보 처리방침 요약</a></p></div></section>`; };
   if (typeof LA_R === 'object') LA_R.consent = view;
