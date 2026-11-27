@@ -18,6 +18,8 @@
 .mil .card{min-width:0}
 .mil-col{display:flex;flex-direction:column;gap:12px;min-width:0}
 .mil-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}.mil-row.wrap{flex-wrap:wrap}.mil-row.sb{justify-content:space-between}
+/* v49.1 개발1: 규칙 탭 머리(칩 · 템플릿 안내 · 버튼)에서 안내 글이 칩 옆에 7px로 눌려 390px에서 가로 넘침(mil42-admin rules:mil). 남는 폭이 좁으면 다음 줄로 내린다 */
+.mil .mil-row > .mut.f1.ar{min-width:min(100%,14em)}
 .mil-g2,.mil-g3,.mil-g4,.mil-g21,.mil-g31{display:grid;gap:16px;min-width:0}
 .mil-g2{grid-template-columns:repeat(2,minmax(0,1fr))}.mil-g3{grid-template-columns:repeat(3,minmax(0,1fr))}.mil-g4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .mil-g21{grid-template-columns:minmax(0,2fr) minmax(0,1fr);align-items:start}.mil-g31{grid-template-columns:minmax(0,1fr) 406px;align-items:start}
