@@ -11,8 +11,9 @@ const crypto = require('node:crypto');
 const TIER = Object.freeze({
   get_overview: 0, list_courses: 0, list_learners_at_risk: 0, list_open_questions: 0, open_screen: 0, download_report: 0, start_guide: 0, connect_guide: 0, web_search: 0,
   quote_content_pass: 0, open_pass_builder: 0, /* v48 콘텐츠 마켓 AI SAM(didisam/mksam.js): 견적 계산(저장 안 함) · A3 화면 열기 */
+  grp_overview: 0, grp_below_target: 0, /* v49.1 통합 센터 AI SAM(A-grp-sam, didisam/group.js): 묶음 집계 · 미달 기관 — 집계 · 가명만(개별 학습자 없음) */
   create_courses: 1, add_learners: 1, enroll_learners: 1, update_course: 1, build_homepage: 1, edit_homepage: 1,
-  run_studio_command: 2, studio_action: 2, run_intent: 2, run_screen_action: 2, create_automation: 2, /* 계획 카드로 메시지 · 메일 · Slack 발송까지 이어질 수 있음 */
+  run_studio_command: 2, studio_action: 2, run_intent: 2, run_screen_action: 2, create_automation: 2, grp_share_plan: 2, /* v49.1 grp_share_plan: 소속 기관 배포 계획 카드(승인해야 배포) */ /* 계획 카드로 메시지 · 메일 · Slack 발송까지 이어질 수 있음 */
 });
 const EXT_TOOLS = ['list_open_questions']; /* 결과에 학습자 글(외부 출처)이 담기는 도구 */
 const EXT_BLOCKS = ['web_search_tool_result', 'web_fetch_tool_result', 'document', 'search_result', 'mcp_tool_result', 'image'];

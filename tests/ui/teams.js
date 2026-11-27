@@ -21,7 +21,7 @@ let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓
     ok(await p.evaluate(() => !!document.querySelector('.cx-row[data-v=teams] .brl svg')), 'Teams 줄: 공식 로고(SVG)');
     ok(await p.evaluate(() => /Microsoft Teams/.test(document.querySelector('.cx-hero h2').textContent)), '대학: 추천 문장에 Teams');
     await p.evaluate(() => ACT['sl-cn']({ dataset: { v: 'teams' } })); await p.waitForTimeout(150);
-    ok(await p.evaluate(() => { const c = document.getElementById('cnCard-teams'); return !!c && !!c.querySelector('.cx-steps') && c.querySelectorAll('.tm-tabs [role=tab]').length === 4 && /받는 사람이 보는 모습/.test(c.textContent) && !!c.querySelector('details.cn-guide'); }), '카드: 3단계 · 탭 4개 · 단계 안내 · 미리보기');
+    ok(await p.evaluate(() => { const c = document.getElementById('cnCard-teams'); return !!c && !!c.querySelector('.cx-steps') && c.querySelectorAll('.tm-tabs [role=tab]').length === (['univ', 'corp'].includes(S.org.type) ? 5 : 4) && /받는 사람이 보는 모습/.test(c.textContent) && !!c.querySelector('details.cn-guide'); }), '카드: 3단계 · 탭 4개(v49.1 대학 · 기업은 「학습자 알림」 더해 5개 — L-noti-teams) · 단계 안내 · 미리보기');
     ok(await p.evaluate(() => cnStatus('teams').st) === '미연결', '처음 상태 = 미연결');
     await p.waitForTimeout(700); await p.fill('#tmChName', '교육운영'); await p.click('#cnCard-teams [data-act=tm-chadd]'); await p.waitForSelector('#cnCard-teams [data-act=tm-chtest]', { timeout: 5000 }).catch(() => { });
     ok(await p.evaluate(() => cnStatus('teams').st) === '연결됨', '시연 채널 추가 → 연결됨 ' + await p.evaluate(() => [(document.querySelector('#toasts') || {}).textContent, document.querySelectorAll('#tmChName').length, (document.getElementById('tmChName') || {}).value].join(' | ')));

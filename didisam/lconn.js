@@ -20,6 +20,28 @@
   const cfg = () => { try { return typeof laCfg === 'function' ? laCfg() : { social: [] }; } catch (e) { return { social: [] }; } };
   const links = () => { try { const a = typeof laFind === 'function' ? laFind(LR.me.sid || LR.me.id) : null; return (a && (a.links || [a.login])) || []; } catch (e) { return []; } };
   const lg = (id, n) => typeof window.brandLogo === 'function' ? window.brandLogo(id, 44, n) : '';
+  /* v49.1 L-noti-teams 학습자 Teams 알림(teams.md 1.7 · 2절) — 기관이 켠 대학 · 기업만, 본인 동의(teams-lrn-v1)로 켜고 끄면 동의 기록을 지워요.
+     운영: GET · PUT /api/pub/<tid>/teams-noti(서버가 기관 시범 TEAMS_PILOT · 기관 켜기 · Microsoft 로그인 연결을 확인). 시연: 사이트 스냅샷 teamsLrn + LR.lp.conn.teams.
+     받는 것: 공지 제목 · 마감 임박 과정 이름만(이름 · 학번 · 성적은 보내지 않아요). */
+  const TN = { v: null, busy: false, at: 0, open: false };
+  const TN_EV = [['notice', '공지'], ['due', '마감 임박']];
+  const tnLive = () => LR.mode === 'live' && !!LR.tid && typeof api === 'function';
+  function tnState() {
+    if (tnLive()) { if (!TN.busy && (!TN.v || Date.now() - TN.at > 60e3)) { TN.busy = true; api('GET', `/api/pub/${encodeURIComponent(LR.tid)}/teams-noti`).then(v => { TN.v = v; TN.at = Date.now(); TN.busy = false; deco(); }).catch(() => { TN.v = { available: false }; TN.at = Date.now(); TN.busy = false; }); } return TN.v; }
+    const o = (SITE() || {}).teamsLrn; if (!o || !o.on || !['univ', 'corp'].includes(ty())) return { available: false };
+    const me = (lp().conn || {}).teams; return { available: true, on: !!(me && me.on), events: me && me.on ? (me.events || []) : [], orgEvents: Array.isArray(o.events) && o.events.length ? o.events : ['due', 'notice'], mode: 'demo', linked: true, agreeVer: 'teams-lrn-v1', consentAt: (me && me.at) || '' }; }
+  function tnRow() { const v = tnState(); if (!v || !v.available) return null; const ev = (v.on ? v.events : v.orgEvents).map(e => (TN_EV.find(x => x[0] === e) || [e, e])[1]).join(' · ');
+    return { id: 'teams', n: 'Microsoft Teams 알림', d: v.on ? `${ev} 알림을 Teams로도 받고 있어요${v.mode === 'demo' ? ' (시연)' : ''}` : `${ev} 알림을 학교 · 회사 Teams로도 받아요`, st: !!v.on, a: `<button type="button" class="lcx-go" data-lcx="teams">${v.on ? '관리' : '켜기'}</button>` }; }
+  function tnForm() { const r = document.querySelector('.lcx [data-lcx="teams"]'); const row = r && r.closest('.lcx-r'); if (!row) return; const old = row.nextElementSibling; if (old && old.classList.contains('lcx-f')) { old.remove(); TN.open = false; return; }
+    const v = tnState() || {}; TN.open = true; const pick = v.on ? v.events : v.orgEvents;
+    row.insertAdjacentHTML('afterend', `<form class="lcx-f" data-lcx-f="teams" novalidate><fieldset class="lcx-fs"><legend class="mini">받을 알림</legend>${(v.orgEvents || []).map(e => `<label class="lcx-ck"><input type="checkbox" name="ev" value="${e}" ${pick.includes(e) ? 'checked' : ''}> ${(TN_EV.find(x => x[0] === e) || [e, e])[1]}</label>`).join('')}</fieldset>
+      <ul class="lcx-ul mini"><li>받는 것: 공지 제목 · 마감이 다가온 과정 이름만 보내요. 이름 · 학번 · 성적은 보내지 않아요.</li><li>목적: 학습 알림을 놓치지 않게 Teams 활동 피드로 알려 드려요.</li><li>보관: 켜 둔 동안만 동의 기록을 두고, 끄면 바로 지워요.</li>${v.mode === 'live' && !v.linked ? '<li>먼저 학교 · 회사 Microsoft 계정으로 한 번 로그인해야 Teams로 받을 수 있어요.</li>' : ''}${v.mode === 'demo' ? '<li>시연 중이라 실제로 보내지 않아요.</li>' : ''}</ul>
+      ${v.on ? '' : '<label class="lcx-ck"><input type="checkbox" name="agree"> 위 내용을 확인했고 Teams 알림 받기에 동의해요</label>'}<p class="err" role="alert"></p>
+      <div class="lcx-fb"><button type="submit" class="lcx-go">${v.on ? '저장' : '켜기'}</button>${v.on ? '<button type="button" class="lcx-go" data-lcx="teamsoff">끄기</button>' : ''}</div></form>`); }
+  const TN_ERR = { teams_lrn_agree: 'Teams 알림을 받으려면 안내를 확인하고 동의해 주세요.', teams_lrn_link: '학교 · 회사 Microsoft 계정으로 한 번 로그인해야 Teams로 받을 수 있어요.', teams_lrn_off: '기관에서 Teams 알림을 아직 켜지 않았어요.', teams_input: '받을 알림을 하나 이상 골라 주세요.' };
+  async function tnSave(on, events, agree) { const v = tnState() || {};
+    if (tnLive()) { const r = await api('PUT', `/api/pub/${encodeURIComponent(LR.tid)}/teams-noti`, { on, ...(on ? { events, agree: !!agree, agreeVer: v.agreeVer || 'teams-lrn-v1' } : {}) }); TN.v = r; TN.at = Date.now(); return r; }
+    const C = lp(); C.conn = C.conn && typeof C.conn === 'object' ? C.conn : {}; if (on) C.conn.teams = { on: true, events, agree: 'teams-lrn-v1', at: new Date().toISOString() }; else delete C.conn.teams; return tnState(); }
   function rows() { const t = ty(), U = /^univ/.test(t), PH = ['public', 'lifelong'].includes(t); const C = cfg(); const L = links().filter(k => k && k !== 'email' && k !== 'code');
     const code = ['adult', 'voc', 'corp', 'lifelong'].includes(t); /* 대학은 학번 · 학과 외 식별자(GitHub 아이디)도 받지 않는다 */ const gh = (lp().conn || {}).gh;
     const G = [['학습 · AI 튜터', [
@@ -32,6 +54,7 @@
       { id: 'gcal', n: '내 캘린더(Google)', d: '수업 · 마감 일정이 내 Google 캘린더에 들어가요', st: gcal(), a: `<button type="button" class="lcx-go" data-lai="gcal">${gcal() ? '관리' : '연결'}</button>` },
       { id: 'apple', n: '캘린더 파일(Apple · Outlook)', d: '.ics 파일로 내 휴대폰 캘린더에 넣어요', st: null, a: '<a class="lcx-go" href="#cal">열기</a>' },
       !U && !PH && { id: 'kakao', n: '카카오톡 알림', d: '수업 · 결제 안내를 카카오톡으로 받아요', st: phone(), a: `<a class="lcx-go" href="#acct/phone">${phone() ? '관리' : '신청'}</a>` },
+      tnRow(),
       PH && { id: 'sms', n: '문자 알림', d: '시설 예약 · 강습 알림을 문자로 받아요', st: sms(), a: '<button type="button" class="lcx-go" data-lcx="sms">설정</button>' }]],
     ['로그인', [!U && C.social && C.social.length && { id: C.social.includes('kakao') ? 'kakao' : C.social[0], n: '간편 로그인', d: `${C.social.map(k => ({ kakao: '카카오', naver: '네이버', google: 'Google', apple: 'Apple' })[k] || k).join(' · ')}로 한 번에 들어와요`, st: L.some(k => C.social.includes(k)), a: '<a class="lcx-go" href="#acct">연동</a>' }]]];
     return G.map(([t, R]) => [t, R.filter(Boolean)]).filter(([, R]) => R.length); }
@@ -68,7 +91,13 @@
     if (k === 'md') { dl(`didisam-study-notes-${stamp()}.md`, mdText(), 'text/markdown;charset=utf-8'); toast('학습 노트(.md)를 내려받았어요. Notion은 「가져오기 › Markdown」, Google Docs는 파일을 열면 돼요.', 'ok'); }
     if (k === 'csv') { const c = csvText(); if (!c.n) { toast('아직 내보낼 퀴즈가 없어요. 과정의 퀴즈를 풀면 복습 카드가 생겨요.', 'warn'); return; } dl(`didisam-review-cards-${stamp()}.csv`, c.text, 'text/csv;charset=utf-8'); toast(`복습 카드 ${c.n}장을 내려받았어요. Anki는 「가져오기」, Quizlet은 「만들기 › 가져오기」에서 넣어요.`, 'ok'); }
     if (k === 'gh') ghForm();
+    if (k === 'teams') tnForm();
+    if (k === 'teamsoff') tnSave(false).then(() => { TN.open = false; saveLp('Teams 알림을 껐어요. 동의 기록도 지웠어요.'); }).catch(er => toast(TN_ERR[er && er.code] || '처리하지 못했어요. 잠시 후 다시 해 주세요.', 'warn'));
     if (k === 'ghoff') { const C = lp(); C.conn = C.conn || {}; delete C.conn.gh; saveLp('GitHub 저장소 연결을 끊었어요.'); } });
+  document.addEventListener('submit', e => { const f = e.target; if (!f || f.dataset.lcxF !== 'teams') return; e.preventDefault(); const v = tnState() || {};
+    const events = [...f.querySelectorAll('[name=ev]:checked')].map(x => x.value); const er = f.querySelector('.err');
+    if (!events.length) { er.textContent = TN_ERR.teams_input; return; } if (!v.on && !(f.agree && f.agree.checked)) { er.textContent = TN_ERR.teams_lrn_agree; f.agree && f.agree.focus(); return; }
+    tnSave(true, events, true).then(() => { TN.open = false; saveLp(v.on ? 'Teams 알림 설정을 저장했어요.' : 'Teams 알림을 켰어요. 공지 · 마감 알림을 Teams로도 보내 드려요.'); }).catch(x => { er.textContent = TN_ERR[x && x.code] || '처리하지 못했어요. 잠시 후 다시 해 주세요.'; }); });
   document.addEventListener('submit', e => { const f = e.target; if (!f || f.dataset.lcxF !== 'gh') return; e.preventDefault(); const u = String(f.u.value || '').trim().replace(/\/+$/, '');
     if (!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/.test(u)) { f.querySelector('.err').textContent = 'github.com/아이디/저장소 형식의 주소를 넣어 주세요.'; f.u.focus(); return; }
     const C = lp(); C.conn = C.conn && typeof C.conn === 'object' ? C.conn : {}; C.conn.gh = { on: true, url: u, at: new Date().toISOString() }; /* 운영: 튜터 서버가 공개 저장소의 README · 파일 목록만 읽어 힌트 맥락으로 쓴다 */ saveLp('GitHub 저장소를 이었어요. AI 튜터에게 「내 코드 힌트 줘」라고 물어보세요.'); });
@@ -78,6 +107,7 @@
     + '.lcx-tx{flex:1;min-width:0}.lcx-tx b{color:inherit;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:15px;font-weight:800}.lcx-tx em{font-style:normal;font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--g100,#F1EDE6);color:var(--g700,#5C554B)}.lcx-tx em.on{background:var(--gr50,#EAF8EF);color:var(--gr700,#00862D)}'
     + '.lcx-tx small{display:block;font-size:13px;color:var(--muted,#736B5F);line-height:1.45;margin-top:2px}.lcx-go{flex:none;min-width:56px;min-height:44px;display:inline-grid;place-items:center;padding:0 14px;border-radius:999px;border:1.5px solid var(--g300,#E7E2D9);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#17150F);text-decoration:none;cursor:pointer}.lcx-go:hover{border-color:var(--gr600,#00862D);color:var(--gr700,#00862D)}'
     + '.lcx-f{padding:4px 0 12px 56px}.lcx-f .fl{display:block;font-size:13px;font-weight:700}.lcx-f input{width:100%;box-sizing:border-box;min-height:44px;margin-top:6px}.lcx-f .err{color:var(--bad,#C62828);font-size:13px;margin:4px 0}.lcx-fb{display:flex;gap:8px}@media (max-width:480px){.lcx-f{padding-left:0}}'
+    + '.lcx-f .lcx-ck{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;min-height:44px}.lcx-f .lcx-ck input{width:20px;height:20px;min-height:0;margin:0;flex:none}.lcx-fs{border:0;padding:0;margin:0 0 4px;display:flex;flex-wrap:wrap;gap:0 16px}.lcx-ul{margin:4px 0 8px;padding-left:18px;color:var(--muted,#736B5F);line-height:1.55}'
     + 'html[data-theme=dark] .lcx,html[data-theme=dark] .lcx-go{background:var(--canvas,#1b1a17)}';
   (document.head || document.documentElement).appendChild(st);
 })();

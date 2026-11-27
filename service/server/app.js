@@ -336,6 +336,7 @@ function createApp({ pool, env = process.env, publicDir, log = console, benchOpt
     if (!s && key === 'POST tutor') return tutorRoute(req, tid, null, ip(req)); /* v23.4 방문자(로그인 전) 튜터 */
     if (!s) throw new HttpErr(401, '로그인이 필요합니다.', 'auth');
     if (pii.pubAuth[key]) return pii.pubAuth[key](req, res, tid, s);
+    if (act === 'teams-noti') return teams.pubNoti(req, tid, s, key); /* v49.1 학습자 Teams 알림(L-noti-teams) — 본인 동의 */
     if (key === 'POST coupon') { const b = await readBody(req, 1024); limit(`lcp:${tid}:${s.sid}`, 20, 600e3); /* 코드 맞히기 막기 */ const code = String(b.code || '').slice(0, 40), cls = String(b.cls || '').slice(0, 60);
       const R = await inTenant(pool, tid, c => coupon.check(c, tid, code, cls, (k, cl) => mileage.personalCoupon(c, tid, s.sid, k, cl))); return R.ok ? { ok: true, code: R.code, off: R.off, final: R.final, label: R.label } : { ok: false, msg: R.msg }; } /* v38 A-17 */
     if (key === 'GET me') return inTenant(pool, tid, c => learnerOut(c, tid, s.sid));
@@ -801,7 +802,7 @@ ${here}${w.name ? `\n지금 보는 화면: ${String(w.name).replace(/[\r\n]/g, '
         if ((url.pathname.startsWith('/api/conn/teams/') || url.pathname.includes('/microsoft/')) && await teams.handle(req, res, url)) return; /* 13차 Teams 리다이렉트(조직 연결 · 회의 계정 · Entra SSO) */
         if (url.pathname.startsWith('/api/oauth/') && (!mod || mod === 'admin') && await oauth.handle(req, res, url)) return;
         if (url.pathname.includes('/loauth/') && url.pathname.startsWith('/api/pub/') && await loauth.handle(req, res, url)) return;
-        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?|mk-[a-z]{2,6})$/);
+        const pm = url.pathname.match(/^\/api\/pub\/([^/]+)\/(site|login|me|progress|logout|tutor|otp|signup|guardian|pending|loauth|pii|withdraw|verify|cpl|events|consent|coupon|lev|fac-[a-z]{2,6}(?:-[a-z]{2,8})?|ledger-[a-z]{2,7}(?:-[a-z]{2,8})?|mile-[a-z]{2,7}(?:-[a-z]{2,8})?|mk-[a-z]{2,6}|teams-noti)$/);
         const sp = req.method === 'PUT' && url.pathname.match(/^\/api\/santa\/orgs\/(tn_[a-z0-9]{8,16})\/plan$/);
         const fn = pm ? (rq, rs) => pubRoute(rq, rs, pm) : sp ? rq => santaPlan(rq, sp[1]) : routes[key] || media.match(req.method, url.pathname) || fac.match(req.method, url.pathname) || ledger.match(req.method, url.pathname) || mileage.match(req.method, url.pathname) || market.match(req.method, url.pathname) || group.match(req.method, url.pathname) || teams.match(req.method, url.pathname) || sec.match(req.method, url.pathname); if (!fn) throw new HttpErr(404, '없는 주소입니다.', 'not_found');
         if (req.method !== 'GET') {

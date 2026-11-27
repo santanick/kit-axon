@@ -57,7 +57,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
             "teams_webhook_url", 400, "Teams 워크플로 주소 형식이 아닙니다.", "teams_webhook_fail", 502, "채널로 보내지 못했습니다. 워크플로가 켜져 있는지 확인하세요.",
             "teams_limit", 409, "알림 채널은 기관당 10곳까지 등록할 수 있습니다.", "teams_time", 400, "수업 시간을 확인하세요(종료가 시작보다 늦고 24시간 이내).",
             "teams_report_none", 404, "출석 보고서가 아직 없습니다. 회의 종료 후 잠시 뒤 다시 시도하세요.", "teams_rate", 429, "Microsoft 요청 한도에 걸렸습니다. 잠시 뒤 다시 시도하세요.",
-            "teams_provider", 502, "Microsoft 서버 응답에 문제가 있습니다.", "teams_phase2", 501, "다음 단계에서 제공합니다.", "teams_bad_event", 400, "보낼 수 없는 알림 종류입니다.",
+            "teams_provider", 502, "Microsoft 서버 응답에 문제가 있습니다.", "teams_phase2", 501, "다음 단계에서 제공합니다.", "teams_lrn_type", 409, "학습자 Teams 알림은 대학 · 기업 기관에서만 켤 수 있습니다.", "teams_lrn_sso", 409, "먼저 학습자 Microsoft 로그인(SSO)을 켜십시오.", "teams_lrn_off", 409, "기관에서 Teams 알림을 아직 켜지 않았어요.", "teams_lrn_agree", 400, "Teams 알림을 받으려면 안내를 확인하고 동의해 주세요.", "teams_lrn_link", 409, "학교 · 회사 Microsoft 계정으로 한 번 로그인해야 Teams로 받을 수 있어요.", "teams_bad_event", 400, "보낼 수 없는 알림 종류입니다.",
             "teams_input", 400, "입력값을 확인하세요.", "teams_none", 404, "없는 Teams 항목입니다.", "teams_item", 409, "반의 라이브 항목에 연결된 회의가 아닙니다.", "teams_off", 403, "Microsoft Teams 연동은 시범 운영 기관에서만 사용할 수 있습니다.", "teams_class", 403, "담당한 반의 수업만 만들고 출석을 반영할 수 있습니다." };
         for (int i = 0; i < m.length; i += 3) MSG.put((String) m[i], new Object[]{ m[i + 1], m[i + 2] });
     }
@@ -65,6 +65,8 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     static final List<String> TEACHER_EV = List.of("notice", "due"); /* QA4 #2: 교수자는 공지 · 마감 알림만 */
     static final Map<String, String> EV_KO = Map.of("notice", "공지", "due", "마감 임박", "approval", "승인 요청", "report", "주간 리포트", "signup", "가입", "pay", "결제", "test", "연결 시험");
     static final List<String> ATT = List.of("출석", "지각", "결석"), SSO_TYPES = List.of("univ", "corp", "public");
+    static final List<String> LRN_TYPES = List.of("univ", "corp"), LRN_EV = List.of("due", "notice"); static final String LRN_AGREE = "teams-lrn-v1"; /* v49.1 학습자 Teams 알림(1.7) — Node LRN_* 와 같음 */
+    static ArrayNode lrnEv(JsonNode c0) { JsonNode L = get(c0, "lrnEvents"); List<String> have = new ArrayList<>(); if (L != null && L.isArray()) for (JsonNode x : L) have.add(x.asText()); else have.addAll(LRN_EV); ArrayNode o = F.arrayNode(); for (String e : LRN_EV) if (have.contains(e)) o.add(e); return o; }
     static final Pattern[] DEF_HOSTS = { Pattern.compile("\\.logic\\.azure\\.com$", Pattern.CASE_INSENSITIVE), Pattern.compile("\\.environment\\.api\\.powerplatform\\.com$", Pattern.CASE_INSENSITIVE), Pattern.compile("\\.api\\.powerplatform\\.com$", Pattern.CASE_INSENSITIVE) };
     static final Pattern[] OLD_HOOK = { Pattern.compile("(^|\\.)webhook\\.office\\.com$", Pattern.CASE_INSENSITIVE), Pattern.compile("^outlook\\.office\\.com$", Pattern.CASE_INSENSITIVE), Pattern.compile("^outlook\\.office365\\.com$", Pattern.CASE_INSENSITIVE) };
     static final String AZ = "abcdefghijklmnopqrstuvwxyz0123456789"; static final SecureRandom RND = new SecureRandom();
@@ -153,12 +155,14 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         JsonNode md = truthy(get(c0, "meetingDefaults")) ? get(c0, "meetingDefaults") : O(); double am = num(get(md, "attMin") == null ? F.missingNode() : get(md, "attMin"));
         ObjectNode mo = o.putObject("meetingDefaults").put("lobby", "everyone".equals(S(get(md, "lobby"))) ? "everyone" : "organization").put("recordAuto", false); if (Double.isFinite(am) && get(md, "attMin") != null) mo.set("attMin", numNode(am)); else mo.put("attMin", 10);
         o.set("channels", channels); o.set("accounts", accounts); o.set("sso", sso); o.put("ssoTypeOk", SSO_TYPES.contains(type));
+        { ObjectNode ln = o.putObject("learnerNoti"); ln.put("typeOk", LRN_TYPES.contains(type)).put("on", truthy(get(feat, "learner")) && LRN_TYPES.contains(type)); ln.set("events", lrnEv(c0)); ln.put("optIn", 0).put("agreeVer", LRN_AGREE); }
         ArrayNode sa = o.putArray("scopesAvail"); if (live) { sa.add("notify"); sa.add("meeting"); sa.add("sso"); } else sa.add("notify");
         ArrayNode ra = o.putArray("runs"); runs.getOrDefault(tid, List.of()).forEach(ra::add); return o;
     }
     ObjectNode status(Map<String, Object> a) throws Exception {
         ObjectNode v = view(tid(a), typeOf(a), T(tid(a), () -> load(tid(a))));
-        ArrayNode acc = F.arrayNode(); for (JsonNode x : v.get("accounts")) { ObjectNode y = ((ObjectNode) x).deepCopy(); String ow = s(y, "owner"); y.remove("owner"); y.put("mine", ow != null && ow.equals(a.get("uid"))); acc.add(y); } v.set("accounts", acc); return v;
+        ArrayNode acc = F.arrayNode(); for (JsonNode x : v.get("accounts")) { ObjectNode y = ((ObjectNode) x).deepCopy(); String ow = s(y, "owner"); y.remove("owner"); y.put("mine", ow != null && ow.equals(a.get("uid"))); acc.add(y); } v.set("accounts", acc);
+        String t0 = tid(a); ObjectNode n = T(t0, () -> db.q1("select count(*)::int n from conn_teams_lrn where tenant_id = $1", t0)); ((ObjectNode) v.get("learnerNoti")).put("optIn", n == null ? 0 : n.get("n").asInt()); return v;
     }
 
     // ── 채널 발송 ──
@@ -211,7 +215,56 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         if (!pilot(tid)) return 0;
         Object[] L0 = T(tid, () -> load(tid)); JsonNode feat = get(g((JsonNode) L0[1], "cfg"), "features"); if (feat != null && get(feat, "notify") != null && get(feat, "notify").isBoolean() && !get(feat, "notify").asBoolean()) return 0;
         List<ObjectNode> L = T(tid, () -> db.q("select id, label, meta, enc from conn_secret where tenant_id = $1 and kind = 'teams_webhook'", tid)); int n = 0;
-        for (ObjectNode ch : L) { boolean has = false; for (JsonNode e : arr(get(g(ch, "meta"), "events"))) if (event.equals(e.asText())) has = true; if (has) { enqueue(tid, ch, event, payload); n++; } } return n;
+        for (ObjectNode ch : L) { boolean has = false; for (JsonNode e : arr(get(g(ch, "meta"), "events"))) if (event.equals(e.asText())) has = true; if (has) { enqueue(tid, ch, event, payload); n++; } }
+        try { lrnNotify(tid, event, payload, g((JsonNode) L0[1], "cfg")); } catch (Exception e) { /* Node log.error */ } return n;
+    }
+    /* v49.1 학습자 Teams 알림(1.7) — Node lrnNotify와 같음: 동의 학습자 수만 세어 최근 실행에 기록(시연), 운영 활동 피드 발송은 Teams 앱 배포 후 */
+    final Map<String, Integer> lastLrn = new ConcurrentHashMap<>();
+    int lrnNotify(String tid, String event, JsonNode payload, JsonNode c0) throws Exception {
+        lastLrn.put(tid, 0); JsonNode feat = get(c0, "features");
+        if (!LRN_EV.contains(event) || !truthy(get(feat, "learner"))) return 0; boolean has = false; for (JsonNode e : lrnEv(c0)) if (event.equals(e.asText())) has = true; if (!has) return 0;
+        ObjectNode r = T(tid, () -> db.q1("select count(*)::int n from conn_teams_lrn where tenant_id = $1 and events @> jsonb_build_array($2::text)", tid, event)); int n = r == null ? 0 : r.get("n").asInt();
+        lastLrn.put(tid, n); if (n == 0) return 0;
+        String ti = str(get(payload, "title"), 80); ObjectNode run = O().put("ch", "학습자 Teams 알림").put("event", event).put("title", ti.isEmpty() ? EV_KO.get(event) : ti).put("n", n); if (live) run.put("wait", "Teams 앱 배포 후 발송"); else run.put("demo", true); addRun(tid, run); return n;
+    }
+    Object putLearner(HttpServletRequest req, byte[] raw) throws Exception {
+        Map<String, Object> a = needAdmin(req); JsonNode b = body(raw, 1024); String t0 = tid(a);
+        JsonNode on0 = get(b, "on"); if (on0 == null || !on0.isBoolean()) throw E("teams_input", map("field", "on")); boolean on = on0.asBoolean();
+        if (!LRN_TYPES.contains(typeOf(a))) throw E("teams_lrn_type");
+        JsonNode ev = get(b, "events"); List<String> want = new ArrayList<>(); if (undef(ev)) want.addAll(LRN_EV); else { if (!ev.isArray()) throw E("teams_bad_event"); for (JsonNode x : ev) { if (!x.isTextual() || !LRN_EV.contains(x.textValue())) throw E("teams_bad_event"); want.add(x.textValue()); } }
+        ArrayNode events = F.arrayNode(); for (String e : LRN_EV) if (want.contains(e)) events.add(e); if (on && events.size() == 0) throw E("teams_input", map("field", "events"));
+        int gone = T(t0, () -> { ObjectNode org = db.q1("select sso from conn_ms_org where tenant_id = $1", t0); ObjectNode row = db.q1("select cfg, demo from conn_teams_cfg where tenant_id = $1 for update", t0);
+            boolean demo = row != null && truthy(g(row, "demo")); if (on && !(org != null || (!live && demo))) throw E("teams_consent"); if (on && live && !truthy(get(g(org, "sso"), "learner"))) throw E("teams_lrn_sso");
+            ObjectNode cur = row != null && g(row, "cfg").isObject() ? (ObjectNode) g(row, "cfg") : O(); ObjectNode f = truthy(cur.get("features")) && cur.get("features").isObject() ? ((ObjectNode) cur.get("features")).deepCopy() : O(); f.put("learner", on); cur.set("features", f); cur.set("lrnEvents", events);
+            db.x("insert into conn_teams_cfg (tenant_id, cfg) values ($1, $2) on conflict (tenant_id) do update set cfg = excluded.cfg, updated_at = now()", t0, cur);
+            if (!on) return db.x("delete from conn_teams_lrn where tenant_id = $1", t0);
+            db.x("update conn_teams_lrn set events = (select coalesce(jsonb_agg(e), '[]'::jsonb) from jsonb_array_elements_text(events) e where e in (select jsonb_array_elements_text($2::jsonb))), updated_at = now() where tenant_id = $1", t0, events.toString()); return 0; });
+        audit(t0, email(a), "teams.learner", map("on", on, "events", events, "removed", gone)); return status(a);
+    }
+    /** 학습자 화면(L-noti-teams) — GET · PUT /api/pub/<tid>/teams-noti(PubServiceImpl이 학습자 세션 확인 뒤 부름). Node lrnState · pubNoti와 같음 */
+    ObjectNode lrnState(String t0, String sid) throws Exception {
+        ObjectNode t = ttx.plain(() -> db.q1("select type from tenants where id = $1", t0)); String ty = t == null ? "" : S(g(t, "type"));
+        Object[] X = T(t0, () -> new Object[]{ db.q1("select sso from conn_ms_org where tenant_id = $1", t0), db.q1("select cfg, demo from conn_teams_cfg where tenant_id = $1", t0), db.q1("select events, agree_ver, consent_at from conn_teams_lrn where tenant_id = $1 and sid = $2", t0, sid) });
+        ObjectNode org = (ObjectNode) X[0], cf = (ObjectNode) X[1], me = (ObjectNode) X[2]; JsonNode c0 = cf != null && g(cf, "cfg").isObject() ? g(cf, "cfg") : O(); boolean demo = cf != null && truthy(g(cf, "demo"));
+        boolean avail = pilot(t0) && LRN_TYPES.contains(ty) && truthy(get(get(c0, "features"), "learner")) && (live ? org != null : (org != null || demo));
+        boolean linked = !live || (avail && !ttx.plain(() -> { db.x("set local role didisam_pii"); db.q("select set_config('app.tenant', $1, true)", t0); return db.q("select 1 from pii.identity where tid = $1 and provider = 'microsoft' and learner_id::text = $2 limit 1", t0, sid); }).isEmpty());
+        ArrayNode orgEv = lrnEv(c0), mine = F.arrayNode(); if (me != null) { List<String> have = new ArrayList<>(); for (JsonNode x : arr(g(me, "events"))) have.add(x.asText()); for (JsonNode e : orgEv) if (have.contains(e.asText())) mine.add(e); }
+        ObjectNode o = O().put("available", avail).put("on", avail && me != null); o.set("events", mine); o.set("orgEvents", avail ? orgEv : F.arrayNode()); o.put("mode", live ? "live" : "demo").put("linked", linked).put("agreeVer", LRN_AGREE).put("consentAt", me == null ? "" : kst(s(me, "consent_at"))); return o;
+    }
+    public Object pubNoti(String t0, String sid, String key, byte[] raw) throws Exception {
+        rl.limit("tln:" + t0 + ":" + sid, 30, 60000L);
+        if ("GET teams-noti".equals(key)) return lrnState(t0, sid);
+        if (!"PUT teams-noti".equals(key)) throw new DdException(405, "허용하지 않는 요청입니다.", "method");
+        JsonNode b = body(raw, 1024); JsonNode on0 = get(b, "on"); if (on0 == null || !on0.isBoolean()) throw E("teams_input", map("field", "on"));
+        ObjectNode st = lrnState(t0, sid); if (!st.get("available").asBoolean()) throw E("teams_lrn_off");
+        if (on0.asBoolean()) {
+            JsonNode ag = get(b, "agree"); if (!(ag != null && ag.isBoolean() && ag.asBoolean()) || !LRN_AGREE.equals(S(get(b, "agreeVer")))) throw E("teams_lrn_agree");
+            if (!st.get("linked").asBoolean()) throw E("teams_lrn_link");
+            JsonNode ev = get(b, "events"); List<String> want = new ArrayList<>(); if (undef(ev)) { for (JsonNode x : st.get("orgEvents")) want.add(x.asText()); } else { if (!ev.isArray()) throw E("teams_bad_event"); for (JsonNode x : ev) { if (!x.isTextual() || !LRN_EV.contains(x.textValue())) throw E("teams_bad_event"); want.add(x.textValue()); } }
+            ArrayNode events = F.arrayNode(); for (JsonNode e : st.get("orgEvents")) if (want.contains(e.asText())) events.add(e); if (events.size() == 0) throw E("teams_input", map("field", "events"));
+            T(t0, () -> db.x("insert into conn_teams_lrn (tenant_id, sid, events, agree_ver) values ($1, $2, $3, $4) on conflict (tenant_id, sid) do update set events = excluded.events, agree_ver = excluded.agree_ver, updated_at = now()", t0, sid, events.toString(), LRN_AGREE)); audit(t0, "sid:" + sid, "teams.lrn.on", map("events", events));
+        } else { int n = T(t0, () -> db.x("delete from conn_teams_lrn where tenant_id = $1 and sid = $2", t0, sid)); if (n > 0) audit(t0, "sid:" + sid, "teams.lrn.off", null); }
+        return lrnState(t0, sid);
     }
 
     // ── 기관 문서 ──
@@ -263,7 +316,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
     Object putSettings(HttpServletRequest req, byte[] raw) throws Exception {
         Map<String, Object> a = needAdmin(req); JsonNode b = body(raw, 8192); String t0 = tid(a);
         T(t0, () -> { ObjectNode r = db.q1("select cfg from conn_teams_cfg where tenant_id = $1 for update", t0); ObjectNode cur = r != null && g(r, "cfg").isObject() ? (ObjectNode) g(r, "cfg") : O();
-            JsonNode bf = get(b, "features"); if (truthy(bf) && bf.isObject()) { ObjectNode f = truthy(cur.get("features")) && cur.get("features").isObject() ? ((ObjectNode) cur.get("features")).deepCopy() : O(); for (String k : new String[]{ "notify", "meeting", "learner" }) if (get(bf, k) != null && get(bf, k).isBoolean()) f.set(k, get(bf, k)); cur.set("features", f); }
+            JsonNode bf = get(b, "features"); if (truthy(bf) && bf.isObject()) { ObjectNode f = truthy(cur.get("features")) && cur.get("features").isObject() ? ((ObjectNode) cur.get("features")).deepCopy() : O(); for (String k : new String[]{ "notify", "meeting" }) /* v49.1 learner는 PUT /learner로만 */ if (get(bf, k) != null && get(bf, k).isBoolean()) f.set(k, get(bf, k)); cur.set("features", f); }
             JsonNode m = get(b, "meetingDefaults"); if (truthy(m) && m.isObject()) { double att = Math.round(num(get(m, "attMin") == null ? F.missingNode() : get(m, "attMin")));
                 if (!undef(get(m, "attMin")) && !(att >= 0 && att <= 600)) throw E("teams_input", map("field", "attMin"));
                 ObjectNode md = O().put("lobby", "everyone".equals(S(get(m, "lobby"))) ? "everyone" : "organization").put("recordAuto", false);
@@ -389,7 +442,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
         Map<String, Object> a = needAny(req); JsonNode b = body(raw, 8192); String event = S(get(b, "event")); if (!EVENTS.contains(event)) throw E("teams_bad_event");
         if (!isAdmin(a) && !TEACHER_EV.contains(event)) throw E("teams_role");
         ObjectNode p = O(); p.set("title", get(b, "title") == null ? F.nullNode() : get(b, "title")); p.set("text", get(b, "text") == null ? F.nullNode() : get(b, "text")); p.set("link", get(b, "link") == null ? F.nullNode() : get(b, "link"));
-        int q = notify(tid(a), event, p); if (q > 0) audit(tid(a), email(a), "teams.notify", map("event", event, "n", q)); return O().put("ok", true).put("queued", q);
+        int q = notify(tid(a), event, p); if (q > 0) audit(tid(a), email(a), "teams.notify", map("event", event, "n", q)); return O().put("ok", true).put("queued", q).put("learners", lastLrn.getOrDefault(tid(a), 0));
     }
 
     // ── 실제 경로(MS_CLIENT_ID 설정 시) — Node teams/index.js 서명 봉투 · PKCE · 토큰 끝점 · id_token · Graph와 같은 동작 ──
@@ -593,7 +646,7 @@ public class TeamsServiceImpl extends EgovAbstractServiceImpl {
             case "POST /api/conn/teams/test": return testChannel(req, raw);
             case "POST /api/conn/teams/notify": return notifyRoute(req, raw);
             case "PUT /api/conn/teams/sso": return putSso(req, raw);
-            case "PUT /api/conn/teams/learner": needAdmin(req); throw E("teams_phase2");
+            case "PUT /api/conn/teams/learner": return putLearner(req, raw);
             case "GET /api/conn/teams/meetings": return listMeetings(req);
             case "POST /api/conn/teams/meetings": return createMeeting(req, res, raw);
             default: break;

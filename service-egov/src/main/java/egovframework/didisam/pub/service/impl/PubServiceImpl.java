@@ -83,6 +83,7 @@ public class PubServiceImpl extends EgovAbstractServiceImpl implements PubServic
         if (s == null && "POST tutor".equals(key)) return tutor(req, body, tid, null, web.ip(req)); /* 방문자(로그인 전) 튜터 */
         if (s == null) throw processException("dd.401.auth");
         String sid = (String) s.get("sid");
+        if ("teams-noti".equals(act)) return teams.pubNoti(tid, sid, key, body); /* v49.1 학습자 Teams 알림(L-noti-teams) — Node app.js pubRoute와 같음 */
         switch (key) {
             case "GET pii": case "PUT pii": return pii.myPii(req, body, tid, sid);
             case "POST withdraw": return pii.withdraw(body, tid, sid);
