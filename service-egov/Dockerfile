@@ -8,7 +8,7 @@ COPY service-egov/src ./src
 ARG PROFILE=
 RUN mvn -q -B package -DskipTests ${PROFILE:+-P$PROFILE}
 
-FROM node:22-slim@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb AS pub
+FROM node:22.23.5-slim@sha256:be979e5523c76fa4d5ca4ebd3099078f220aa47ec39c48ad5b5df9314debd6eb AS pub
 WORKDIR /w
 COPY didisam ./didisam
 COPY service/build-public.js ./service/

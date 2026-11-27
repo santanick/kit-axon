@@ -40,6 +40,11 @@ const MSG = {
   teams_rate: [429, 'Microsoft 요청 한도에 걸렸습니다. 잠시 뒤 다시 시도하세요.'],
   teams_provider: [502, 'Microsoft 서버 응답에 문제가 있습니다.'],
   teams_phase2: [501, '다음 단계에서 제공합니다.'],
+  teams_lrn_type: [409, '학습자 Teams 알림은 대학 · 기업 기관에서만 켤 수 있습니다.'],
+  teams_lrn_sso: [409, '먼저 학습자 Microsoft 로그인(SSO)을 켜십시오.'],
+  teams_lrn_off: [409, '기관에서 Teams 알림을 아직 켜지 않았어요.'],
+  teams_lrn_agree: [400, 'Teams 알림을 받으려면 안내를 확인하고 동의해 주세요.'],
+  teams_lrn_link: [409, '학교 · 회사 Microsoft 계정으로 한 번 로그인해야 Teams로 받을 수 있어요.'],
   teams_bad_event: [400, '보낼 수 없는 알림 종류입니다.'],
   teams_input: [400, '입력값을 확인하세요.'],
   teams_none: [404, '없는 Teams 항목입니다.'],
@@ -51,6 +56,8 @@ const EVENTS = ['notice', 'due', 'approval', 'report', 'signup', 'pay'];
 const EV_KO = { notice: '공지', due: '마감 임박', approval: '승인 요청', report: '주간 리포트', signup: '가입', pay: '결제', test: '연결 시험' };
 const ATT = ['출석', '지각', '결석'];
 const TEACHER_EV = ['notice', 'due'];
+const LRN_TYPES = ['univ', 'corp']; /* v49.1 학습자 Teams 알림(1.7) — 대학 · 기업만 */
+const LRN_EV = ['due', 'notice']; const LRN_AGREE = 'teams-lrn-v1';
 const SSO_TYPES = ['univ', 'corp', 'public']; /* 학습자 Entra 로그인을 켤 수 있는 기관 유형(학원 · 평생 · 직훈 제외) */
 const MSA_TID = '9188040d-6c67-4c5b-b112-36a304b66dad'; /* 개인 Microsoft 계정 — 받지 않는다 */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -183,6 +190,7 @@ function createTeams(ctx) {
     const sec = (await c.query('select id, kind, owner_user, label, mask, meta, expires_at, created_at from conn_secret where tenant_id = $1 order by created_at', [tid])).rows;
     return { org, cf, sec };
   }
+  const lrnEv = c0 => { const L = Array.isArray(c0 && c0.lrnEvents) ? c0.lrnEvents : LRN_EV; return LRN_EV.filter(x => L.includes(x)); };
   function view(tid, type, { org, cf, sec }) {
     const c0 = cf.cfg || {}; const feat = c0.features || {};
     const channels = sec.filter(s => s.kind === 'teams_webhook').map(s => ({ id: s.id, name: s.label, kind: s.meta.demo ? 'demo' : 'workflow', mask: s.mask, events: s.meta.events || [], lastOk: s.meta.lastOk || '', err: s.meta.err || '' }));
@@ -197,12 +205,14 @@ function createTeams(ctx) {
       features: { notify: feat.notify !== false, meeting: feat.meeting !== false, sso: sso.operator || sso.learner, learner: !!feat.learner },
       meetingDefaults: { lobby: (c0.meetingDefaults || {}).lobby === 'everyone' ? 'everyone' : 'organization', recordAuto: false, attMin: Number.isFinite(+(c0.meetingDefaults || {}).attMin) ? +(c0.meetingDefaults || {}).attMin : 10 },
       channels, accounts, sso, ssoTypeOk: SSO_TYPES.includes(type),
+      learnerNoti: { typeOk: LRN_TYPES.includes(type), on: !!feat.learner && LRN_TYPES.includes(type), events: lrnEv(c0), optIn: 0, agreeVer: LRN_AGREE },
       scopesAvail: cfg.live ? ['notify', 'meeting', 'sso'] : ['notify'], runs: runs.get(tid) || [],
     };
   }
   async function status(a) {
     const v = view(a.tid, a.type, await T(a.tid, c => load(c, a.tid)));
     v.accounts = v.accounts.map(x => { const { owner, ...o } = x; return { ...o, mine: owner === a.uid }; });
+    v.learnerNoti.optIn = (await T(a.tid, c => c.query('select count(*)::int n from conn_teams_lrn where tenant_id = $1', [a.tid]))).rows[0].n;
     return v;
   }
 
@@ -242,7 +252,20 @@ function createTeams(ctx) {
     const { cf, sec } = await T(tid, c => load(c, tid));
     if ((cf.cfg.features || {}).notify === false) return 0;
     const L = (await T(tid, c => c.query("select id, label, meta, enc from conn_secret where tenant_id = $1 and kind = 'teams_webhook'", [tid]))).rows.filter(ch => (ch.meta.events || []).includes(event));
-    void sec; L.forEach(ch => enqueue(tid, ch, event, payload)); return L.length;
+    void sec; L.forEach(ch => enqueue(tid, ch, event, payload));
+    await lrnNotify(tid, event, payload, cf).catch(e => { log.error && log.error('teams lrn', e && e.message); });
+    return L.length;
+  }
+  /* v49.1 학습자 Teams 알림(1.7): 기관이 켜고(PUT /learner) 학습자가 동의한(conn_teams_lrn) 사람에게만. 공지 · 마감만, 제목 80자 · 이름 · 연락처 없음.
+     시연(키 없음) = 실제 발송 없이 최근 실행에 「학습자 n명(시연)」 기록. 운영 활동 피드 발송(sendActivityNotification)은 Teams 앱(봇 · RSC) 배포 후 — 그전에는 대기로 기록 */
+  const lastLrn = new Map();
+  async function lrnNotify(tid, event, payload, cf) {
+    lastLrn.set(tid, 0);
+    if (!LRN_EV.includes(event) || !(cf.cfg.features || {}).learner || !lrnEv(cf.cfg).includes(event)) return 0;
+    const n = (await T(tid, c => c.query('select count(*)::int n from conn_teams_lrn where tenant_id = $1 and events @> jsonb_build_array($2::text)', [tid, event]))).rows[0].n;
+    lastLrn.set(tid, n); if (!n) return 0;
+    addRun(tid, { ch: '학습자 Teams 알림', event, title: str(payload && payload.title, 80) || EV_KO[event], n, ...(cfg.live ? { wait: 'Teams 앱 배포 후 발송' } : { demo: true }) });
+    return n;
   }
   const flush = async () => { while (pending.size) await Promise.allSettled([...pending]); };
 
@@ -465,7 +488,7 @@ function createTeams(ctx) {
     const a = await needAdmin(req); const b = await readBody(req, 8192);
     await T(a.tid, async c => {
       const cur = ((await c.query('select cfg from conn_teams_cfg where tenant_id = $1 for update', [a.tid])).rows[0] || { cfg: {} }).cfg;
-      if (b.features && typeof b.features === 'object') { cur.features = { ...(cur.features || {}) }; for (const k of ['notify', 'meeting', 'learner']) if (typeof b.features[k] === 'boolean') cur.features[k] = b.features[k]; }
+      if (b.features && typeof b.features === 'object') { cur.features = { ...(cur.features || {}) }; for (const k of ['notify', 'meeting']) if (typeof b.features[k] === 'boolean') /* v49.1 learner는 PUT /learner로만(유형 · 동의 점검) */ cur.features[k] = b.features[k]; }
       if (b.meetingDefaults && typeof b.meetingDefaults === 'object') { const m = b.meetingDefaults; const att = Math.round(+m.attMin); if (m.attMin !== undefined && !(att >= 0 && att <= 600)) throw E('teams_input', { field: 'attMin' }); cur.meetingDefaults = { lobby: m.lobby === 'everyone' ? 'everyone' : 'organization', recordAuto: false, attMin: m.attMin === undefined ? ((cur.meetingDefaults || {}).attMin ?? 10) : att }; }
       if (b.events && typeof b.events === 'object') for (const [id, L] of Object.entries(b.events).slice(0, 10)) {
         if (!Array.isArray(L) || L.some(x => !EVENTS.includes(x))) throw E('teams_bad_event');
@@ -511,6 +534,52 @@ function createTeams(ctx) {
       await audit(c, a.tid, a.email, 'teams.sso', sso);
     });
     return status(a);
+  }
+
+  /* v49.1 학습자 Teams 알림 켜기(기관) — 대학 · 기업, 조직 연결(시연은 시연 연결)과 운영 SSO 학습자 로그인이 먼저. 끄면 학습자 동의 기록을 모두 지운다 */
+  async function putLearner(req) {
+    const a = await needAdmin(req); const b = await readBody(req, 1024);
+    if (typeof b.on !== 'boolean') throw E('teams_input', { field: 'on' });
+    if (!LRN_TYPES.includes(a.type)) throw E('teams_lrn_type');
+    const ev = b.events === undefined ? LRN_EV : b.events;
+    if (!Array.isArray(ev) || ev.some(x => !LRN_EV.includes(x))) throw E('teams_bad_event');
+    const events = LRN_EV.filter(x => ev.includes(x)); if (b.on && !events.length) throw E('teams_input', { field: 'events' });
+    await T(a.tid, async c => {
+      const org = (await c.query('select sso from conn_ms_org where tenant_id = $1', [a.tid])).rows[0] || null;
+      const row = (await c.query('select cfg, demo from conn_teams_cfg where tenant_id = $1 for update', [a.tid])).rows[0] || { cfg: {}, demo: false };
+      if (b.on && !(org || (!cfg.live && row.demo))) throw E('teams_consent');
+      if (b.on && cfg.live && !org.sso.learner) throw E('teams_lrn_sso');
+      const cur = row.cfg || {}; cur.features = { ...(cur.features || {}), learner: b.on }; cur.lrnEvents = events;
+      await c.query('insert into conn_teams_cfg (tenant_id, cfg) values ($1, $2) on conflict (tenant_id) do update set cfg = excluded.cfg, updated_at = now()', [a.tid, JSON.stringify(cur)]);
+      let gone = 0; if (!b.on) gone = (await c.query('delete from conn_teams_lrn where tenant_id = $1', [a.tid])).rowCount;
+      else await c.query('update conn_teams_lrn set events = (select coalesce(jsonb_agg(e), \'[]\'::jsonb) from jsonb_array_elements_text(events) e where e in (select jsonb_array_elements_text($2::jsonb))), updated_at = now() where tenant_id = $1', [a.tid, JSON.stringify(events)]);
+      await audit(c, a.tid, a.email, 'teams.learner', { on: b.on, events, removed: gone });
+    });
+    return status(a);
+  }
+  /* 학습자 화면(L-noti-teams) — GET · PUT /api/pub/<tid>/teams-noti, 학습자 세션 s. 받는 것: 공지 · 마감 제목만. 끄면 동의 기록을 지운다 */
+  async function lrnState(tid, sid) {
+    const t = (await pool.query('select type from tenants where id = $1', [tid])).rows[0] || {};
+    const { org, cf, me } = await T(tid, async c => ({ org: (await c.query('select sso from conn_ms_org where tenant_id = $1', [tid])).rows[0] || null, cf: (await c.query('select cfg, demo from conn_teams_cfg where tenant_id = $1', [tid])).rows[0] || { cfg: {}, demo: false }, me: (await c.query('select events, agree_ver, consent_at from conn_teams_lrn where tenant_id = $1 and sid = $2', [tid, sid])).rows[0] || null }));
+    const avail = cfg.pilot(tid) && LRN_TYPES.includes(t.type) && !!(cf.cfg.features || {}).learner && (cfg.live ? !!org : (!!org || !!cf.demo));
+    const linked = !cfg.live ? true : avail ? (await piiTx(tid, c => c.query("select 1 from pii.identity where tid = $1 and provider = 'microsoft' and learner_id::text = $2 limit 1", [tid, sid]))).length > 0 : false;
+    const orgEv = lrnEv(cf.cfg);
+    return { available: avail, on: !!(avail && me), events: me ? orgEv.filter(x => (me.events || []).includes(x)) : [], orgEvents: avail ? orgEv : [], mode: cfg.live ? 'live' : 'demo', linked, agreeVer: LRN_AGREE, consentAt: me ? kst(me.consent_at) : '' };
+  }
+  async function pubNoti(req, tid, s, key) {
+    limit(`tln:${tid}:${s.sid}`, 30, 60e3);
+    if (key === 'GET teams-noti') return lrnState(tid, s.sid);
+    if (key !== 'PUT teams-noti') throw new HttpErr(405, '허용하지 않는 요청입니다.', 'method');
+    const b = await readBody(req, 1024); if (typeof b.on !== 'boolean') throw E('teams_input', { field: 'on' });
+    const st = await lrnState(tid, s.sid); if (!st.available) throw E('teams_lrn_off');
+    if (b.on) {
+      if (b.agree !== true || b.agreeVer !== LRN_AGREE) throw E('teams_lrn_agree');
+      if (!st.linked) throw E('teams_lrn_link');
+      const ev = b.events === undefined ? st.orgEvents : b.events; if (!Array.isArray(ev) || ev.some(x => !LRN_EV.includes(x))) throw E('teams_bad_event');
+      const events = st.orgEvents.filter(x => ev.includes(x)); if (!events.length) throw E('teams_input', { field: 'events' });
+      await T(tid, async c => { await c.query('insert into conn_teams_lrn (tenant_id, sid, events, agree_ver) values ($1, $2, $3, $4) on conflict (tenant_id, sid) do update set events = excluded.events, agree_ver = excluded.agree_ver, updated_at = now()', [tid, s.sid, JSON.stringify(events), LRN_AGREE]); await audit(c, tid, 'sid:' + s.sid, 'teams.lrn.on', { events }); });
+    } else await T(tid, async c => { const n = (await c.query('delete from conn_teams_lrn where tenant_id = $1 and sid = $2', [tid, s.sid])).rowCount; if (n) await audit(c, tid, 'sid:' + s.sid, 'teams.lrn.off', null); });
+    return lrnState(tid, s.sid);
   }
 
   /* 회의 — docLink:false(만들기) · ?doc=0(삭제)이면 기관 문서는 건드리지 않는다: 스튜디오가 편집 중인 항목에 직접 넣고 저장해 rev 충돌(409)을 막는다 */
@@ -617,7 +686,7 @@ function createTeams(ctx) {
     if (!isAdmin(a) && !TEACHER_EV.includes(event)) throw E('teams_role'); /* QA4 #2: 교수자는 공지 · 마감 알림만 */
     const queued = await notify(a.tid, event, { title: b.title, text: b.text, link: b.link });
     if (queued) await T(a.tid, c => audit(c, a.tid, a.email, 'teams.notify', { event, n: queued })).catch(() => {});
-    return { ok: true, queued };
+    return { ok: true, queued, learners: lastLrn.get(a.tid) || 0 };
   }
 
   const routes = {
@@ -629,7 +698,7 @@ function createTeams(ctx) {
     'POST /api/conn/teams/test': testChannel,
     'POST /api/conn/teams/notify': notifyRoute,
     'PUT /api/conn/teams/sso': putSso,
-    'PUT /api/conn/teams/learner': async req => { await needAdmin(req); throw E('teams_phase2'); },
+    'PUT /api/conn/teams/learner': putLearner,
     'GET /api/conn/teams/meetings': listMeetings,
     'POST /api/conn/teams/meetings': createMeeting,
     'POST /api/oauth/microsoft/link-start': opLinkStart,
@@ -644,7 +713,7 @@ function createTeams(ctx) {
     if (/^\/api\/conn\/teams(\/|$)/.test(p)) return () => { throw new HttpErr(404, '없는 주소입니다.', 'not_found'); };
     return null;
   }
-  return { match, handle, notify, flush, learnerReady, live: cfg.live && !!String(env.TEAMS_PILOT || '').trim(), config: cfg }; /* live = 운영자 로그인 버튼 노출(키 + 시범 기관 설정) */
+  return { match, handle, notify, flush, learnerReady, pubNoti, live: cfg.live && !!String(env.TEAMS_PILOT || '').trim(), config: cfg }; /* live = 운영자 로그인 버튼 노출(키 + 시범 기관 설정) */
 }
 
-module.exports = { createTeams, sqlMigrations, teamsConfig, checkHook, card, EVENTS, MSG };
+module.exports = { createTeams, sqlMigrations, teamsConfig, checkHook, card, EVENTS, MSG, LRN_TYPES, LRN_EV, LRN_AGREE };

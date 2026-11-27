@@ -7,13 +7,17 @@ const { chromium } = require('playwright');
 const ROOT = path.resolve(__dirname, '../..'); const SVC = path.join(ROOT, 'service'); const PORT = process.env.PORT_MFA || '9811'; const B = `http://127.0.0.1:${PORT}`;
 let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('✓', m); } else { fail++; console.error('✗', m); } };
 (async () => {
+  /* v49.1 개발1: 회귀 판정 「ECONNREFUSED 9811」은 DATABASE_URL 없이 돌려 서버가 DB 연결에서 바로 종료된 환경 문제였다(제품 · 시험 정상).
+     원인이 바로 보이도록 DATABASE_URL을 먼저 확인하고, 서버가 뜨지 않으면 서버 오류 끝부분을 출력한다. */
+  if (!process.env.DATABASE_URL) { console.error('✗ 환경: DATABASE_URL이 필요합니다(실제 Node 서버 + PostgreSQL 시험).'); process.exit(1); }
   cp.execFileSync(process.execPath, ['build-public.js'], { cwd: SVC, stdio: 'ignore' });
   const env = { ...process.env, COOKIE_SECURE: '0', TRUST_PROXY_HOPS: '0', SESSION_PEPPER: 'ci-only', PII_KEY: '0'.repeat(64), PORT, MFA_OFF: '0', MFA_DEV: '1', SIGNUP_CODE: '' };
   delete env.MAIL_PROVIDER; delete env.SIGNUP_CODE;
-  const ch = cp.spawn(process.execPath, ['server/index.js'], { cwd: SVC, env, stdio: 'ignore' });
+  const ch = cp.spawn(process.execPath, ['server/index.js'], { cwd: SVC, env, stdio: ['ignore', 'ignore', 'pipe'] }); let elog = ''; ch.stderr.on('data', d => { elog += d; });
   const stop = () => { try { ch.kill('SIGKILL'); } catch (e) { } };
   try {
-    for (let i = 0; i < 150; i++) { try { if ((await fetch(B + '/api/health')).ok) break; } catch (e) { } await new Promise(k => setTimeout(k, 100)); }
+    let up = false; for (let i = 0; i < 150 && !up; i++) { try { up = (await fetch(B + '/api/health')).ok; } catch (e) { } if (!up) await new Promise(k => setTimeout(k, 100)); }
+    if (!up) throw new Error('환경: 서버 기동 실패\n' + elog.slice(-800));
     const em = `ui${Date.now().toString(36)}@d.kr`, PW = 'Passw0rd-mfaui';
     const s = await fetch(B + '/api/signup', { method: 'POST', headers: { 'content-type': 'application/json', 'x-didisam': '1' }, body: JSON.stringify({ email: em, password: PW, orgName: 'MFA UI', type: 'corp' }) }); ok(s.status === 200, '가입(API)');
     const br = await chromium.launch(); const pg = await (await br.newContext({ viewport: { width: 1280, height: 860 } })).newPage(); const errs = []; pg.on('pageerror', e => errs.push(e.message));

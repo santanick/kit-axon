@@ -48,7 +48,10 @@ const sha = s => crypto.createHash('sha256').update(s).digest('hex');
     await mount('sess'); await p.waitForSelector('#ss-body table', { timeout: 8000 }).catch(() => {});
     ok((await p.$$('#ss-body tbody tr')).length === 2, '로그인 기기 · 세션 목록 2줄');
     await p.fill('#ss-wr', '성적 일괄 입력').catch(() => {}); await p.selectOption('#ss-wm', '120').catch(() => {}); await p.$eval('[data-act=ss-work]', el => el.click()).catch(() => {}); await p.waitForTimeout(900);
-    ok((await pg.query("select count(*)::int n from audit_log where actor = $1 and action = 'session.work'", [em])).rows[0].n === 1, '작업 모드 켜기 → audit');
+    /* v49.1 개발1: audit_log는 기관 격리(RLS FORCE, app.tenant)가 걸린 뒤로 기관을 지정하지 않으면 소유자도 0건으로 보인다(시험이 낡음).
+       제품은 session.work를 정상 기록하므로, 시험 계정의 기관으로 app.tenant를 지정한 트랜잭션 안에서 센다. */
+    const auditN = async act => { await pg.query('begin'); try { await pg.query("select set_config('app.tenant', (select tenant_id from users where email = $1), true)", [em]); return (await pg.query('select count(*)::int n from audit_log where actor = $1 and action = $2', [em, act])).rows[0].n; } finally { await pg.query('commit'); } };
+    ok(await auditN('session.work') === 1, '작업 모드 켜기 → audit');
     await p.$eval('[data-act=ss-out]', el => el.click()).catch(() => {}); await p.waitForTimeout(900);
     ok((await pg.query('select count(*)::int n from sessions s join users u on u.id = s.user_id where u.email = $1', [em])).rows[0].n === 1, '다른 기기 모두 로그아웃');
     await mount('osec'); await p.waitForSelector('#os-idle', { timeout: 8000 }).catch(() => {});

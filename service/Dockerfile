@@ -1,6 +1,7 @@
 # 디디쌤 스튜디오 운영 이미지 — 빌드 컨텍스트는 저장소 루트: docker build -f service/Dockerfile .
-# 보안(SEC-0002 · IAC-02): 기준 이미지 다이제스트 고정 — 갱신은 Dependabot docker PR
-FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS build
+# 보안(SEC-0002 · IAC-02 · v49.1 P2): 기준 이미지는 Node 지원 계열 정확한 버전(22.23.5, 2026-11-11 보안 릴리스) + 다이제스트로 고정 — 갱신은 Dependabot docker PR,
+# 바꿀 때는 Dockerfile · gcp/Dockerfile.lite · service-egov/Dockerfile · server/package.json engines를 함께 고치고 node scripts/check-dockerfile.js로 확인
+FROM node:22.23.5-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS build
 WORKDIR /w
 COPY service/server/package.json service/server/package-lock.json ./server/
 # (선택) 사내 프록시 CA: docker build --secret id=ca,src=ca.crt …
@@ -29,7 +30,7 @@ RUN apk add --no-cache build-base cmake git curl \
  && curl -fL -o /opt/whisper/ggml-base.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${WHISPER_MODEL_NAME} \
  && echo "${WHISPER_MODEL_SHA256}  /opt/whisper/ggml-base.bin" | sha256sum -c -
 
-FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
+FROM node:22.23.5-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a
 ENV NODE_ENV=production PORT=8080 PUBLIC_DIR=/app/public
 # v32 미디어 파이프라인: ffmpeg(HLS 변환 · 음성 추출) + whisper.cpp(STT). 저장소는 MEDIA_STORE(db 기본 · disk · gcs)
 RUN apk add --no-cache ffmpeg libstdc++ libgomp
