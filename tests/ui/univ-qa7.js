@@ -185,7 +185,10 @@ async function live(br) {
     void lg;
     /* 내려받기 기록(/api/export/log → audit 'export') */
     const { Client } = require(require.resolve('pg', { paths: NP.split(path.delimiter) })); const db = new Client({ connectionString: DB }); await db.connect();
-    try { const q = await db.query("select actor, detail from audit_log where action = 'export' and actor = any($1) order by id desc limit 5", [[own, staff.sub]]).catch(e => ({ rows: [], err: e.message }));
+    /* v49.1 개발1: audit_log에 기관 격리(RLS FORCE, app.tenant)가 걸린 뒤로 기관 지정 없이 세면 0건이었다(시험이 낡음, 제품은 정상 기록).
+       정운영자 기관으로 app.tenant를 지정한 트랜잭션 안에서 읽는다(CI의 슈퍼유저 DB에서도 같은 결과). */
+    try { await db.query('begin'); await db.query("select set_config('app.tenant', (select tenant_id from users where email = $1), true)", [own]);
+      const q = await db.query("select actor, detail from audit_log where action = 'export' and actor = any($1) order by id desc limit 5", [[own, staff.sub]]).catch(e => ({ rows: [], err: e.message })); await db.query('commit').catch(() => {});
       ok(q.rows.some(x => x.actor === own) && q.rows.some(x => x.actor === staff.sub), `내려받기 감사 기록(정 · 부운영자) ${q.rows.length}건 ${q.err || ''}`); } finally { await db.end(); }
   } finally { try { ch.kill('SIGKILL'); } catch (e) { } try { cp.execSync(`fuser -k -n tcp ${port} 2>/dev/null`); } catch (e) { } fs.rmSync(pub, { recursive: true, force: true }); }
 }
