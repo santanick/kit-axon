@@ -103,3 +103,12 @@ test('v48 콘텐츠 마켓 AI SAM 도구(quote_content_pass · open_pass_builder
   assert.equal(T.checkRequest({ tools: [{ name: 'quote_content_pass', input_schema: {} }, { name: 'open_pass_builder', input_schema: {} }], messages: [] }, { secret: 's', tid: 't', uid: 'u' }), null);
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'didisam', 'mksam.js'), 'utf8'); for (const m of src.matchAll(/\{ name: '([a-z_]+)', description/g)) assert.ok(T.tierOf(m[1]) >= 0, '화면 도구 등급 등록: ' + m[1]);
 });
+
+test('v49.1 통합 센터 AI SAM 도구(grp_overview · grp_below_target 0등급 · grp_share_plan 2등급) 등록 — Java DdAiTools 같은 표, group.js 화면 도구 전부 등록', () => {
+  const T = require('../server/aitools'); const fs = require('node:fs'); const path = require('node:path');
+  const J = fs.readFileSync(path.join(__dirname, '..', '..', 'service-egov', 'src', 'main', 'java', 'egovframework', 'didisam', 'cmm', 'DdAiTools.java'), 'utf8');
+  for (const [n, v] of [['grp_overview', 0], ['grp_below_target', 0], ['grp_share_plan', 2]]) { assert.equal(T.tierOf(n), v, n); assert.ok(J.includes(`"${n}", ${v}`), 'Java ' + n); }
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'didisam', 'group.js'), 'utf8'); const names = [...src.matchAll(/\{ name: '([a-z_]+)', description/g)].map(m => m[1]);
+  assert.deepEqual(names.sort(), ['grp_below_target', 'grp_overview', 'grp_share_plan']); names.forEach(n => assert.ok(T.tierOf(n) >= 0, '화면 도구 등급 등록: ' + n));
+  assert.equal(T.checkRequest({ tools: names.map(name => ({ name, input_schema: {} })), messages: [] }, { secret: 's', tid: 't', uid: 'u' }), null);
+});

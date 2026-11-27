@@ -260,7 +260,7 @@
     if (LV()) return TM.v;
     const t = loc(); const ch = t.channels || [];
     return { mode: 'demo', local: true, st: t.demo || ch.length ? CN_ST.on : CN_ST.off, demo: t.demo, note: ch.length ? `알림 채널 ${ch.length}곳(시연)` : '', org: t.demo ? { domain: 'demo.onmicrosoft.com', demo: true } : null,
-      features: { notify: true, meeting: true, sso: false, learner: false }, meetingDefaults: t.md, channels: ch, accounts: [], sso: { operator: false, learner: false, tids: [] }, ssoTypeOk: ssoType(), scopesAvail: ['notify'], runs: t.runs || [] };
+      features: { notify: true, meeting: true, sso: false, learner: !!(t.lrn && t.lrn.on) }, learnerNoti: { typeOk: lnType(), on: !!(t.lrn && t.lrn.on), events: (t.lrn && t.lrn.events) || ['due', 'notice'], optIn: 0, agreeVer: 'teams-lrn-v1', local: true }, meetingDefaults: t.md, channels: ch, accounts: [], sso: { operator: false, learner: false, tids: [] }, ssoTypeOk: ssoType(), scopesAvail: ['notify'], runs: t.runs || [] };
   }
   const repaint = () => { const n = document.getElementById('cnCard-teams'); if (n) { const d = document.createElement('div'); d.innerHTML = cnCard('teams'); n.replaceWith(d.firstElementChild); } if (typeof CUR === 'object' && CUR.tab === 'conn') render(); };
   async function pull(force) { if (!LV() || TM.busy || (TM.v && !force)) return; TM.busy = true; try { TM.v = await api('GET', '/api/conn/teams'); TM.err = ''; if (OFF()) { const i = CN_IDS.indexOf('teams'); if (i >= 0) CN_IDS.splice(i, 1); if (typeof CUR === 'object' && CUR.tab === 'conn' && typeof render === 'function') render(); } } catch (e) { TM.err = (e && e.message) || '불러오지 못했습니다.'; } TM.busy = false; repaint(); }
@@ -272,6 +272,9 @@
       return { st, note: v.note || (v.org ? `${v.org.domain || 'Microsoft 365'}${v.demo || v.org.demo ? ' · 시연' : ''}` : st === CN_ST.off ? '채널 알림 · 회의 · 로그인 미설정' : '') }; }; }
 
   const TABS = [['org', '조직 연결'], ['ch', '채널 알림'], ['mt', '온라인 수업'], ['sso', '로그인']];
+  /* v49.1 L-noti-teams: 대학 · 기업 기관만 「학습자 알림」 탭(기관이 켜고 → 학습자가 앱 · 웹 「연결 · 알림」에서 본인 동의로 켬). 다른 유형 · 시범 밖은 탭 4개 그대로 */
+  const lnType = () => ['univ', 'univ_lms', 'corp'].includes((S.org && S.org.type) || '');
+  const tabsOf = v => lnType() && v && v.learnerNoti && v.learnerNoti.typeOk !== false ? [...TABS, ['ln', '학습자 알림']] : TABS;
   const prevCard = () => `<div class="cx-prev tm-prev"><small>받는 사람이 보는 모습(Teams 채널)</small><div class="tm-ac"><span class="tm-ac-h">디디쌤 · 승인 요청</span><b>수강 승인 요청 3건이 기다리고 있습니다</b><p>학습자 이름 · 연락처는 보내지 않고 건수만 알립니다.</p><span class="tm-ac-b">디디쌤에서 보기</span></div></div>`;
   function tabBody(k, v, admin, owner) {
     const live = v.mode === 'live';
@@ -287,6 +290,13 @@
       return `${A.length ? `<ul class="tm-list">${A.map(a => `<li><div><b>${esc(a.upn)}</b><small>${esc(a.role)}${a.exp === 'reauth' ? ' · 만료 — 다시 연결하십시오' : ' · 사용 가능'}</small></div>${a.mine || owner ? `<span class="tm-la"><button class="btn sm ghost" data-act="tm-acdel" data-v="${esc(a.id)}">연결 끊기</button></span>` : ''}</li>`).join('')}</ul>` : `<p class="mini">${live ? '회의를 여는 교수자 · 운영자가 각자 Microsoft 계정을 연결합니다. 회의는 연결한 사람 이름으로 만들어집니다.' : '시연 모드에서는 계정 연결 없이 「시연 링크」로 회의 만들기 · 출석 가져오기를 체험할 수 있습니다.'}</p>`}
         ${live ? `<button class="btn sm" data-act="tm-acct" ${v.org ? '' : 'disabled title="조직 연결 후 사용"'}>${ic('plus', 13)} 내 Microsoft 계정 연결</button>` : ''}
         ${admin ? `<div class="form2 cn-f2 tm-md"><label class="fl">대기실 바로 입장<select id="tmLobby"><option value="organization" ${md.lobby !== 'everyone' ? 'selected' : ''}>우리 조직 사람만</option><option value="everyone" ${md.lobby === 'everyone' ? 'selected' : ''}>모두(외부 학습자 포함)</option></select></label><label class="fl">출석 인정 최소 참여(분)<input id="tmAttMin" type="number" min="0" max="600" value="${esc(md.attMin ?? 10)}"></label></div><button class="btn sm" data-act="tm-md">기본값 저장</button><p class="mini">자동 녹화는 하지 않습니다. 출석은 Teams 참석 보고서로 「제안」만 만들고, 담당자가 확인 후 반영합니다.</p>` : ''}`; }
+    if (k === 'ln') { const ln = v.learnerNoti || {}; const ev = ln.events || ['due', 'notice']; const ready = live ? !!(v.org && (v.sso || {}).learner) : !!(v.org || v.demo);
+      return `<p class="mini">학습자가 앱 · 웹 「연결 · 알림」에서 직접 켜면 공지 · 마감 임박 알림을 Teams 활동 피드로도 받습니다. 기관이 먼저 켜고, 학습자마다 본인 동의를 받습니다. 보내는 내용은 공지 제목 · 과정 이름뿐이며 이름 · 학번 · 성적은 보내지 않습니다.</p>
+        <dl class="cn-dl"><dt>상태</dt><dd>${ln.on ? `켜짐 ${tag(live ? '운영' : '시연', live ? 'g' : 'b')}` : '꺼짐'}</dd>${ln.on && !ln.local ? `<dt>동의한 학습자</dt><dd>${ln.optIn >= 1 && ln.optIn <= 4 ? '5명 미만' : `${nf0(ln.optIn)}명`}</dd>` : ''}</dl>
+        ${ready ? '' : `<p class="mini">${live ? '먼저 「조직 연결」을 마치고 「로그인」에서 학습자 Microsoft 로그인을 켜십시오.' : '먼저 「조직 연결」에서 시연으로 연결하십시오.'}</p>`}
+        ${admin ? `<fieldset class="tm-evck"><legend class="mini">보낼 알림</legend>${[['notice', '공지'], ['due', '마감 임박']].map(([e, n]) => `<label class="ckl"><input type="checkbox" name="tmLnEv" value="${e}" ${ev.includes(e) ? 'checked' : ''}> ${n}</label>`).join('')}</fieldset>
+        <div class="bar2">${ln.on ? '<button class="btn sm" data-act="tm-ln" data-v="save">알림 종류 저장</button><button class="btn sm ghost" data-act="tm-ln" data-v="off">학습자 알림 끄기</button>' : `<button class="btn sm ink" data-act="tm-ln" data-v="on" ${ready ? '' : 'disabled'}>학습자 알림 켜기</button>`}</div>
+        <p class="mini">끄면 학습자 동의 기록을 모두 지웁니다.${live ? ' 실제 발송은 Teams 앱(조직 앱 카탈로그) 배포 후 시작합니다 — 그전에는 최근 실행에 「대기」로 남습니다.' : ' 시연은 실제로 보내지 않고 최근 실행에만 남깁니다.'}</p>` : ''}`; }
     if (k === 'sso') { const s = v.sso || {};
       if (!live) return `<p class="mini">Microsoft 계정 로그인은 서버에 Microsoft 앱 키가 설정된 뒤 사용할 수 있습니다(시연 로그인은 만들지 않습니다).</p>`;
       if (!v.org) return '<p class="mini">먼저 「조직 연결」을 완료하십시오.</p>';
@@ -297,13 +307,13 @@
   }
   { const base = cnCard; cnCard = id => { if (id !== 'teams') return base(id); const d = CN.teams; const s = cnStatus('teams'); const v = view();
       if (!v) return `<div class="card cn-card cx-card" id="cnCard-teams" data-st="${esc(s.st)}"><div class="cn-h">${typeof brandLogo === 'function' ? brandLogo('teams', 44, d.name) : ''}<div><b>${esc(d.name)}</b><small>${esc(d.use)}</small></div></div><p class="cn-note">${esc(TM.err || s.note)}</p></div>`;
-      const admin = S.me && ['owner', 'sub', 'admin'].includes(S.me.role); const owner = S.me && S.me.role === 'owner'; const tab = TABS.some(t => t[0] === UI.tmTab) ? UI.tmTab : 'ch';
+      const admin = S.me && ['owner', 'sub', 'admin'].includes(S.me.role); const owner = S.me && S.me.role === 'owner'; const tab = tabsOf(v).some(t => t[0] === UI.tmTab) ? UI.tmTab : 'ch';
       const n = s.st === CN_ST.on ? 3 : s.st === CN_ST.off ? 1 : 2;
       const last = (v.runs || [])[0];
       return `<div class="card cn-card cx-card tm-card" id="cnCard-teams" data-st="${esc(s.st)}"><div class="cn-h">${typeof brandLogo === 'function' ? brandLogo('teams', 44, d.name) : `<span class="cn-logo" style="background:${d.col}">T</span>`}<div><b>${esc(d.name)}</b><small>${esc(d.use)}</small></div>${tag(s.st === CN_ST.off ? '미연결' : s.st, s.st === CN_ST.on ? 'g' : s.st === CN_ST.chk ? 'y' : s.st === CN_ST.off ? '' : 'b')}${v.mode === 'demo' ? tag('시연', 'b') : ''}</div>
         <ol class="cx-steps" aria-label="연결 단계">${['준비하기', '워크플로 주소 · 조직 연결', '시험 · 완료'].map((t, i) => `<li class="${i + 1 < n ? 'done' : i + 1 === n ? 'cur' : ''}"><i>${i + 1 < n ? '✓' : i + 1}</i>${esc(t)}</li>`).join('')}</ol>
         <p class="cn-note">${esc(s.note)}</p>${cnGuideHTML('teams', s.st !== CN_ST.on)}
-        <div class="seg2 tm-tabs" role="tablist" aria-label="Teams 연결 항목">${TABS.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === tab}" class="${k === tab ? 'on' : ''}" data-act="tm-tab" data-v="${k}">${l}</button>`).join('')}</div>
+        <div class="seg2 tm-tabs" role="tablist" aria-label="Teams 연결 항목">${tabsOf(v).map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === tab}" class="${k === tab ? 'on' : ''}" data-act="tm-tab" data-v="${k}">${l}</button>`).join('')}</div>
         <div class="cn-body tm-body" role="tabpanel">${tabBody(tab, v, admin, owner)}</div>${tab === 'ch' ? prevCard() : ''}
         <div class="bar2 cn-acts">${s.st !== CN_ST.off && owner ? `<button class="btn sm ghost" data-act="cn-off" data-v="teams">연결 해제</button>` : ''}<button class="btn sm ghost" data-act="gd-start" data-v="cn-teams">${ic('spark', 13)} 따라하기</button></div>${last ? `<p class="mini cn-last">최근 실행: ${esc(last.at || '')} · ${esc(last.ch || '')} ${esc(last.title || '')}${last.demo ? '(시연)' : last.ok === false ? '(실패)' : ''}</p>` : ''}</div>`; }; }
 
@@ -328,6 +338,14 @@
   ACT['tm-acdel'] = el => call('DELETE', '/api/conn/teams/account/' + encodeURIComponent(el.dataset.v), null, '회의 계정 연결을 끊었습니다.');
   ACT['tm-md'] = () => { const lobby = (document.getElementById('tmLobby') || {}).value === 'everyone' ? 'everyone' : 'organization'; const attMin = Math.max(0, Math.min(600, parseInt((document.getElementById('tmAttMin') || {}).value, 10) || 0));
     if (LV()) return call('PUT', '/api/conn/teams/settings', { meetingDefaults: { lobby, attMin } }, '회의 기본값을 저장했습니다.'); const t = loc(); t.md = { lobby, attMin }; save(); repaint(); toast('회의 기본값을 저장했습니다.', 'ok'); };
+  const nf0 = n => (Number(n) || 0).toLocaleString('ko-KR');
+  ACT['tm-ln'] = el => { const d = el.dataset.v; const events = [...document.querySelectorAll('[name=tmLnEv]:checked')].map(x => x.value); const on = d !== 'off';
+    if (on && !events.length) { toast('보낼 알림을 하나 이상 고르십시오.', 'warn'); return; }
+    const done = d === 'off' ? '학습자 Teams 알림을 껐습니다. 학습자 동의 기록을 지웠습니다.' : d === 'save' ? '보낼 알림 종류를 저장했습니다.' : '학습자 Teams 알림을 켰습니다. 학습자는 「연결 · 알림」에서 본인 동의로 켭니다.';
+    if (LV()) return call('PUT', '/api/conn/teams/learner', { on, events }, done);
+    const t = loc(); t.lrn = on ? { on: true, events } : { on: false, events }; cnLog('teams', on ? '학습자 알림 켜기(시연)' : '학습자 알림 끄기(시연)', true); logAudit(`외부 연결 — Microsoft Teams 학습자 알림 ${on ? '켜기' : '끄기'}(시연)`); save(); repaint(); toast(done, 'ok'); };
+  /* 시연판: 학습자 사이트 스냅샷에 기관 켜짐만(동의 · 발송은 학습자 브라우저) — 운영은 서버 /api/pub/<tid>/teams-noti가 판단 */
+  if (typeof lsSnapshot === 'function') { const base = lsSnapshot; lsSnapshot = (...a) => { const o = base(...a); try { const t = !LV() && lnType() ? ((cnEnsure() || {}).teams || {}).lrn : null; if (o && t && t.on) o.teamsLrn = { on: true, events: t.events || ['due', 'notice'] }; } catch (e) { } return o; }; } /* eslint-disable-line no-global-assign */
   ACT['tm-sso'] = () => call('PUT', '/api/conn/teams/sso', { operator: !!(document.getElementById('tmSsoOp') || {}).checked, learner: !!(document.getElementById('tmSsoLn') || {}).checked }, '로그인 설정을 저장했습니다.');
   { const b = ACT['cn-test']; ACT['cn-test'] = el => el.dataset.v === 'teams' ? (UI.tmTab = 'ch', repaint()) : b(el); }
   { const b = ACT['cn-demo']; ACT['cn-demo'] = el => el.dataset.v === 'teams' ? ACT['tm-demo'](el) : b(el); }

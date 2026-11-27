@@ -182,7 +182,7 @@ test('MS Teams 연동 — 시연 · 웹훅 · 조직 연결 · 회의 · 출석 
     assert.equal((await call(UL, 'B', 'DELETE', `/api/conn/teams/meetings/${acct.meeting}`)).status, 404, '다른 기관 회의');
     assert.equal((await call(UL, 'B', 'POST', `/api/conn/teams/meetings/${acct.meeting}/attendance/sync`)).status, 404);
     assert.equal((await call(UL, 'B', 'GET', '/api/conn/teams')).j.accounts.length, 0);
-    assert.equal((await call(UL, 'A', 'PUT', '/api/conn/teams/learner', { on: true })).j.error, 'teams_phase2');
+    assert.equal((await call(UL, 'A', 'PUT', '/api/conn/teams/learner', { on: true })).j.error, 'teams_lrn_sso', 'v49.1: 2차 학습자 알림 구현 — 운영은 학습자 SSO를 먼저 켜야 함(이전 기대값 teams_phase2는 1차 예약 시점)');
   });
 
   /* SSO */
@@ -225,6 +225,13 @@ test('MS Teams 연동 — 시연 · 웹훅 · 조직 연결 · 회의 · 출석 
     const id = (await (async () => { const c = await pool.connect(); try { await c.query('begin'); await c.query('set local role didisam_pii'); await c.query("select set_config('app.tenant', $1, true)", [A.tid]); return await c.query('select provider, provider_sub_hash, email_enc, name_enc from pii.identity where tid = $1 and learner_id = $2', [A.tid, lsid]); } finally { await c.query('rollback'); c.release(); } })()).rows[0];
     assert.equal(id.provider, 'microsoft'); assert.equal(id.email_enc, null); assert.equal(id.name_enc, null); assert.ok(!id.provider_sub_hash.includes(loid));
     assert.equal(await go('L2', MST, loid, 'login'), 'ok');
+    /* v49.1 L-noti-teams 운영: Microsoft로 로그인한 학습자만 linked · 동의 후 켜기 · 발송은 Teams 앱 배포 전 「대기」 기록 */
+    const on = await call(UL, 'A', 'PUT', '/api/conn/teams/learner', { on: true, events: ['notice'] }); assert.equal(on.status, 200, on.txt); assert.equal(on.j.learnerNoti.on, true); assert.deepEqual(on.j.learnerNoti.events, ['notice']);
+    const g0 = await call(UL, 'L2', 'GET', `/api/pub/${A.tid}/teams-noti`); assert.equal(g0.j.available, true); assert.equal(g0.j.linked, true); assert.equal(g0.j.mode, 'live'); assert.deepEqual(g0.j.orgEvents, ['notice']);
+    assert.equal((await call(UL, 'L2', 'PUT', `/api/pub/${A.tid}/teams-noti`, { on: true, agree: true, agreeVer: 'teams-lrn-v1', events: ['notice'] })).j.on, true);
+    assert.equal((await call(UL, 'A', 'POST', '/api/conn/teams/notify', { event: 'notice', title: '보강 안내' })).j.learners, 1);
+    assert.ok((await call(UL, 'A', 'GET', '/api/conn/teams')).j.runs.some(r => r.ch === '학습자 Teams 알림' && r.n === 1 && r.wait && !r.demo), '운영: 대기 기록');
+    assert.equal((await call(UL, 'L2', 'PUT', `/api/pub/${A.tid}/teams-noti`, { on: false })).j.on, false);
   });
   await t.test('T11 · T12 출석 가져오기: 보고서 없음 → 404 · 출석/지각/결석 제안 · 미매칭 수 · 이메일 미저장', async () => {
     assert.equal((await call(UL, 'A', 'POST', `/api/conn/teams/meetings/${acct.meeting}/attendance/sync`)).j.error, 'teams_report_none');

@@ -23,7 +23,7 @@ async function scenario(base, tag) {
   const R = {}; const call = client(base); const em = `ct_tm_${tag}_${Date.now()}@example.com`;
   R.noauth = await call('GET', '/api/conn/teams');
   R.signup = await call('POST', '/api/signup', { email: em, password: 'Contract2026x', orgName: '대조 대학교', type: 'univ', ...(process.env.SIGNUP_CODE ? { code: process.env.SIGNUP_CODE } : {}) });
-  R.state = await call('PUT', '/api/state', { doc: { org: { name: '대조 대학교', type: 'univ' }, members: [{ id: 'm1', name: '가' }, { id: 'm2', name: '나' }], classes: [{ id: 'c1', name: '반', learners: ['m1', 'm2'], curriculum: [{ id: 'it1', type: 'live', title: '라이브', url: '' }], att: {} }] }, rev: 0 });
+  R.state = await call('PUT', '/api/state', { doc: { org: { name: '대조 대학교', type: 'univ' }, lsite: { pub: { org: { name: '대조 대학교', type: 'univ' }, pages: [], classes: [] } }, codes: [{ sid: '20260001', dept: '수학', code: 'ABC234' }], members: [{ id: 'm1', name: '가', sid: '20260001' }, { id: 'm2', name: '나' }], classes: [{ id: 'c1', name: '반', learners: ['m1', 'm2'], curriculum: [{ id: 'it1', type: 'live', title: '라이브', url: '' }], att: {} }] }, rev: 0 });
   R.get0 = await call('GET', '/api/conn/teams');
   R.consent = await call('GET', '/api/conn/teams/consent/start');
   R.opStart = await call('GET', '/api/oauth/microsoft/start');
@@ -65,7 +65,22 @@ async function scenario(base, tag) {
   R.mtNone = await call('DELETE', '/api/conn/teams/meetings/tm_zzzzzzzzzz');
   R.mtDel = await call('DELETE', `/api/conn/teams/meetings/${mt}`);
   R.sso = await call('PUT', '/api/conn/teams/sso', { operator: true });
+  R.learnerBad = await call('PUT', '/api/conn/teams/learner', { on: true, events: ['pay'] });
   R.learner = await call('PUT', '/api/conn/teams/learner', { on: true });
+  /* v49.1 L-noti-teams 학습자 경로 — /api/pub/<tid>/teams-noti(학습자 세션) */
+  const tid = R.signup.j && R.signup.j.tenant && R.signup.j.tenant.tid; const lc = client(base);
+  R.lNo = await lc('GET', `/api/pub/${tid}/teams-noti`);
+  R.lLogin = await lc('POST', `/api/pub/${tid}/login`, { sid: '20260001', code: 'abc234' });
+  R.lGet = await lc('GET', `/api/pub/${tid}/teams-noti`);
+  R.lAgree = await lc('PUT', `/api/pub/${tid}/teams-noti`, { on: true });
+  R.lEv = await lc('PUT', `/api/pub/${tid}/teams-noti`, { on: true, agree: true, agreeVer: 'teams-lrn-v1', events: ['pay'] });
+  R.lOn = await lc('PUT', `/api/pub/${tid}/teams-noti`, { on: true, agree: true, agreeVer: 'teams-lrn-v1', events: ['notice'] });
+  R.lNotify = await call('POST', '/api/conn/teams/notify', { event: 'notice', title: '휴강 안내' });
+  R.lNotify2 = await call('POST', '/api/conn/teams/notify', { event: 'due', title: '마감' });
+  R.lStat = await call('GET', '/api/conn/teams');
+  R.lOff = await lc('PUT', `/api/pub/${tid}/teams-noti`, { on: false });
+  R.learnerOff = await call('PUT', '/api/conn/teams/learner', { on: false });
+  R.lAfter = await lc('PUT', `/api/pub/${tid}/teams-noti`, { on: true, agree: true, agreeVer: 'teams-lrn-v1' });
   R.acNone = await call('DELETE', '/api/conn/teams/account/ac_zzzzzzzzzz');
   R.unknown = await call('GET', '/api/conn/teams/nope');
   R.get1 = await call('GET', '/api/conn/teams');
@@ -85,7 +100,9 @@ const FIX = {
   sync: j => [j.mode, j.matched.length, j.unmatched], applyBad: j => [j.error], apply: j => [j.applied],
   doc: j => { const c = j.doc.classes[0]; return [c.curriculum[0].url, JSON.stringify(c.att.it1 || {})]; },
   tMt: j => [j.error], tMtNo: j => [j.error], tPatch: j => [j.error], tApply: j => [j.error], tDel: j => [j.error], tList: j => [j.meetings.length], tNotify: j => [j.error], tNotice: j => [j.ok],
-  mtNone: j => [j.error], mtDel: j => [j.ok], sso: j => [j.error], learner: j => [j.error], acNone: j => [j.error], unknown: j => [j.error],
+  mtNone: j => [j.error], mtDel: j => [j.ok], sso: j => [j.error], learner: j => [j.learnerNoti.on, j.learnerNoti.events.join(), j.learnerNoti.optIn], learnerBad: j => [j.error],
+  lNo: j => [j.error], lGet: j => [j.available, j.on, j.orgEvents.join(), j.mode, j.linked, j.agreeVer], lAgree: j => [j.error], lEv: j => [j.error], lOn: j => [j.on, j.events.join()],
+  lNotify: j => [j.queued, j.learners], lNotify2: j => [j.queued, j.learners], lStat: j => [j.learnerNoti.optIn, JSON.stringify(j.runs.filter(r => r.ch === '학습자 Teams 알림').map(r => [r.event, r.title, r.n, r.demo]))], lOff: j => [j.on, j.events.length], learnerOff: j => [j.learnerNoti.on, j.learnerNoti.optIn], lAfter: j => [j.error], acNone: j => [j.error], unknown: j => [j.error],
   get1: j => [j.st, j.channels.length, j.channels[0] && j.channels[0].events.join()], off: j => [j.ok, j.removed.channels, j.removed.accounts], get2: j => [j.st, j.channels.length],
 };
 
@@ -119,6 +136,7 @@ else (async () => {
   ok(/#conn=teams:err-unset$/.test(ra.consent.loc) && /#oauth=err:unset$/.test(ra.opStart.loc), 'Node 기준: 키 없음 리다이렉트');
   ok(ra.chDemo.st === 201 && ra.mt.st === 201, 'Node 기준: 만들기 201');
   ok(['tMt', 'tMtNo', 'tPatch', 'tApply', 'tDel'].every(k => ra[k].j && ra[k].j.error === 'teams_class') && ra.tList.j.meetings.length === 0 && ra.tNotify.j.error === 'teams_role' && ra.tNotice.st === 200, 'Node 기준: QA4 교수자 담당 반 · 알림 종류 제한');
-  ok(ra.sso.j.error === 'teams_unset' && ra.learner.j.error === 'teams_phase2', 'Node 기준: SSO 503 · 학습자 알림 501');
+  ok(ra.sso.j.error === 'teams_unset' && ra.learner.j.learnerNoti && ra.learner.j.learnerNoti.on === true, 'Node 기준: SSO 503 · 학습자 알림(v49.1) 시연 연결 후 켜짐');
+  ok(ra.lNo.st === 401 && ra.lGet.j.available === true && ra.lAgree.j.error === 'teams_lrn_agree' && ra.lOn.j.on === true && ra.lNotify.j.learners === 1 && ra.lNotify2.j.learners === 0 && ra.lStat.j.learnerNoti.optIn === 1 && ra.learnerOff.j.learnerNoti.optIn === 0 && ra.lAfter.j.error === 'teams_lrn_off', 'Node 기준: 학습자 Teams 알림 동의 · 시연 발송 · 기관 끄기 파기');
   console.log(`contract-teams: ${pass} 통과 · ${fail} 실패`); errs.forEach(e => console.log(' ✗', e)); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

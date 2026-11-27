@@ -396,6 +396,88 @@
   ACT['grp-mypol'] = el => run('POST', `/api/group/my/policies/${el.dataset.v}`, { action: el.dataset.d, linkId: el.dataset.l }, el.dataset.d === 'override' ? '우리 값으로 쓰도록 바꿨습니다.' : '상위 기관 값을 적용했습니다.').catch(() => { });
   ACT['grp-in'] = el => run('POST', `/api/group/my/inbox/${el.dataset.v}/${el.dataset.d}`, { asDraft: true, linkId: (myLinks()[0] || {}).linkId }, el.dataset.d === 'decline' ? '거절했습니다.' : el.dataset.d === 'update' ? '새 버전을 적용했습니다.' : `우리 ${typeof t === 'function' ? t('cls') : '과정'} 초안(비공개)으로 가져왔습니다.`).catch(() => { });
   ACT['grp-up'] = () => { const C = (S.classes || []).slice(0, 30); modal('공유 요청 올리기', `<p class="gp-sub">상위 기관이 승인하면 다른 소속 기관에도 배포될 수 있습니다. 학습자 · 성적 자료는 빠집니다.</p><label class="fl">과정<select name="src">${C.map(c => `<option value="${esc(c.id)}" ${c.mk || c.market || c.mkProd ? 'disabled' : ''}>${esc(c.name)}${c.mk || c.market || c.mkProd ? ' (마켓 상품 — 불가)' : ''}</option>`).join('')}</select></label><label class="fl">한 줄 메모<input name="note" maxlength="80"></label>`, [{ id: 'c', label: '취소' }, { id: 'ok', label: '요청 올리기', kind: 'pri', run: w => { run('POST', '/api/group/my/up', { kind: 'course', source: { courseId: fv(w, 'src') }, title: '', note: fv(w, 'note'), linkId: (myLinks()[0] || {}).linkId }, '공유 요청을 올렸습니다.').catch(() => { }); } }]); };
+
+  /* ── v49.1 A-grp-sam 통합 센터 AI SAM(spec 7절 · 5-2 ⑤) — 상위 기관 운영자가 대화로 통합 현황 · 목표 미달 소속 기관 · 콘텐츠 배포 계획을 묻습니다.
+     자료는 GET /api/group/dash 응답(시연판은 DEMO)만 씁니다 — 소속 기관 단위 집계 · 「5명 미만」 가림 그대로, 학습자 개인 단위는 없습니다(P-PRIV-10).
+     학습자 개별 열람(학번 · 이름 · 개별 기록) 요청은 거절하고 통합 학습자 화면의 열람 절차(권한 · 목적 · 재인증 · 감사 기록)를 안내합니다.
+     도구 3종(등급: 서버 aitools TIER · Java DdAiTools) — grp_overview · grp_below_target(0 읽기) · grp_share_plan(2, 계획 카드 → 승인해야 배포).
+     시범 게이트: 통합 센터가 켜진 상위 기관(ownerOn)만 — 꺼진 기관은 Claude 요청의 도구 목록 · 규칙 · 칩이 지금과 같습니다. */
+  const SAMON = () => { try { return ownerOn() && (can('view') || can('content')); } catch (e) { return false; } };
+  const PERN = { m: '이번 달', pm: '지난달', term: '이번 학기', y: '올해' };
+  const perOf = s => /지난\s*달|전월|저번\s*달/.test(s) ? 'pm' : /학기/.test(s) ? 'term' : /올해|연간|1년/.test(s) ? 'y' : 'm';
+  const KPIQ = [[/진도/, 'progBp'], [/활동\s*(률|율|비율)/, 'actRate'], [/활동/, 'act'], [/AI|에이아이/i, 'aiCalls'], [/수납|매출/, 'rev'], [/수료|이수/, 'cmpRateBp']];
+  const kpiOf = s => { const m = KPIQ.find(([re]) => re.test(String(s || ''))); return m ? m[1] : 'cmpRateBp'; };
+  const fmtS = (k, v) => (k === 'enr' || k === 'cmp') && v !== MASK && v != null ? nf(v) + '건' : fmt(k, v);
+  const INDIV = /(학번|이름|명단|개인별|개별|연락처|전화|이메일|누가|누구|학생\s*목록|학습자\s*목록)/;
+  const PEOPLEQ = /(학생|학습자|원생|수강생|시민|회원)/;
+  function samDash(p) { const R = rangeOf(p); const x = get(`/api/group/dash?p=${p}&from=${R.from}&to=${R.to}&unit=week`); return x; }
+  const wait = x => ({ ok: false, 이유: x && x.err ? x.err : '통합 집계를 불러오는 중입니다. 잠시 후 다시 물어봐 주십시오.' });
+  const tgtOf = (g, k) => { const T = (g && g.targets) || {}; return k === 'actRate' ? T.actRateBp : T[k]; };
+  function overview(p) { const g = GRP(); if (!g) return null; const x = samDash(p); if (!x.d) return { wait: wait(x) }; const d = x.d; const T = K(g);
+    const keys = (T.kpis || []).filter(k => d.kpis.includes(k)); const flagged = d.children.filter(c => (c.flags || []).some(f => f.rule > 0));
+    const tot = keys.map(k => [KL(k, g), d.total[k] == null ? '일부 기관 비공개' : fmtS(k, d.total[k])]);
+    const text = `${PERN[p]} ${T.space} 현황입니다. ${T.child} ${d.children.length}곳 · ${tot.slice(0, 3).map(([a, b]) => `${a} ${b}`).join(' · ')}${flagged.length ? `. 경고 기준에 걸린 ${T.child} ${flagged.length}곳` : ''}.`;
+    const cols = (T.cols || []).filter(k => d.kpis.includes(k));
+    const html = scxTbl([T.child, ...cols.map(k => KL(k, g)), '경고'], d.children.map(c => [c.label, ...cols.map(k => fmtS(k, c.v[k])), (c.flags || []).map(f => f.label).join(' · ') || '—']))
+      + `<p class="gp-sub">집계 기준 ${esc(String(d.asOf || ''))} · 5명 미만은 가립니다 · 학습자 개인 정보는 보이지 않습니다.</p>`;
+    return { text, html, out: { 기간: PERN[p], 범위: `${d.range.from} ~ ${d.range.to}`, 소속기관수: d.children.length, 합계: Object.fromEntries(tot), 경고기관수: flagged.length, 안내: '소속 기관 단위 집계만 있습니다. 5명 미만은 가림, 동의하지 않은 항목은 비공개입니다.' } }; }
+  function below(p, k) { const g = GRP(); if (!g) return null; const x = samDash(p); if (!x.d) return { wait: wait(x) }; const d = x.d; const T = K(g); const tg = tgtOf(g, k);
+    const rows = d.children.map(c => { const v = c.v[k]; const fl = (c.flags || []).filter(f => f.kpi === k || (f.rule === 0 && !f.kpi)); return { c, v, fl }; });
+    const hid = rows.filter(r => r.v === MASK || r.v == null); const bad = rows.filter(r => !(r.v === MASK || r.v == null) && ((tg != null && /Bp$|actRate/.test(k) && +r.v < tg) || r.fl.length)).sort((a, b) => (+a.v || 0) - (+b.v || 0));
+    const tgt = tg != null && /Bp$|actRate/.test(k) ? fmt(k, tg) : '';
+    const text = bad.length ? `${PERN[p]} ${KL(k, g)}${tgt ? ` 목표 ${tgt}` : ' 경고 기준'}에 못 미치는 ${T.child}은 ${bad.length}곳입니다: ${bad.slice(0, 5).map(r => `${r.c.label}(${fmtS(k, r.v)})`).join(' · ')}.${hid.length ? ` 5명 미만 · 비공개 ${hid.length}곳은 판정에서 뺐습니다.` : ''}`
+      : `${PERN[p]} ${KL(k, g)}${tgt ? ` 목표 ${tgt}` : ''}에 못 미치는 ${T.child}은 없습니다.${hid.length ? ` 5명 미만 · 비공개 ${hid.length}곳은 판정에서 뺐습니다.` : ''}`;
+    const html = bad.length ? scxTbl([T.child, KL(k, g), '목표', '경고'], bad.map(r => [r.c.label, fmtS(k, r.v), tgt || '—', r.fl.map(f => f.label).join(' · ') || '목표 미달'])) : '';
+    return { text, html, bad, k, out: { 기간: PERN[p], 지표: KL(k, g), 목표: tgt || '경고 기준', 미달: bad.map(r => ({ 기관: r.c.label, 값: fmtS(k, r.v) })), 판정제외: hid.length } }; }
+  const isMk = c => !!(c && (c.mk || c.market || c.mkProd));
+  function sharePlan(o, mk) { const g = GRP(); if (!g) return { err: '통합 센터가 켜져 있지 않습니다.' }; const T = K(g);
+    if (!can('content')) return { err: ERR.grp_role }; const C = (S.classes || []).filter(c => c && c.name);
+    const want = String(o.course || '').trim(); const c = want ? (C.find(x => x.name === want) || C.find(x => x.name.includes(want) || want.includes(x.name))) : null;
+    if (!c) return { err: want ? `「${want}」 과정을 찾지 못했습니다.` : '배포할 우리 과정을 알려 주십시오.', pick: C.filter(x => !isMk(x)).slice(0, 5).map(x => x.name) };
+    if (isMk(c)) return { err: ERR.grp_license };
+    const L = get('/api/group/links?status=active'); if (!L.d) return { err: wait(L).이유 }; const kids = L.d.items || [];
+    let tg = 'all', names = kids.map(k => k.label), why = `${T.child} 전체`;
+    if (o.targets === 'below') { const b = below(o.period || 'm', o.kpi || 'cmpRateBp'); if (!b || b.wait) return { err: (b && b.wait && b.wait.이유) || '집계를 불러오지 못했습니다.' }; const ids = b.bad.map(r => r.c.tid).filter(id => kids.some(k => k.childTid === id)); if (!ids.length) return { err: `${KL(b.k, g)} 목표에 못 미치는 ${T.child}이 없어 배포 대상이 없습니다.` }; tg = ids; names = ids.map(id => (kids.find(k => k.childTid === id) || {}).label); why = `${KL(b.k, g)} 목표 미달 ${T.child}`; }
+    else if (Array.isArray(o.targets) && o.targets.length) { const ids = kids.filter(k => o.targets.some(n => String(n) && (k.label === n || k.label.includes(n)))).map(k => k.childTid); if (!ids.length) return { err: `대상 ${T.child}을 찾지 못했습니다. 목록: ${kids.map(k => k.label).slice(0, 8).join(' · ')}` }; tg = ids; names = ids.map(id => kids.find(k => k.childTid === id).label); why = '고른 곳'; }
+    if (!names.length) return { err: `연결된 ${T.child}이 없습니다. 먼저 ${T.child}을 초대하십시오.` };
+    const req = !!o.required;
+    const text = `「${c.name}」을(를) ${why} ${names.length}곳(${names.slice(0, 4).join(' · ')}${names.length > 4 ? ' 외' : ''})에 ${req ? '필수' : '선택'} 배포할까요? 승인하시면 사본을 만들어 배포하고, ${T.child} 「받은 콘텐츠」에 표시됩니다.`;
+    const html = `<div class="gp-snap"><b>사본에 넣음</b> 제목 · 소개 · 차시 구성 · 본문 · 퀴즈 · 링크 · 수료 기준<br><b>빠짐</b> 수강생 · 진도 · 성적 · 제출물 · 게시판 · 상담 · 수납 · 담당 교수자</div>`;
+    const runIt = () => act('POST', '/api/group/shares', { kind: 'course', source: { courseId: c.id }, required: req, targets: tg }).then(r => act('POST', `/api/group/shares/${r.share.sid}/publish`, {})).then(() => { toast(`「${c.name}」을(를) ${names.length}곳에 배포했습니다.`, 'ok'); UI.grpDir = 'down'; render(); }).catch(e => toast(errOf(e), 'warn'));
+    return { c, names, req, text, html, runIt, out: { 과정: c.name, 대상: names, 배포: req ? '필수' : '선택', 승인필요: true } }; }
+  const indivAns = () => { const g = GRP(); const T = K(g); const lrn = T.learners && can('learner'); return scxInfo(`AI SAM은 ${T.lrn} 개인(학번 · 이름 · 개별 기록)을 조회하지 않습니다. 통합 센터 대화는 ${T.child} 단위 집계 · 가명 값만 씁니다.${lrn ? ' 꼭 필요하면 「통합 학습자」에서 열람 권한자가 목적을 적고 2단계 인증을 다시 한 뒤 학번으로 개별 열람합니다(모두 감사 기록).' : ''}`, '', { steps: lrn ? ['통합 센터 › 통합 학습자를 엽니다', '[학번으로 개별 열람]을 누르고 목적(10자 이상)을 적습니다', '2단계 인증을 다시 하면 동의한 범위(학번 · 학과 · 과정 이력)만 보입니다'] : undefined, guide: lrn, nav: lrn ? 'grplrn' : undefined, via: '통합 센터 AI SAM · 개인정보 보호' }); };
+  window.grpSam = Object.freeze({ on: SAMON, overview: p => overview(p || 'm'), below: (p, k) => below(p || 'm', k || 'cmpRateBp'), plan: o => { const r = sharePlan(o || {}); return r.err ? r : { text: r.text, out: r.out }; } });
+
+  /* Claude 경로: 통합 센터가 켜진 상위 기관일 때만 도구 3종 · 규칙을 요청에 덧붙입니다(AG_TOOLS · AG_SYS는 그대로) */
+  const GRP_TOOLS = [
+    { name: 'grp_overview', description: '통합 센터(기관 묶음) 현황을 조회합니다. 소속 기관 단위 집계(학습자 수 · 수료율 · 진도 · 활동 · AI 사용량 등)와 경고 기관 수만 돌려줍니다. 학습자 개인 정보는 없습니다. period: m(이번 달) · pm(지난달) · term(이번 학기) · y(올해).', input_schema: { type: 'object', properties: { period: { type: 'string', enum: ['m', 'pm', 'term', 'y'] } } } },
+    { name: 'grp_below_target', description: '목표값 · 경고 기준에 못 미치는 소속 기관 목록을 조회합니다(기관 이름 · 값만, 5명 미만 · 비공개 기관은 판정 제외 수만). kpi: cmpRateBp(수료율 · 이수율) · progBp(평균 진도) · actRate(활동률) · act · aiCalls · rev.', input_schema: { type: 'object', properties: { period: { type: 'string', enum: ['m', 'pm', 'term', 'y'] }, kpi: { type: 'string' } } } },
+    { name: 'grp_share_plan', description: '우리 과정 하나를 소속 기관에 배포하는 계획 카드를 만듭니다(승인해야 배포). course: 우리 과정 이름. targets: "all"(전체) · "below"(목표 미달 기관, kpi · period와 함께) · 기관 이름 배열. required: 필수 배포 여부(기본 false). 콘텐츠 마켓 상품은 재공유할 수 없습니다.', input_schema: { type: 'object', properties: { course: { type: 'string' }, targets: {}, kpi: { type: 'string' }, period: { type: 'string' }, required: { type: 'boolean' } }, required: ['course'] } }];
+  const GRP_RULE = () => { const T = K(GRP()); return `\n\n[통합 센터] 지금 사용자는 ${T.top}(${T.space}) 운영자입니다. 통합 현황 · 미달 ${T.child} 질문은 grp_overview · grp_below_target 결과 숫자만 말하고, 배포는 grp_share_plan 계획 카드로 제안합니다(승인 후 실행). ${T.lrn} 개인(이름 · 학번 · 개별 기록) 조회 요청은 거절하고, 통합 학습자 화면의 열람 절차(권한 · 목적 · 2단계 인증 · 감사 기록)를 안내합니다. 「5명 미만」 · 비공개 값을 추정하거나 역산하지 않습니다.`; };
+  if (typeof CL !== 'undefined' && typeof CL.call === 'function') { const cb = CL.call; CL.call = function (o) { try { if (o && Array.isArray(o.tools) && o.tools.some(x => x && x.name === 'get_overview') && !o.tools.some(x => x && x.name === 'grp_overview') && SAMON()) o = { ...o, tools: [...o.tools.slice(0, -1), ...GRP_TOOLS, o.tools[o.tools.length - 1]], ...(typeof o.system === 'string' ? { system: o.system + GRP_RULE() } : {}) }; } catch (e) { } return cb.call(CL, o); }; }
+  if (typeof agRun === 'function') { const base = agRun; agRun = (name, x, ctx) => { /* eslint-disable-line no-global-assign */
+    if (!/^grp_(overview|below_target|share_plan)$/.test(name)) return base(name, x, ctx);
+    if (!SAMON()) return { ok: false, 이유: '통합 센터가 켜진 상위 기관 운영자만 쓸 수 있습니다.' }; x = x || {}; const p = PERN[x.period] ? x.period : 'm';
+    if (name === 'grp_overview') { const r = overview(p); if (r.wait) return r.wait; if (ctx && ctx.cards) ctx.cards.push({ text: r.text, html: r.html }); return { ok: true, ...r.out }; }
+    if (name === 'grp_below_target') { const r = below(p, KIND && x.kpi && /^(cmpRateBp|progBp|actRate|act|aiCalls|rev)$/.test(x.kpi) ? x.kpi : 'cmpRateBp'); if (r.wait) return r.wait; if (ctx && ctx.cards && r.html) ctx.cards.push({ text: r.text, html: r.html }); return { ok: true, ...r.out }; }
+    const r = sharePlan({ ...x, period: p }); if (r.err) return { ok: false, 이유: r.err, ...(r.pick ? { 고를수있는과정: r.pick } : {}) };
+    if (typeof agCard === 'function' && ctx) agCard(ctx, { title: '콘텐츠 배포 계획', text: r.text, html: r.html, cta: '승인하고 배포' }, r.runIt); return { ok: true, ...r.out, 안내: '계획 카드를 만들었습니다. 운영자가 승인하면 배포합니다.' }; }; }
+  /* 규칙 엔진(Claude 없음 · 실패 시) — 같은 함수로 답합니다 */
+  if (typeof answer === 'function') { const base = answer; answer = (q, ...a) => { /* eslint-disable-line no-global-assign */
+    try { const s = String(q || '').trim(); if (s && SAMON()) { const g = GRP(); const T = K(g); const onGrp = typeof scxKey === 'function' && /^grp/.test(scxKey());
+      const about = onGrp || /통합|묶음/.test(s) || s.includes(T.child.replace(' · 센터', '')) || /소속\s*기관|가맹점|지점|사업단|학교별|기관별/.test(s);
+      if (about && PEOPLEQ.test(s) && INDIV.test(s)) return indivAns();
+      if (about && /(배포|나눠|내려\s*보내|공유)/.test(s) && /(계획|과정|콘텐츠|강좌)/.test(s)) { const m = s.match(/[「"'“]([^」"'”]{2,40})[」"'”]/); const r = sharePlan({ course: m ? m[1] : '', targets: /(미달|못\s*미치|낮은|부진)/.test(s) ? 'below' : 'all', kpi: kpiOf(s), period: perOf(s), required: /필수/.test(s) });
+        if (r.err) return scxInfo(r.err + (r.pick && r.pick.length ? ` 예: 「${r.pick[0]}」 과정을 미달 ${T.child}에 배포 계획 세워 줘` : ''), r.pick && r.pick.length ? scxTbl(['배포할 수 있는 우리 과정'], r.pick.map(n => [n])) : '', { via: '통합 센터 AI SAM' });
+        return scxPlan('콘텐츠 배포 계획', r.text, r.runIt, { html: r.html, cta: '승인하고 배포' }); }
+      if (about && /(미달|못\s*미치|낮은|부진|경고|기준\s*이하)/.test(s)) { const r = below(perOf(s), kpiOf(s)); if (r.wait) return scxInfo(r.wait.이유); return scxInfo(r.text, r.html, { via: '통합 센터 AI SAM · 집계' }); }
+      if (about && /(현황|요약|어때|알려|보여|상황|비교|순위)/.test(s)) { const r = overview(perOf(s)); if (r.wait) return scxInfo(r.wait.이유); return scxInfo(r.text, r.html, { via: '통합 센터 AI SAM · 집계' }); } } } catch (e) { console.warn('grp sam', e); }
+    return base(q, ...a); }; }
+  /* 화면 칩(통합 센터 탭) — 현황 요약 · 목표 미달 · 배포 계획 */
+  document.addEventListener('DOMContentLoaded', () => { if (typeof scxDefs !== 'function') return; const base = scxDefs; scxDefs = function (k) { /* eslint-disable-line no-global-assign */
+    const D = base.apply(this, arguments) || []; if (!/^grp(dash|links|share)$/.test(String(k)) || !SAMON()) return D; const g = GRP(); const T = K(g); const ch = T.child.replace(' · 센터', '');
+    const mine = [['gs-sum', `${T.space} 현황 요약`, () => answer(`통합 현황 알려줘`), '통합 현황'], ['gs-low', `${KL('cmpRateBp', g)} 목표 미달 ${ch} 보기`, () => answer(`통합 ${KL('cmpRateBp', g)} 미달 기관 알려줘`), '미달 기관'], ...(can('content') ? [['gs-plan', `미달 ${ch}에 콘텐츠 배포 계획`, () => answer('통합 미달 기관에 콘텐츠 배포 계획'), '배포 계획']] : [])];
+    return [...mine, ...D.filter(c => !mine.some(m => m[1] === c[1]))]; }; });
   /* 시연판 역할 보기(시험 · 시연용): grpAs('grp_viewer') 등 */
   window.grpAs = r => { UI.grpAs = r || ''; navSync(); render(); };
   window.GRP_DEMO = DEMO; window.GRP_KIND = KIND;
